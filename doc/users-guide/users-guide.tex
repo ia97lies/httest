@@ -1,0 +1,57 @@
+\documentclass[11pt]{book}
+\usepackage{verbatim}
+\usepackage[pdftex]{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}    % needed for including graphics e.g. EPS, PS
+\topmargin -1.5cm        % read Lamport p.163
+\oddsidemargin -0.04cm   % read Lamport p.163
+\evensidemargin -0.04cm  % same as oddsidemargin but for left-hand pages
+\textwidth 16.59cm
+\textheight 21.94cm 
+%\pagestyle{empty}       % Uncomment if don't want page numbers
+\parskip 7.2pt           % sets spacing between paragraphs
+%\renewcommand{\baselinestretch}{1.5} % Uncomment for 1.5 spacing between lines
+\parindent 0pt		 % sets leading space for paragraphs
+
+% ******************************************************************************
+% FORMAT: "listgray" - A light gray background-color for code sample boxes
+% ******************************************************************************
+\definecolor{listgray}{rgb}{0.94,0.94,0.94} 
+
+% ******************************************************************************
+% FORMAT: "usplisting" - For light-gray background boxes containing code samples
+% ******************************************************************************
+\lstnewenvironment{usplisting}[0]
+  {\lstset{xleftmargin={20pt},xrightmargin={20pt},basicstyle=\ttfamily\small,frame=shadowbox,backgroundcolor=\color{listgray},language={},float=h,label=implst:0}}
+  {}
+
+
+% -------------- Define title page ---------------------------
+\begin{titlepage}
+\title{htt User's Guide}
+\author{by Marcel Schoen, Switzerland}
+\end{titlepage}
+
+% -------------- Begin document ---------------------------
+\begin{document}
+
+% -------------- Title page ---------------------------
+\maketitle
+
+% -------------- Table of Contents ---------------------------
+\tableofcontents
+
+% -------------- Document content ---------------------------
+
+\input{functionality.tex}
+\input{quickstart.tex}
+\input{commandline.tex}
+\input{script-structure.tex}
+\input{variables.tex}
+\input{bodytypes.tex}
+\input{commands.tex}
+
+% -------------- References ---------------------------
+ 
+% Stop your text
+\end{document}

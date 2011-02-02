@@ -1,0 +1,32 @@
+#Ubuntu: `apr-config --includedir`
+INCLUDES=-I. -I/usr/include/apr-1.0 -I/usr/include/apr-1
+
+all: httest
+
+static: httest_static
+custom: httest_custom
+debug: httest_debug
+
+httest_static: httest.c
+	cc ${CFLAGS} -Wall -O2 -static -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -I${INCLUDE_DIR} httest.c -o httest -lapr-1 -luuid -lrt -lcrypt -lpthread -ldl -lpcre -lssl -lcrypto -lz -ldl
+
+httest_custom: httest.c
+	cc ${CFLAGS} -Wall -O2 -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -I. -I../3thrdparty/apr/include -I../3thrdparty/apr-util/include -I../3thrdparty/openssl/include -c httest.c -o httest.o
+	cc ${CFLAGS} -o httest httest.o ../3thrdparty/pcre/.libs/libpcre.a ../3thrdparty/apr-util/.libs/libaprutil-1.a ../3thrdparty/apr/.libs/libapr-1.a -lpthread ../3thrdparty/openssl/libssl.a ../3thrdparty/openssl/libcrypto.a -ldl
+
+httest_debug: httest.c
+	cc ${CFLAGS} -Wall -g -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -I. -I../3thrdparty/apr/include -I../3thrdparty/apr-util/include -I../3thrdparty/openssl/include -c httest.c -o httest.o
+	cc ${CFLAGS} -o httest httest.o ../3thrdparty/pcre/.libs/libpcre.a ../3thrdparty/apr-util/.libs/libaprutil-1.a ../3thrdparty/apr/.libs/libapr-1.a -lpthread ../3thrdparty/openssl/libssl.a ../3thrdparty/openssl/libcrypto.a -ldl
+
+httest: httest.c
+	cc ${CFLAGS} -Wall -O2 -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE ${INCLUDES} -c httest.c -o httest.o
+	cc ${CFLAGS} -o httest httest.o  -lapr-1 -luuid -lrt -lcrypt -lpthread -ldl -lpcre -lssl
+
+install:
+	cp httest /usr/bin
+
+clean:
+	rm -f httest *.o *~
+
+test: httest
+	./run_all_test.sh ../test/*.txt

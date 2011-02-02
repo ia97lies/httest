@@ -1,0 +1,16 @@
+= Rampup example =
+
+== Where ==
+
+$TOP/scripts
+
+== Setup ==
+
+This example is a good skeleton for your own rampup performance tests. You can run this example as follow:
+
+    * Start the test dummy server (this is the target) httest test.htt
+    * Run rampup.sh 2 2 4 1000 6000 example.htt
+
+rampup.sh will give you a usage text if called without or wrong number of parameters.
+
+

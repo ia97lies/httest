@@ -1,0 +1,47 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_MATCH headers "(Content-Length: .*|HTTP/1\.1 .*)" DEBUG
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO 
+__
+__|$DEBUG|
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS2 - 0==
+__
+
+END
+

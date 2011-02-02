@@ -1,0 +1,23 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+__<html><head>
+__<title>400 Bad Request</title>
+__</head><body>
+__<h1>Bad Request</h1>
+__<p>Your browser sent a request that this server could not understand.<br />
+__045</p>
+__</body></html>
+END

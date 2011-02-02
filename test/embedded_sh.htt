@@ -1,0 +1,39 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_MATCH exec "(foobar)" BAR
+_MATCH exec "(blabla)" BLA
+_SH #!/bin/bash
+_SH echo foobar
+_SH echo blabla 
+_SH END
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO
+__
+__$BAR $BLA
+_EXPECT . "foo"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT . "foobar blabla"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+_PIPE
+_SH #!/bin/bash
+_SH echo foo
+_SH if test "$?" = "0"; then
+_SH   echo success
+_SH else
+_SH   echo failed
+_SH fi
+_SH END
+END

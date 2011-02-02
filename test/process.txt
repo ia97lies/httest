@@ -1,0 +1,5 @@
+
+EXPECT headers: Did expect "200 OK"                                                     
+process.hte:4: error: CLT0-0 Invalid argument(22)                                       
+process.hte:22: error: Process "a" FAILED                                               
+process.hte:22: error: CLT0-0 Invalid argument(22)                                       FAILED

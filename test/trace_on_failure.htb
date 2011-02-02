@@ -1,0 +1,10 @@
+INCLUDE trace_on_failure_2.htb
+
+BLOCK FAILE
+_REQ 127.0.0.1 8080
+__GET / HTTP/1.1
+__Host: localhost
+__
+_CALL FAILE_2
+END
+

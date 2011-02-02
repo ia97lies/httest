@@ -1,0 +1,59 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__OPTIONS icap://foo.bar.ch/htt ICAP/1.0
+__Host: $YOUR_HOST 
+__
+_EXPECT . "ICAP/1.0 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__REQMOD icap://foo.bar.ch/htt ICAP/1.0
+__Host: $YOUR_HOST 
+__Preview: 0
+__Encapsulated: req-hdr=0, req-body=120
+__
+__POST /test/icap/as2/post HTTP/1.1
+__Host: sesdev
+__Content-Length: 50
+__Content-Type: application/x-www-form-urlencoded
+__
+_EXPECT . "ICAP/1.0 100 Continue"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__a
+__01234567
+__a
+__01234567
+__a
+__01234567
+__a
+__01234567
+__0
+__
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__ICAP/1.0 200 OK
+__Methods: REQMOD, RESPMOD
+__Transfer-Preview: *
+__Preview: 0
+__
+
+_RES
+_WAIT
+__ICAP/1.0 100 Continue
+__ISTag: "304743912747"
+__
+
+_RES
+_RECV CHUNKED
+
+END
+

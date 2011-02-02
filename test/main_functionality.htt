@@ -1,0 +1,180 @@
+INCLUDE $TOP/test/config.htb
+
+# XXX TODO NOTE FIXME
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: 9
+__
+__==RQ1==
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO 
+__
+__==RQ1==
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Transfer-Encoding: chunked 
+_FLUSH
+__==RQ1==
+_CHUNK
+__
+__0
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_MATCH headers "Foobar: (.*)" MY_VAR
+_MATCH body "<id xsl:foo>(.*)</id>" MY_VAR2
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Foobar1: $MY_VAR
+__Foobar2: $MY_VAR2
+__
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "==AS1 - 7=="
+   _WAIT
+      
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 1==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 2==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 3==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Transfer-Encoding: chunked
+_FLUSH
+__==AS1 - 4 - 0==
+_CHUNK
+__==AS1 - 4 - 1==
+_CHUNK
+__==AS1 - 4 - 2==
+_CHUNK
+__
+_CHUNK
+_CHUNK
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__Foobar: Hello World
+__
+__<id xsl:foo>Hallo Welt </id>
+__==AS1 - 5==
+__
+
+_RES
+_EXPECT . "Hello World"
+_EXPECT . "Hallo Welt"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 6==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Connection: close
+__
+__==AS1 - 7==
+__==AS1 - 7==
+__
+__
+__
+__
+__
+__==AS1 - 7==
+__
+_CLOSE
+
+END
+

@@ -1,0 +1,6 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_EXEC echo foo
+_Foo
+END

@@ -1,0 +1,13 @@
+CLIENT 
+_REQ $DIST_HOST $DIST_PORT
+__POST / HTTP/1.1
+__Host: localhost 
+__Content-Length: AUTO
+__
+_PIPE
+_EXEC cat $DIST_HTT_SCRIPT
+_EXPECT . "==OK"
+_WAIT
+
+END
+

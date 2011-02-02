@@ -1,0 +1,99 @@
+\chapter{htt Variables}
+\label{chap:variables}
+
+Within a htt script, variables can store values read from files 
+or created during the execution of the script.
+
+\section{Variable Names}
+
+A variable has a name and a value. Variable names are NOT 
+case-sensitive, so a variable named "VarA" can be used by 
+refering to the name "VARA" as well.
+
+\begin{usplisting}
+    CLIENT
+    # Set variable with value "First"
+    _SET VarA=First
+    
+    # This will overwrite the value of the 
+    # variable "VarA", since it is internally 
+    # the same variable as "VARA".
+    _SET VARA=Second
+    END
+\end{usplisting}
+
+\section{Variable Scope}
+
+A variable is defined either as a global variable, or as a local within 
+a body (like \texttt{CLIENT}, \texttt{SERVER} etc.). Note that unlike as in  
+common programming languages, local variables created in a \texttt{BLOCK} 
+are also available in the invoking bodies.
+
+So, if a \texttt{CLIENT} body invokes a \texttt{BLOCK} where a local variable "A" 
+is created, that variable will also become available in the invoking \texttt{CLIENT} 
+body.
+
+\newpage
+\section{Setting A Variable} 
+
+The syntax for setting a global variable is:
+
+\begin{usplisting}
+    SET name=value
+\end{usplisting}
+
+The syntax for setting a local variable in a body is:
+
+\begin{usplisting}
+    _SET name=value
+\end{usplisting}
+
+Examples:
+
+\begin{usplisting}
+    SET MYVAR=SomeValue
+    
+    CLIENT
+    _SET MYLOCAL=LocalValue
+    # Invoke block DOIT, makes variable "DoLocal"
+    # available in this CLIENT body as well.
+    _CALL DOIT
+    END
+    
+    BLOCK DOIT
+    _SET DoLocal=anotherValue
+    END
+\end{usplisting}
+
+\newpage
+\section{Using Variables}
+
+In order to resolve a variable and use the value it is holding, 
+its name must be prefixed with a "\char`\$" character, just like 
+in a shell script. Example:
+
+\begin{usplisting}
+    # Set global Variables for host and port
+    SET MyHost=www.acme.com
+    SET MyPort=8080
+    
+    CLIENT
+    # Invoke named block DOIT which
+    # sets the variable for the URI path
+    _CALL DOIT
+    
+    _REQ $MyHost $MyPort
+    __GET $UriPath HTTP/1.1
+    __Host: www.acme.com
+    __
+    _WAIT
+    END
+    
+    BLOCK DOIT
+    # Set URI path variable which will also
+    # become available in the invoking body.
+    _SET UriPath=/webapp
+    END
+\end{usplisting}
+
+Done.

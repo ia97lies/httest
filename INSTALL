@@ -1,0 +1,13 @@
+INSTALL INSTRUCTIONS
+--------------------
+Prerequisits:
+libapr-1
+libapr-util-1
+libpcre
+libssl
+
+./configure.sh
+./make
+./su root
+./make install
+

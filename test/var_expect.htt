@@ -1,0 +1,4 @@
+CLIENT
+_SET TMP=Foo bar
+_EXPECT VAR(TMP) "^Foo bar$"
+END

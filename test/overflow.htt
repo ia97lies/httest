@@ -1,0 +1,24 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+_SET BIG=1000000000000
+_OP $BIG ADD 10000 BIG
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET / HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: AUTO
+__
+__$BIG
+_EXPECT . "HTTP/1.1 200 Ok"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT . "1000000010000"
+_WAIT
+__HTTP/1.1 200 Ok
+__
+END

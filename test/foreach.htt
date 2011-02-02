@@ -1,0 +1,21 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_FOR I "foo bar bla fasel"
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /$I HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_WAIT
+_END FOR
+END
+
+SERVER $YOUR_PORT
+_FOR I "foo bar bla fasel"
+_RES
+_EXPECT . "$I"
+_WAIT
+__HTTP/1.1 200 OK
+__
+_END FOR
+END

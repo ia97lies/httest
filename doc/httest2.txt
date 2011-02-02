@@ -1,0 +1,23 @@
+Ideas for httest 2.0
+- Microkernel for network, compare, threads and cut
+- be able to emulate any TCP(/UDP) protocol for testing
+- httest commands can be construct out of this microkernel
+- Configuration file defines protocol and its test commands
+- Microkernel commands are directly accessible
+- Microkernel supports, functions, if, while, variables, context, threads, ....
+- Microkernel need support for ssl, asn.1, compress, crypto and many more
+- All procotols should log the same way to be able to expect/match the stream
+
+What we need with in the syntax
+- Functions which automaticaly get a thread/process wide context
+- The process context must be protected with mutexes
+- Functions can be called with arguments like that
+  SERVER 8080
+  WAIT
+  REQ localhost SSL:443 client.key.pem client.cert.pem
+  ...
+  END
+- Function can be a body for more functions to call like SERVER, CLIENT, BLOCK, ...
+- Enviroment variables: system, process and thread with variables
+
+

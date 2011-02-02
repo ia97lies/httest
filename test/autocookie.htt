@@ -1,0 +1,125 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_AUTO_COOKIE on
+
+# get a set cookie
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Cookie: AUTO
+__
+_WAIT
+
+# use this cookie every time
+_LOOP 5
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Cookie: AUTO
+__
+_WAIT
+_END LOOP
+
+# get a set cookie with the same name
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Cookie: AUTO
+__
+_WAIT
+
+# use this overwritten cookie every time
+_LOOP 5
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Cookie: AUTO
+__
+_WAIT
+_END LOOP
+
+# get a new set cookie with
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Cookie: AUTO
+__
+_WAIT
+
+# use both cookies every time
+_LOOP 5
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Cookie: AUTO
+__
+_WAIT
+_END LOOP
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT headers "!Cookie"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__Set-Cookie: foo=fasel; path=/bla/bla
+__
+__== OK ==
+
+_LOOP 5
+_RES
+_EXPECT headers "Cookie: foo=fasel"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__
+__== OK ==
+_END LOOP
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__Set-Cookie: foo=blubi; path=/bla/bla
+__
+__== OK ==
+
+_LOOP 5
+_RES
+_EXPECT headers "Cookie: foo=blubi"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__
+__== OK ==
+_END LOOP
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__Set-Cookie: foo2=fasel; path=/bla/bla
+__
+__== OK ==
+
+_LOOP 5
+_RES
+_EXPECT headers "Cookie: foo=blubi; foo2=fasel"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__
+__== OK ==
+_END LOOP
+
+END
+

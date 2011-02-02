@@ -1,0 +1,29 @@
+General
+-------
+
+Functions should be short and should handle only one task. Keep the functions short and simple.
+Explain hacks within the code.
+
+
+Formating
+---------
+
+To force the style guide install indent on your computer. Call
+
+indent -npsl -di0 -br -nce -d0 -cli0 -npcs -nut -i2 httest.c
+
+It is more or less the apache standard to code.
+
+
+Description
+-----------
+
+Every methode implementation must have a description header like:
+/**
+ * Short description
+ *
+ * @param my IN my parameter 1
+ * @param my2 IN my parameter 2
+ *
+ * @return your return definition
+ */

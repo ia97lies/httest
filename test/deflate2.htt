@@ -1,0 +1,615 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_FLUSH
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "<html>"
+_EXPECT . "</html>"
+_EXEC< gunzip
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+_PIPE
+_EXEC cat test.html | gzip
+END
+
+FILE test.html
+_<html><head><title>HTTP Test Tool</title>
+_  <meta http-equiv="content-type" content="text/html; charset=iso-8859-1"><meta name="author" content="Christian Liesch"><link rel="shortcut icon" href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/favicon.ico"><style type="text/css">
+_
+_    /* standard elements */
+_    * {
+_	    margin: 0;
+_	    padding: 0;
+_    }
+_    a {color: #222e88;}
+_    a:hover {color: #6666aa;}
+_    body {
+_	    color: #333;
+_	    font: normal "Lucida Sans Unicode",sans-serif;
+_    }
+_    input {
+_	    color: #555;
+_	    font: normal 1.0em "Lucida Sans Unicode",sans-serif;
+_    }
+_    p,cite,code,ul {
+_	    font-size: 1.0em;
+_	    padding-bottom: 1.0em;
+_    }
+_    ul {margin-left: 1.0em;}
+_    li {list-style-image: url(../images/layout/li2.gif);}
+_    h1 {font-size: 1.2em;}
+_    blockquote {
+_	    background: #FFF;
+_	    border-bottom: 1px solid #EEE;
+_	    border-top: 1px solid #EEE;
+_	    color: #333;
+_	    display: block;
+_	    font-size: 1.0em;
+_	    margin-bottom: 1.2em;
+_	    padding: 6px 12px;
+_    }
+_    blockquote p {padding: 3px 0;}
+_    h1,h2,h3 {color: #464466;}
+_
+_    /* misc */
+_    .clearer {clear: both;}
+_
+_    /* structure */
+_    .container {
+_	    background: #F2F5A9;
+_	    margin: 0 auto;
+_	    width: 1000px;
+_    }
+_
+_    /* top */
+_    .top {
+_	    background: #FE9A2E;
+_	    font: normal 2.4em Verdana,sans-serif;
+_	    height: 60px;
+_	    margin: 0 auto;
+_	    width: 1000px;
+_    }
+_    .top a {
+_	    color: #000;
+_	    display: block;
+_	    line-height: 60px;
+_	    text-decoration: none;
+_	    width: 100%;
+_    }
+_    .top span {padding-left: 24px;}
+_    .top a:hover {
+_	    background: #FF8000;
+_	    color: #000;
+_    }
+_
+_    /* navigation */
+_    .navigation {
+_	    float: right;
+_	    margin-left: 1px;
+_	    width: 199px;
+_    }
+_    .navigation h1 a {
+_	    background: #0068fc;
+_	    color: #FFF;
+_	    display: block;
+_	    line-height: 40px;
+_	    padding-left: 12px;
+_	    text-decoration: none;
+_    }
+_    .navigation h1 a:hover {
+_	    background: #0007fc;
+_	    color: #fff;
+_    }
+_    .navigation ul {margin: 0; padding: 0;}
+_    .navigation li {
+_	    border-bottom: 1px solid #adade8;
+_	    list-style: none;
+_    }
+_    .navigation li a {
+_	    background: #F2F5A9;
+_	    color: #553;
+_	    display: block;
+_	    padding: 8px 4px 8px 12px;
+_	    text-decoration: none;
+_    }
+_    .navigation li a:hover {
+_	    background: #F4FA58;
+_	    color: #553;
+_    }
+_
+_    /* main */
+_    .main {
+_            background: #FFF;
+_            font: normal 0.9em Lucida,sans-serif;
+_            float: left;
+_	    width: 800px;
+_    }
+_
+_    .main h1 {
+_            font: normal 1.5em Verdana,sans-serif;
+_            padding: 12px;
+_    }
+_
+_    .main h2 {
+_            font: normal 1.1em Verdana,sans-serif;
+_            background: #FEDC01;
+_            color: #00;
+_            line-height: 30px;
+_            padding-left: 12px;
+_    }
+_
+_    .main h3 {
+_            font: normal 0.9em Verdana,sans-serif;
+_            padding: 12px 12px;
+_    }
+_
+_    .main h4 {
+_            font: normal 0.7em Verdana,sans-serif;
+_            padding: 12px 12px;
+_    }
+_
+_    .main iframe {
+_            padding: 12px 12px;
+_    }
+_
+_    .main p {
+_            padding: 12px 12px;
+_    }
+_
+_    .main ul {
+_            padding: 12px 12px;
+_    }
+_
+_    .main table {
+_            padding: 12px 12px;
+_    }
+_
+_    /* footer */
+_    .footer {
+_	    background: #000;
+_	    color: #FFF;
+_	    font-size: 1.1em;
+_	    line-height: 40px;
+_	    margin: 0 auto;
+_	    text-align: center;
+_	    width: 1000x;
+_    }
+_    .footer a {color: #000;}
+_    .footer a:hover {color: #F4D403;}
+_    </style></head><body><header>
+_    
+_
+_    
+_     
+_    
+_
+_    
+_  </header>
+_  
+_
+_    <div class="container">
+_<div class="top">
+_<a href="http://sourceforge.net/projects/cwiki"><span>HTTP Test Tool</span></a>
+_</div>
+_<div class="main">
+_<h1>Examples Scripts</h1>
+_
+_<p>A collection of sample scripts with explanation</p>
+_<h2>Simple self running Example</h2>
+_
+_<p>In the file simple.htt:</p>
+_<p>CLIENT<br>
+_# Connect to localhost and port 8080<br>
+__REQ localhost 8080<br>
+___GET /foo/bar HTTP/1.1<br>
+___Host: localhost<br>
+___<br>
+_# We expect a 200 OK from the server<br>
+_# and we also expect Response data send from server<br>
+_# If we get something different the script will fail<br>
+__EXPECT . "HTTP/1.1 200 OK"<br>
+__EXPECT . "Response data"<br>
+__WAIT<br>
+_END<br>
+_ <br>
+_# Listen on port 8080 on ANY address<br>
+_SERVER 8080<br>
+__RES<br>
+_# We expect the GET request of the client<br>
+_# If we get something different the script will fail<br>
+__EXPECT . "GET /foo/bar HTTP/1.1"<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+_# AUTO do calculate the length of the body<br>
+___Content-Length: AUTO<br>
+___<br>
+___Response data<br>
+_END</p>
+_<p>Now call simply</p>
+_<p> ./httest simple.htt</p>
+_<h2>SSL Example</h2>
+_
+_<p>We take the same simple example from above and enable SSL.</p>
+_<p>CLIENT<br>
+__REQ localhost SSL:8080<br>
+_...<br>
+_END<br>
+_ <br>
+_SERVER SSL:8080<br>
+_...<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_There are only small changes to enable SSL within a test. You need only set "SSL:" before the port with no spaces between.</p>
+_<h2>Client SSL Example</h2>
+_
+_<p>Assume there is a server with a CA loaded and does require client
+_certificate. Let further assume there is a client pem cert and key
+_signed by the CA loaded from the server.<br>
+_The server is on your.domain:443</p>
+_<p>CLIENT<br>
+__REQ your.domain SSL:443 client.cert.pem client.key.pem<br>
+___GET / HTTP/1.1<br>
+___Host: your.domain<br>
+___<br>
+__EXPECT . "HTTP/1.1 200 OK"<br>
+__WAIT</p>
+_<p><strong>Explanation:</strong><br>
+_As in the SSL Example we open the connection on SSL:443 and we tell
+_httest which is our cert and key. Attention must be taken with the key,
+_there is no password support, so free your key from any password.</p>
+_<h2>POST chunked </h2>
+_
+_<p>There are many Fat Clients which do post with transfer-encoding:
+_chunked. A simple example will demonstrat the chunked support with in
+_httest.</p>
+_<p>CLIENT<br>
+__REQ localhost 8080<br>
+___POST / HTTP/1.1<br>
+___Host: localhost<br>
+___Transfer-Encoding: chunked<br>
+__FLUSH<br>
+___Some data<br>
+__CHUNKED<br>
+___More data<br>
+__CHUNKED<br>
+___Last data<br>
+__CHUNKED<br>
+__CHUNKED<br>
+___<br>
+__EXPECT . "HTTP/1.1 200 OK"<br>
+__WAIT<br>
+_END<br>
+_ <br>
+_SERVER 8080<br>
+__RES<br>
+__EXPECT . "Some data"<br>
+__EXPECT . "More data"<br>
+__EXPECT . "Last data"<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+___Transfer-Encoding: chunked<br>
+__FLUSH<br>
+___Answer<br>
+__CHUNKED<br>
+__CHUNKED<br>
+___<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_The command _CHUNKED to \r\n<chunk size="" in="" hex="">\r\n.
+_Every command do store the data in a line cache. The _FLUSH command do
+_send all lines in the line cache, in this case all headers. The command
+__CHUNKED to calculate the size in the line cache, with all lines not
+_allready flushed.<br>
+_The empty line between the headers and the body is done with the first
+__CHUNKED command. The Last 0 Chunkded could also be done with CHUNKED
+_with a following newline __.</chunk></p>
+_<h2>Cut Session and Use It</h2>
+_
+_<p>Many times you have to login and test with a valid session. Below is
+_a very simple example how to cut session infos out of the socket stream.</p>
+_<p>CLIENT<br>
+__REQ localhost 8080<br>
+___GET / HTTP/1.1<br>
+___Host: localhost<br>
+___<br>
+__MATCH headers "Set-Cookie: <a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=SessionId">SessionId</a>=(.*);" SESSION<br>
+__WAIT<br>
+_ <br>
+__REQ localhost 8080<br>
+__GET /foo HTTP/1.1<br>
+___Host: localhost<br>
+___Cookie: <a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=SessionId">SessionId</a>=$SESSION<br>
+___<br>
+_END<br>
+_ <br>
+_SERVER 8080<br>
+__RES<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+___Set-Cookie: <a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=SessionId">SessionId</a>=foobar path=/<br>
+___Content-Length: AUTO<br>
+___<br>
+___Data<br>
+_ <br>
+__RES<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+___Content-Length: AUTO<br>
+___<br>
+___Data<br>
+_ <br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+__MATCH do match with a regex every line (and fail if no hits) and cut
+_the stuff in () out and store it in the given variable name.<br>
+__MATCH has two scope for performance impact "headers" and "body". Most test will only need the scope "headers".</p>
+_<h2>Execute External Commands</h2>
+_
+_<p>It is very useful to call external commands in a test script.</p>
+_<p>EXEC ./your_external_program start<br>
+_ <br>
+_CLIENT<br>
+_...<br>
+__EXEC ./your_external_program stop<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_There is a global and local exec command. First the external program is
+_called with the parameter "start" and on clients end the external
+_command is called with the parameter "stop".<br>
+_Attention, one could doing this task with two global EXEC commands but
+_this will not work. Because the CLIENT body is running in the
+_background, the last exec command would not wait for the clients end.</p>
+_<h2>Pipe Output of External Command into Socket Stream</h2>
+_
+_<p>It could be useful to call an external program to tranform a String,
+_for example a base64 transformation and pipe the output back to the
+_socket stream.</p>
+_<p>CLIENT<br>
+__REQ localhost 8080<br>
+__-GET<br>
+__PIPE<br>
+__EXEC echo /foo/bar<br>
+___ HTTP/1.1<br>
+___Host: localhost<br>
+___<br>
+__EXPECT . "HTTP/1.1 200 OK"<br>
+__WAIT<br>
+_END<br>
+_ <br>
+_SERVER 8080<br>
+__RES<br>
+__EXPECT . "/foo/bar"<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+___Content-Length: AUTO<br>
+___<br>
+___Answer<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_This is somehow a stupid example you could short write the GET request with a simple</p>
+_<p>__GET /foo/bar HTTP/1.1</p>
+_<p>But it demonstrate how to pipe a external commands out put, i.e. "echo /foo/bar", into an open socket stream.</p>
+_<h2>Pipe Output of External Command into Socket Stream 2</h2>
+_
+_<p>Mostly we want to stream a file output to the caller.</p>
+_<p>CLIENT<br>
+__REQ localhost 8080<br>
+___GET / HTTP/1.1<br>
+___Host: localhost<br>
+___<br>
+__WAIT<br>
+_END<br>
+_ <br>
+_SERVER 8080<br>
+__RES<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+___Transfer-Encoding: chunked<br>
+__FLUSH<br>
+__PIPE CHUNKED 30<br>
+__EXEC echo blabla bla bla bla bla bla bla bla bla bla bla<br>
+__CHUNKED<br>
+___<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_The EXEC echo blabla is piped into socket stream with chunks of 30 bytes.</p>
+_<h2>Pipe Socket Stream to External Command</h2>
+_
+_<p>This is useful to validate for example content of a server.</p>
+_<p>CLIENT<br>
+__REQ localhost 8080<br>
+___GET / HTTP/1.1<br>
+___Host: localhost<br>
+___<br>
+__EXEC| cat &gt; yourfile<br>
+__WAIT<br>
+_END<br>
+_ <br>
+_SERVER 8080<br>
+__RES<br>
+__WAIT<br>
+___HTTP/1.1 200 OK<br>
+___Host: localhost<br>
+___Content-Length: AUTO<br>
+___<br>
+___Stream me to yourfile :)<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_Stupid example to show how to pipe socket stream to a external command
+_like "cat". yourfile contains after running this test script: "Stream
+_me to yourfile :)".</p>
+_<h2>Mutual authentication</h2>
+_
+_<p>Do mutual authentication.</p>
+_<p>CLIENT<br>
+__REQ localhost SSL:8080 client.cert.pem client.key.pem ca.cert.pem<br>
+__VERIFY_PEER<br>
+___GET / HTTP/1.1<br>
+___Host: localhost<br>
+___<br>
+__WAIT<br>
+_END<br>
+_ <br>
+_SERVER 8080<br>
+__CERT server.cert.pem server.key.pem ca.cert.pem<br>
+__RES<br>
+__WAIT<br>
+__VERIFY_PEER<br>
+___HTTP/1.1 200 OK<br>
+___Content-Length: AUTO<br>
+___<br>
+___Hello World<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_The key point is the command _VERIFY_PEER, which is integrated in the version 0.12.1 and higher.<br>
+_The client do verify the server certificate and the server do request and validate the client certificate.<br>
+_The certificates must all be from the same CA in this example.</p>
+_<h2>Bandwidth test</h2>
+_
+_<p>Restrict the bandwidth while httest is sending.</p>
+_<p>CLIENT<br>
+_ <br>
+__BPS 100 20<br>
+__REQ localhost 8080<br>
+___POST / HTTP/1.1<br>
+___Host: $YOUR_HOST<br>
+___User-Agent: mozilla<br>
+___Content-Length: AUTO<br>
+___<br>
+___.............................................................................<br>
+__WAIT<br>
+__CLOSE<br>
+__END BPS<br>
+__EXIT OK<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_This test will send the HTTP request with 100 byte/s to <a href="http://localhost:8080/">http://localhost:8080/</a> for about 20 seconds.<br>
+_Do not send too much date in the BPS body with a low bandwidth, cause
+_the test will delay next request until it reaches the given byte/s. If
+_you like to send with a very high bandwidth do it also parallel with
+_i.e CLIENT 10 and bandwith of 1000 byte/s per client</p>
+_<h2>Cut Stuff from Stdout</h2>
+_
+_<p>Many time you need to call an external script and match its output.</p>
+_<p>CLIENT<br>
+__MATCH exec "Foo(.*)" BAR<br>
+__EXEC echo Foobar<br>
+_END</p>
+_<p><strong>Explanation</strong><br>
+_In the variable $BAR "bar" ist stored in this example. This script will fail if noc Foo.* is read on the stdout.</p>
+_<p><strong>Note</strong><br>
+_Need newline for every line else will not appear, will be fixed with the new httest version 1.3.1</p>
+_<h2>Embedded Scripts</h2>
+_
+_<p>To hold everything in a single test script, you could also embedd a shell script right in the httest script.</p>
+_<p>CLIENT<br>
+__MATCH exec "hello (.*)" WORLD<br>
+__SH #!/bin/bash<br>
+__SH echo hello world<br>
+__SH END<br>
+__DEBUG $WORLD<br>
+_END</p>
+_<p><strong>Explanation:</strong><br>
+_The embedded shell script will be written in a temporary file with a
+_random name. On _SH END the script will be called like any ohter
+_external written script, therefore you can also use _MATCH exec.</p>
+_<h2>HEAD Request</h2>
+_
+_<p>The head request has as a response a Content-Length but not content.</p>
+_<p>CLIENT<br>
+__REQ localhost 8080<br>
+___HEAD /your/path HTTP/1.1<br>
+___Host: $YOUR_HOST<br>
+___User-Agent: mozilla<br>
+___<br>
+__WAIT 0</p>
+_<p><strong>Explanation:</strong><br>
+_To cope witht the a Content-Length header but no content in the
+_response, we told httest to wait for the headers and zero bytes in the
+_body.</p>
+_<h2>Deflate a gzipped stream</h2>
+_
+_<p>_REQ localhost 8080<br>
+___GET /your/path HTTP/1.1<br>
+___Host: localhost<br>
+___User-Agent: mozilla<br>
+___<br>
+__EXEC&lt; gunzip<br>
+__WAIT</p>
+_<p><strong>Explanation:</strong><br>
+_With the command _EXEC&lt; the received stream can be piped in and the
+_output of the executed shell command ist piped back to the _WAIT command</p>
+_<hr>
+_
+_<hr>
+_
+_<table>
+_  <tbody><tr>
+_    <td>
+_    </td>
+_    <td>
+_    </td>
+_    <td>
+_    </td>
+_    <td>
+_    </td>
+_  </tr>
+_</tbody></table>
+_<table>
+_  <tbody><tr>
+_    <td>
+_    </td>
+_  </tr>
+_</tbody></table>
+_
+_</div>
+_<div class="navigation">
+_<ul>
+_<li><a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=HomePage">Home</a></li>
+_<li><a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=ScriptsSyntax">Script Syntax</a></li>
+_<li><a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=ExampleScripts">Example Scripts</a></li>
+_<li><a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=GenerateScripts">Generate Scripts</a></li>
+_<li><a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/public?page=WindowsBinary"> Windows Binary</a></li>
+_</ul>
+_<hr>
+_
+_<ul>
+_<li><a href="http://sourceforge.net/project/showfiles.php?group_id=201621">Download Section</a></li>
+_<li><a href="http://sourceforge.net/projects/htt">Project webpage</a></li>
+_</ul>
+_<hr>
+_
+_<ul>
+_<li><a href="http://htt.sourceforge.net/cgi-bin/cwiki/bin/view?dir=Home/HttSkin/&amp;page=ExampleScripts">Member Section</a></li>
+_</ul>
+_<hr>
+_
+_</div>
+_<div class="clearer"><span></span></div>
+_<div class="footer">
+_<a href="http://sourceforge.net/"><img src="test_files/sflogo.png" alt="SourceForge.net Logo" border="0" height="37" width="125"></a>
+_</div>
+_    </div>
+_
+_  
+_</body></html>
+END

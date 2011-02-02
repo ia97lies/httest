@@ -1,0 +1,65 @@
+#
+# Tests the _RESWAIT command which ignores TCP connections not
+# sending any data, e.g. hearbeats send by a load balancer or
+# monitoring tool.
+#
+
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+_CLOSE
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_EXPECT . "== OK =="
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_EXPECT . "== OK =="
+_WAIT
+_CLOSE
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_EXPECT . "== OK =="
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RESWAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Content-Type: text/plain
+__
+__== OK ==
+
+_RESWAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__Content-Type: text/plain
+__
+__== OK ==
+_CLOSE
+
+_RESWAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__Content-Type: text/plain
+__
+__== OK ==
+_CLOSE
+
+END

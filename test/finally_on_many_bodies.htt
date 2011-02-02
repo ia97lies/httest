@@ -1,0 +1,22 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_EXEC echo bla bla bla > testtest.txt
+END
+
+CLIENT
+_SLEEP 1000
+END
+
+SERVER 8080
+_SLEEP 2000
+END
+
+BLOCK FINALLY
+_EXEC rm testtest.txt
+END
+
+DAEMON
+_SLEEP 10000
+_EXIT FAILED
+END

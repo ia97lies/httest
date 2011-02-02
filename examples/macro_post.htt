@@ -1,0 +1,13 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/macros/request_simple.htb
+
+CLIENT
+_SIMPLE_POST http://foo/bla/fasel HTTP/1.1
+_SIMPLE_FORM_URLENC
+_SIMPLE_FORM_URLENC_ARG foo bar&bla
+_SIMPLE_FORM_URLENC_ARG bla fasel
+_SIMPLE_FORM_URLENC_ARG hello kitty
+_SIMPLE_FORM_URLENC_END
+_WAIT
+END
+

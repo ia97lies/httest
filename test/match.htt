@@ -1,0 +1,55 @@
+INCLUDE $TOP/test/config.htb
+
+# SSS: hallo
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_MATCH body "AS(.) - (.)==" NUM MIN
+_WAIT
+
+__POST / HTTP/1.1
+__Content-Length: AUTO
+__
+__RESULT $MIN $NUM
+_MATCH . "Content-Type: (.*)" TYPE 
+_WAIT
+
+__POST / HTTP/1.1
+__Content-Length: AUTO
+__
+__RESULT $TYPE
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+
+_RES
+_EXPECT . "RESULT 0 1"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 1==
+__
+
+_RES
+_EXPECT body "RESULT text/html"
+_WAIT
+
+END
+

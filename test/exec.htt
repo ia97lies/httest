@@ -1,0 +1,14 @@
+INCLUDE $TOP/test/config.htb
+
+EXEC echo Hallo Welt > tmp.txt 
+
+CLIENT
+
+_SLEEP 1000
+_EXEC echo hello world
+_EXEC cat tmp.txt >/dev/null
+_EXEC rm tmp.txt
+_EXPECT ERROR "Internal error"
+_EXEC rm tmp.txt 2>/dev/null >/dev/null 
+
+END

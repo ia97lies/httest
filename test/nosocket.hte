@@ -1,0 +1,13 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_WAIT
+
+END

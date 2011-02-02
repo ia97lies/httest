@@ -1,0 +1,19 @@
+FILE testfile
+_foo
+_bar
+_blafsel
+END
+
+CLIENT
+_EXPECT EXEC "foo\n"
+_EXPECT EXEC "bar\n"
+_EXPECT EXEC "blafsel\n"
+_EXEC cat testfile
+END
+
+FILE testfile2
+_foo
+_bar
+_blafsel
+END
+

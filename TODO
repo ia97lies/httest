@@ -1,0 +1,19 @@
+htproxy
+-------
+- Etag support
+- Title matcher
+- Link name matcher (the stuff between <a href..> and </a>)
+- Generic tag matcher
+- SSL support
+
+httest
+------
+- Encrpyt the ntml type 3 message and extrakt user
+- Plain on SSL connection terminate with a clear error
+- MATCH error is not realy understandable
+- Stack trace on error is not highlighted. Do it the C way :)
+- Precompile httest script
+- Include concept with env variables
+- SSL session reuse (partial)
+- _TRY ... _CATCH ... FINALLY ... END TRY
+- _ERROR <error>* _END ERROR

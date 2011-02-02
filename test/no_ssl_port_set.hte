@@ -1,0 +1,5 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ localhost SSL:
+END

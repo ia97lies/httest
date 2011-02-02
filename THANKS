@@ -1,0 +1,21 @@
+[THANKS]
+Thanks to Thomas Frauenknecht for 
+- the windows build enviroment
+- many win32 changes.
+
+Thanks to Pascal Buchbinder for 
+- the ntlm tool.
+- the renegotiation command without client cert verify.
+
+Thanks to Michael Vogt for 
+- the help with htproxy.
+- the help with many win32 issues.
+- releasing win32 binaries.
+
+Thanks to Eva Ramon for
+- Debian package maintenance
+- the help with the man pages
+- clearify the lizence incompatibility problem between GNU and OpenSSL
+
+Thanks to Alain Stalder for
+- cleaning up the windows build enviroment

@@ -1,0 +1,9 @@
+EXEC touch myfile
+
+CLIENT
+END
+
+BLOCK FINALLY
+_EXEC rm myfile
+_EXIT FAILED
+END

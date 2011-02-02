@@ -1,0 +1,46 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+_RPS 1 10
+_REQ $YOUR_HOST $YOUR_PORT
+__POST / HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO
+__
+__.............................................................................
+_WAIT
+_END RPS 
+END
+
+SERVER $YOUR_PORT 
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_LOOP 12 
+_TIMER RESET FOO 
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_TIMER GET FOO 
+_IF "$FOO" LT "994"
+_DEBUGToo fast
+_EXIT FAILED
+_END IF
+
+_END LOOP
+END
+
+BLOCK ON_ERROR
+_EXIT OK
+END

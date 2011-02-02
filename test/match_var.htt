@@ -1,0 +1,19 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_SET FOO=Hallo Velo
+_MATCH VAR(FOO) "Hallo (.*)" VELO
+_REQ $YOUR_HOST $YOUR_PORT
+__POST / HTTP/1.1
+__Content-Length: AUTO
+__
+__$VELO
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT . "^Velo"
+_WAIT
+__HTTP/1.1 200 OK
+__
+END

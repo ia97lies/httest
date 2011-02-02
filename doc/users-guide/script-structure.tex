@@ -1,0 +1,55 @@
+\chapter{htt Script Structure}
+\label{chap:structure}
+\begin{flushleft}
+A htt test usually consists of a ".htt" file (the main script), and optionally
+some include files (usually with the suffix ".htb").
+
+The main script consists of \textit{include statements}, global or local 
+\textit{commands}, \textit{variables}, \textit{bodies} and comments:
+
+\begin{itemize}
+  \item \textit{Command}: An instruction to perform an action, like sending a request,
+          setting a header in that request, evaluating the response etc. There are 
+          global and local commands (explained in the chapter "Commands").
+  \item \textit{Include}: A global command used to include re-usable scripting code from other files.
+  \item \textit{Variables}: Holder for values created during the execution of the script. 
+  \item \textit{Body}: A block of code containing a number of commands.
+  \item \textit{Comment}: A line of non-executable text
+\end{itemize}
+
+Commands, variables and body types are explained in more detail in the corresponding chapters. 
+
+\subsection{Comments}
+
+Comment lines must begin with the "\char`\#" character.
+
+\newpage
+\section{Structure Example}
+
+A simple htt script code example for showing the structure:
+\end{flushleft}
+
+\begin{usplisting}
+    # Include some macros
+    INCLUDE macros.htb
+    
+    # The actual test client part
+    CLIENT
+       ...
+    END
+    
+    # Optional: a re-used code block
+    BLOCK DOIT
+       ...
+    END
+    
+    # Optional: A test monitoring daemon
+    DAEMON
+       ...
+    END 
+\end{usplisting}
+
+In the example above, \texttt{INCLUDE} is a global statement used to include another 
+script file with some re-usable code blocks. It is followed by the \texttt{CLIENT} 
+block which starts the actual HTTP test client, a block of re-usable functionality 
+named "DOIT" and a \texttt{DAEMON} body which contains some test monitoring functionality.

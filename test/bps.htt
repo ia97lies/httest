@@ -1,0 +1,27 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_BPS 1000 20
+_REQ $YOUR_HOST $YOUR_PORT
+__POST / HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO
+__
+__.............................................................................
+_WAIT
+_CLOSE
+_END BPS
+_EXIT OK
+END
+
+SERVER $YOUR_PORT -1
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+END

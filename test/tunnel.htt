@@ -1,0 +1,56 @@
+INCLUDE $TOP/test/config.htb
+
+SET PROXY_HOST=$YOUR_HOST
+SET PROXY_PORT=$YOUR_PORT2
+SET AS_HOST=$YOUR_HOST
+SET AS_PORT=$YOUR_PORT
+
+CLIENT
+_REQ $PROXY_HOST $PROXY_PORT
+__CONNECT $AS_HOST:$AS_PORT HTTP/1.1
+__GET / HTTP/1.1
+__Host: localhost
+__
+_EXPECT . "200 OK"
+_EXPECT . "BEGIN"
+_EXPECT . "END"
+_WAIT
+_CLOSE
+
+_REQ $PROXY_HOST $PROXY_PORT
+__GET / HTTP/1.1
+__Host: localhost
+__
+_EXPECT . "200 OK"
+_WAIT
+END
+
+# emulated forward proxy with a tunnel to AS 
+SERVER $PROXY_PORT
+_RES
+_MATCH body "CONNECT (.*):(.*) HTTP/1.1" AS AS_PORT
+_SOCKET
+_READLINE
+_TUNNEL $AS $AS_PORT
+_END SOCKET
+_CLOSE
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+END
+
+SERVER $AS_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__BEGIN
+_LOOP 100
+__.............................................................................
+_END LOOP
+__END
+END

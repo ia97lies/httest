@@ -1,0 +1,49 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST SSL:$YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "CONNECTED"
+_WAIT
+
+_SOCKSTATE STATE
+_IF "$STATE" MATCH "CLOSED"
+_CLOSE
+_END IF
+
+_REQ $YOUR_HOST SSL:$YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+END
+
+SERVER SSL:$YOUR_PORT
+_RES
+_SOCKSTATE STATE
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__$STATE
+
+_CLOSE
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__$STATE
+__Reconnect
+
+END
+

@@ -1,0 +1,73 @@
+\chapter{htt Commandline Interface}
+\label{chap:commandline}
+
+\section{Files}
+
+The htt tool is available for multiple platforms. On Unix platforms, the htt 
+provides two binaries:
+
+\begin{itemize}
+ \item \texttt{httest}: The actual HTTP testing tool.
+ \item \texttt{htntlm}: A tool required to perform an NTLM authentication.
+\end{itemize}
+
+On Windows, a number of other files (.exe and .dll) are required to run the htt.
+
+\section{Syntax}
+
+The htt binary uses the following commandline syntax:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    $ httest [OPTIONS] scripts
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+Where \textit{scripts} is just one or multiple ".htt"-files, for example:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    $ httest -Ts testone.htt testtwo.htt
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+File names must be specified either relative to the current working 
+directory, or with an absolute path.
+\newpage 
+\section{Options}
+
+A list of all options can always be retrieved by using the "--help" argument:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    $ httest -Ts testone.htt testtwo.htt
+
+    httest is a script based tool for testing and benchmarking web 
+    applications, web servers, proxy servers and web browsers. httest 
+    can emulate clients and servers in the same test script, very 
+    useful for testing proxys.
+
+    Usage: httest [OPTIONS] scripts
+
+    Options:
+      -V --version         Print version number and exit
+      -h --help            Display usage information (this message)
+      -n --suppress        do no print start and OK|FAILED
+      -s --silent          silent mode
+      -e --error           log level error
+      -w --warn            log level warn
+      -d --debug           log level debug
+      -L --list-commands   List all available script commands
+      -C --help-command    Print help for specific command
+      -T --timestamp       Time stamp on every run
+      -S --shell           Shell mode
+   
+    Examples:
+    httest script.htt
+   
+    httest -Ts script.htt
+   
+    Report bugs to http://sourceforge.net/projects/htt   
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+

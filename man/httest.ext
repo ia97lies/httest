@@ -1,0 +1,18 @@
+[Script Samples]
+Cut and past from a HTTP stream, i.e we cut the apache host to access it in the second request.
+
+.nf
+CLIENT
+_REQ www.google.ch 80
+__GET /search?hl=de&q=apache&btnG=Google-Suche&meta=&aq=f&oq= HTTP/1.1
+__Host: www.google.ch
+__
+_MATCH body '\\<a href="http://([^\\/]*)/" class=l\\>Welcome! - The \\<em\\>Apache\\</em\\> HTTP Server Project' APACHE_HOST
+_WAIT
+
+_REQ $APACHE_HOST 80
+__GET / HTTP/1.1
+__Host: $APACHE_HOST
+__
+_WAIT
+END

@@ -1,0 +1,58 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK foo BLA FASEL HELLO : FOO BAR
+__$BLA | $FASEL | $HELLO
+_SET FOO=Hallo Velo
+_SET BAR=function call
+END
+
+BLOCK _DUMMY
+__dummy dummy dummy
+END
+
+BLOCK _DUMMY2 : BLA
+_SET BLA=dummy2 
+END
+
+BLOCK _DUMMY3 FOO : BLA
+__$FOO
+_SET BLA=dummy3 
+END
+
+BLOCK _DUMMY4 : RET
+_SET RET=dummy4
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_EXPECT body "ha he hi | fasel | hello kitty"
+_EXPECT body "Hallo Velo | function call"
+_EXPECT body "dummy dummy dummy"
+_EXPECT body "dummy2"
+_EXPECT body "call DUMMY3"
+_EXPECT body "dummy3"
+_EXPECT body "dummy4"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Connection: close
+__
+_CALL foo "ha he hi" "fasel" "hello kitty" BLA BLI
+__$BLA | $BLI
+_DUMMY
+_DUMMY2 FOO
+__$FOO
+_DUMMY3 "call DUMMY3" GET
+__$GET
+_DUMMY4 BAR
+__$BAR
+END
+

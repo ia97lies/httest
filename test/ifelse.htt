@@ -1,0 +1,42 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+_SET COND=Blub
+_LOOP 2
+_IF "$COND" MATCH "bar"
+  _IF "Bla" MATCH "Fasel"
+    _DEBUG Blub
+  _END IF
+  __GET /nope HTTP/1.1
+_ELSE
+  __GET /yes HTTP/1.1
+_END IF
+_EXPECT . "AS"
+__Host: $YOUR_HOST 
+__
+_WAIT
+_SET COND=bar
+_END LOOP
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT . "/yes"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__AS
+
+_RES
+_EXPECT . "/nope"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__AS
+
+END

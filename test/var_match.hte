@@ -1,0 +1,4 @@
+CLIENT
+_SET TMP=Foo bar
+_MATCH VAR(TMP) "(^Do not match TMP variable$)" TMP2
+END

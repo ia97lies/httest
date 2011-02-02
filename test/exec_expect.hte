@@ -1,0 +1,10 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_EXPECT exec "!foobar"
+_SH #!/bin/bash
+_SH echo foobar
+_SH echo blabla 
+_SH END
+END
+

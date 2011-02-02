@@ -1,0 +1,3 @@
+
+Can not set cert, ssl not enabled in CLIENT/SERVER                                      
+no_ssl_set_cert.hte:4: error: SRV0-0 Invalid argument(22)                                FAILED

@@ -1,0 +1,29 @@
+#
+# test IPv6 (address only) support of the _REQ and SERVER command
+#
+
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ [::1] $YOUR_PORT
+__GET /main?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "==OK=="
+_WAIT
+END
+
+SERVER [::1]:$YOUR_PORT
+_RES
+_EXPECT . "GET /main\?your=params HTTP/1.1"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Content-Type: text/plain
+__
+__==OK==
+
+END

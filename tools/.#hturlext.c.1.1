@@ -1,0 +1,240 @@
+/* Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. 
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @file
+ *
+ * @Author christian liesch <liesch@gmx.ch>
+ *
+ * Implementation of the HTTP URL extractor.
+ */
+
+/* affects include files on Solaris */
+#define BSD_COMP
+
+/************************************************************************
+ * Includes
+ ***********************************************************************/
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <pcre.h>
+
+#include <apr.h>
+#include <apr_lib.h>
+#include <apr_signal.h>
+#include <apr_strings.h>
+#include <apr_getopt.h>
+#include <apr_portable.h>
+#include <apr_errno.h>
+
+/************************************************************************
+ * Defines 
+ ***********************************************************************/
+#define BLOCK_MAX 8192
+
+/************************************************************************
+ * Typedefs 
+ ***********************************************************************/
+typedef struct self_s {
+  apr_pool_t *pool;
+  apr_file_t *ofp;
+  apr_file_t *ifp;
+} self_t;
+
+typedef struct pattern_s {
+  char *pattern;
+  apr_size_t len;
+  apr_size_t match;
+} pattern_t;
+
+/************************************************************************
+ * Implementation 
+ ***********************************************************************/
+/**
+ * Helper
+ */
+
+/**
+ * get the status string
+ *
+ * @param p IN pool
+ * @param rc IN status to print
+ *
+ * @return status string
+ */
+static char *get_status_str(apr_pool_t * p, apr_status_t rc) {
+  char *text = apr_pcalloc(p, 201);
+  apr_strerror(rc, text, 200);
+  return text;
+}
+
+/**
+ * display copyright information
+ */
+static void copyright(void) {
+  printf("\nThis is Http Test URL Extractor " VERSION);
+}
+
+/** 
+ * display usage information
+ *
+ * @progname IN name of the programm
+ */
+static void usage(const char *progname) {
+  fprintf(stdout, "\nUsage: %s [options] scripts", progname);
+  fprintf(stdout, "\nOptions are:");
+  fprintf(stdout, "\n    -V      Print version number and exit");
+  fprintf(stdout, "\n    -h      Display usage information (this message)");
+  fprintf(stdout, "\n    -i      Input HTML file (default is stdin)");
+  fprintf(stdout, "\n    -o      Output HTML file (default stdout)");
+}
+
+/**
+ * Extractor
+ */
+static void extract(self_t *self) {
+  apr_status_t status;
+  char *buf;
+  apr_size_t len;
+  int a, i;
+  pattern_t start[] = { { "<a href=", 8, 0 },
+                        { "<img href=", 10, 0 }, 
+ 		        { NULL, 0, 0} };
+
+  len = BLOCK_MAX;
+  
+  buf = apr_pcalloc(self->pool, len);
+  
+  while ((status = apr_file_read(self->ifp, buf, &len)) == APR_SUCCESS) {
+    /* string 0 termination */
+    buf[len] = 0;
+
+    for (i = 0; i < len; i++) {
+      a = 0;
+      while (start[a].pattern) {
+        if (start[a].match < start[a].len && 
+	    apr_tolower(buf[i]) == start[a].pattern[start[a].match]) {
+	  ++start[a].match;
+	}
+	else if (start[a].match == start[a].len) {
+	  apr_file_printf(self->ofp, "Found URL %s\n", start[a].pattern);
+	  start[a].match = 0;
+	}
+	else {
+	  start[a].match = 0;
+	}
+	++a;
+      }
+    }
+    
+    len = BLOCK_MAX;
+  }
+}
+
+/** 
+ * sort out command-line args and call test 
+ *
+ * @param argc IN number of arguments
+ * @param argv IN argument array
+ *
+ * @return 0 if success
+ */
+int main(int argc, const char *const argv[]) {
+  apr_status_t status;
+  apr_getopt_t *opt;
+  const char *optarg;
+  char c;
+  apr_pool_t *pool;
+  apr_file_t *ifp;
+  apr_file_t *ofp;
+  self_t *self;
+
+  char *ifile = NULL;
+  char *ofile = NULL;
+
+  srand(apr_time_now()); 
+  
+  apr_app_initialize(&argc, &argv, NULL);
+  apr_pool_create(&pool, NULL);
+
+  /* block broken pipe signal */
+  apr_signal_block(SIGPIPE);
+  
+  /* get options */
+  apr_getopt_init(&opt, pool, argc, argv);
+  while ((status = apr_getopt(opt, "Vhi:o:", &c, &optarg)) == APR_SUCCESS) {
+    switch (c) {
+    case 'h':
+      usage(argv[0]);
+      break;
+    case 'V':
+      copyright();
+      return 0;
+      break;
+    case 'i':
+      break;
+    case 'o':
+      break;
+    }
+  }
+
+  if (ifile == NULL) {
+    if ((status = apr_file_open_stdin(&ifp, pool)) != APR_SUCCESS) {
+      fprintf(stderr, "Could not open stdin: %s (%d)\n", 
+	      get_status_str(pool, status), status);
+      exit(status);
+    }
+  }
+  else if ((status =
+	    apr_file_open(&ifp, ifile, APR_READ, APR_OS_DEFAULT,
+			  pool)) != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not open input file %s: %s (%d)", ifile,
+	    get_status_str(pool, status), status);
+    exit(status);
+  }
+
+  if (ofile == NULL) {
+    if ((status = apr_file_open_stdout(&ofp, pool)) != APR_SUCCESS) {
+      fprintf(stderr, "Could not open stdin: %s (%d)\n", 
+	      get_status_str(pool, status), status);
+      exit(status);
+    }
+  }
+  else if ((status =
+	    apr_file_open(&ofp, ofile, APR_WRITE, APR_OS_DEFAULT,
+			  pool)) != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not open output file %s: %s (%d)", ofile,
+	    get_status_str(pool, status), status);
+    exit(status);
+  }
+  
+  apr_file_printf(ofp, "# Result of HTTP URL extractor\n");
+  
+  self = apr_pcalloc(pool, sizeof(*self));
+  self->pool = pool;
+  self->ofp = ofp;
+  self->ifp = ifp;
+
+  extract(self);
+  
+  apr_file_printf(ofp, "# --normal end\n");
+  apr_file_close(ifp);
+  apr_file_close(ofp);
+
+  return 0;
+}
+

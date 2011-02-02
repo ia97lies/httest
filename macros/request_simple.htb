@@ -1,0 +1,119 @@
+BLOCK _SIMPLE_FOLLOW
+_GREP headers "(HTTP/1.1 .*)" STATUS
+_GREP headers "Location: (.*)" LOCATION
+_RECORD RES ALL
+_WAIT
+_IF "${STATUS}" MATCH "302"
+  _IF "YES${LOCATION}" NOT MATCH "^YES$"
+    _SIMPLE_REQ GET $LOCATION
+    __
+    _SIMPLE_FOLLOW
+  _END IF
+_END IF
+END
+
+BLOCK _SIMPLE_REQ
+_SET METHOD=$1
+_SET URL=$2
+_GREP VAR(URL) "(https?:)" SCHEMA
+_IF "$SCHEMA" NOT MATCH "^https?:" 
+  _SET SCHEMA=relative
+_END IF
+_IF "$SCHEMA" NOT MATCH "^relative$"
+  _MATCH VAR(URL) "(https?)://([^/]+)(/.*)" SCHEMA HOST URI
+  _GREP VAR(HOST) "([^:]+):?(.*)?" NAME PORT
+  _SET _HOST=$NAME:$PORT
+  _IF "$SCHEMA" MATCH "^https$"
+    _SET _PORT=SSL:$PORT
+    _IF "YES${PORT}" MATCH "^YES$"
+      _SET PORT=443
+      _SET _PORT=SSL:443
+      _SET _HOST=$NAME
+    _END IF
+  _END IF
+  _IF "$SCHEMA" MATCH "^http$"
+    _IF "YES$PORT" NOT MATCH "^YES$"
+      _SET _PORT=$PORT
+    _END IF
+    _IF "YES${PORT}" MATCH "^YES$"
+      _SET PORT=80
+      _SET _PORT=80
+      _SET _HOST=$NAME
+    _END IF
+  _END IF
+  _REQ $NAME $_PORT
+_END IF
+_IF "$SCHEMA" MATCH "^relative$"
+_MATCH VAR(URL) "(/.*)" URI
+_END IF
+__$METHOD $URI HTTP/1.1
+__Host: $_HOST
+__User-Agent: Mozilla
+__Cookie: AUTO
+END
+
+BLOCK _SIMPLE_GET
+_AUTO_CLOSE on
+_SIMPLE_REQ GET $1
+__
+_SIMPLE_FOLLOW
+_PLAY SOCKET
+END
+
+BLOCK _SIMPLE_POST
+_AUTO_CLOSE on
+_SIMPLE_REQ POST $1
+__Content-Length: AUTO
+END
+
+BLOCK _SIMPLE_FORM_URLENC
+_SET _SIMPLE_FORM_URLENC_ARG=_SIMPLE_FORM_URLENC_ARG
+__Content-Type: application/x-www-form-urlencoded
+__
+END
+
+BLOCK _SIMPLE_FORM_URLENC_ARG
+_URLENC "$2" VALUE
+_IF "$_SIMPLE_FORM_URLENC_ARG" NOT MATCH "_SIMPLE_FORM_URLENC_ARG"
+  _SET _SIMPLE_FORM_URLENC_ARG=$_SIMPLE_FORM_URLENC_ARG&$1=$VALUE
+_END IF
+_IF "$_SIMPLE_FORM_URLENC_ARG" MATCH "_SIMPLE_FORM_URLENC_ARG"
+  _SET _SIMPLE_FORM_URLENC_ARG=$1=$VALUE
+_END IF
+END
+
+BLOCK _SIMPLE_FORM_URLENC_END
+__$_SIMPLE_FORM_URLENC_ARG
+_SIMPLE_FOLLOW
+_PLAY SOCKET
+END
+
+BLOCK _SIMPLE_FORM_MULTIPART
+__Content-Type: multipart/form-data; boundary=---------------------------108697810410710530441715222927
+__
+END
+
+BLOCK _SIMPLE_FORM_MULTIPART_ARG
+_URLENC "$2" VALUE
+__-----------------------------108697810410710530441715222927
+__Content-Disposition: form-data; name="$1"
+__
+__$VALUE
+END
+
+BLOCK _SIMPLE_FORM_MULTIPART_FILE
+__-----------------------------108697810410710530441715222927
+__Content-Disposition: form-data; name="${1}"; filename="${2}"
+__Content-Type: application/x-tar
+__
+_PIPE
+_EXEC cat ${2}
+__
+END
+
+BLOCK _SIMPLE_FORM_MULTIPART_END
+__-----------------------------108697810410710530441715222927--
+_SIMPLE_FOLLOW
+_PLAY SOCKET
+END
+

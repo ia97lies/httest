@@ -3,6 +3,9 @@ Version 2.0.0
  - New      httest: Automatic cookie handling
  - New      httest: Local variables useful for BLOCK
  - New      httest: BLOCK signatur with parameter and return values
+ - New      httest: Add missing _ELSE for _IF command
+ - New      httest: Add command _ERROR <error> ... _END ERROR to define an
+                    error which must occure with in this body.
  - New      macros: Simple get and post request for Application testing
 
 Version 1.18.0

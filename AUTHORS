@@ -1,0 +1,14 @@
+Christian Liesch <ia97lies@sourceforge.net>:
+  project owner 
+
+Pascal Buchbinder:
+  entier files -> tools/htntlm.c
+  add command _RENEG for ssl renegotiation
+
+Thomas Frauenknech:
+  changes for win32 -> httest
+
+Michael Vogt <michu@neophob.com>:
+  modifications -> htproxy, httest
+  changes for win32 -> httest, htproxy, htremote, htnlm, htxtb
+ 

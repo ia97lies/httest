@@ -1,0 +1,6 @@
+INCLUDE ./functions.htt
+
+BLOCK PERF_TEST
+#your test code
+END
+

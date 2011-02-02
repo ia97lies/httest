@@ -1,0 +1,32 @@
+INCLUDE $TOP/test/config.htb
+
+SET TEST=Hallo Welt
+SET TESTTEST= He Ho
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "Random: 1.stop"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+_RAND 10 20 RAND_NUMBER
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__Random: ${RAND_NUMBER}stop
+
+END
+

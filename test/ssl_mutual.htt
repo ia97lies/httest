@@ -1,0 +1,54 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+# also test if we could load cert and key in a client
+_REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem ca.cert.pem
+_VERIFY_PEER
+_SSL_CERT_VAL M_VERSION VERSION 
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO
+__
+__Cert version $VERSION
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST SSL:$YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+END
+
+SERVER SSL:$YOUR_PORT
+_CERT server.cert.pem server.key.pem ca.cert.pem
+
+_RES
+_EXPECT body "Cert version 3"
+_WAIT
+_VERIFY_PEER
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Connection: close
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+_CLOSE
+
+END
+

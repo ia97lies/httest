@@ -1,0 +1,98 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_FLUSH
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_EXPECT . "AS2"
+_EXPECT . "AS3"
+_EXPECT . "AS4"
+# gzip will sometimes not terminate, do not work properly over stdin
+#_EXEC< gunzip
+_EXEC< cat
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_FLUSH
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "BEGIN"
+_EXPECT . "END"
+# gzip will sometimes not terminate, do not work properly over stdin
+#_EXEC< gunzip
+_EXEC< cat
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_FLUSH
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT body "AS OK"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+_PIPE
+# gzip will sometimes not terminate, do not work properly over stdin
+#_EXEC echo == AS1 OK == | gzip -c 
+_EXEC echo == AS1 OK == | cat 
+_PIPE
+_EXEC echo == AS2 OK == | cat
+_PIPE
+_EXEC echo == AS3 OK == | cat 
+_PIPE
+_EXEC echo == AS4 OK == | cat 
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+_PIPE
+# gzip will sometimes not terminate, do not work properly over stdin
+#_EXEC echo BEGIN $1K$1K$1K$1K$1K$1K$1K$1K | gzip -c
+_EXEC echo BEGIN $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+_PIPE
+_EXEC echo END $1K$1K$1K$1K$1K$1K$1K$1K | cat 
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__==AS OK==
+
+END
+

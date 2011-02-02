@@ -1,0 +1,33 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "[1]?[0-9]{3,3}"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_SLEEP 1000
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+_TIMER GET D
+__$D
+END
+
+BLOCK FINALLY
+_TIMER GET D
+_IF "${__STATUS}" MATCH "0"
+_EXEC echo $D >foo.txt
+_END IF
+END
+
+FILE foo.txt
+END

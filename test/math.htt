@@ -1,0 +1,85 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__POST / HTTP/1.1
+__Host: localhost
+__Content-Length: AUTO
+__
+_SET A=5
+_SET B=3
+_OP $A ADD $B C
+__Result: $C
+_WAIT
+
+__POST / HTTP/1.1
+__Host: localhost
+__Content-Length: AUTO
+__
+_SET A=5
+_SET B=-3
+_OP $A ADD $B C
+__Result: $C
+_WAIT
+
+__POST / HTTP/1.1
+__Host: localhost
+__Content-Length: AUTO
+__
+_SET A=5
+_SET B=3
+_OP $A SUB $B C
+__Result: $C
+_WAIT
+
+__POST / HTTP/1.1
+__Host: localhost
+__Content-Length: AUTO
+__
+_SET A=5
+_SET B=3
+_OP $A MUL $B C
+__Result: $C
+_WAIT
+
+__POST / HTTP/1.1
+__Host: localhost
+__Content-Length: AUTO
+__
+_SET A=5
+_SET B=3
+_OP $A DIV $B C
+__Result: $C
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT . "Result: 8"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_LOOP 2
+_RES
+_EXPECT . "Result: 2"
+_WAIT
+__HTTP/1.1 200 OK
+__
+_END LOOP
+
+_RES
+_EXPECT . "Result: 15"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_RES
+_EXPECT . "Result: 1"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+END
+

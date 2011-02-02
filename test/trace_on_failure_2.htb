@@ -1,0 +1,7 @@
+INCLUDE trace_on_failure_3.htb
+
+BLOCK FAILE_2
+_EXPECT . "AS2 OK"
+_CALL FAILE_3 
+END
+

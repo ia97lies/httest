@@ -1,0 +1,23 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET / HTTP/1.1
+__Host: Localhost
+__Bad: Bad:More
+__
+_EXPECT . "Bad: More"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_EXPECT . "Bad:More"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__Bad: Bad: More
+__
+__== OK ==
+END

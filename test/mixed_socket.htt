@@ -1,0 +1,35 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST SSL:$SSL_PORT
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+
+_EXPECT ERROR "Connection refused\([0-9]+\)"
+_REQ $YOUR_HOST SSL:$YOUR_PORT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+END
+
+SERVER SSL:$SSL_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+END
+

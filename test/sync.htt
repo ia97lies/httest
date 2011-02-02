@@ -1,0 +1,36 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK ManualSetContentLength
+
+
+END
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "(0[0-1][0-9])|(99[0-9])"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+_SYNC
+_TIME T
+__$T
+__
+
+END
+

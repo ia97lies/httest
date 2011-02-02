@@ -1,0 +1,2 @@
+SET LISTEN=8079
+SET HTTEST_BIN=../../src/httest

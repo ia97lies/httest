@@ -1,0 +1,386 @@
+/* Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. 
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @file
+ *
+ * @Author christian liesch <liesch@gmx.ch>
+ *
+ * Implementation of the HTTP Test Tool util.
+ */
+
+/************************************************************************
+ * Includes
+ ***********************************************************************/
+#include <config.h>
+#include <apr.h>
+#include <apr_strings.h>
+#include <apr_file_io.h>
+#include <apr_env.h>
+
+#include "defines.h"
+#include "util.h"
+
+
+/************************************************************************
+ * Definitions 
+ ***********************************************************************/
+
+
+/************************************************************************
+ * Forward declaration 
+ ***********************************************************************/
+
+
+/************************************************************************
+ * Implementation
+ ***********************************************************************/
+
+/**
+ * get a string starting/ending with a char, unescape this char if found as an 
+ * escape sequence.
+ *
+ * @param string IN <char><string with escaped <char>><char>
+ * @param last OUT pointer to next char after cutted string
+ *
+ * @return <string with unescaped <char>>
+ * @note: Example: "foo bar \"hallo velo\"" -> foo bar "hallo velo"
+ */
+char *my_unescape(char *string, char **last) {
+  char *result;
+  char enclose;
+  apr_size_t i;
+  apr_size_t j;
+  apr_size_t len;
+
+  if (!string) {
+    return string;
+  }
+  
+  len = strlen(string);
+  
+  enclose = string[0];
+  result = string;
+  for (i = 1, j = 0; i < len; i++, j++) {
+    /* check if we have an escape char */
+    if (string[i] == '\\') {
+      /* lookahead */
+      ++i;
+      /* if lookahead is not \ or " store the \ too, else skip */
+      if (string[i] != '\\' && string[i] != enclose) {
+	result[j] = '\\';
+	++j;
+      }
+    }
+    /* break if we got the first char unescaped */
+    else if (string[i] == enclose) {
+      ++i;
+      break;
+    }
+    /* store char in result */
+    result[j] = string[i];
+  }
+  result[j] = 0;
+  *last = &string[i]; 
+  return result;
+}
+
+/**
+ * Deep table copy
+ *
+ * @param p IN pool
+ * @param orig IN orig table
+ *
+ * @return copy of orig
+ */
+apr_table_t *my_table_deep_copy(apr_pool_t *p, apr_table_t *orig) {
+  apr_table_entry_t *e;
+  apr_table_t *dest;
+  int i;
+  apr_size_t size;
+
+  if (!orig) {
+    dest = apr_table_make(p, 5);
+    return dest;
+  }
+
+  size  = apr_table_elts(orig)->nelts;
+
+  if (size < 5) {
+    size = 5;
+  }
+  dest = apr_table_make(p, size);
+  e = (apr_table_entry_t *) apr_table_elts(orig)->elts;
+  for (i = 0; i < apr_table_elts(orig)->nelts; ++i) {
+    apr_table_add(dest, e[i].key, e[i].val);
+  }
+
+  return dest;
+}
+
+/**
+ * Swallow table copy
+ *
+ * @param p IN pool
+ * @param orig IN orig table
+ *
+ * @return copy of orig
+ */
+apr_table_t *my_table_swallow_copy(apr_pool_t *p, apr_table_t *orig) {
+  apr_table_entry_t *e;
+  apr_table_t *dest;
+  int i;
+  apr_size_t size;
+    
+  if (!orig) {
+    dest = apr_table_make(p, 5);
+    return dest;
+  }
+
+  size  = apr_table_elts(orig)->nelts;
+
+  if (size < 5) {
+    size = 5;
+  }
+  dest = apr_table_make(p, size);
+  e = (apr_table_entry_t *) apr_table_elts(orig)->elts;
+  for (i = 0; i < apr_table_elts(orig)->nelts; ++i) {
+    apr_table_addn(dest, apr_pstrdup(p, e[i].key), e[i].val);
+  }
+
+  return dest;
+}
+
+/**
+ * get the status string
+ *
+ * @param p IN pool
+ * @param rc IN status to print
+ *
+ * @return status string
+ */
+char *my_status_str(apr_pool_t * p, apr_status_t rc) {
+  char *text = apr_pcalloc(p, 201);
+  apr_strerror(rc, text, 200);
+  return text;
+}
+
+/**
+ * replace vars in given line 
+ *
+ * @param p IN pool
+ * @param line IN line where to replace the vars with values
+ * @param vars IN table of key value pairs
+ * @param env IN do also lookup system enviroment
+ *
+ * @return new line
+ */
+char *my_replace_vars(apr_pool_t * p, char *line, apr_table_t * vars, 
+                      int lookup_env) {
+  int i;
+  int start;
+  int line_end;
+  char *var_name;
+  char *new_line;
+  const char *val;
+  char *env;
+
+  new_line = line;
+
+once_again:
+  i = 0;
+  while (line[i] != 0) {
+    if (line[i] == '$') {
+      line_end = i;
+      ++i;
+      if (line[i] == '{') {
+        ++i;
+      }
+      start = i;
+      while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS, line[i])) {
+        ++i;
+      }
+      var_name = apr_pstrndup(p, &line[start], i - start);
+      val = apr_table_get(vars, var_name);
+      if (!val && lookup_env) {
+        if (apr_env_get(&env, var_name, p) == APR_SUCCESS) {
+	  val = env;
+	}
+      }
+      if (val) {
+        line[line_end] = 0;
+        if (line[i] == '}') {
+          ++i;
+        }
+        new_line = apr_pstrcat(p, line, val, &line[i], NULL);
+        line = new_line;
+        goto once_again;
+      }
+    }
+    ++i;
+  }
+
+  return new_line;
+}
+
+/**
+ * split next argumet from string
+ *
+ * @param line IN initial line
+ * @param last IN rest of line and context
+ *
+ * @return next arg without "
+ */
+static char *my_get_args_next(char *line, char **last) {
+  char *arg;
+  char *foo;
+  char *cur;
+  int quot = 0;
+  char *end;
+
+  if (line) {
+    *last = line;
+  }
+
+  if (*last == NULL) {
+    return NULL;
+  }
+
+  if (**last == '"') {
+    quot = 1;
+  }
+
+  arg = *last;
+  if (quot == 0) {
+    cur = strchr(arg, ' ');
+  }
+  else {
+    int i;
+    for (i = 1; arg[i] != 0; i++) {
+      if (arg[i] == '\\') {
+	i++;
+	continue;
+      }
+      if (arg[i] == '"') {
+	break;
+      }
+    }
+    if (arg[i] == 0) {
+      cur = NULL;
+    }
+    else {
+      cur = &arg[i];
+    }
+  }
+  if (cur) {
+    *cur = 0;
+    cur++;
+    while (*cur == ' ') {
+      cur++;
+    }
+  }
+  *last = cur;
+
+  if (quot) {
+    arg = my_unescape(arg, &foo);
+  }
+
+  return arg;
+}
+
+/**
+ * splits arguments into a table
+ *
+ * @param line IN string of params
+ * @param params INOUT table to store params
+ */
+void my_get_args(char *line, apr_table_t *params, apr_pool_t *pool) {
+  int i; 
+  char **argv;
+
+  if (apr_tokenize_to_argv(line, &argv, pool) == APR_SUCCESS) {
+    for (i = 0; argv[i] != NULL; i++) {
+      /* store value by his index */
+      apr_table_set(params, apr_itoa(pool, i), argv[i]);
+    }
+  }
+}
+
+/**
+ * display copyright information
+ *
+ * @param program name
+ */
+void copyright(const char *progname) {
+  printf("%s " PACKAGE_VERSION "\n", progname);
+  printf("\nCopyright (C) 2006 Free Software Foundation, Inc.\n"
+         "This is free software; see the source for copying conditions.  There is NO\n"
+	 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
+  printf("\nWritten by Christian Liesch\n");
+}
+
+/**
+ * filename
+ *
+ * @param path IN path to file
+ *
+ * @return last part of path
+ */
+const char *filename(apr_pool_t *pool, const char *path) {
+  char *tmp;
+  char *elem;
+  char *last;
+  
+  char *old = NULL;
+
+  tmp = apr_pstrdup(pool, path);
+  elem = apr_strtok(tmp, "/", &last);
+  while (elem) {
+    old = elem;
+    elem = apr_strtok(NULL, "/", &last);
+  }
+
+  return old;
+} 
+
+/**
+ * 2 hex digit number to char borowed from apache sourc
+ *
+ * @param what IN hex to convert
+ *
+ * @return char
+ */
+char x2c(const char *what) {
+  register char digit;
+
+#if !APR_CHARSET_EBCDIC
+  digit = ((what[0] >= 'A') ? ((what[0] & 0xdf) - 'A') + 10
+	   : (what[0] - '0'));
+  digit *= 16;
+  digit += (what[1] >= 'A' ? ((what[1] & 0xdf) - 'A') + 10
+	    : (what[1] - '0'));
+#else /*APR_CHARSET_EBCDIC*/
+  char xstr[5];
+  xstr[0]='0';
+  xstr[1]='x';
+  xstr[2]=what[0];
+  xstr[3]=what[1];
+  xstr[4]='\0';
+  digit = apr_xlate_conv_byte(ap_hdrs_from_ascii,
+			      0xFF & strtol(xstr, NULL, 16));
+#endif /*APR_CHARSET_EBCDIC*/
+  return (digit);
+}
+

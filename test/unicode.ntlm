@@ -1,0 +1,14 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_MATCH EXEC "(.*)" B64M
+_EXEC $TOP/src/htntlm --write --type=3 --challenge=0x0123456789abcdef --user=hans --password=peter --response="lm ntlm" --unicode
+
+# test if user hans is unicoded only a single 'H' will be visible
+_EXPECT EXEC "user: H\n"
+_EXEC $TOP/src/htntlm --read=$B64M --info
+
+# test if we could read the message with the unicoded user: HANS
+_EXPECT EXEC "user: HANS"
+_EXEC $TOP/src/htntlm --read=$B64M --info --unicode
+END

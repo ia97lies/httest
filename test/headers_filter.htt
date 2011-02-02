@@ -1,0 +1,39 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+# HTTP/1.0 does not know anything about Transfer-Encoding
+# Filter this header for receive processing
+_HEADER FILTER Transfer-Encoding 
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.0
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+# We expect the chunk infos with in the data because Tranfer-Encoding is
+# filtered
+_EXPECT . "9\r\n"
+_EXPECT . "\r\n0\r\n"
+# Of course we also expect Tranfer-Encoding header, weired isn't it :)
+# But use full to do a force downgrade to 1.0
+_EXPECT . "Transfer-Encoding: chunked"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Transfer-Encoding: chunked
+__Connection: close 
+_FLUSH
+__==AS1==
+_CHUNKED
+_CHUNKED
+_CLOSE
+
+END
+

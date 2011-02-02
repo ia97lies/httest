@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+
+EXEC echo foo bar >myfile
+
+CLIENT
+_SLEEP 2000
+_EXPECT Exec "foo bar"
+_EXEC cat myfile
+_SLEEP 1000
+_EXEC fail_please 2>/dev/null >/dev/null
+END
+
+BLOCK FINALLY
+_EXEC rm myfile
+END

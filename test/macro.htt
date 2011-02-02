@@ -1,0 +1,86 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/macros/simple_request.htb
+INCLUDE $TOP/macros/simple_urlenc.htb
+INCLUDE $TOP/macros/simple_multipart.htb
+
+CLIENT
+_USE SIMPLE
+_AUTO_COOKIE on
+_GET http://$YOUR_HOST:$YOUR_PORT/bla/fasel HTTP/1.1
+_EXPECT . "AS2"
+_WAIT
+
+_POST http://$YOUR_HOST:$YOUR_PORT/bla/bla HTTP/1.1
+_FORM_URLENC MY 
+_FORM_URLENC_ARG $MY hallo velo
+_FORM_URLENC_ARG $MY hallo2 "velo2 velo blubi"
+_FORM_URLENC_ARG $MY hallo3 velo3
+_FORM_URLENC_END $MY
+_EXPECT . "AS1"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 302 Found
+__Location: http://$YOUR_HOST:$YOUR_PORT/foo/bar
+__Content-Length: AUTO
+__Set-Cookie: foo=bar; path=/bla/fasel
+__
+__REDIRECT 1
+
+_RES
+_EXPECT headers "Cookie: foo=bar"
+_WAIT
+__HTTP/1.1 302 Found
+__Location: http://$YOUR_HOST:$YOUR_PORT/bla/bla
+__Content-Length: AUTO
+__Connection: close
+__
+__REDIRECT 1
+_CLOSE
+
+_RES
+_EXPECT headers "Cookie: foo=bar"
+_WAIT
+__HTTP/1.1 302 Found
+__Location: /foo/bar2
+__Content-Length: AUTO
+__
+__REDIRECT 2
+
+_RES
+_EXPECT headers "Cookie: foo=bar"
+_WAIT
+__HTTP/1.1 302 Found
+__Location: https://$YOUR_HOST:$YOUR_PORT2/foo/bar3
+__Content-Length: AUTO
+__Set-Cookie: foo=blubi; path=/
+__Set-Cookie: bla=fasel; path=/
+__Connection: close
+__
+__REDIRECT 3
+_CLOSE
+
+_RES
+_EXPECT body "hallo=velo&hallo2=velo2\+velo\+blubi&hallo3=velo3
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__==AS1 OK==
+END
+
+SERVER SSL:$YOUR_PORT2
+_RES
+_EXPECT headers "!Cookie"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Foo: Bar
+__Connection: close
+__
+__==AS2 OK==
+_CLOSE
+END

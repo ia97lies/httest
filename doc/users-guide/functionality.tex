@@ -1,0 +1,24 @@
+\chapter{htt Functionality Overview}
+\label{chap:functionality}
+
+\begin{itemize}
+
+ \item The htt provides a large variety of HTTP-related functionality, useful for 
+implementing all kinds of HTTP-based tests:
+
+ \item Advanced HTTP protocol handling, including fine-grained timeout handling, 
+request and response validation
+
+ \item Simulating clients and servers, including startup and shutdown of server 
+daemons. This allows to create mock-ups of back-end systems in more complex 
+test situations, for example when the tested application needs to interact
+with a 3rd-party back-end system which is not available in the testing 
+environment.
+
+ \item Execution of external commandline tools, using their output as request 
+or response data, or for validation purposes.
+
+ \item Copying stream data (e.g. from a response) and re-using it in variables.
+
+\end{itemize}
+

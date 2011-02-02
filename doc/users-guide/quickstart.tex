@@ -1,0 +1,114 @@
+\chapter{Quickstart}
+\label{chap:quickstart}
+
+This short chapter shows some simple, basic htt examples without explaining 
+everything. Some parts should be obvious for anyone who has a solid knowledge 
+of HTTP, everything else will be explained in more detail in the other chapters.
+
+NOTE: Depending on the version and platform you are using \texttt{httest} on, there may be 
+a bug which requires that every script ends with an empty line, below the last
+statement or variable definition!
+
+\section{Step 1: GET www.wikipedia.org} 
+
+This first example sends a simple GET request to "www.wikipedia.org" and checks 
+that the page contains the word "Wikipedia", and the HTTP response code is 200.
+
+Enter the following example code into a file named "wikipedia.htt":
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    CLIENT
+    _REQ www.wikipedia.org 80
+    __GET / HTTP/1.1
+    __Host: www.wikipedia.org
+    __
+    _EXPECT . "200 OK"
+    _EXPECT . "Wikipedia"
+    _WAIT
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+Then execute the newly created script using the \texttt{httest} binary:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    $ httest wikipedia.htt
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+\newpage 
+And, given that the system you are running \texttt{httest} on has internet 
+access, the following result should be displayed:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    run wikipedia.htt
+    CLT0-0 start ...
+    _REQ www.wikipedia.org 80
+    __GET / HTTP/1.1
+    __Host: www.wikipedia.org
+    __
+    _EXPECT . "200 OK"
+    _EXPECT . "Wikipedia"
+    _WAIT
+    >GET / HTTP/1.1
+    >Host: www.wikipedia.org
+    >
+    <HTTP/1.0 200 OK
+    <Date: Tue, 18 Jan 2011 12:38:51 GMT
+    ...
+    ...many more headers, and the HTML page...
+    ...
+    <</body>
+    <</html> OK
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+Some explanations concerning the output:
+
+\begin{itemize}
+\item The first part (everything before the lines with the "$>$" prefix)
+      shows the commands executed by the httest binary.
+\item All lines beginning with "$>$" show the data sent to the HTTP server.
+\item All lines beginning with "$<$" show the data received in the HTTP response.
+\item The "OK" at the end of the output signals a successful test completion.
+\end{itemize}
+
+\newpage
+\section{Step 2: Externalize host and port values} 
+
+Create a new file named "\texttt{values.htb}" in the same directory like the 
+"\texttt{wikipedia.htt}" file. Insert these contents:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    # Set host and port as variables
+    SET PORT=80
+    SET HOST=www.wikipedia.org
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+Then change the contents of the "\texttt{wikipedia.htt}" file like this:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    INCLUDE values.htb
+    
+    CLIENT
+    _REQ $HOST $PORT
+    __GET / HTTP/1.1
+    __Host: www.wikipedia.org
+    __
+    _EXPECT . "200 OK"
+    _EXPECT . "Wikipedia"
+    _WAIT
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+Now you can use that include file to use the same host and port value 
+in multiple htt scripts, while being able to maintain those values in 
+only one file.
+

@@ -1,0 +1,8 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_FOO
+_BAR
+ThisIsNotAllowed
+END
+

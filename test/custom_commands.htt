@@ -1,0 +1,24 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK _MY_REQ
+_REQ $1 $2
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $1
+__
+_WAIT
+END
+
+CLIENT
+_MY_REQ $YOUR_HOST $YOUR_PORT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+
+END
+

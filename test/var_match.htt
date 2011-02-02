@@ -1,0 +1,5 @@
+CLIENT
+_SET TMP=Foo bar
+_MATCH VAR(TMP) "(^Foo bar$)" TMP2
+_EXPECT VAR(TMP2) "^Foo bar$"
+END

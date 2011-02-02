@@ -1,0 +1,3 @@
+SET SUPER_PORT=8079
+SET SUPER_HOST=localhost
+

@@ -1,0 +1,89 @@
+#!/bin/bash
+
+HTT_ERRORS=0
+COPY=0
+ls *.htt >/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+  cp ../../test/*.htt .
+  cp ../../test/*.hte .
+  cp ../../test/*.htb .
+  cp ../../test/*.pem .
+  COPY=1
+fi
+
+HTTEST=../src/httest
+
+# start testing
+echo
+echo Test script mode:
+for E in `ls *.htt`; do
+    CORES_PRE=`ls core* 2>/dev/null | wc -l` 
+    $HTTEST -e $E
+    if [ $? -ne 0 ]; then
+        HTT_ERRORS=`expr $HTT_ERRORS + 1`
+    fi
+    CORES_POST=`ls core* 2>/dev/null | wc -l` 
+    if [ $CORES_POST -gt $CORES_PRE ]; then
+      echo Coredump detected!
+    fi
+done
+
+echo
+echo Test shell mode:
+for E in `ls *.htt`; do
+    CORES_PRE=`ls core* 2>/dev/null | wc -l` 
+    echo "cat $E | $HTTEST -S"
+    cat $E | $HTTEST -Ss 2>/dev/null >/dev/null
+    if [ $? -ne 0 ]; then
+        echo FAILED
+        HTT_ERRORS=`expr $HTT_ERRORS + 1`
+    fi
+    CORES_POST=`ls core* 2>/dev/null | wc -l` 
+    if [ $CORES_POST -gt $CORES_PRE ]; then
+      echo Coredump detected!
+    fi
+done
+
+echo
+echo Test error phrone scripts:
+for E in `ls *.hte`; do
+    CORES_PRE=`ls core* 2>/dev/null | wc -l` 
+    $HTTEST -ns $E > tmp.txt
+    httest_ret=$?
+    grep OK tmp.txt
+    grep_ret=$?
+    if [ $httest_ret -eq 0 ]; then
+        HTT_ERRORS=`expr $HTT_ERRORS + 1`
+	echo $E FAILED
+    elif [ $grep_ret -eq 0 ]; then
+        HTT_ERRORS=`expr $HTT_ERRORS + 1`
+	echo $E FAILED
+    else
+	echo $E OK
+    fi
+    CORES_POST=`ls core* 2>/dev/null | wc -l` 
+    if [ $CORES_POST -gt $CORES_PRE ]; then
+      echo Coredump detected!
+    fi
+done
+
+rm -f tmp.txt
+
+if [ $COPY -ne 0 ]; then
+  rm -f *.htt
+  rm -f *.hte
+  rm -f *.htb
+  rm -f *.pem
+fi
+
+CORES=`ls core* 2>/dev/null | wc -l` 
+if [ $HTT_ERRORS -ne 0 -o $CORES -gt 0 ]; then
+    echo "$HTT_ERRORS Errors"
+    if [ $CORES -gt 0 ]; then
+      echo $CORES coredumps
+    fi
+    exit 1
+fi
+echo "Success"
+exit 0
+

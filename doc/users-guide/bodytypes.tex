@@ -1,0 +1,216 @@
+\chapter{Body Types}
+\label{chap:bodytypes}
+
+The following body 
+types exist:
+
+\begin{itemize}
+\item \texttt{CLIENT} - The main HTTP test client logic.
+ 
+\item \texttt{SERVER} - Allows to start a HTTP server which will react and respond as defined in the 
+ given block. This allows to simulate HTTP back-end servers (like some application server)
+ that may not be available in the testing environment.
+ 
+\item \texttt{BLOCK} - A block is a named section of the script with a defined begin and ending, not 
+ unlike functions or methods in common scripting or programming languages. 
+
+  \begin{itemize}
+    \item \texttt{BLOCK FINALLY} - A special block. The FINALLY block is always executed at the end of
+    the test, and can be used for clean-up work.
+    \item \texttt{BLOCK ON\_ERROR} - Another special block. A global error handler that will be executed 
+    when an error occurs in a test script. While some errors can be handled within a regular body (e.g. during 
+    the evaluation of a HTTP response), other errors (especially technical ones) sometimes can only be 
+    handled in this block.
+  \end{itemize}
+  
+\item \texttt{DAEMON} - Other than a \texttt{SERVER}, a \texttt{DAEMON} does not implement any kind of listener. It is just 
+a separate thread that can be used to monitor or control the execution of the test, e.g. implement timeout 
+functionality to interrupt a hanging test etc.
+
+\end{itemize}
+
+\newpage 
+\section{Bodies And Threads}
+
+\subsection{Parallel Execution}
+Note that all body blocks are executed in separate threads! So, if a htt 
+script contains more than one \texttt{CLIENT} body, each one will be started in a 
+separate thread, allowing to simulate two distinct, separate HTTP clients in 
+one test case.
+
+\subsection{Execution Order}
+While multiple bodies are executed in parallel threads in general, \texttt{SERVER}
+and \texttt{DAEMON} bodies are always started before \texttt{CLIENT} bodies.
+
+\subsection{Lifespan}
+If a \texttt{CLIENT} body (or all of them, if there's more than one) ends, 
+the test ends, and the htt process exits. The completion of \texttt{SERVER} 
+and \texttt{DAEMON} bodies, on the other hand, will not automatically terminate 
+the test.
+
+\subsection{Synchronization}
+There is no means of synchronization between those threads as of now.
+
+
+% --------------------------- Section "Client" ------------------------------
+
+\newpage
+\section{CLIENT}
+\label{chap:client}
+
+A \texttt{CLIENT} body is the part of a htt script, where the actual HTTP requests 
+are generated to perform some kind of test. Usually, there is just one single 
+\texttt{CLIENT} body in a htt script, but there can be multiple ones; in that case, 
+they are executed in parallel threads.
+
+A htt test ends, when all \texttt{CLIENT} bodies complete their work.
+
+A simple \texttt{CLIENT} example:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    CLIENT
+    _REQ www.wikipedia.org 80
+    __GET / HTTP/1.1
+    __Host: www.wikipedia.org
+    __
+    _EXPECT . "200 OK"
+    _EXPECT . "Wikipedia"
+    _WAIT
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+
+% --------------------------- Section "Server" ------------------------------
+
+\newpage
+\section{SERVER}
+\label{chap:server}
+
+A \texttt{SERVER} body can start a HTTP listener and react to incoming HTTP 
+requests with predefined responses. This allows to simulate application 
+backend servers that may not be available in a test environment. 
+
+There can be multiple \texttt{SERVER} bodies; in that case, 
+they are executed in parallel threads.
+
+A htt test does not end when the \texttt{SERVER} bodies complete their work, 
+only when the \texttt{CLIENT} bodies have finished.
+
+A simple \texttt{SERVER} example:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    # Simple HTTP listener which just responds with
+    # a HTTP 200 return code, and an empty body.
+    SERVER
+    _RES
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Content-Length: AUTO
+    __Content-Type: text/html
+    __
+
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+
+% --------------------------- Section "Daemon" ------------------------------
+
+\newpage
+\section{DAEMON}
+\label{chap:daemon}
+
+A \texttt{DAEMON} body does not start a listener, and also not necessarily 
+send any HTTP request. It's purpose is to perform monitoring tasks during 
+a test. For instance, if a \texttt{CLIENT} body sends a HTTP request that 
+may hang for a long time due to slow response time of the server, the 
+\texttt{DAEMON} may enforce an exit of the htt test process after a certain 
+time, essentially implementing a timeout function.
+
+This is only one possibility. A \texttt{DAEMON} can also monitor log files 
+written during the test, execute external binaries etc.
+
+There can be multiple \texttt{DAEMON} bodies; in that case, 
+they are executed in parallel threads.
+
+A htt test does not end when the \texttt{DAEMON} bodies complete their work, 
+only when the \texttt{CLIENT} bodies have finished.
+
+A simple \texttt{DAEMON} example:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    # Timeout daemon thread, which exits the 
+    # test process with a failure return code,
+    # if it takes longer than 30 seconds.
+    DAEMON
+    _SLEEP 30000
+    _DEBUG Test duration too long
+    _EXIT FAILED
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+
+% --------------------------- Section "Block" ------------------------------
+
+\newpage
+\section{BLOCK}
+\label{chap:block}
+
+A \texttt{BLOCK} body is not executed by itself like \texttt{CLIENT} or 
+\texttt{SERVER} bodies; it just serves as a holder for a fragment of 
+re-usable script code, similar to a function or method in common 
+programming languages.
+
+Every \texttt{BLOCK} must have a name, in order to distinguish them from 
+each other, and to be able to be invoked from another body.
+
+Just like high-level programming language functions or methods, 
+a \texttt{BLOCK} can be parameterized, in a way 
+very similar to shell scripts. The name of the \texttt{BLOCK}, mentioned 
+in the previous paragraph, is just the first parameter (and it's 
+mandatory). Within the \texttt{BLOCK} body, all parameter values are 
+available as variables with simple numeric names, like in a shell script:
+
+\begin{itemize}
+  \item \texttt{\$0} - The name of the \texttt{BLOCK}
+  \item \texttt{\$1} - The first parameter after the name
+  \item \texttt{\$2} - The second parameter after the name
+  \item \texttt{\$3} - The third parameter, and so on
+\end{itemize}
+
+A simple \texttt{BLOCK} example, without parameters:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    BLOCK SENDREQ
+    _REQ www.acme.com 80
+    __GET / HTTP/1.1
+    __Host: www.acme.com
+    __
+    _WAIT
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+
+The following example shows a \texttt{BLOCK} with some parameters:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    # Block takes 3 parameters:
+    # 1: hostname, like www.acme.com
+    # 2: port
+    # 3: requested URI path
+    BLOCK SENDREQ
+    _REQ $1 $2
+    __GET $3 HTTP/1.1
+    __Host: $1
+    __
+    _WAIT
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------

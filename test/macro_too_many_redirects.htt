@@ -1,0 +1,32 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/macros/simple_request.htb
+INCLUDE $TOP/macros/simple_urlenc.htb
+INCLUDE $TOP/macros/simple_multipart.htb
+
+CLIENT
+_USE SIMPLE
+_AUTO_COOKIE on
+_GET http://$YOUR_HOST:$YOUR_PORT/bla/fasel HTTP/1.1
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_LOOP -1 
+_RES
+_WAIT
+__HTTP/1.1 302 Found
+__Location: http://$YOUR_HOST:$YOUR_PORT/foo/bar
+__Content-Length: AUTO
+__Set-Cookie: foo=bar; path=/bla/fasel
+__
+__REDIRECT 1
+_END LOOP
+END
+
+BLOCK ON_ERROR
+_IF "$__ERROR" MATCH "Invalid argument"
+  _EXIT OK
+_ELSE
+  _EXIT FAILED
+_END IF
+END

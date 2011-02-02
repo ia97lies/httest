@@ -1,0 +1,46 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_EXPECT ERROR "Connection refused"
+_REQ $YOUR_HOST $YOUR_PORT
+
+_SLEEP 1000
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+_CLOSE
+
+END
+
+SERVER $YOUR_PORT DOWN
+
+_EXPECT ERROR "Internal error"
+_RES
+
+_SLEEP 500
+
+_UP
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Connection: close
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+_CLOSE
+
+_DOWN
+_EXPECT ERROR "Internal error"
+_RES
+
+END
+

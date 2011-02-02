@@ -1,0 +1,49 @@
+#
+# Test script/example for ntlm authentication
+#
+
+SET HOST=intranet.tetrade.ch
+SET PORT=80
+SET USER=cliesch
+SET PASSWD=DM31enumM
+
+CLIENT
+
+_REQ $HOST $PORT
+__GET / HTTP/1.1
+__Host: $HOST
+__User-Agent: mozilla
+__
+_EXPECT . "WWW-Authenticate: NTLM"
+_WAIT
+_CLOSE
+
+_MATCH EXEC "(.*)" B64MSG
+_EXEC $TOP/src/htntlm --type=1 --write --flags="neg-oem neg-lm2-key"
+
+_REQ $HOST $PORT
+__GET / HTTP/1.1
+__Host: $HOST
+__Authorization: NTLM $B64MSG
+__User-Agent: mozilla
+__
+_MATCH headers "WWW-Authenticate: NTLM (.*)" MSG2
+_WAIT
+
+_MATCH EXEC "challenge: (.*)" CHL
+_EXEC $TOP/src/htntlm --read=$MSG2 --info
+
+_MATCH EXEC "(.*)" B64MSG
+_EXEC $TOP/src/htntlm --type=3 --write --challenge=$CHL --user=$USER --password=$PASSWD --response="lm2"
+
+_REQ $HOST $PORT
+__GET / HTTP/1.1
+__Host: $HOST
+__Authorization: NTLM $B64MSG
+__User-Agent: mozilla
+__
+_EXPECT . "200 OK"
+_WAIT
+
+END
+

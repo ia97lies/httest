@@ -1,0 +1,43 @@
+Release Build
+-------------
+
+Document version
+  Set new version in configure.in
+  Set new windos version in src/defines.h
+  Update ChangeLog
+  Update NEWS
+  Update AUTHORS
+  Update THANKS 
+
+Test if everything is checked in and there are no updates
+  cvs -q up -d
+
+Check in all changes
+  cvs -q ci -m"Release build"
+
+Test it on Linux (optional)
+  make distcheck
+
+Test it on Solaris (optional)
+  configure && make && make check 
+
+Set version in configure.in and src/defines.h and do
+  cvs -q ci -m"Release build"
+
+Tag new release
+  cvs tag HTT_RELEASE_<major>_<minor>_<maint>
+
+Build release
+  ./release.sh HTT_RELEASE_<major>_<minor>_<maint>
+
+Upload release
+./upload.sh HTT_RELEASE_<major>_<minor>_<maint>
+
+Set version in configure.in and src/defines.h to undef and do
+  cvs -q ci -m"Release build"
+
+Build Configure Script
+----------------------
+
+./buildconf.sh
+

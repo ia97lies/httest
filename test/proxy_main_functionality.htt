@@ -1,0 +1,184 @@
+INCLUDE $TOP/test/config.htb
+
+FILE header
+_INCLUDE $TOP/test/config.htb
+_CLIENT
+END
+
+FILE trailer
+_END
+END
+
+FILE htproxy.conf
+_# htproxy sample configuration
+_Port 8888
+_Timeout 30000
+_HostVar YOUR_HOST
+_PortVar YOUR_PORT
+#_HostPortVar FQND
+_CookieVarPrefix MY_COOKIE_
+_UrlBlacklist (.*\.png\;.*$)|(.*\.css\;.*$)|(.*\.ico\;.*$)|(.*\.js\;.*$)
+_ScriptHeader ./header 
+_ScriptTrailer ./trailer
+END
+
+DAEMON
+_EXEC ../src/htremote -p$CMD_PORT -e"../src/htproxy -C htproxy.conf -d /var/tmp/test.htt"
+END
+
+CLIENT
+_SLEEP 2000
+# start proxy
+_REQ localhost $CMD_PORT
+_SLEEP 500
+_SOCKET
+_MATCH Body "Start proxy on port ([0-9]+)" PROXY_PORT
+_READLINE
+_READLINE
+_END SOCKET
+# get help text
+_PIPE
+_EXEC echo H
+_SOCKET
+_READLINE
+_EXPECT . "Help text"
+_LOOP 7
+_READLINE
+_END LOOP
+_EXPECT . "q\|quit *: Exit"
+_READLINE
+_END SOCKET
+
+# start with a comment
+_REQ localhost $CMD_PORT
+_PIPE
+_EXEC echo "c my comment"
+
+_SLEEP 500
+# do something to record
+_REQ localhost $PROXY_PORT
+__GET http://$YOUR_HOST:$YOUR_PORT/your/path HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT
+
+# say proxy to add an expect
+_REQ localhost $CMD_PORT
+_PIPE
+_EXEC echo "e ==AS1 OK 1=="
+
+# say proxy to add additional request
+_PIPE
+_SH #!/bin/bash
+_SH echo "h _REQ localhost $YOUR_PORT2"
+_SH echo "h __GET /foo HTTP/1.1"
+_SH echo "h __Host: localhost"
+_SH echo "h __"
+_SH echo "h _EXPECT . \"HTTP/1.1 200\""
+_SH echo "h _WAIT"
+_SH END
+
+_SLEEP 500
+# test if has wrote an expect
+_EXPECT EXEC "# my comment"
+_EXPECT EXEC "_EXPECT \. \"==AS1 OK 1==\""
+_EXEC cat /var/tmp/test.htt
+
+_REQ localhost $PROXY_PORT
+__GET http://$YOUR_HOST:$YOUR_PORT/your/path/2 HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT
+
+_REQ localhost $PROXY_PORT
+__GET http://$YOUR_HOST:$YOUR_PORT/your/path/3 HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT
+
+_REQ localhost $PROXY_PORT
+__GET http://$YOUR_HOST:$YOUR_PORT/your/path/4 HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__Cookie: my=cookie
+__
+_WAIT
+_CLOSE
+
+# say proxy to add an expect
+_REQ localhost $CMD_PORT
+_PIPE
+_EXEC echo "e ==AS1 OK 2=="
+
+_SLEEP 500
+# test if has wrote an expect
+_EXPECT EXEC '_EXPECT \. "==AS1 OK 2=="'
+_EXEC cat /var/tmp/test.htt
+
+# say proxy to rotate out (writes header and trailer too)
+_REQ localhost $CMD_PORT
+_PIPE
+_EXEC echo "r /var/tmp/my.htt"
+_PIPE
+_EXEC echo "q"
+_SLEEP 500
+_CLOSE
+
+# run the recorded test (server is prepared with a _LOOP 2)
+
+_LOG_LEVEL 4
+_EXEC ../src/httest /var/tmp/my.htt
+_LOG_LEVEL 0
+END
+
+SERVER $YOUR_PORT
+# first loop to record it with htproxy
+# second loop to test if we can rerun the recorded httest script
+_LOOP 2
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__==AS1 OK 1==
+
+_RES
+_WAIT
+__HTTP/1.1 302 Found
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__302 Found
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__Set-Cookie: my=cookie path=/
+__
+
+_RES
+_EXPECT . "Cookie: my=cookie"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__Connection: close
+__
+__==AS1 OK 2==
+
+_CLOSE
+_END LOOP
+END
+
+SERVER $YOUR_PORT2
+_RES
+_EXPECT . "GET /foo"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__==AS2 OK 1==
+END

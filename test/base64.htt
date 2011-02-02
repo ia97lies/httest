@@ -1,0 +1,25 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "plain: TestUser:test1234"
+_EXPECT . "b64: VGVzdFVzZXI6dGVzdDEyMzQ="
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_B64DEC "VGVzdFVzZXI6dGVzdDEyMzQ=" PLAIN
+_B64ENC "TestUser:test1234" B64MSG
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__plain: $PLAIN
+__b64: $B64MSG
+END

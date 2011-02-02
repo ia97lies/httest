@@ -1,0 +1,19 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+# also test if we could load cert and key in a client
+_REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
+_VERIFY_PEER
+
+END
+
+SERVER SSL:$YOUR_PORT
+_CERT server.cert.pem server.key.pem ca.cert.pem
+
+_RES
+_WAIT
+
+END
+

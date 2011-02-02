@@ -1,0 +1,62 @@
+INCLUDE $TOP/test/config.htb
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 Ok
+__
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT4
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+
+SERVER $YOUR_PORT2
+_RES
+_WAIT
+__HTTP/1.1 200 Ok
+__
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT3
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT2
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+
+SERVER $YOUR_PORT3
+_RES
+_WAIT
+__HTTP/1.1 200 Ok
+__
+END
+
+SERVER $YOUR_PORT4
+_RES
+_WAIT
+__HTTP/1.1 200 Ok
+__
+END
+

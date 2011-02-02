@@ -1,0 +1,53 @@
+INCLUDE $TOP/test/config.htb
+
+SET YOUR_PROXY=8082
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PROXY
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "==AS1 - 0=="
+_WAIT
+
+END
+
+SERVER $YOUR_PROXY
+
+_RES
+_MATCH headers "(GET.*)" GET_LINE
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__$GET_LINE
+__Host: Proxy host
+__
+_MATCH headers "(HTTP/1.1 .*)" RES_LINE
+_MATCH body "(==AS1.*)" RES_BODY_LINE
+_WAIT
+
+_RES
+__$RES_LINE
+__Content-Length: AUTO
+__
+__$RES_BODY_LINE
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_EXPECT . "/your/path/to/your/resource.your=params HTTP/1.1"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+
+END
+

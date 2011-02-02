@@ -1,0 +1,17 @@
+FILE data.txt
+_REGEX: foo(bar).*bla
+_DATA: asdfafoobarwerqw%20asdf%20asdfblahelloworld
+END
+
+CLIENT
+_MATCH EXEC "REGEX: (.*)" REGEX
+_EXEC cat data.txt
+_MATCH EXEC "DATA: (.*)" DATA
+_EXEC cat data.txt
+
+_URLDEC "$DATA" URL
+_MATCH EXEC "($REGEX)" HIT
+_EXEC echo $URL
+_EXEC echo $HIT
+END
+

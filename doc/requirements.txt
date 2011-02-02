@@ -1,0 +1,4 @@
+REQUIREMENTS
+------------
+
+- Fail allways if EXPECT or MATCH do find nothing

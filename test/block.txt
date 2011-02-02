@@ -1,0 +1,5 @@
+
+block.hte:9: error: CLT0-0 Broken pipe(32)                                              
+block.hte:8: error: CLT0-0 Broken pipe(32)                                              
+block.hte:8: error: Error in loop with count = 1                                        
+block.hte:8: error: CLT0-0 Broken pipe(32)                                               FAILED

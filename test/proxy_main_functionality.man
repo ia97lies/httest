@@ -1,0 +1,47 @@
+SET YOUR_HOST=127.0.0.1
+SET YOUR_PORT=8081
+SET PROXY_PORT=8888
+SET CMD_PORT=8082
+
+DAEMON
+_EXEC ../src/htproxy -p8888 -d /var/tmp/test.htt -i header -e trailer 
+END
+
+CLIENT
+_REQ localhost $PROXY_PORT
+__GET http://$YOUR_HOST:$YOUR_PORT/your/path HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT
+
+_REQ localhost $PROXY_PORT
+__GET http://$YOUR_HOST:$YOUR_PORT/your/path/2 HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT
+
+_CLOSE
+_EXEC cat /var/tmp/test.htt
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+__==AS1 OK==
+
+_RES
+_WAIT
+__HTTP/1.1 302 Found
+__
+_CLOSE
+END
+
+FILE header 
+_CLIENT
+END
+
+FILE trailer 
+_END
+END

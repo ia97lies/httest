@@ -1,0 +1,63 @@
+INCLUDE $TOP/test/config.htb
+
+SET CONCURRENT=100
+
+CLIENT $CONCURRENT
+_SET DATA=initial
+
+_RAND 1 120 COUNT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /setup HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO 
+__
+__Count: $COUNT
+_WAIT
+
+_LOOP $COUNT 
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Data: $DATA
+__
+_MATCH headers "DATA=(.*)" DATA
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_WAIT
+_END LOOP
+
+_CLOSE
+END
+
+SERVER $YOUR_PORT $CONCURRENT
+_RES
+_MATCH body "Count: (.*)" COUNT
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__Ok
+
+_LOOP $COUNT 
+_RAND 1 10000000 RAND_DATA
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__Set-Data: DATA=1234567890abcdefghijklmnopqrstuvwxyz$RAND_DATA
+__
+__
+__==AS1 - 0==
+__
+_END LOOP
+END
+
+DAEMON
+_SLEEP 30000
+_EXIT FAILED
+END

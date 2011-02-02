@@ -1,0 +1,48 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "4153310D0A"
+_PRINT_HEX on
+_WAIT
+_PRINT_HEX off
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_FLUSH
+_EXPECT . "HTTP/1.1 200 OK"
+_SOCKET
+_READLINE
+_READLINE
+_READLINE
+_MATCH body "(.*)" HEX
+_PRINT_HEX on
+_RECV 5
+_END SOCKET
+_PRINT_HEX off
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__AS1
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__AS2
+
+END

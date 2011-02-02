@@ -1,0 +1,44 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_GREP headers "Foo: (.*)" VAR
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: AUTO
+__
+__Result: $VAR
+_GREP headers "Foo: (.*)" VAR
+_EXPECT headers "HTTP/1.1 200 OK"
+_WAIT
+
+END
+
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Foo: Bar
+__Content-Length: AUTO
+__
+__== OK ==
+
+_RES
+_EXPECT headers "!Bar"
+_EXPECT body "Bar"
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+END
+

@@ -1,0 +1,2 @@
+
+Wrong scope:6: ThisIsNotAllowed is not a local command, close body with "END" FAILED

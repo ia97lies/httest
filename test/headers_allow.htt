@@ -1,0 +1,31 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_HEADER ALLOW Content-Length
+_HEADER ALLOW Content-Type
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT ERROR "Internal error"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__Foobar: foo
+__
+__==AS1==
+__
+
+END
+

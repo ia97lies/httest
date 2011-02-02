@@ -1,0 +1,6 @@
+
+EXPECT .: Did expect "AS2 OK"                                                           
+trace_on_failure_2.htb:5: error: CLT0-0 Invalid argument(22)                            
+trace_on_failure.htb:8: error: CLT0-0 Invalid argument(22)                              
+trace_on_failure.hte:6: error: CLT0-0 Invalid argument(22)                              
+trace_on_failure_3.htb:3: error: CLT0-0 Invalid argument(22)                             FAILED

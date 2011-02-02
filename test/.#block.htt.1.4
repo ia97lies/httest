@@ -1,0 +1,29 @@
+SET YOUR_HOST=127.0.0.1
+SET YOUR_PORT=8081
+
+INCLUDE ../test/block.htb
+
+# runs exactly one time
+CLIENT 2
+
+_LOOP 80 
+_CALL ManualSetContentLength PARAM1=>KungFuuuuuuuuuuuuuuuuu
+_END LOOP
+      
+END
+
+SERVER $YOUR_PORT 2
+
+_LOOP 80 
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1==
+__
+_END LOOP
+
+END
+

@@ -1,0 +1,30 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_CLOSE
+
+END
+
+SERVER $YOUR_PORT
+
+_ERROR "Broken pipe"
+_RES
+_WAIT
+_SLEEP 500
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+_FLUSH
+_END ERROR
+
+END
+

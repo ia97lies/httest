@@ -1,0 +1,48 @@
+INCLUDE path/to/your/include/file
+
+SET YOUR_HOST=your.host
+SET YOUR_PORT=8080
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: 13 
+__
+__Hello World 1
+__
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO 
+__
+__Hello World 2
+__
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Transfer-Encdoding: chunked
+__
+_FLUSH
+__Hello World 3
+_CHUNK
+__Hello World 4
+_CHUNK
+__Hello World 5
+_CHUNK
+__
+__0
+__
+__
+_WAIT
+
+END

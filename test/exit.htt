@@ -1,0 +1,9 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_EXIT OK
+
+END
+

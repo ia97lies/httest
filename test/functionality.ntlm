@@ -1,0 +1,28 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_MATCH EXEC "(.*)" B64M
+_EXEC $TOP/src/htntlm --write --type=1 --flags="neg-oem neg-ntlm-key"
+
+_EXPECT EXEC "type: 1"
+_EXPECT EXEC "flags: neg-oem neg-ntlm-key"
+_EXEC $TOP/src/htntlm --read=$B64M --info
+
+_MATCH EXEC "(.*)" B64M
+_EXEC $TOP/src/htntlm --write --type=2 --flags="neg-oem neg-ntlm-key" --challenge=0x0123456789abcdef
+
+_EXPECT EXEC "type: 2"
+_EXPECT EXEC "flags: neg-oem neg-ntlm-key"
+_EXPECT EXEC "challenge: 123456789abcdef"
+_EXEC $TOP/src/htntlm --read=$B64M --info
+
+# Do this test static to avoid errors in lm and ntlm hash calculation
+_MATCH EXEC "(.*)" B64M
+_EXEC $TOP/src/htntlm --write --type=3 --challenge=0x0123456789abcdef --user=hans --password=peter --response="lm ntlm"
+
+_EXPECT EXEC "type: 3"
+_EXPECT EXEC "user: HANS"
+_EXPECT EXEC "lm hash: [0-9a-f]{48,48}$"
+_EXPECT EXEC "ntlm hash: [0-9a-f]{48,48}$"
+_EXEC $TOP/src/htntlm --read=$B64M --info
+END

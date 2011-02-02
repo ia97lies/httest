@@ -1,0 +1,32 @@
+INCLUDE $TOP/test/config.htb
+
+INCLUDE $TOP/test/block.htb
+
+# runs exactly one time
+CLIENT 2
+
+_LOOP 80 
+_CALL ManualSetContentLength
+_END LOOP
+      
+END
+
+SERVER $YOUR_PORT 2
+
+_LOOP 80 
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1==
+__
+_END LOOP
+
+END
+
+DAEMON
+_SLEEP 30000
+_EXIT FAILED
+END

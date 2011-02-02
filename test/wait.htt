@@ -1,0 +1,41 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: 10 
+__
+_EXPECT . "== OK =="
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: 10 
+__
+__012345
+_EXPECT . "== OK =="
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT 0 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+
+_RES
+_EXPECT . "012345"
+_WAIT 8 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+END
+

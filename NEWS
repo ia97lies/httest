@@ -1,0 +1,63 @@
+Version 1.18.0
+ - New      httest: _RESWAIT combines the _RES and _WAIT command ignoring
+	            TCP connections not sending any data.
+
+Version 1.17.0
+ - New      httest: Possibilties to fork part or the hole script within the script
+ - New      httest: Enhanced ICAP support
+
+Version 1.16.0
+ - New      httest: Openssl engine support to use crypto devices.
+ - New      httest: _MATCH and _EXPECT with new namespaces
+ - New      httest: _GREP to cut stuff from stream but no validation like _MATCH
+ - New      httest: Automatic connection handling
+ - New      httest: _SSL_CERT_VAL getting values from a cert.
+
+Version 1.15.0
+ - New      httest: _REQ/SERVER command supports IPV6 (address surrounded in
+	            square brackets).
+
+Version 1.14.0
+ - httest: New command _RPS (request per second loop)
+
+Version 1.13.0
+ - httest: Improved error handling with ON_ERROR block
+
+Version 1.12.0
+ - htntlm: Can read/write NTLM message
+
+Version 1.11.0
+ - hturlext: Filter to exclude tags and/or attributes
+ - man pages
+
+Version 1.10.0
+ - httest: Variable scope for _MATCH
+ - httest: EXEC| and _EXEC< for _READLINE and _RECV
+ - htproxy: Configuration file reader
+
+Version 1.9.0
+ - httest: Command to print duration time [ms]
+ - httest: Predefined variables: __STATUS and __START_TIME
+ - httest: Improved _IF command, handle [NOT] MATCH|EQ|LT|GT|LE|GE
+ - htpcap: Removed
+
+Version 1.8.0
+ - httest: Command _BREAK to interrupt a loop
+ - httest: Extend _RECV with "Chunked" and "Close"
+ - httest: _PRINT_HEX command to print and match hex output
+ - httest: BLOCK / _CALL can handle arguments
+
+Version 1.7.0
+- httest: New commands
+- htproxy: Shell improvment
+- htremote: New helper for testing
+
+Version 1.0.2
+- Critical bugfix for send data
+
+Version 1.0.1
+- Bugfixes for the configure script
+
+Version 1.0.0
+- Easy to build and install with configure && make && make install
+

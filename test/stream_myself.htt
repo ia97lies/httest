@@ -1,0 +1,55 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_EXEC cp ../src/httest httest_tmp
+_EXEC strip httest_tmp 
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO
+__
+_PIPE
+_EXEC cat httest_tmp 
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "httest_streamed [0-9.]+"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Transfer-Encoding: chunked 
+__
+_FLUSH
+_PIPE chunked 2000
+_EXEC cat httest_tmp 
+_CHUNK
+_CHUNK
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "httest_streamed [0-9.]+"
+_WAIT
+_EXEC rm httest_tmp
+
+END
+
+SERVER $YOUR_PORT
+
+_LOOP 2
+_RES
+_EXEC| cat > httest_streamed
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__
+__GOT MYSELF PUSHED into httest_streamed :-)
+_EXEC chmod u+x httest_streamed
+_PIPE 200 
+_EXEC ./httest_streamed --version
+_EXEC rm httest_streamed
+_END LOOP
+
+END
+

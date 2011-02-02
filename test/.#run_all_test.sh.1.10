@@ -1,0 +1,55 @@
+#!/bin/bash
+
+HTT_ERRORS=0
+HTTEST=../src/httest
+PFX=.
+
+COPY=0
+ls *.htt >/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+  cp ../../test/*.htt .
+  cp ../../test/*.hte .
+  cp ../../test/*.htb .
+  cp ../../test/*.txt .
+  cp ../../test/*.pem .
+  PFX=../../test
+  COPY=1
+fi
+
+# start testing
+echo
+echo Test script mode:
+$PFX/run_htt.sh
+HTT_ERRORS=`expr $HTT_ERRORS + $?`
+
+echo
+echo Test error phrone scripts:
+$PFX/run_hte.sh
+HTT_ERRORS=`expr $HTT_ERRORS + $?`
+
+echo
+echo Test error output
+$PFX/run_test_error_output.sh
+HTT_ERRORS=`expr $HTT_ERRORS + $?`
+
+rm -f tmp.txt
+
+if [ $COPY -ne 0 ]; then
+  rm -f *.htt
+  rm -f *.hte
+  rm -f *.htb
+  rm -f *.txt
+  rm -f *.pem
+fi
+
+CORES=`ls core* 2>/dev/null | wc -l` 
+if [ $HTT_ERRORS -ne 0 -o $CORES -gt 0 ]; then
+  echo "$HTT_ERRORS Errors"
+  if [ $CORES -gt 0 ]; then
+    echo $CORES coredumps
+  fi
+  exit 1
+fi
+echo "Success"
+exit 0
+

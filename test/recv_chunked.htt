@@ -1,0 +1,34 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_SOCKET
+_EXPECT . "HTTP/1.1 200 OK"
+_READLINE
+_READLINE
+_READLINE
+_EXPECT . "Fooo"
+_EXPECT . "Baar"
+_EXPECT . "Blafasel"
+_RECV Chunked
+_END SOCKET
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Transfer-Encoding: chunked
+_FLUSH
+__Fooo
+__Baar
+_CHUNKED
+__Blafasel
+_CHUNKED
+_CHUNKED
+END
+

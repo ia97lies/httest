@@ -1,0 +1,46 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT ERROR "incomplete\(70008\)"
+_WAIT
+
+_CLOSE
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT ERROR "incomplete\(70008\)"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: 100
+__
+__Hallo Welt
+_CLOSE
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Transfer-Encoding: chunked
+__
+__a
+__01234567
+__
+__a
+__01234567
+_CLOSE
+END
+

@@ -1,0 +1,11 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_EXEC ls > ls_before
+_SH #!/bin/bash
+_SH echo
+END
+
+# now httest remove this file on finish
+FILE ls_before
+END

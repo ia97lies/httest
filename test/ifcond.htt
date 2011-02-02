@@ -1,0 +1,154 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_LOOP 2
+
+_IF "$ONLY_ONCE" MATCH "done" 
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1-bar"
+_WAIT
+_END IF
+
+_IF "$ONLY_ONCE" NOT MATCH "done" 
+_SET ONLY_ONCE=done
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1-foo"
+_WAIT
+_END IF
+
+_END LOOP
+
+_SET CNT=0
+_LOOP 10000
+_OP $CNT ADD 1 CNT
+_IF "$CNT" GT "4"
+_BREAK
+_END IF
+_END LOOP
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /foo/$CNT HTTP/1.1
+__
+_WAIT
+
+_SET CNT=0
+_LOOP 10000
+_OP $CNT ADD 1 CNT
+_IF "$CNT" GE "4"
+_BREAK
+_END IF
+_END LOOP
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /foo/$CNT HTTP/1.1
+__
+_WAIT
+
+_SET CNT=10
+_LOOP 10000
+_OP $CNT SUB 1 CNT
+_IF "$CNT" LT "4"
+_BREAK
+_END IF
+_END LOOP
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /foo/$CNT HTTP/1.1
+__
+_WAIT
+
+_SET CNT=10
+_LOOP 10000
+_OP $CNT SUB 1 CNT
+_IF "$CNT" LE "4"
+_BREAK
+_END IF
+_END LOOP
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /foo/$CNT HTTP/1.1
+__
+_WAIT
+
+_SET CNT=10
+_LOOP 10000
+_OP $CNT SUB 1 CNT
+_IF "$CNT" NOT GT "5"
+_BREAK
+_END IF
+_END LOOP
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /foo/$CNT HTTP/1.1
+__
+_WAIT
+
+_IF "-4" GT "3"
+_EXIT FAILED
+_END IF
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__== AS1-foo ==
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__== AS1-bar ==
+
+_RES
+_EXPECT . "/foo/5"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_RES
+_EXPECT . "/foo/4"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_RES
+_EXPECT . "/foo/3"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_RES
+_EXPECT . "/foo/4"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+_RES
+_EXPECT . "/foo/5"
+_WAIT
+__HTTP/1.1 200 OK
+__
+
+END
+

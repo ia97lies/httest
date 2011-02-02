@@ -1,0 +1,29 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO
+__
+__Foobar
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_WAIT
+_CLOSE
+
+_EXPECT ERROR "Connection refused"
+_REQ $YOUR_HOST $YOUR_PORT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__AS1
+END

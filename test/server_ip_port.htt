@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ 127.0.0.1 $YOUR_PORT
+__GET / HTTP/1.1
+__
+_WAIT
+END
+
+SERVER 127.0.0.1:$YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__
+END

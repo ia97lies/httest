@@ -1,0 +1,51 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__REQMOD /your/path/to/your/resource?your=params ICAP/1.0
+__Host: $YOUR_HOST 
+__Encapsulated: null-body=0
+__
+_EXPECT . "ICAP/1.0 200 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__REQMOD /your/path/to/your/resource?your=params ICAP/1.0
+__Host: $YOUR_HOST 
+__Encapsulated: req-hdr=0, null-body=34
+__
+__GET / HTTP/1.1
+__Host: 127.0.0.1
+__
+
+_EXPECT . "ICAP/1.0 200 OK"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__ICAP/1.0 200 OK
+__Connection: close
+__Encapsulated: null-body=0
+__
+
+_RES
+_WAIT
+__ICAP/1.0 200 OK
+__Connection: close
+__Encapsulated: req-hdr=0, req-body=39
+__
+__POST / HTTP/1.1
+__Content-Length: 11
+_FLUSH
+__== AS1 ==
+_CHUNKED
+_CHUNKED
+__
+
+END
+

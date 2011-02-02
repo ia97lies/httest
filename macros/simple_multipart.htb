@@ -1,0 +1,35 @@
+# Implements a simple way to build up a multipart post body
+#
+
+MODULE SIMPLE
+
+BLOCK _FORM_MULTIPART : HOOK
+_SET HOOK=---------------------------108697810410710530441715222927
+__Content-Type: multipart/form-data; boundary=$HOOK
+__
+END
+
+BLOCK _FORM_MULTIPART_ARG HOOK VAR VAL
+_URLENC "$VAL" VALUE
+__$HOOK
+__Content-Disposition: form-data; name="$VAR"
+__
+__$VALUE
+END
+
+BLOCK _FORM_MULTIPART_FILE HOOK ITEM FILENAME
+__$HOOK
+__Content-Disposition: form-data; name="$ITEM"; filename="$FILENAME"
+__Content-Type: application/x-tar
+__
+_PIPE
+_EXEC cat $NAME
+__
+END
+
+BLOCK _FORM_MULTIPART_END HOOK
+__${HOOK}--
+_SIMPLE:FOLLOW
+_PLAY SOCKET
+END
+

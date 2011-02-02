@@ -1,0 +1,23 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT2
+__POST / HTTP/1.1
+__Host: $YOUR_HOST
+__Content-Length: AUTO
+__
+_PIPE
+_EXEC cat main_functionality.htt
+_EXPECT . "HTTP/1.1 200 Ok"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT2 
+_RES
+_SLEEP 100
+_EXEC| ../src/httest -Ss
+_WAIT
+__HTTP/1.1 200 Ok
+__
+END

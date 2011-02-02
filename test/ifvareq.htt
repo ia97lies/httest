@@ -1,0 +1,10 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_SET VARA=foo
+_SET VARB=foo
+_IF "$VARA" MATCH "$VARB"
+_EXIT OK
+_END IF
+_EXIT FAILED
+END

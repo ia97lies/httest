@@ -1,0 +1,28 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_EXPECT . "Date: [MDWTFS][a-z]{2,2}, [0-9]{2,2} [JFMAJASOND][a-z]{2,2} [0-9]{4,4} [0-9]{2,2}:[0-9]{2,2}:[0-9]{2,2} GMT" 
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+_TIME TIME
+_STRFTIME $TIME "%a, %d %b %Y %H:%M:%S GMT" DATE
+__Date: $DATE
+__Content-Length: AUTO
+__
+__AS1
+END

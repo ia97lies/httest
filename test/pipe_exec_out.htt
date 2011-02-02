@@ -1,0 +1,76 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "total"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "Start of line .* End of line"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "total"
+_EXPECT . "Hallo"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+_PIPE
+_EXEC ls -al
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+_-Start of line 
+_PIPE
+_EXEC echo -n `date`
+__ End of line
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Transfer-Encoding: chunked
+__
+_FLUSH
+_PIPE chunked 30
+_EXEC ls -al
+_PIPE chunked 30
+_EXEC echo Hallo
+__
+__0
+__
+
+END
+

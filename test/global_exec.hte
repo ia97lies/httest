@@ -1,0 +1,3 @@
+INCLUDE $TOP/test/config.htb
+
+EXEC heho >/dev/null 2>/dev/null

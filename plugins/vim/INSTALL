@@ -1,0 +1,27 @@
+INSTALLATION
+------------
+
+Syntax Highlighting
+-------------------
+Put the htt.vim file into your ~/.vim/syntax/ folder.
+Add a filetype.vim into ~/.vim/ folder with the following content
+
+if exists("did_load_my_filetypes")
+  finish
+endif
+let did_load_my_filetypes = 1
+
+" Line continuation is used here, remove 'C' from 'cpoptions'
+let s:cpo_save = &cpo
+set cpo&vim
+
+augroup filetypedetect
+
+" Httest scripts
+au BufNewFile,BufRead *.htt,*.htb		setf htt
+
+augroup END
+
+" Restore 'cpoptions'
+let &cpo = s:cpo_save
+unlet s:cpo_save

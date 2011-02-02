@@ -1,0 +1,67 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK foo
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__$0 $1 $2
+END
+
+BLOCK bar
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__$0 $1 $2
+END
+
+BLOCK _bar2
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__$0 $1 $2 $3 $4 $5 $6 $7
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "foo AS1 OK"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "bar \$1 \$2"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "bar2 fasel he ho hu hi ha hallo |ha ha ha| |hu hu \"hu\"|"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+_CALL foo AS1 OK
+
+_RES
+_WAIT
+_CALL bar
+
+_RES
+_WAIT
+_bar2 "fasel he ho hu hi ha" hallo "|ha ha ha|" "|hu hu \"hu\"|"
+
+END

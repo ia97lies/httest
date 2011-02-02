@@ -1,0 +1,12 @@
+# 50 concurrent clients, loop 100 times each client
+CLIENT 50 100
+
+_REQ www.your.name 80
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: www.your.name
+__User-Agent: mozilla
+__
+_WAIT
+
+END
+

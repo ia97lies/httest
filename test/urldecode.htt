@@ -1,0 +1,20 @@
+
+CLIENT
+_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar" DEC
+_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar"
+_EXEC echo $DEC
+
+_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar%F" DEC
+_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar%F"
+_EXEC echo $DEC
+
+_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar\xF" DEC
+_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2FfoobarxF"
+_EXEC echo $DEC
+
+_SET TEST=foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar\xF
+_URLDEC "$TEST" TEST2
+_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2FfoobarxF"
+_EXEC echo $TEST2
+
+END

@@ -1,0 +1,69 @@
+= SYNTAX =
+
+
+== General ==
+command = capital-letters
+args = chars
+global-call = command args* newline
+local-call = "_"command args* newline
+global-body = global-call local-call* END newline
+local-body = local-call local-call* _END local-call newline
+
+
+=== Example ===
+GLOBAL_CALLS
+
+GLOBAL_BODY <args>
+...
+_LOCAL_CALLS <args>
+...
+_LOCAL_BODY <args>
+...
+_END LOCAL_BODY
+...
+END
+
+== BLOCK ==
+BLOCK <name>
+END
+
+_CALL <name>
+
+or
+
+_<name>
+
+Overwrite existent calls shoult be possible. But with in a BLOCK it should be
+also possible to call the parent instead of overwritten calls.
+
+
+== ICAP Support ==
+_REQ foobar 80
+__ICAP /foo/bar ICAP/1.0
+__Host: foobar
+__Blafasel: blablabla
+__Encapsulated: req-hdr: 0, null-body: AUTO 
+__
+__GET /foobar HTTP/1.1
+__Host: blafasel
+__Content-Type: text/html
+__
+
+oder
+
+_REQ foobar 80
+__ICAP /foo/bar ICAP/1.0
+__Host: foobar
+__Blafasel: blablabla
+__Encapsulated: req-hdr: 0, res-hdr: AUTO, res-body: AUTO
+__
+__GET /foobar HTTP/1.1
+__Host: blafasel
+__Content-Type: text/html
+__
+__HTTP/1.1 500 Internal Server Error
+__Content-Length: AUTO
+__
+__==OK==
+
+

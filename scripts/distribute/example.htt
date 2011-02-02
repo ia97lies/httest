@@ -1,0 +1,19 @@
+
+CLIENT
+_REQ 127.0.0.1 8078
+__GET / HTTP/1.1
+__Host: localhost
+__
+_EXPECT . "==OK2=="
+_WAIT
+END
+
+SERVER 8078
+_RES
+_WAIT
+__HTTP/1.1 200 Ok
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__==OK==
+END

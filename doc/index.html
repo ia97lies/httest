@@ -1,0 +1,271 @@
+<html>
+  <head>
+    <title>HTTP Test Tool</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <meta name="author" content="Christian Liesch">
+    <link rel="shortcut icon" href="favicon.ico" />
+    <style TYPE="text/css">
+      <!--  
+        body {
+	  background-color: white;
+	  color: black;
+	  font-family: arial, helvetica, verdana, sans-serif;
+	  font-weight: normal;
+	  text-align: left;
+	}
+	a:link    { color: rgb(95,10,15); }
+	a:visited { color:black; }
+	a:focus   { color:black; text-decoration:underline; }
+	a:hover   { color:black; text-decoration:none; }
+	a:active  { color:black; text-decoration:underline; }
+	pre {
+	  padding:8px; 
+	  overflow:auto;
+	  background:#F1F1F1;
+	  font-size:12px;
+	  color:#000000;
+	}
+      -->
+    </style>
+  </head>
+  <body>
+<nobr style="color:#000000;font-family: Terminal, monospace;">&nbsp;_&nbsp;&nbsp;&nbsp;&nbsp;_&nbsp;_______&nbsp;_______&nbsp;_____&nbsp;&nbsp;&nbsp;&nbsp;_______&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_______&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_&nbsp;<br />|&nbsp;|&nbsp;&nbsp;|&nbsp;|__&nbsp;&nbsp;&nbsp;__|__&nbsp;&nbsp;&nbsp;__|&nbsp;&nbsp;__&nbsp;\&nbsp;&nbsp;|__&nbsp;&nbsp;&nbsp;__|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;&nbsp;|__&nbsp;&nbsp;&nbsp;__|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|<br />|&nbsp;|__|&nbsp;|&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;|&nbsp;|__)&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;___&nbsp;___|&nbsp;|_&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;___&nbsp;&nbsp;&nbsp;___&nbsp;|&nbsp;|<br />|&nbsp;&nbsp;__&nbsp;&nbsp;|&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;|&nbsp;&nbsp;___/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|/&nbsp;_&nbsp;\&nbsp;__|&nbsp;__|&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|/&nbsp;_&nbsp;\&nbsp;/&nbsp;_&nbsp;\|&nbsp;|<br />|&nbsp;|&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;&nbsp;__\__&nbsp;\&nbsp;|_&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;|&nbsp;(_)&nbsp;|&nbsp;(_)&nbsp;|&nbsp;|<br />|_|&nbsp;&nbsp;|_|&nbsp;&nbsp;|_|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|_|&nbsp;&nbsp;|_|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|_|\___|___/\__|&nbsp;&nbsp;&nbsp;&nbsp;|_|\___/&nbsp;\___/|_|<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</nobr>
+<!-- 
+-->
+    <h2>Description</h2>
+    Scriptable HTTP Test Tool for testing and benchmarking webapplication and HTTP server development.
+    <br />
+    <br />
+    Special: Can act as client (requesting) and server (backend for reverse proxys). Pattern matching answers (both server(s)and client(s)) to test validity. You are completly free in what headers you like to send (good and bad ones) and what content. Can exectute any shell command you like and stream the standard output back to the HTTP stream.
+    <br />
+    <br />
+    You can cut everything you like from the receiving HTTP stream and set this as whatever you like in the answer.
+    <br />
+
+
+    <!-- 
+    -->
+    <h2>Use Cases</h2>
+    <h3>Testing Webapplication</h3>
+    Client test scripts do test webapplication functionality. While development the test scripts take care that nothing goes broken.
+    <br />
+    <br />
+    <h3>Testing Webserver</h3>
+    Client test scripts in combination with server test scripts, which acts as a CGI, test functionality of the webserver like filtering, rewritings, or what ever your webserver is able to and what you expect on the CGI side.
+    <br />
+    <br />
+    <h3>Testing Revers Proxy</h3>
+    Client/server test scripts test the reverse proxy functionality like single sign on, Webapplication Firewall and so on.
+
+
+    <!-- 
+    -->
+    <h2>Tools</h2>
+    <h3>httest</h3>
+    httest is the main program for automatic testing, it runs the scripts.
+    <br />
+    <br />
+    httest do have a online help
+    <br />
+    <pre>
+httest -h 
+    </pre>
+    <br />
+    httest can list all implemented commands
+    <br />
+    <pre>
+httest -L
+    </pre>
+
+    <h3>htproxy</h3>
+    htproxy can be used to record a html session to a httest script.
+    <br />
+    <br />
+    htproxy do have a online help
+    <br />
+    <pre>
+htproxy -h
+    </pre>
+      </td></tr>
+    </table>
+    <br />
+    If htproxy is running a build in shell apears. If you need help type h or help. 
+    <br />
+    With in the buildin shell it is possible to add expect clauses or comments within the generated httest script.
+    
+    <!-- 
+    -->
+    <h2>Script Syntax</h2>
+    <h3>Concept</h3>
+    There are global commands and local commands. A global command starts with a letter. A local command starts with a undersocre and can be only placed within a body (CLIENT, SERVER, BLOCK, DAEMON).
+    <h4>Bodies</h4>
+    There are 4 different body types CLIENT, SERVER, BLOCK and DAEMON. Every Body must be closed with an END.
+    <br />
+    <br />
+    Example:
+    <pre>
+CLIENT
+...
+END 
+    </pre>
+    <br />
+    <h5>CLIENT</h5>
+    a CLIENT does have an optional parameter which defines the number of concurrent CLIENTS to start. It starts threads in the background.
+    <br />
+    <br />
+    Syntax:
+    <pre>
+CLIENT [<number of concurrent clients>]
+    </pre>
+    Note:
+    <br />
+    Attention to call a CLIENT body does not wait until it is done, a CLIENT is but to background and the next global command will be called.
+
+    <h5>SERVER</h5>
+    A SERVER must have a parameter which holds the port. It starts threads in the background.
+    <br />
+    <br />
+    Syntax:
+    <pre>
+SERVER [(SSL|SSL2|SSL3|TLS):]<port> [<number of concurrent servers>]
+    </pre>
+    Note:
+    <br />
+    Attention to call a CLIENT body does not wait until it is done, a CLIENT is but to background and the next global command will be called.
+
+    <h5>BLOCK</h5>
+    A BLOCK defines a set of commands which could be called out of SERVER, CLIENT, BLOCK and DAEMON. The parameter specifies the name of the BLOCK.
+    <br />
+    <br />
+    Syntax:
+    <pre>
+BLOCK <name>
+    </pre>
+
+    <h5>DAEMON</h5>
+    A DAEMON defines a thread which is indipendant of CLIENT/SERVER threads and need not to end with in a test. A DAEMON can be used for supervisor jobs.
+    <br />
+    <br />
+    Syntax:
+    <pre>
+DAEMON
+    </pre>
+
+    Example:
+    <pre>
+DAEMON
+_SLEEP 10000
+_DEBUG Test duration is too long
+_EXIT FAILED
+END
+    </pre>
+
+    Do end a test after 10 Seconds with a "FAILED", but if CLIENT/SERVER threads do end befor 10 seconds the test ends with the exit code of the CLIENT/SERVER hopefully an "OK".
+    <br />
+    <br />
+    Note:
+    <br />
+    Attention to call a CLIENT body does not wait until it is done, a CLIENT is but to background and the next global command will be called.
+
+    <h5>Sending Data</h5>
+    Sending data can only be done with in a body. There are two roles, active connect to a server or passivly wait for a connection from a client.
+    <br />
+    <br />
+    Connect
+    <pre>
+_REQ <hostname> [(SSL|SSL2|SSL3|TLS):]<port>
+    </pre>
+    You can have multiple connection with in a client, a _REQ does set the socket and open a connection if not allready done. After a _REQ command you can send data.
+    <br />
+    <br />
+    Example:
+    <pre>
+CLIENT
+_REQ localhost 8080
+__GET / HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+    </pre>
+    Explanation:
+    <br />
+    The double underscore call is the send command, a little special and very use full, cause you can detect the actual line length with its \r\n termination of a send line with any common editor :)
+    <br />
+    <br />
+    The _WAIT command does wait and receive a possible HTTP answer. You could short down the wait command with a _TIMEOUT command which would set the socket timeout of the current socket.
+
+    <h5>Accept</h5>
+    An accept of a client connect command is only possible in the SERVER body.
+
+    SERVER 8080
+    _RES
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Host: localhost
+    __Content-Type: text/html
+    __Content-Length: AUTO
+    __
+    __My content
+    END
+
+
+    Explanation:
+    _RES do an accept of a incoming connection request. _WAIT do receive the request. With the double underscore command we send the answer. A speciality is the Content-Length: AUTO command, this does calculate automatic the content length.
+
+    <h5>Validate</h5>
+    Main feature is the possibilty to validate the responds of a server or the request of a client.
+
+    Validate Response
+
+    CLIENT
+    _REQ localhost 8080
+    __GET / HTTP/1.1
+    __Host: localhost
+    __
+    _EXPECT . "HTTP/1.1 200 OK"
+    _WAIT
+    END
+
+
+    Explanation:
+    Before a _WAIT you can specify what you expect in the incoming stream marked as ".". You can set any regular expression, escaping " is not supported yet.
+
+    Validate Request
+    The same is possible within a server body.
+
+    SERVER 8080
+    _RES
+    _EXPECT . "POST / HTTP/1\.\d"
+    _EXPECT . "Post data"
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Host: localhost
+    __Content-Length: AUTO
+    __
+    __Answer data :)
+    END
+
+
+    Explanation:
+    Before a _WAIT you can specify what you expect in the incoming stream marked as ".". You can set any regular expression, escaping " is not supported yet.
+
+    <h5>FINALLY Block</h5>
+    Offent when testing a server it is needed to restart a server with certain special options. After Testing the server should be restarted with its default options again, else the next tests will fail.
+
+    A special named BLOCK will be called on exit no matter if OK or FAILED. The Block is called "FINALLY".
+
+    BLOCK FINALLY
+    ...
+    END
+
+
+    Note: Must have at least one CLIENT/SERVER/DAEMON then the FINALLY block will be called on exit. If only global commands are in the script no FINALLY Block will be called.
+    
+    <!-- 
+    -->
+    <h2>Examples</h2>
+
+
+  </body>
+</html>

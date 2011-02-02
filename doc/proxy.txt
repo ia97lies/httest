@@ -1,0 +1,14 @@
+The htproxy should generate runnable httest scripts.
+
+There should be several options doing this.
+
+Record
+*  all send date
+*  all receive data for emulate application server
+*  path rewrites
+*  expects with choosable levels
+*  match clauses (session)
+*  all connections 
+*  all closes
+*  delays to emulate user interaction
+
