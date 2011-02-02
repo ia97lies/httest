@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:     Httest	
 " Maintainer:   Christian Liesch <ia97lies@users.sourceforge.net>	
-" Last Change:	2008 Feb 8 
+" Last Change:	2011 Feb 2 
 
 if version < 600
   syntax clear
