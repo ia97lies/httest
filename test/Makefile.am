@@ -33,6 +33,7 @@ EXTRA_DIST= \
 	embedded_sh.htt \
 	embedded_sh_pipe.htt \
 	env.htt \
+	error_body.htt \
 	error_match.htt \
 	errors.hte \
 	errors.htt \
@@ -75,12 +76,14 @@ EXTRA_DIST= \
 	icap_auto.htt \
 	icap_main.htt \
 	ifcond.htt \
+	ifelse.htt \
 	ifvareq.htt \
 	incomplete.htt \
 	leftovertmpf.htt \
 	loop_auto.htt \
 	loop.htt \
 	macro.htt \
+	macro_too_many_redirects.htt \
 	main_functionality.htt \
 	match_dot.hte \
 	match_dot.txt \
