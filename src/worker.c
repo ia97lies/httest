@@ -1613,12 +1613,9 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     worker->socket->socket_state = SOCKET_CONNECTED;
 #ifdef USE_SSL
     if (worker->socket->is_ssl) {
-      BIO *bio = BIO_new_fp (stderr, BIO_NOCLOSE); 
-      SSL_SESSION_print(bio,SSL_get_session(worker->socket->ssl));
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
 	return status;
       }
-      SSL_SESSION_print(bio,SSL_get_session(worker->socket->ssl));
     }
 #endif
   }
