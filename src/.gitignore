@@ -1,0 +1,5 @@
+*.o
+htntlm
+htproxy
+httest
+htremote
