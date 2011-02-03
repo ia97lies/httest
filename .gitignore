@@ -7,3 +7,4 @@ config.*
 configure
 libtool
 m4
+httest-*
