@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS=foreign
-SUBDIRS=src tools test man examples
+SUBDIRS=src tools macros test man examples plugins
