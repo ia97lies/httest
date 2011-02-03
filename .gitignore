@@ -8,3 +8,4 @@ configure
 libtool
 m4
 httest-*
+tags
