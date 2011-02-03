@@ -196,7 +196,7 @@ apr_status_t ssl_handshake(SSL *ssl, char **error, apr_pool_t *pool) {
 
     apr_sleep(1);
     
-    ret = SSL_connect(ssl);
+    ret = SSL_do_handshake(ssl);
     ecode = SSL_get_error(ssl, ret);
 
     switch (ecode) {
