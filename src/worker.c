@@ -4391,7 +4391,8 @@ apr_status_t command_SSL_SET_SESSION(command_t *self, worker_t *worker, char *da
  * @return an apr status
  */
 apr_status_t worker_new(worker_t ** self, char *additional,
-                        char *prefix, global_t *global) {
+                        char *prefix, global_t *global, 
+			interpret_f interpret) {
   apr_pool_t *p;
 
   apr_pool_create(&p, NULL);
@@ -4407,6 +4408,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->pcache = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
+  (*self)->interpret = interpret;
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
@@ -4485,6 +4487,7 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->pcache = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
+  (*self)->interpret = orig->interpret;
   (*self)->flags = orig->flags;
   (*self)->prefix = apr_pstrdup(p, orig->prefix);
   (*self)->additional = apr_pstrdup(p, orig->additional);

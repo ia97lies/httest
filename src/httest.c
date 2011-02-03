@@ -1149,7 +1149,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     if (call->log_mode == LOG_CMD) {
       call->log_mode = LOG_INFO;
     }
-    status = worker_interpret(call, worker);
+    status = worker->interpret(call, worker);
     call->log_mode = log_mode;
     cmd = worker->cmd;
     lines = worker->lines;
@@ -1926,8 +1926,8 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
 
   /* Client start */
   global->state = state;
-  if ((status = worker_new(&global->worker, data, global->prefix, global)) 
-      != APR_SUCCESS) {
+  if ((status = worker_new(&global->worker, data, global->prefix, global, 
+                           worker_interpret)) != APR_SUCCESS) {
     return status;
   }
   global->prefix = apr_pstrcat(global->pool, global->prefix, 
@@ -1984,8 +1984,8 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
   global->state = GLOBAL_STATE_BLOCK;
 
   /* Start a new worker */
-  if ((status = worker_new(&global->worker, data, global->prefix, global)) 
-      != APR_SUCCESS) {
+  if ((status = worker_new(&global->worker, data, global->prefix, global, 
+                           worker_interpret)) != APR_SUCCESS) {
     return status;
   }
   
@@ -2044,8 +2044,8 @@ static apr_status_t global_FILE(command_t * self, global_t * global,
   global->state = GLOBAL_STATE_FILE;
 
   /* Start a new worker */
-  if ((status = worker_new(&global->worker, data, global->prefix, global)) 
-      != APR_SUCCESS) {
+  if ((status = worker_new(&global->worker, data, global->prefix, global, 
+                           worker_interpret)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2090,7 +2090,7 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data) {
     ++i;
   }
 
-  if ((status = worker_new(&worker, &data[i], "", global)) 
+  if ((status = worker_new(&worker, &data[i], "", global, worker_interpret))
       != APR_SUCCESS) {
     return status;
   }

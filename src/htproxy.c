@@ -814,7 +814,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
   global.log_mode = self->log_mode;
   global.socktmo = 1000 * 300000;
   
-  if ((status = worker_new(&server, "", "", &global)) != APR_SUCCESS) {
+  if ((status = worker_new(&server, "", "", &global, NULL)) != APR_SUCCESS) {
     apr_thread_exit(thread, status);
   } 
 
@@ -1166,7 +1166,7 @@ int proxy(self_t *self) {
   global.log_mode = self->log_mode;
   global.socktmo = 1000 * 300000;
   
-  if ((status = worker_new(&listener, "", "", &global)) != APR_SUCCESS) {
+  if ((status = worker_new(&listener, "", "", &global, NULL)) != APR_SUCCESS) {
     return status;
   } 
 
@@ -1183,8 +1183,8 @@ int proxy(self_t *self) {
 
     /* test if main is back */
     
-    if ((status = worker_new(&client, "", "                        ", &global)) 
-	!= APR_SUCCESS) {
+    if ((status = worker_new(&client, "", "                        ", &global, 
+	                     NULL)) != APR_SUCCESS) {
       return status;
     } 
 

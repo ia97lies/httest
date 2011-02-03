@@ -63,7 +63,10 @@ typedef struct recorder_s {
   sockreader_t *sockreader;
 } recorder_t;
 
-typedef struct worker_s {
+typedef struct worker_s worker_t;
+typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
+struct worker_s {
+  interpret_f interpret;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
   /* dies on END */
@@ -150,7 +153,7 @@ typedef struct worker_s {
 #if APR_HAS_FORK
   apr_hash_t *procs;
 #endif
-} worker_t;
+};
 
 typedef struct global_s {
   apr_pool_t *pool;
@@ -249,7 +252,7 @@ struct command_s {
   worker_log(worker, LOG_CMD, "%s", self->name)
 
 apr_status_t worker_new(worker_t ** self, char *additional,
-                        char *prefix, global_t *global);
+                        char *prefix, global_t *global, interpret_f interpret);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
 
 /** commands */
