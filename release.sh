@@ -3,7 +3,7 @@ TOP=`pwd`
 CVS_TAG=$1
 
 # check if ChangeLog ist
-VERSION=`echo $CVS_TAG | awk 'BEGIN { FS="_" } { printf("%d.%d.%d", $3, $4, $5) }'`
+VERSION=`echo $CVS_TAG | awk 'BEGIN { FS="." } { printf("%d.%d.%d", $3, $4, $5) }'`
 
 echo
 echo "Release httest-$VERSION"
@@ -50,25 +50,6 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
-set +e
-set +u
-echo
-echo "  Check Release"
-echo "    cvs -q -n -f up"
-rm -f /var/tmp/diff.txt
-cvs -q -n up 2>>/var/tmp/diff.txt >>/var/tmp/diff.txt 
-# Remove lines starting with U<space>
-mv /var/tmp/diff.txt /var/tmp/diff.txt.tmp
-egrep -v '^U ' /var/tmp/diff.txt.tmp >/var/tmp/diff.txt
-rm /var/tmp/diff.txt.tmp
-echo "    cvs -q -f diff -r $CVS_TAG"
-cvs -q diff -r -f $CVS_TAG  2>>/var/tmp/diff.txt >>/var/tmp/diff.txt
-mv /var/tmp/diff.txt /var/tmp/diff.txt.tmp
-grep -v "no longer exists, no comparison available" /var/tmp/diff.txt.tmp >/var/tmp/diff.txt
-rm /var/tmp/diff.txt.tmp
-
-set -e
-set -u
 # Now we have a file containing the filtered output from cvs update, cvs diff,
 # count the number of lines
 DIFF_LINES=0
