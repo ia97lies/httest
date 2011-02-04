@@ -1,5 +1,5 @@
 Version 2.0.0
- - New      httest: Syntax improvements for simple DSL ability
+ - New      httest: Syntax improvements for better DSL ability
  - New      httest: Automatic cookie handling
  - New      httest: Local variables useful for BLOCK
  - New      httest: BLOCK signatur with parameter and return values
