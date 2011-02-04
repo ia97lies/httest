@@ -13,6 +13,7 @@ if [ $? -ne 0 ]; then
   cp ../../test/*.htb .
   cp ../../test/*.pem .
   cp ../../test/run.sh .
+  cp ../../macros/*.htb ../macros/.
   PFX=../../test
   COPY=1
 fi
@@ -30,6 +31,7 @@ if [ $COPY -ne 0 ]; then
   rm -f *.htb
   rm -f *.pem
   rm -f run.sh
+  rm -f ../macros/*.htb
 fi
 
 CORES=`ls core* 2>/dev/null | wc -l` 

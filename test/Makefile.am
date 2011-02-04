@@ -144,6 +144,7 @@ EXTRA_DIST= \
 	server.key.pem \
 	server_reswait.htt \
 	server_up_down.htt \
+	smtp_simple.htt \
 	socketbody.htt \
 	sockstate.htt \
 	ssl_big_content.htt \
