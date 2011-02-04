@@ -7,6 +7,7 @@ Version 2.0.0
  - New      httest: Add command _ERROR <error> ... _END ERROR to define an
                     error which must occure with in this body.
  - New      macros: Simple get and post request for Application testing
+ - New      macros: Simple SMTP implementation 
 
 Version 1.18.0
  - New      httest: _RESWAIT combines the _RES and _WAIT command ignoring
