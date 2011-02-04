@@ -1,9 +1,6 @@
 TOP=`pwd`
 
-CVS_TAG=$1
-
-# check if ChangeLog ist
-VERSION=`echo $CVS_TAG | awk 'BEGIN { FS="." } { printf("%d.%d.%d", $3, $4, $5) }'`
+VERSION=$1
 
 echo
 echo "Release httest-$VERSION"
