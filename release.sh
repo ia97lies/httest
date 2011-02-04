@@ -50,21 +50,6 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
-# Now we have a file containing the filtered output from cvs update, cvs diff,
-# count the number of lines
-DIFF_LINES=0
-WC_OUT=`cat /var/tmp/diff.txt | wc -l`
-if [ "$WC_OUT" != "0" ]; then
-  echo $WC_OUT
-  echo cvs and local version does not match 
-  cat /var/tmp/diff.txt
-  echo Release build FAILED
-  rm /var/tmp/diff.txt
-  exit -1
-fi
-rm /var/tmp/diff.txt
-echo
-
 echo
 echo "  Build Man Pages"
 ./generate_man_pages.sh
