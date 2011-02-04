@@ -1,0 +1,21 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/macros/smtp.htb
+
+CLIENT
+_SMTP:CONNECT $YOUR_HOST $YOUR_PORT
+_SMTP:SEND "HELO bluewin.ch"
+_SMTP:WAIT RET
+_SMTP:QUIT
+_SMTP:WAIT RET
+END
+
+SERVER $YOUR_PORT
+_RES
+__220 small stupid smtp test server
+_FLUSH
+_READLINE
+__220 say HELO too
+_FLUSH
+_READLINE
+__220 terminate
+END
