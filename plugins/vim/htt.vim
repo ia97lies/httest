@@ -40,7 +40,7 @@ syn match httFunction           "^ *__.*" contains=httIdentifier
 syn match httFunction           "^ *_-.*" contains=httIdentifier
 syn match   httSpecial contained "\\\d\d\d\|\\."
 syn region  httString		  start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=basicSpecial,httIdentifier
-syn region httComment	        display oneline start="^#" end="$" contains=httTodo
+syn region httComment	        display oneline start="^ *#" end="$" contains=httTodo
 syn keyword httTodo             contained TODO FIXME XXX NOTE
 syn keyword httType             EXEC HEADER BODY VAR exec header body var
 
