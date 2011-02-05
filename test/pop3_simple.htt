@@ -1,0 +1,16 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/macros/pop3.htb
+
+CLIENT
+_POP3:CONNECT pop.gmx.net 110
+_POP3:SEND "USER liesch@gmx.ch"
+_POP3:WAIT
+_POP3:SEND "PASS DMM:enumM"
+_POP3:WAIT
+_POP3:SEND "LIST"
+_POP3:WAIT_MULTI
+_POP3:SEND "QUIT"
+_EXPECT . "\+OK"
+_POP3:WAIT
+END
+
