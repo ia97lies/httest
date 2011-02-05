@@ -303,10 +303,18 @@ command_t local_commands[] = {
   "Level is a number 0-4"},
   {"_SYNC", (command_f )command_SYNC, "", 
   "Synchronise to the next full second"},
-  {"_RECV", (command_f )command_RECV, "<bytes>|POLL|CHUNKED|CLOSE", 
+  {"_RECV", (command_f )command_RECV, "<bytes>|POLL|CHUNKED|CLOSE [DO_NOT_CHECK]", 
   "Receive an amount of bytes, either specified by a number \n"
-  "or as much until socket timeout will in POLL mode"},
-  {"_READLINE", (command_f )command_READLINE, "", 
+  "or as much until socket timeout will in POLL mode.\n"
+  "optional DO_NOT_CHECK do not check the _MATCH and _EXPECT clauses. \n"
+  "With _CHECK you can do this afterward over a couple of not yet checked "
+  "_RECVs"},
+  {"_READLINE", (command_f )command_READLINE, "[DO_NOT_CHECK]", 
+  "Receive a line terminated with \\r\\n or \\n\n"
+  "optional DO_NOT_CHECK do not check the _MATCH and _EXPECT clauses. \n"
+  "With _CHECK you can do this afterward over a couple of not yet checked "
+  "_READLINEs"},
+  {"_CHECK", (command_f )command_CHECK, "", 
   "Receive a line terminated with \\r\\n or \\n"},
   {"_OP", (command_f )command_OP, "<left> ADD|SUB|DIV|MUL <right> <variable>", 
   "Store evaluated expression"},

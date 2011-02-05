@@ -14,11 +14,12 @@ BLOCK _WAIT
 _SOCKET
   _LOOP -1
     _GREP . "(...)(.)(.*)" CODE LAST TEXT
-    _READLINE
+    _READLINE DO_NOT_CHECK
     _IF "$LAST" MATCH " "
       _BREAK
     _END IF
   _END LOOP
 _END SOCKET 
+_CHECK
 END
 

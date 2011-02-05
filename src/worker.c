@@ -2880,7 +2880,9 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data) {
   }
 
 out_err:
-  status = worker_check_expect(worker, status);
+  if (strcasecmp(last, "DO_NOT_CHECK") != 0) {
+    status = worker_check_expect(worker, status);
+  }
   apr_pool_destroy(pool);
 
   return status;
@@ -2891,7 +2893,7 @@ out_err:
  *
  * @param self IN command
  * @param worker IN thread data object
- * @param data IN unused
+ * @param data IN optional parameter DO_NOT_CHECK to avoid expect checking
  *
  * @return APR_SUCCESS
  */
@@ -2902,8 +2904,9 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data) {
   apr_size_t len;
   sockreader_t *sockreader;
   char *buf;
+  char *copy;
 
-  COMMAND_NO_ARG;
+  COMMAND_OPTIONAL_ARG;
 
   apr_pool_create(&pool, NULL);
 
@@ -2935,9 +2938,25 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data) {
   }
 
 out_err:
-  status = worker_check_expect(worker, status);
+  if (strcasecmp(copy, "DO_NOT_CHECK") != 0) {
+    status = worker_check_expect(worker, status);
+  }
   apr_pool_destroy(pool);
 
+  return status;
+}
+
+/**
+ * CHECK command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN optional check match and expects
+ *
+ * @return APR_SUCCESS
+ */
+apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data) {
+  apr_status_t status = worker_check_expect(worker, status);
   return status;
 }
 

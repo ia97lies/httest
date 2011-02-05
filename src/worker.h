@@ -285,6 +285,7 @@ apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data);
 apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data);
 apr_status_t command_RECV(command_t * self, worker_t * worker, char *data);
 apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data);
+apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data);
 apr_status_t command_OP(command_t * self, worker_t * worker, char *data);
 apr_status_t command_WHICH(command_t * self, worker_t * worker, char *data);
 apr_status_t command_CERT(command_t * self, worker_t * worker, char *data);
