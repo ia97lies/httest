@@ -1423,6 +1423,119 @@ void worker_get_socket(worker_t *self, const char *hostname,
 }
 
 /**
+ * Do an ssl connect on a connected socket
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
+ * @param data IN aditional data
+ *
+ * @return an apr status
+ */
+apr_status_t command_SSL(command_t *self, worker_t *worker, char *data) {
+	char *copy;
+	char *last;
+	char *sslstr;
+  int is_ssl;
+	char *filename;
+	BIO *bio;
+	apr_os_sock_t fd;
+	apr_status_t status;
+
+  COMMAND_NEED_ARG("SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]");
+
+  sslstr = apr_strtok(copy, " ", &last);
+
+#ifndef USE_SSL
+	return APR_SUCCESS;
+#else
+  is_ssl = 0;
+  if (strcasecmp(copy, "SSL") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv23_client_method();
+  }
+  else if (strcasecmp(copy, "SSL2") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv2_client_method();
+  }
+  else if (strcasecmp(copy, "SSL3") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv3_client_method();
+  }
+  else if (strcasecmp(copy, "TLS1") == 0) {
+    is_ssl = 1;
+    worker->meth = TLSv1_client_method();
+  }
+	else {
+    worker_log(worker, LOG_ERR, "%s is not supported", copy);
+    return APR_EGENERAL;
+  }
+  worker->socket->is_ssl = is_ssl;
+
+  if (worker->socket->socket_state == SOCKET_CONNECTED) {
+    if (worker->socket->is_ssl) {
+      if (!worker->ssl_ctx && !(worker->ssl_ctx = SSL_CTX_new(worker->meth))) {
+        worker_log(worker, LOG_ERR, "Could not initialize SSL Context.");
+      }
+      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
+      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+      /* get cert file if any is specified */
+      filename = apr_strtok(NULL, " ", &last);
+      if (filename && SSL_CTX_use_certificate_file(worker->ssl_ctx, filename, 
+				       SSL_FILETYPE_PEM) <= 0) { 
+				worker_log(worker, LOG_ERR, "Could not load RSA certifacte \"%s\"", 
+									 filename);
+				return APR_EINVAL;
+      }
+
+      /* get key file if any is specified */
+      filename = apr_strtok(NULL, " ", &last);
+      if (filename && SSL_CTX_use_PrivateKey_file(worker->ssl_ctx, filename, 
+	                              SSL_FILETYPE_PEM) <= 0) {
+				worker_log(worker, LOG_ERR, "Could not load RSA private key \"%s\"", 
+	           filename);
+				return APR_EINVAL;
+      }
+
+      /* get ca file if any is specified */
+      filename = apr_strtok(NULL, " ", &last);
+      if (filename && !SSL_CTX_load_verify_locations(worker->ssl_ctx, filename,
+	                                             NULL)) {
+				worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", filename);
+				return APR_EINVAL;
+      }
+#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
+      SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
+#endif
+
+      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+				worker_log(worker, LOG_ERR, "SSL_new failed.");
+				return APR_ECONNREFUSED;
+      }
+      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+      ssl_rand_seed();
+      apr_os_sock_get(&fd, worker->socket->socket);
+      bio = BIO_new_socket(fd, BIO_NOCLOSE);
+      SSL_set_bio(worker->socket->ssl, bio, bio);
+      if (worker->socket->sess) {
+				SSL_set_session(worker->socket->ssl, worker->socket->sess);
+				SSL_SESSION_free(worker->socket->sess);
+				worker->socket->sess = NULL;
+      }
+      SSL_set_connect_state(worker->socket->ssl);
+
+      if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
+				return status;
+      }
+    }
+#endif
+  }
+	else {
+		worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+		return APR_EGENERAL;
+	}
+}
+
+/**
  * Setup a connection to host
  *
  * @param self IN command object
@@ -1517,26 +1630,26 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       filename = apr_strtok(NULL, " ", &last);
       if (filename && SSL_CTX_use_certificate_file(worker->ssl_ctx, filename, 
 				       SSL_FILETYPE_PEM) <= 0) { 
-	worker_log(worker, LOG_ERR, "Could not load RSA certifacte \"%s\"", 
-	           filename);
-	return APR_EINVAL;
+				worker_log(worker, LOG_ERR, "Could not load RSA certifacte \"%s\"", 
+									 filename);
+				return APR_EINVAL;
       }
 
       /* get key file if any is specified */
       filename = apr_strtok(NULL, " ", &last);
       if (filename && SSL_CTX_use_PrivateKey_file(worker->ssl_ctx, filename, 
 	                              SSL_FILETYPE_PEM) <= 0) {
-	worker_log(worker, LOG_ERR, "Could not load RSA private key \"%s\"", 
+				worker_log(worker, LOG_ERR, "Could not load RSA private key \"%s\"", 
 	           filename);
-	return APR_EINVAL;
+				return APR_EINVAL;
       }
 
       /* get ca file if any is specified */
       filename = apr_strtok(NULL, " ", &last);
       if (filename && !SSL_CTX_load_verify_locations(worker->ssl_ctx, filename,
 	                                             NULL)) {
-	worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", filename);
-	return APR_EINVAL;
+				worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", filename);
+				return APR_EINVAL;
       }
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
       SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
@@ -1575,8 +1688,8 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       apr_os_sock_t fd;
 
       if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
-	worker_log(worker, LOG_ERR, "SSL_new failed.");
-	status = APR_ECONNREFUSED;
+				worker_log(worker, LOG_ERR, "SSL_new failed.");
+				status = APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(worker->socket->ssl, worker->meth);
       ssl_rand_seed();
@@ -1584,9 +1697,9 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(worker->socket->ssl, bio, bio);
       if (worker->socket->sess) {
-	SSL_set_session(worker->socket->ssl, worker->socket->sess);
-	SSL_SESSION_free(worker->socket->sess);
-	worker->socket->sess = NULL;
+				SSL_set_session(worker->socket->ssl, worker->socket->sess);
+				SSL_SESSION_free(worker->socket->sess);
+				worker->socket->sess = NULL;
       }
       SSL_set_connect_state(worker->socket->ssl);
     }
@@ -1600,7 +1713,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 
     if ((status =
          apr_socket_connect(worker->socket->socket, remote_addr)) 
-	!= APR_SUCCESS) {
+				!= APR_SUCCESS) {
       return status;
     }
 
@@ -1614,7 +1727,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 #ifdef USE_SSL
     if (worker->socket->is_ssl) {
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
-	return status;
+				return status;
       }
     }
 #endif
