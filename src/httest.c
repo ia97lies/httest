@@ -348,6 +348,8 @@ command_t local_commands[] = {
   "Store base64 decoded string into a variable"},
   {"_STRFTIME", (command_f )command_STRFTIME, "<time> \"<format-string>\" <variable> [Local|GMT]", 
   "Stores given time [ms] formated to variable"},
+  {"_SSL_CONNECT", (command_f )command_SSL_CONNECT, "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]", 
+  "Do a ssl connect on an already connected TCP socket"},
   {"_SSL_LEGACY", (command_f )command_SSL_LEGACY, "on|off", 
   "Turn on|off SSL legacy behavour for renegotiation for openssl libraries 0.9.8l and above"},
   {"_SSL_ENGINE", (command_f )command_SSL_ENGINE, "<engine>", 

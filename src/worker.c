@@ -1431,7 +1431,8 @@ void worker_get_socket(worker_t *self, const char *hostname,
  *
  * @return an apr status
  */
-apr_status_t command_SSL(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker, 
+		                             char *data) {
 	char *copy;
 	char *last;
 	char *sslstr;
@@ -1611,10 +1612,12 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
 #endif
+
+	worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portstr);
+  worker_get_socket(worker, hostname, portstr);
+
   portstr = apr_strtok(portstr, ":", &tag);
   port = apr_atoi64(portstr);
-
-  worker_get_socket(worker, hostname, portname);
   
   worker->socket->is_ssl = is_ssl;
 
