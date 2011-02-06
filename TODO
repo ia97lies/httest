@@ -16,5 +16,3 @@ httest
 - Include concept with env variables
 - SSL session reuse (partial)
 - _TRY ... _CATCH ... FINALLY ... END TRY
-- _ERROR <error>* _END ERROR
-- POP3 support implement as macro
