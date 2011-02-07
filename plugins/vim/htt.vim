@@ -13,22 +13,25 @@ syn keyword httStorageClass	CLIENT SERVER DAEMON BLOCK END
 syn keyword httInclude          INCLUDE 
 syn keyword httStatement	SET GO EXEC TIMEOUT AUTO_CLOSE PROCESS FILE MODULE
 syn keyword httStatement	_FLUSH _REQ _RESWAIT _RES _WAIT _CLOSE 
-syn keyword httStatement	_SEQUENCE _BREAK _SOCKET _EXPECT _MATCH _GREP
-syn keyword httStatement	_ERROR _PROCESS _PROC_WAIT _SLEEP _TIMEOUT _SET _EXEC _PIPE 
+syn keyword httStatement	_SEQUENCE _BREAK _EXPECT _MATCH _GREP
+syn keyword httStatement	_PROCESS _PROC_WAIT _SLEEP _TIMEOUT _SET _EXEC _PIPE 
 syn keyword httStatement	_SOCKSTATE _EXIT _HEADER _RAND _SENDFILE _DEBUG _UP _DOWN _TIMER 
 syn keyword httStatement	_TIME _CALL _LOG_LEVEL _SYNC _RECV _READLINE _OP _WHICH _CERT 
 syn keyword httStatement	_VERIFY_PEER _RENEG _ONLY_PRINTABLE _PRINT_HEX _SH _ADD_HEADER 
 syn keyword httStatement	_DETACH _PID _URLENC _URLDEC _B64ENC _B64DEC _STRFTIME _SSL_LEGACY 
 syn keyword httStatement	_SSL_ENGINE _SSL_SECURE_RENEG_SUPPORTED _AUTO_CLOSE _AUTO_COOKIE 
 syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT _SSL_SESSION_ID _SSL_GET_SESSION 
-syn keyword httStatement	_SSL_SET_SESSION _TUNNEL _RECORD _PLAY _USE _CHUNK
-syn keyword httRepeat           _LOOP _FOR _BPS _RPS
+syn keyword httStatement	_SSL_SET_SESSION _TUNNEL _RECORD _PLAY _USE _CHUNK _CHECK
+syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET
+syn keyword httConstant         POLL DO_NOT_CHECK 
+syn match httRepeat             "\<_END SOCKET\>"
 syn match httRepeat             "\<_END LOOP\>"
 syn match httRepeat             "\<_END FOR\>"
 syn match httRepeat             "\<_END BPS\>"
 syn match httRepeat             "\<_END RPS\>"
-syn keyword httConditional      _IF _ELSE
+syn keyword httConditional      _IF _ELSE _ERROR
 syn match httConditional        "\<_END IF\>" 
+syn match httConditional        "\<_END ERROR\>" 
 syn keyword httOperator         MATCH LT GT LE GE EQ ADD SUB MUL DIV
 syn match httIdentifier		"$[^ /.:\$"]\+" 
 syn match httIdentifier		"${[^ /.:\$}"]\+}" 
@@ -37,7 +40,7 @@ syn match httFunction           "^ *__.*" contains=httIdentifier
 syn match httFunction           "^ *_-.*" contains=httIdentifier
 syn match   httSpecial contained "\\\d\d\d\|\\."
 syn region  httString		  start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=basicSpecial,httIdentifier
-syn region httComment	        display oneline start="^#" end="$" contains=httTodo
+syn region httComment	        display oneline start="^ *#" end="$" contains=httTodo
 syn keyword httTodo             contained TODO FIXME XXX NOTE
 syn keyword httType             EXEC HEADER BODY VAR exec header body var
 

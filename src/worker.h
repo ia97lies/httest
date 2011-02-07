@@ -285,6 +285,7 @@ apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data);
 apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data);
 apr_status_t command_RECV(command_t * self, worker_t * worker, char *data);
 apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data);
+apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data);
 apr_status_t command_OP(command_t * self, worker_t * worker, char *data);
 apr_status_t command_WHICH(command_t * self, worker_t * worker, char *data);
 apr_status_t command_CERT(command_t * self, worker_t * worker, char *data);
@@ -306,6 +307,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data);
 apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data); 
+apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker, char *data);
 apr_status_t command_SSL_LEGACY(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_SSL_SECURE_RENEG_SUPPORTED(command_t *self, 
                                                 worker_t *worker, char *data);

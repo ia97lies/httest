@@ -3,4 +3,5 @@ EXTRA_DIST= \
 	simple_multipart.htb \
 	simple_request.htb \
 	simple_urlenc.htb \
-	smtp.htb 
+	smtp.htb \
+	pop3.htb 

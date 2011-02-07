@@ -14,10 +14,10 @@
 # 
 # Author: Christian Liesch <ia97lies@users.sourceforge.net>
 #
-# SMTP module
+# POP3 module
 #
 
-MODULE SMTP
+MODULE POP3
 
 BLOCK _CONNECT IP PORT
 _REQ $IP $PORT
@@ -29,15 +29,26 @@ __$DATA
 _FLUSH
 END
 
+# this is for single line answers
 BLOCK _WAIT
+_READLINE
+END
+
+# some kind of pop3 commands do expect multi line answers
+BLOCK _WAIT_MULTI
 _SOCKET
-  _LOOP -1
-    _GREP . "(...)(.)(.*)" CODE LAST TEXT
-    _READLINE DO_NOT_CHECK
-    _IF "$LAST" MATCH " "
-      _BREAK
-    _END IF
-  _END LOOP
+  _GREP . "(.[^ ]+)" STATUS
+  _READLINE DO_NOT_CHECK
+  # on error no multi line answer will be sent
+  _IF "$STATUS" MATCH "\+OK"
+    _LOOP -1
+      _GREP . "(^.$)" DOT
+      _READLINE DO_NOT_CHECK
+      _IF "$DOT" MATCH "^\.$"
+        _BREAK
+      _END IF
+    _END LOOP
+  _END IF
 _END SOCKET 
 _CHECK
 END
