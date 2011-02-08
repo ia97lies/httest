@@ -23,7 +23,7 @@ syn keyword httStatement	_SSL_ENGINE _SSL_SECURE_RENEG_SUPPORTED _AUTO_CLOSE _AU
 syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT _SSL_SESSION_ID _SSL_GET_SESSION 
 syn keyword httStatement	_SSL_SET_SESSION _TUNNEL _RECORD _PLAY _USE _CHUNK _CHECK
 syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET
-syn keyword httConstant         POLL DO_NOT_CHECK 
+syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO 
 syn match httRepeat             "\<_END SOCKET\>"
 syn match httRepeat             "\<_END LOOP\>"
 syn match httRepeat             "\<_END FOR\>"
@@ -36,13 +36,13 @@ syn keyword httOperator         MATCH LT GT LE GE EQ ADD SUB MUL DIV
 syn match httIdentifier		"$[^ /.:\$"]\+" 
 syn match httIdentifier		"${[^ /.:\$}"]\+}" 
 syn match httNumber		"\<[0-9]\+\>"
-syn match httFunction           "^ *__.*" contains=httIdentifier
+syn match httFunction           "^ *__.*" contains=httIdentifier,httConstant
 syn match httFunction           "^ *_-.*" contains=httIdentifier
 syn match   httSpecial contained "\\\d\d\d\|\\."
 syn region  httString		  start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=basicSpecial,httIdentifier
 syn region httComment	        display oneline start="^ *#" end="$" contains=httTodo
 syn keyword httTodo             contained TODO FIXME XXX NOTE
-syn keyword httType             EXEC HEADER BODY VAR exec header body var
+syn keyword httType             EXEC HEADER BODY VAR exec headers body var
 
 " Define the default highlighting.
 " For version 5.7 and earlier: only when not done already
