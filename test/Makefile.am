@@ -74,6 +74,7 @@ EXTRA_DIST= \
 	huge_page.htt \
 	icap_100cont.htt \
 	icap_auto.htt \
+	icap_huge.htt \
 	icap_main.htt \
 	ifcond.htt \
 	ifelse.htt \
@@ -114,6 +115,7 @@ EXTRA_DIST= \
 	pipe_recv_to_file.htt \
 	pipe_simple.htt \
 	pipe_to_file.htt \
+	pop3_simple.htt \
 	print_hex_match.htt \
 	process.hte \
 	process.htt \
@@ -155,6 +157,7 @@ EXTRA_DIST= \
 	ssl_mutual.htt \
 	ssl_mutual.txt \
 	ssl_session_reuse.htt \
+	sslsimple2.htt \
 	sslsimple.htt \
 	ssl_sockstate.htt \
 	ssl_stream_myself.htt \

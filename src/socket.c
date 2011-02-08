@@ -478,7 +478,7 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
     return APR_SUCCESS;
   }
   
-  read = apr_pcalloc(sockreader->pool, size);
+  read = apr_pcalloc(sockreader->ppool, size);
   sockreader_read_block(sockreader, read, &size);
 
   if (strcasecmp(key, "null-body") != 0 && (!preview || strcasecmp(preview, "0") != 0)) {
@@ -486,7 +486,7 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
 	!= APR_SUCCESS) {
       return status;
     }
-    *buf = apr_pcalloc(sockreader->pool, size + size2);
+    *buf = apr_pcalloc(sockreader->ppool, size + size2);
     memcpy(*buf, read, size);
     memcpy(&(*buf)[size], read2, size2);
     *len = size + size2;
