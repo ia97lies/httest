@@ -2,6 +2,7 @@ Version 2.0.1
  - New      httest: _READLINE and _RECV can turn off check match/expects. 
                     This check can be done with a separated command _CHECK
  - New      macros: Simple POP3 implementation
+ - Fixed    httest: Bugfix icap encapsulated reader
 
 Version 2.0.0
  - New      httest: Syntax improvements for better DSL ability
