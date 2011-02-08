@@ -9,23 +9,18 @@ Document version
   Update AUTHORS
   Update THANKS 
 
-Test if everything is checked in and there are no updates
-  cvs -q up -d
-
-Check in all changes
-  cvs -q ci -m"Release build"
-
 Test it on Linux (optional)
   make distcheck
 
 Test it on Solaris (optional)
   configure && make && make check 
 
-Set version in configure.in and src/defines.h and do
-  cvs -q ci -m"Release build"
+Set version in configure.in and do
+  git commit -m"new release" configure.in src/defines.h
 
 Tag new release
-  cvs tag HTT_RELEASE_<major>_<minor>_<maint>
+  git tag <major>.<minor>.<maint>
+  git push --tags
 
 Build release
   ./release.sh HTT_RELEASE_<major>_<minor>_<maint>
