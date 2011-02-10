@@ -22,7 +22,7 @@ syn keyword httStatement	_DETACH _PID _URLENC _URLDEC _B64ENC _B64DEC _STRFTIME 
 syn keyword httStatement	_SSL_ENGINE _SSL_SECURE_RENEG_SUPPORTED _AUTO_CLOSE _AUTO_COOKIE 
 syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT _SSL_SESSION_ID _SSL_GET_SESSION 
 syn keyword httStatement	_SSL_SET_SESSION _TUNNEL _RECORD _PLAY _USE _CHUNK _CHECK
-syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET
+syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY
 syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO 
 syn match httRepeat             "\<_END SOCKET\>"
 syn match httRepeat             "\<_END LOOP\>"
