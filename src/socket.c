@@ -59,6 +59,9 @@ struct sockreader_s {
   char *swap;
   apr_bucket_alloc_t *cache_alloc;
   apr_bucket_brigade *cache;
+#define SOCKREADER_OPTIONS_NONE 0
+#define SOCKREADER_OPTIONS_IGNORE_BODY 1
+  int options; 
 };
 
 
@@ -120,6 +123,17 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
   }
 
   return APR_SUCCESS;
+}
+
+/**
+ * Set options
+ *
+ * @param self IN sockreader object
+ * @param options IN SOCKREADER_OPTIONS_IGNORE_BODY to ignore recvd body 
+ *                   SOCKREADER_OPTIONS_NONE delete options
+ */
+void sockreader_set_options(sockreader_t *self, int options) {
+  self->options = options;
 }
 
 /** 
