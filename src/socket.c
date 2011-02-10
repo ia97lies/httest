@@ -266,16 +266,23 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
       }
     }
 
-    block[i] = self->buf[self->i];
+    if (block) {
+      block[i] = self->buf[self->i];
+      ++self->i;
+    }
     ++i;
-    ++self->i;
   }
 
   /* on eof we like to get the bytes recvieved so far */
-  while (i < len && self->i < self->len) {
-    block[i] = self->buf[self->i];
-    ++i;
-    ++self->i;
+  if (block) {
+    while (i < len && self->i < self->len) {
+      block[i] = self->buf[self->i];
+      ++i;
+      ++self->i;
+    }
+  }
+  else {
+    i += self->len - self->i;
   }
 
   *length = i;
@@ -308,7 +315,12 @@ apr_status_t content_length_reader(sockreader_t * sockreader,
     return status;
   }
   
-  read = apr_pcalloc(sockreader->pool, len);
+  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    read = NULL;
+  }
+  else {
+    read = apr_pcalloc(sockreader->pool, len);
+  }
   sockreader_read_block(sockreader, read, &len);
   *buf = read;
   /* if we did not get the request length quit with data incomplete error */
@@ -317,6 +329,10 @@ apr_status_t content_length_reader(sockreader_t * sockreader,
   }
 
   *ct = len;
+
+  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    *ct = 0;
+  }
 
   return status;
 }
@@ -344,7 +360,12 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
 
   *buf = NULL;
   (*len) = 0;
-  read = apr_pcalloc(sockreader->pool, 1);
+  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    read = NULL;
+  }
+  else {
+    read = apr_pcalloc(sockreader->pool, 1);
+  }
   cur_len = 0;
   chunk = 0;
   if (my_strcasestr(val, "chunked")) {
@@ -360,11 +381,18 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
       if (chunk == 0) {
 	break;
       }
-      read = my_realloc(sockreader, read, cur_len, cur_len + chunk);
+      if (!sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+	read = my_realloc(sockreader, read, cur_len, cur_len + chunk);
+      }
       chunk_len = 0;
       while (chunk_len < chunk) {
 	chunk_cur = chunk - chunk_len;
-	status = sockreader_read_block(sockreader, &read[cur_len + chunk_len], &chunk_cur);
+	if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+	  status = sockreader_read_block(sockreader, NULL, &chunk_cur);
+	}
+	else {
+	  status = sockreader_read_block(sockreader, &read[cur_len + chunk_len], &chunk_cur);
+	}
 	if (status != APR_SUCCESS && (status != APR_EOF || chunk_cur == 0)) {
 	  break;
 	}
@@ -388,6 +416,9 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
 
   *buf = read;
   *len = cur_len;
+  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    *len = 0;
+  }
 
   /* if null chunk termination and eof this is also ok */
   if (status == APR_SUCCESS || status == APR_EOF) {
@@ -423,12 +454,23 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
 
   i = 0;
   alloc = BLOCK_MAX;
-  read = apr_pcalloc(self->pool, alloc);
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    read = NULL;
+  }
+  else {
+    read = apr_pcalloc(self->pool, alloc);
+  }
   do {
     block = BLOCK_MAX;
-    status = sockreader_read_block(self, &read[i], &block);
+    if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+      status = sockreader_read_block(self, NULL, &block);
+    }
+    else {
+      status = sockreader_read_block(self, &read[i], &block);
+    }
     i += block;
-    if (i >= alloc) {
+    if (!self->options & SOCKREADER_OPTIONS_IGNORE_BODY &&
+	i >= alloc) {
       alloc += BLOCK_MAX;
       read = my_realloc(self, read, alloc - BLOCK_MAX, alloc);
     }
@@ -436,6 +478,10 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
 
   *buf = read;
   *len = i;
+
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    *len = 0;
+  }
 
   if (status == APR_SUCCESS || status == APR_EOF) {
     return APR_SUCCESS;
@@ -492,7 +538,12 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
     return APR_SUCCESS;
   }
   
-  read = apr_pcalloc(sockreader->pool, size);
+  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    read = NULL;
+  }
+  else {
+    read = apr_pcalloc(sockreader->pool, size);
+  }
   sockreader_read_block(sockreader, read, &size);
 
   if (strcasecmp(key, "null-body") != 0 && (!preview || strcasecmp(preview, "0") != 0)) {
@@ -500,14 +551,20 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
 	!= APR_SUCCESS) {
       return status;
     }
-    *buf = apr_pcalloc(sockreader->ppool, size + size2);
-    memcpy(*buf, read, size);
-    memcpy(&(*buf)[size], read2, size2);
-    *len = size + size2;
+    if (!sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+      *buf = apr_pcalloc(sockreader->ppool, size + size2);
+      memcpy(*buf, read, size);
+      memcpy(&(*buf)[size], read2, size2);
+      *len = size + size2;
+    }
   }
   else {
     *len = size;
     *buf = read;
+  }
+
+  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    *len = 0;
   }
 
   return APR_SUCCESS;
