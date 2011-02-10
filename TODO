@@ -19,3 +19,6 @@ httest
 - POP3 TLS support
 - Cleanup the messy ssl implementation
 - Check if that pushback feature in sockreader realy works
+- Store recorded stuff in a variable
+- Array variable
+- Hash variable, btw. the variables are hold in hash :)
