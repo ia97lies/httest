@@ -1191,6 +1191,14 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     sockreader = worker->sockreader;
   }
 
+  /* bodies were read but not store */
+  if (worker->flags & FLAGS_IGNORE_BODY) {
+    sockreader_set_options(sockreader, SOCKREADER_OPTIONS_IGNORE_BODY);
+  }
+  else {
+    sockreader_set_options(sockreader, SOCKREADER_OPTIONS_NONE);
+  }
+
   if (worker->headers) {
     apr_table_clear(worker->headers);
   }
@@ -4508,6 +4516,29 @@ apr_status_t command_SSL_SET_SESSION(command_t *self, worker_t *worker, char *da
 #endif
 
   return APR_SUCCESS;
+}
+
+/**
+ * IGNORE_BODY command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data) {
+  char *copy;
+  COMMAND_NEED_ARG("on|off, default off");
+
+  if (strcasecmp(copy, "on") == 0) {
+    worker->flags |= FLAGS_IGNORE_BODY;
+  }
+  else {
+    worker->flags &= ~FLAGS_IGNORE_BODY;
+  }
+  return APR_SUCCESS;
+
 }
 
 /**

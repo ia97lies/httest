@@ -360,6 +360,8 @@ command_t local_commands[] = {
   "Close connection on Connection: close header"},
   {"_AUTO_COOKIE", (command_f )command_AUTO_COOKIE, "on|off", 
   "Handles cookies in a simple way, do not check expire or path"},
+  {"_IGNORE_BODY", (command_f )command_IGNORE_BODY, "on|off", 
+  "Recv but do not store or inspect body, used for performance testing."},
   {"_SSL_CERT_VAL", (command_f )command_SSL_CERT_VAL, "<cert entry> <variable>", 
   "Get <cert entry> and store it into <variable>\n"
   "Get cert with _RENEG or _VERIFY_PEER\n"

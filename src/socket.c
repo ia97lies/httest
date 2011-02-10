@@ -59,8 +59,6 @@ struct sockreader_s {
   char *swap;
   apr_bucket_alloc_t *cache_alloc;
   apr_bucket_brigade *cache;
-#define SOCKREADER_OPTIONS_NONE 0
-#define SOCKREADER_OPTIONS_IGNORE_BODY 1
   int options; 
 };
 

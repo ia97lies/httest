@@ -92,6 +92,7 @@ struct worker_s {
 #define FLAGS_SSL_LEGACY     0x00000200
 #define FLAGS_AUTO_CLOSE     0x00000400
 #define FLAGS_AUTO_COOKIE    0x00000800
+#define FLAGS_IGNORE_BODY    0x00001000
   int flags;
   apr_proc_t proc;
   int cmd;
@@ -314,6 +315,7 @@ apr_status_t command_SSL_SECURE_RENEG_SUPPORTED(command_t *self,
 apr_status_t command_SSL_ENGINE(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data); 
+apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_SSL_CERT_VAL(command_t *self, worker_t *worker, 
                                   char *data); 
 apr_status_t command_SSL_SESSION_ID(command_t *self, worker_t *worker, char *data); 
