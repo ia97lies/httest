@@ -257,22 +257,22 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
 
   status = APR_SUCCESS;
   i = 0;
-  while (i < len) {
-    if (self->i >= self->len) {
-      if ((status = sockreader_fill(self)) != APR_SUCCESS) {
-        break;
+  if (block) {
+    while (i < len) {
+      if (self->i >= self->len) {
+	if ((status = sockreader_fill(self)) != APR_SUCCESS) {
+	  break;
+	}
       }
-    }
 
-    if (block) {
-      block[i] = self->buf[self->i];
+      if (block) {
+	block[i] = self->buf[self->i];
+      }
+      ++i;
       ++self->i;
     }
-    ++i;
-  }
 
-  /* on eof we like to get the bytes recvieved so far */
-  if (block) {
+    /* on eof we like to get the bytes recvieved so far */
     while (i < len && self->i < self->len) {
       block[i] = self->buf[self->i];
       ++i;
@@ -280,7 +280,18 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
     }
   }
   else {
-    i += self->len - self->i;
+    while (i < len) {
+      if (len - i > self->len - self->i) {
+	i += self->len - self->i;
+	if ((status = sockreader_fill(self)) != APR_SUCCESS) {
+	  break;
+	}
+      }
+      else {
+	i = len;
+	self->i += len;
+      }
+    }
   }
 
   *length = i;
