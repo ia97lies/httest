@@ -220,9 +220,9 @@ void worker_log_error(worker_t * self, char *fmt, ...) {
     tmp = apr_pvsprintf(self->pcmd, fmt, va);
     tmp = apr_psprintf(self->pcmd, "%s: error: %s", self->file_and_line,
 	               tmp);
-    fprintf(stderr, "\n%-88s", tmp);
-    fflush(stderr);
-  }
+    fprintf(stdout, "\n%-88s", tmp);
+    fflush(stdout);
+  } 
 }
 
 /**
@@ -2988,7 +2988,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data) {
 	goto out_err;
       }
     }
-  }
+  } 
 
   if ((status = worker_handle_buf(worker, pool, buf, recv_len)) 
       != APR_SUCCESS) {
