@@ -79,6 +79,7 @@ EXTRA_DIST= \
 	ifcond.htt \
 	ifelse.htt \
 	ifvareq.htt \
+	ignore_body.htt \
 	incomplete.htt \
 	leftovertmpf.htt \
 	loop_auto.htt \
