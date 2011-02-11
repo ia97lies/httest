@@ -1607,7 +1607,8 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     portname += 5;
   }
 
-  if ((status = worker_ssl_ctx(self, RSA_SERVER_CERT, RSA_SERVER_KEY, 0)) 
+  if (self->is_ssl && 
+      (status = worker_ssl_ctx(self, RSA_SERVER_CERT, RSA_SERVER_KEY, NULL, 0)) 
       != APR_SUCCESS) {
     goto error;
   }

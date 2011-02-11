@@ -395,31 +395,46 @@ apr_status_t worker_ssl_handshake(worker_t * worker) {
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, int check) {
-  if (self->is_ssl && !self->ssl_ctx) {
+apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, char *ca, int check) {
+  worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
+             certfile?certfile:"(null)",
+             keyfile?keyfile:"(null)",
+             ca?ca:"(null)");
+  if (!self->ssl_ctx) {
     if (!(self->ssl_ctx = SSL_CTX_new(self->meth))) {
       worker_log(self, LOG_ERR, "Could not initialize SSL Context.");
-      return APR_ECONNABORTED;
+      return APR_EINVAL;
     }
   }
-  if (self->is_ssl && self->ssl_ctx) {
-    if (SSL_CTX_use_certificate_file(self->ssl_ctx, certfile, 
-	SSL_FILETYPE_PEM) <= 0 && check) { 
+  if (self->ssl_ctx) {
+    if (certfile && SSL_CTX_use_certificate_file(self->ssl_ctx, certfile, 
+	                                         SSL_FILETYPE_PEM) <= 0 && 
+	check) { 
       worker_log(self, LOG_ERR, "Could not load RSA server certifacte \"%s\"",
 	         certfile);
-      return APR_ECONNABORTED;
+      return APR_EINVAL;
     }
-    if (SSL_CTX_use_PrivateKey_file(self->ssl_ctx, keyfile, 
-	SSL_FILETYPE_PEM) <= 0 && check) {
+    if (keyfile && SSL_CTX_use_PrivateKey_file(self->ssl_ctx, keyfile, 
+	                                       SSL_FILETYPE_PEM) <= 0 && 
+	check) {
       worker_log(self, LOG_ERR, "Could not load RSA server private key \"%s\"",
 	         keyfile);
-      return APR_ECONNABORTED;
+      return APR_EINVAL;
     }
-    if (!SSL_CTX_check_private_key(self->ssl_ctx) && check) {
+    if (ca && !SSL_CTX_load_verify_locations(self->ssl_ctx, ca,
+					     NULL) && check) {
+      worker_log(self, LOG_ERR, "Could not load CA file \"%s\"", ca);
+      return APR_EINVAL;
+    }
+
+    if (check && !SSL_CTX_check_private_key(self->ssl_ctx)) {
       worker_log(self, LOG_ERR, "Private key does not match the certificate public key");
-      return APR_ECONNABORTED;
+      return APR_EINVAL;
     }
-  }
+#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
+    SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
+#endif
+ }
   return APR_SUCCESS;
 }
 
@@ -1482,39 +1497,17 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
 
   if (worker->socket->socket_state == SOCKET_CONNECTED) {
     if (worker->socket->is_ssl) {
-      if (!worker->ssl_ctx && !(worker->ssl_ctx = SSL_CTX_new(worker->meth))) {
-        worker_log(worker, LOG_ERR, "Could not initialize SSL Context.");
-      }
-      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
-      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
-      /* get cert file if any is specified */
-      filename = apr_strtok(NULL, " ", &last);
-      if (filename && SSL_CTX_use_certificate_file(worker->ssl_ctx, filename, 
-				       SSL_FILETYPE_PEM) <= 0) { 
-				worker_log(worker, LOG_ERR, "Could not load RSA certifacte \"%s\"", 
-									 filename);
-				return APR_EINVAL;
-      }
+      char *cert;
+      char *key;
+      char *ca;
+      apr_status_t status;
 
-      /* get key file if any is specified */
-      filename = apr_strtok(NULL, " ", &last);
-      if (filename && SSL_CTX_use_PrivateKey_file(worker->ssl_ctx, filename, 
-	                              SSL_FILETYPE_PEM) <= 0) {
-				worker_log(worker, LOG_ERR, "Could not load RSA private key \"%s\"", 
-	           filename);
-				return APR_EINVAL;
+      cert = apr_strtok(NULL, " ", &last);
+      key = apr_strtok(NULL, " ", &last);
+      ca = apr_strtok(NULL, " ", &last);
+      if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
+	return status;
       }
-
-      /* get ca file if any is specified */
-      filename = apr_strtok(NULL, " ", &last);
-      if (filename && !SSL_CTX_load_verify_locations(worker->ssl_ctx, filename,
-	                                             NULL)) {
-				worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", filename);
-				return APR_EINVAL;
-      }
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-      SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
-#endif
 
       if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
 				worker_log(worker, LOG_ERR, "SSL_new failed.");
@@ -1632,40 +1625,19 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   if (worker->socket->socket_state == SOCKET_CLOSED) {
 #ifdef USE_SSL
     if (worker->socket->is_ssl) {
-      if (!worker->ssl_ctx && !(worker->ssl_ctx = SSL_CTX_new(worker->meth))) {
-        worker_log(worker, LOG_ERR, "Could not initialize SSL Context.");
+      char *cert;
+      char *key;
+      char *ca;
+
+      cert = apr_strtok(NULL, " ", &last);
+      key = apr_strtok(NULL, " ", &last);
+      ca = apr_strtok(NULL, " ", &last);
+      if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) 
+	  != APR_SUCCESS) {
+	return status;
       }
       SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
       SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
-      /* get cert file if any is specified */
-      filename = apr_strtok(NULL, " ", &last);
-      if (filename && SSL_CTX_use_certificate_file(worker->ssl_ctx, filename, 
-				       SSL_FILETYPE_PEM) <= 0) { 
-				worker_log(worker, LOG_ERR, "Could not load RSA certifacte \"%s\"", 
-									 filename);
-				return APR_EINVAL;
-      }
-
-      /* get key file if any is specified */
-      filename = apr_strtok(NULL, " ", &last);
-      if (filename && SSL_CTX_use_PrivateKey_file(worker->ssl_ctx, filename, 
-	                              SSL_FILETYPE_PEM) <= 0) {
-				worker_log(worker, LOG_ERR, "Could not load RSA private key \"%s\"", 
-	           filename);
-				return APR_EINVAL;
-      }
-
-      /* get ca file if any is specified */
-      filename = apr_strtok(NULL, " ", &last);
-      if (filename && !SSL_CTX_load_verify_locations(worker->ssl_ctx, filename,
-	                                             NULL)) {
-				worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", filename);
-				return APR_EINVAL;
-      }
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-      SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
-#endif
-
     }
 #endif
 #if APR_HAVE_IPV6
@@ -3080,7 +3052,7 @@ out_err:
  * @return APR_SUCCESS
  */
 apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data) {
-  apr_status_t status = worker_check_expect(worker, status);
+  apr_status_t status = worker_check_expect(worker, APR_SUCCESS);
   return status;
 }
 
@@ -3183,21 +3155,18 @@ apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data) {
 apr_status_t command_CERT(command_t *self, worker_t *worker, char *data) {
   char *copy;
   char *last;
-  char *cert;
-  char *key;
-  char *ca;
 
   COMMAND_NEED_ARG("<cert-file> <key-file> [<ca-file>]");
   
   if (worker->ssl_ctx) {
+    char *cert;
+    char *key;
+    char *ca;
+
     cert = apr_strtok(copy, " ", &last);
     key = apr_strtok(NULL, " ", &last);
     ca = apr_strtok(NULL, " ", &last);
-    worker_ssl_ctx(worker, cert, key, 1);
-    if (ca && !SSL_CTX_load_verify_locations(worker->ssl_ctx, ca, NULL)) {
-	worker_log(worker, LOG_ERR, "Could not load CA file");
-      return APR_EINVAL;
-    }
+    worker_ssl_ctx(worker, cert, key, ca, 1);
   }
   else {
     worker_log(worker, LOG_ERR, "Can not set cert, ssl not enabled in CLIENT/SERVER");
@@ -3317,7 +3286,7 @@ apr_status_t command_RENEG(command_t *self, worker_t *worker, char *data) {
 	return APR_EACCES;
       }
 
-      if((rc = SSL_get_verify_result(worker->socket->ssl))!=X509_V_OK) {
+      if((rc = SSL_get_verify_result(worker->socket->ssl)) != X509_V_OK) {
 	worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
 	X509_verify_cert_error_string(rc), rc);
 	return APR_EACCES;

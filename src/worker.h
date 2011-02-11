@@ -352,7 +352,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
                           const char *data, apr_size_t len); 
 void worker_conn_close_all(worker_t *self); 
 apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, 
-                            int check); 
+                            char *cafile, int check); 
 apr_status_t worker_listener_up(worker_t *worker, apr_int32_t backlog); 
 void worker_get_socket(worker_t *self, const char *hostname, 
                        const char *portname);
