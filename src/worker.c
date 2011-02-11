@@ -440,6 +440,35 @@ apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, char
 }
 
 /**
+ * Get method 
+ *
+ * @param self IN thread object data
+ * @param sslstr IN SSL|SSL2|SSL3|TLS1
+ *
+ * @return APR_SUCCESS or APR_ECONNABORTED
+ */
+int worker_set_method(worker_t * worker, char *sslstr) {
+  int is_ssl = 0;
+  if (strcasecmp(sslstr, "SSL") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv23_client_method();
+  }
+  else if (strcasecmp(sslstr, "SSL2") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv2_client_method();
+  }
+  else if (strcasecmp(sslstr, "SSL3") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv3_client_method();
+  }
+  else if (strcasecmp(sslstr, "TLS1") == 0) {
+    is_ssl = 1;
+    worker->meth = TLSv1_client_method();
+  }
+  return is_ssl;
+}
+
+/**
  * Do a ssl accept
  *
  * @param worker IN thread data object
@@ -1473,25 +1502,9 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
 #ifndef USE_SSL
 	return APR_SUCCESS;
 #else
-  is_ssl = 0;
-  if (strcasecmp(copy, "SSL") == 0) {
-    is_ssl = 1;
-    worker->meth = SSLv23_client_method();
-  }
-  else if (strcasecmp(copy, "SSL2") == 0) {
-    is_ssl = 1;
-    worker->meth = SSLv2_client_method();
-  }
-  else if (strcasecmp(copy, "SSL3") == 0) {
-    is_ssl = 1;
-    worker->meth = SSLv3_client_method();
-  }
-  else if (strcasecmp(copy, "TLS1") == 0) {
-    is_ssl = 1;
-    worker->meth = TLSv1_client_method();
-  }
-	else {
-    worker_log(worker, LOG_ERR, "%s is not supported", copy);
+  is_ssl = worker_set_method(worker, sslstr);
+  if (!is_ssl) {
+    worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
     return APR_EGENERAL;
   }
   worker->socket->is_ssl = is_ssl;
@@ -1552,6 +1565,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   apr_status_t status;
   apr_sockaddr_t *remote_addr;
   char *portname;
+  char *sslstr;
   char *portstr;
   char *hostname;
   char *filename;
@@ -1587,37 +1601,20 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   }
 
 #ifdef USE_SSL
-  is_ssl = 0;
-  if (strncmp(portstr, "SSL:", 4) == 0) {
-    is_ssl = 1;
-    worker->meth = SSLv23_client_method();
-    portstr += 4;
+  sslstr = apr_strtok(portstr, ":", &tag);
+  is_ssl = worker_set_method(worker, sslstr);
+  if (!is_ssl) {
+    portstr = sslstr;
   }
-  else if (strncmp(portstr, "SSL2:", 4) == 0) {
-    is_ssl = 1;
-    worker->meth = SSLv2_client_method();
-    portstr += 5;
-  }
-  else if (strncmp(portstr, "SSL3:", 4) == 0) {
-    is_ssl = 1;
-    worker->meth = SSLv3_client_method();
-    portstr += 5;
-  }
-  else if (strncmp(portstr, "TLS1:", 4) == 0) {
-    is_ssl = 1;
-    worker->meth = TLSv1_client_method();
-    portstr += 5;
-  }
-  
-  if (!portstr[0]) {
-    worker_log(worker, LOG_ERR, "no SSL port specified");
-    return APR_EGENERAL;
+  else {
+    portstr = tag;
   }
 #endif
 
-	worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portstr);
+  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portstr);
   worker_get_socket(worker, hostname, portstr);
 
+  /* remove tag from port */
   portstr = apr_strtok(portstr, ":", &tag);
   port = apr_atoi64(portstr);
   
