@@ -427,7 +427,8 @@ apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, char
       return APR_EINVAL;
     }
 
-    if (check && !SSL_CTX_check_private_key(self->ssl_ctx)) {
+    if (certfile && keyfile&& check && 
+	!SSL_CTX_check_private_key(self->ssl_ctx)) {
       worker_log(self, LOG_ERR, "Private key does not match the certificate public key");
       return APR_EINVAL;
     }
