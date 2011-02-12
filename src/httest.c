@@ -426,7 +426,7 @@ static void sync_lock(apr_thread_mutex_t *mutex) {
     success = 0;
     fprintf(stderr, "could not lock: %s(%d)\n", 
 	    my_status_str(ptmp, status), status);
-    exit(status);
+    exit(1);
   }
 }
 
@@ -443,7 +443,7 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
     success = 0;
     fprintf(stderr, "could not unlock: %s(%d)\n", 
 	    my_status_str(ptmp, status), status);
-    exit(status);
+    exit(1);
   }
 }
 
@@ -497,7 +497,7 @@ static apr_status_t command_EXIT(command_t * self, worker_t * worker,
     worker_log_error(worker, "EXIT");
     worker_set_global_error(worker);
     worker_destroy(worker);
-    exit(-1);
+    exit(1);
   }
 
   /* just make the compiler happy, never reach this point */
@@ -1213,7 +1213,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
     worker_log(worker, LOG_CMD, "_END PROCESS");
     worker_body_end(body, worker);
     if (status != APR_SUCCESS) {
-      exit(-1);
+      exit(1);
     }
     else {
       exit(0);
@@ -1394,7 +1394,7 @@ void worker_finally(worker_t *self, apr_status_t status) {
     worker_set_global_error(self);
 //    worker_destroy(self);
     worker_conn_close_all(self);
-    exit(status);
+    exit(1);
   }
 exodus:
 //  worker_destroy(self);
@@ -2347,7 +2347,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
 
   /* and exit */
   if (success != 0) {
-    exit(-1);
+    exit(1);
   }
   exit(0);
 }
@@ -2859,7 +2859,7 @@ int main(int argc, const char *const argv[]) {
 	fprintf(stderr, "Could not format time: %s (%d)\n", 
 	        my_status_str(pool, status), status);
 	success = 0;
-	exit(status);
+	exit(1);
       }
       if (!(flags & MAIN_FLAGS_NO_OUTPUT)) {
 	fprintf(stdout, "%s  run %-54s\t", time_str, cur_file);
@@ -2878,7 +2878,7 @@ int main(int argc, const char *const argv[]) {
 	fprintf(stderr, "Could not open stdin: %s (%d)\n", 
 	        my_status_str(pool, status), status);
 	success = 0;
-	exit(status);
+	exit(1);
       }
     }
     else if ((status =
@@ -2887,7 +2887,7 @@ int main(int argc, const char *const argv[]) {
       fprintf(stderr, "\nCould not open %s: %s (%d)", cur_file,
 	      my_status_str(pool, status), status);
       success = 0;
-      exit(status);
+      exit(1);
     }
 
     /* create a global vars table */
@@ -2896,7 +2896,7 @@ int main(int argc, const char *const argv[]) {
     /* interpret current file */
     if ((status = interpret(fp, vars_table, log_mode, pool)) != APR_SUCCESS) {
       success = 0;
-      exit(status);
+      exit(1);
     }
 
     /* close current file */
