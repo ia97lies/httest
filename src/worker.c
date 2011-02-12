@@ -1613,16 +1613,25 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   }
 #endif
 
-  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portstr);
-  worker_get_socket(worker, hostname, portstr);
+  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
+  worker_get_socket(worker, hostname, portname);
 
   /* remove tag from port */
   portstr = apr_strtok(portstr, ":", &tag);
+  if (!portstr) {
+    if (is_ssl) {
+      worker_log(worker, LOG_ERR, "no SSL port specified");
+    }
+    else {
+      worker_log(worker, LOG_ERR, "no port specified");
+    }
+    return APR_EGENERAL;
+  }
   port = apr_atoi64(portstr);
-  
-  worker->socket->is_ssl = is_ssl;
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
+    worker->socket->is_ssl = is_ssl;
+
 #ifdef USE_SSL
     if (worker->socket->is_ssl) {
       char *cert;
