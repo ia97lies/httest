@@ -1,3 +1,9 @@
+Version 2.0.2
+ - Fixed    httest: SSL bugfixes and refactoring
+ - Fixed    httest: Uninitialized variable in command _CHECK do cause false
+                    positive failures
+ - New      httest: _IGNORE_BODY command
+
 Version 2.0.1
  - New      httest: _READLINE and _RECV can turn off check match/expects. 
                     This check can be done with a separated command _CHECK
