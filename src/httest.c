@@ -621,6 +621,13 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
       doit = 1;
     }
   }
+  else if (strcmp(middle, "EQUAL") == 0) {
+    if (strcmp(left, right) == 0) {
+      if (!not) {
+	doit = 1;
+      }
+    }
+  }
   else {
     left_val = apr_atoi64(left);
     right_val = apr_atoi64(right);
