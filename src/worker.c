@@ -1680,8 +1680,8 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       apr_os_sock_t fd;
 
       if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
-				worker_log(worker, LOG_ERR, "SSL_new failed.");
-				status = APR_ECONNREFUSED;
+	worker_log(worker, LOG_ERR, "SSL_new failed.");
+	status = APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(worker->socket->ssl, worker->meth);
       ssl_rand_seed();
@@ -1689,9 +1689,9 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(worker->socket->ssl, bio, bio);
       if (worker->socket->sess) {
-				SSL_set_session(worker->socket->ssl, worker->socket->sess);
-				SSL_SESSION_free(worker->socket->sess);
-				worker->socket->sess = NULL;
+	SSL_set_session(worker->socket->ssl, worker->socket->sess);
+	SSL_SESSION_free(worker->socket->sess);
+	worker->socket->sess = NULL;
       }
       SSL_set_connect_state(worker->socket->ssl);
     }
