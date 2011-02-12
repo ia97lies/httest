@@ -1458,6 +1458,7 @@ apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char * data) {
 void worker_get_socket(worker_t *self, const char *hostname, 
                        const char *portname) {
   socket_t *socket;
+  char *tag;
 
   socket = 
     apr_hash_get(self->sockets, apr_pstrcat(self->pcmd, hostname, portname, 
@@ -1467,7 +1468,8 @@ void worker_get_socket(worker_t *self, const char *hostname,
   if (!socket) {
     socket = apr_pcalloc(self->pool, sizeof(*socket));
     socket->socket_state = SOCKET_CLOSED;
-    apr_hash_set(self->sockets, apr_pstrcat(self->pcmd, hostname, portname,
+    tag = apr_pstrdup(self->pbody, portname);
+    apr_hash_set(self->sockets, apr_pstrcat(self->pcmd, hostname, tag,
 	                                    NULL),
 	         APR_HASH_KEY_STRING, socket);
   }
