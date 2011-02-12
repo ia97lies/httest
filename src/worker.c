@@ -1647,6 +1647,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       }
       SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
       SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_NO_TICKET);
     }
 #endif
 #if APR_HAVE_IPV6
