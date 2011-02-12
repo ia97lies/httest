@@ -23,7 +23,7 @@ syn keyword httStatement	_SSL_ENGINE _SSL_SECURE_RENEG_SUPPORTED _AUTO_CLOSE _AU
 syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT _SSL_SESSION_ID _SSL_GET_SESSION 
 syn keyword httStatement	_SSL_SET_SESSION _TUNNEL _RECORD _PLAY _USE _CHUNK _CHECK
 syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY
-syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO 
+syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO on off On Off SSL SSL2 SSL3 TLS1 OK FAILED
 syn match httRepeat             "\<_END SOCKET\>"
 syn match httRepeat             "\<_END LOOP\>"
 syn match httRepeat             "\<_END FOR\>"
@@ -32,7 +32,7 @@ syn match httRepeat             "\<_END RPS\>"
 syn keyword httConditional      _IF _ELSE _ERROR
 syn match httConditional        "\<_END IF\>" 
 syn match httConditional        "\<_END ERROR\>" 
-syn keyword httOperator         MATCH LT GT LE GE EQ ADD SUB MUL DIV
+syn keyword httOperator         NOT MATCH EQUAL LT GT LE GE EQ ADD SUB MUL DIV
 syn match httIdentifier		"$[^ /.:\$"]\+" 
 syn match httIdentifier		"${[^ /.:\$}"]\+}" 
 syn match httNumber		"\<[0-9]\+\>"
