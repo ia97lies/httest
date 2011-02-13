@@ -551,7 +551,7 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
     read = NULL;
   }
   else {
-    read = apr_pcalloc(sockreader->pool, size);
+    read = apr_pcalloc(sockreader->ppool, size);
   }
   sockreader_read_block(sockreader, read, &size);
 
