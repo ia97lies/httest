@@ -98,9 +98,7 @@ static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, char *
 static char *ssl_var_lookup_ssl_cert_valid(apr_pool_t *p, ASN1_UTCTIME *tm);
 static char *ssl_var_lookup_ssl_cert_remain(apr_pool_t *p, ASN1_UTCTIME *tm);
 static char *ssl_var_lookup_ssl_cert_serial(apr_pool_t *p, X509 *xs);
-static char *ssl_var_lookup_ssl_cert_chain(apr_pool_t *p, STACK_OF(X509) *sk, char *var);
 static char *ssl_var_lookup_ssl_cert_PEM(apr_pool_t *p, X509 *xs);
-static char *ssl_var_lookup_ssl_compress_meth(SSL *ssl);
 
 /************************************************************************
  * Implementation
@@ -635,25 +633,6 @@ static char *ssl_var_lookup_ssl_cert_serial(apr_pool_t *p, X509 *xs)
     return result;
 }
 
-static char *ssl_var_lookup_ssl_cert_chain(apr_pool_t *p, STACK_OF(X509) *sk, char *var)
-{
-    char *result;
-    X509 *xs;
-    int n;
-
-    result = NULL;
-
-    if (strspn(var, "0123456789") == strlen(var)) {
-        n = atoi(var);
-        if (n < sk_X509_num(sk)) {
-            xs = sk_X509_value(sk, n);
-            result = ssl_var_lookup_ssl_cert_PEM(p, xs);
-        }
-    }
-
-    return result;
-}
-
 static char *ssl_var_lookup_ssl_cert_PEM(apr_pool_t *p, X509 *xs)
 {
     char *result;
@@ -759,39 +738,6 @@ void modssl_var_extract_dns(apr_table_t *t, SSL *ssl, apr_pool_t *p)
         extract_dn(t, nids, "SSL_CLIENT_I_DN_", X509_get_issuer_name(xs), p);
         X509_free(xs);
     }
-}
-
-static char *ssl_var_lookup_ssl_compress_meth(SSL *ssl)
-{
-    char *result = "NULL";
-#ifdef OPENSSL_VERSION_NUMBER
-#if (OPENSSL_VERSION_NUMBER >= 0x00908000)
-    SSL_SESSION *pSession = SSL_get_session(ssl);
-
-    if (pSession) {
-        switch (pSession->compress_meth) {
-        case 0:
-            /* default "NULL" already set */
-            break;
-
-            /* Defined by RFC 3749, deflate is coded by "1" */
-        case 1:
-            result = "DEFLATE";
-            break;
-
-            /* IANA assigned compression number for LZS */
-        case 0x40:
-            result = "LZS";
-            break;
-
-        default:
-            result = "UNKNOWN";
-            break;
-        }
-    }
-#endif
-#endif
-    return result;
 }
 
 #endif

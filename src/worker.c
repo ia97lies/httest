@@ -1492,10 +1492,8 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
 	char *last;
 	char *sslstr;
   int is_ssl;
-	char *filename;
 	BIO *bio;
 	apr_os_sock_t fd;
-	apr_status_t status;
 
   COMMAND_NEED_ARG("SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]");
 
@@ -1547,10 +1545,11 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
     }
 #endif
   }
-	else {
-		worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
-		return APR_EGENERAL;
-	}
+  else {
+	  worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+	  return APR_EGENERAL;
+  }
+  return APR_SUCCESS;
 }
 
 /**
@@ -1570,7 +1569,6 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   char *sslstr;
   char *portstr;
   char *hostname;
-  char *filename;
   char *tag;
   char *last;
   int port;
@@ -3817,7 +3815,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
   tunnel_t backend;
   apr_size_t peeklen;
 
-  if (!worker->flags & FLAGS_SERVER) {
+  if (!(worker->flags & FLAGS_SERVER)) {
     worker_log_error(worker, "This command is only valid in a SERVER");
     return APR_EGENERAL;
   }
@@ -4170,6 +4168,7 @@ apr_status_t command_SSL_USE_CERT(command_t *self, worker_t *worker, char *data)
     worker_log_error(worker, "Can not use this cert");
     return APR_EINVAL;
   }
+  return APR_SUCCESS;
 }
 
 /**
@@ -4235,7 +4234,6 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data) {
   char *copy;
   char *var;
   char *last;
-  apr_table_t *vtbl;
   apr_status_t status = APR_SUCCESS;
 
   COMMAND_NEED_ARG("<name>*");
@@ -4979,7 +4977,7 @@ apr_status_t worker_flush(worker_t * self) {
   }
 
   /* callculate headers and optional body of ICAP message */
-  if (hdr = apr_table_get(self->cache, "Encapsulated")) {
+  if ((hdr = apr_table_get(self->cache, "Encapsulated"))) {
     char *nv;
     char *last;
     char *res = NULL;

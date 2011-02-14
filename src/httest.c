@@ -581,9 +581,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
   regex_t *compiled;
   apr_status_t status;
   worker_t *body;
-  worker_t *ifnot;
   apr_size_t len;
-  apr_table_entry_t *e; 
 
   int doit = 0;
   int not = 0;

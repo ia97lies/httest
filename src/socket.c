@@ -157,8 +157,6 @@ apr_socket_t * sockreader_get_socket(sockreader_t *self) {
  */
 apr_status_t sockreader_push_back(sockreader_t * self, const char *buf, 
                                   apr_size_t len) {
-  apr_bucket *b;
-
   if (!self->cache) {
     self->cache = apr_brigade_create(self->ppool, self->cache_alloc);
   }
@@ -315,7 +313,7 @@ apr_status_t content_length_reader(sockreader_t * sockreader,
                                    char **buf, apr_size_t *ct, 
 				   const char *val) {
   apr_status_t status = APR_SUCCESS;
-  apr_ssize_t len = *ct;
+  apr_size_t len = *ct;
   char *read;
 
   if (len < 0) {

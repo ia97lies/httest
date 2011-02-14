@@ -56,5 +56,6 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
                                  apr_size_t *len, const char *enc_info,
 				 const char *preview); 
 apr_socket_t * sockreader_get_socket(sockreader_t *self);
+void sockreader_set_options(sockreader_t *self, int options); 
 
 #endif
