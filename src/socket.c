@@ -59,7 +59,7 @@ struct sockreader_s {
   char *swap;
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *cache;
-  apr_bucket_brigade *buffer;
+  apr_bucket_brigade *line;
   int options; 
 };
 
@@ -97,7 +97,7 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
   *sockreader = apr_pcalloc(p, sizeof(sockreader_t));
   (*sockreader)->buf = apr_pcalloc(p, BLOCK_MAX + 1);
   (*sockreader)->alloc = apr_bucket_alloc_create(p);
-  (*sockreader)->buffer = apr_brigade_create(p, (*sockreader)->alloc);
+  (*sockreader)->line = apr_brigade_create(p, (*sockreader)->alloc);
 
   (*sockreader)->socket = socket;
 #ifdef USE_SSL
@@ -211,14 +211,14 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
 
     if (self->i < self->len) {
       c = self->buf[self->i];
-      apr_brigade_putc(self->buffer, NULL, NULL, c);
+      apr_brigade_putc(self->line, NULL, NULL, c);
       self->i++;
       i++;
     }
   }
 
-  apr_brigade_pflatten(self->buffer, line, &i, self->ppool);
-  apr_brigade_cleanup(self->buffer);
+  apr_brigade_pflatten(self->line, line, &i, self->ppool);
+  apr_brigade_cleanup(self->line);
 
   if (i) {
     (*line)[i - 1] = 0;
@@ -357,8 +357,10 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
   apr_size_t chunk_cur;
   apr_size_t chunk_len;
   apr_bucket *b;
+  apr_bucket_brigade *bb;
 
   apr_status_t status = APR_SUCCESS;
+  bb = apr_brigade_create(sockreader->ppool, sockreader->alloc);
 
   *buf = NULL;
   (*len) = 0;
@@ -397,7 +399,7 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
       if (!(sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
 	b = apr_bucket_pool_create(read, chunk_len, sockreader->ppool, 
 				   sockreader->alloc);
-	APR_BRIGADE_INSERT_TAIL(sockreader->buffer, b);
+	APR_BRIGADE_INSERT_TAIL(bb, b);
       }
       if (chunk != chunk_len) {
 	status = APR_INCOMPLETE;
@@ -419,7 +421,8 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
     *len = 0;
   }
   else {
-    apr_brigade_pflatten(sockreader->buffer, buf, len, sockreader->ppool);
+    apr_brigade_pflatten(bb, buf, len, sockreader->ppool);
+    apr_brigade_destroy(bb);
   }
 
   /* if null chunk termination and eof this is also ok */
