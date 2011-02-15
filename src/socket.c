@@ -57,8 +57,9 @@ struct sockreader_s {
   apr_size_t len;
   char *buf;
   char *swap;
-  apr_bucket_alloc_t *cache_alloc;
+  apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *cache;
+  apr_bucket_brigade *buffer;
   int options; 
 };
 
@@ -95,7 +96,8 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
 
   *sockreader = apr_pcalloc(p, sizeof(sockreader_t));
   (*sockreader)->buf = apr_pcalloc(p, BLOCK_MAX + 1);
-  (*sockreader)->cache_alloc = apr_bucket_alloc_create(p);
+  (*sockreader)->alloc = apr_bucket_alloc_create(p);
+  (*sockreader)->buffer = apr_brigade_create(p, (*sockreader)->alloc);
 
   (*sockreader)->socket = socket;
 #ifdef USE_SSL
@@ -158,7 +160,7 @@ apr_socket_t * sockreader_get_socket(sockreader_t *self) {
 apr_status_t sockreader_push_back(sockreader_t * self, const char *buf, 
                                   apr_size_t len) {
   if (!self->cache) {
-    self->cache = apr_brigade_create(self->ppool, self->cache_alloc);
+    self->cache = apr_brigade_create(self->ppool, self->alloc);
   }
 
   apr_brigade_write(self->cache, NULL, NULL, buf, len);
@@ -195,23 +197,12 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
   apr_status_t status;
   char c;
   apr_size_t i;
-  apr_size_t size;
-  char *new_size_line;
 
   *line = NULL;
-  size = 0;
 
   i = 0;
   c = 0;
   while (c != '\n') {
-    if (i >= size) {
-      size += 512;
-      new_size_line = apr_palloc(self->ppool, size + 1);
-      if (*line != NULL) {
-	memcpy(new_size_line, *line, size - 512);
-      }
-      *line = new_size_line;
-    }
     if (self->i >= self->len) {
       if ((status = sockreader_fill(self)) != APR_SUCCESS) {
         return status;
@@ -220,11 +211,15 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
 
     if (self->i < self->len) {
       c = self->buf[self->i];
-      (*line)[i] = c;
+      apr_brigade_putc(self->buffer, NULL, NULL, c);
       self->i++;
       i++;
     }
   }
+
+  apr_brigade_pflatten(self->buffer, line, &i, self->ppool);
+  apr_brigade_cleanup(self->buffer);
+
   if (i) {
     (*line)[i - 1] = 0;
   }
@@ -359,21 +354,14 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
   char *line;
   int chunk;
   char *read;
-  apr_size_t cur_len;
   apr_size_t chunk_cur;
   apr_size_t chunk_len;
+  apr_bucket *b;
 
   apr_status_t status = APR_SUCCESS;
 
   *buf = NULL;
   (*len) = 0;
-  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
-    read = NULL;
-  }
-  else {
-    read = apr_pcalloc(sockreader->pool, 1);
-  }
-  cur_len = 0;
   chunk = 0;
   if (my_strcasestr(val, "chunked")) {
     while (1) {
@@ -388,8 +376,8 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
       if (chunk == 0) {
 	break;
       }
-      if (!sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
-	read = my_realloc(sockreader, read, cur_len, cur_len + chunk);
+      if (!(sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
+	read = apr_pcalloc(sockreader->ppool, chunk);
       }
       chunk_len = 0;
       while (chunk_len < chunk) {
@@ -398,18 +386,23 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
 	  status = sockreader_read_block(sockreader, NULL, &chunk_cur);
 	}
 	else {
-	  status = sockreader_read_block(sockreader, &read[cur_len + chunk_len], &chunk_cur);
+	  status = sockreader_read_block(sockreader, &read[chunk_len], 
+	                                 &chunk_cur);
 	}
 	if (status != APR_SUCCESS && (status != APR_EOF || chunk_cur == 0)) {
 	  break;
 	}
 	chunk_len += chunk_cur;
       }
+      if (!(sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
+	b = apr_bucket_pool_create(read, chunk_len, sockreader->ppool, 
+				   sockreader->alloc);
+	APR_BRIGADE_INSERT_TAIL(sockreader->buffer, b);
+      }
       if (chunk != chunk_len) {
 	status = APR_INCOMPLETE;
 	break;
       }
-      cur_len += chunk;
     }
   }
   else {
@@ -421,10 +414,12 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
     status = APR_INCOMPLETE;
   }
 
-  *buf = read;
-  *len = cur_len;
   if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    *buf = NULL;
     *len = 0;
+  }
+  else {
+    apr_brigade_pflatten(sockreader->buffer, buf, len, sockreader->ppool);
   }
 
   /* if null chunk termination and eof this is also ok */
