@@ -46,9 +46,7 @@
  ***********************************************************************/
 
 struct sockreader_s {
-  apr_pool_t *ppool;
   apr_pool_t *pool;
-  apr_pool_t *next;
   apr_socket_t *socket;
 #ifdef USE_SSL
   SSL *ssl;
@@ -69,8 +67,6 @@ struct sockreader_s {
  ***********************************************************************/
 
 static apr_status_t sockreader_fill(sockreader_t * self); 
-static void *my_realloc(sockreader_t *sockreader, void *mem_old, 
-                        apr_size_t size_old, apr_size_t size_new);
 static char *my_strcasestr(const char *s1, const char *s2); 
 
 /************************************************************************
@@ -105,7 +101,7 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
 #endif
   allocator = apr_pool_allocator_get(p);
   apr_allocator_max_free_set(allocator, 1024*1024);
-  (*sockreader)->ppool = p;
+  (*sockreader)->pool = p;
   apr_pool_create(&(*sockreader)->pool, p);
 
   if (len > BLOCK_MAX) {
@@ -160,7 +156,7 @@ apr_socket_t * sockreader_get_socket(sockreader_t *self) {
 apr_status_t sockreader_push_back(sockreader_t * self, const char *buf, 
                                   apr_size_t len) {
   if (!self->cache) {
-    self->cache = apr_brigade_create(self->ppool, self->alloc);
+    self->cache = apr_brigade_create(self->pool, self->alloc);
   }
 
   apr_brigade_write(self->cache, NULL, NULL, buf, len);
@@ -217,7 +213,7 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
     }
   }
 
-  apr_brigade_pflatten(self->line, line, &i, self->ppool);
+  apr_brigade_pflatten(self->line, line, &i, self->pool);
   apr_brigade_cleanup(self->line);
 
   if (i) {
@@ -304,7 +300,7 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
  *
  * @return APR_SUCCESS else an APR error
  */
-apr_status_t content_length_reader(sockreader_t * sockreader,
+apr_status_t content_length_reader(sockreader_t * self,
                                    char **buf, apr_size_t *ct, 
 				   const char *val) {
   apr_status_t status = APR_SUCCESS;
@@ -317,13 +313,13 @@ apr_status_t content_length_reader(sockreader_t * sockreader,
     return status;
   }
   
-  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     read = NULL;
   }
   else {
-    read = apr_pcalloc(sockreader->pool, len);
+    read = apr_pcalloc(self->pool, len);
   }
-  sockreader_read_block(sockreader, read, &len);
+  sockreader_read_block(self, read, &len);
   *buf = read;
   /* if we did not get the request length quit with data incomplete error */
   if (len != *ct) {
@@ -332,7 +328,7 @@ apr_status_t content_length_reader(sockreader_t * sockreader,
 
   *ct = len;
 
-  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     *ct = 0;
   }
 
@@ -343,31 +339,27 @@ apr_status_t content_length_reader(sockreader_t * sockreader,
  * Transfer encoding reader (only chunked implemented) 
  *
  * @param sockreader IN sockreader object
- * @param buf OUT content buffer
+ * @param bb OUT content buffer
  * @param val IN type of encoding 
  *
  * @return APR_SUCCESS else an APR error
  */
-apr_status_t transfer_enc_reader(sockreader_t * sockreader,
-                                 char **buf, apr_size_t *len, const char *val) {
+static apr_status_t transfer_enc_reader_bb(sockreader_t *self, 
+                                           apr_bucket_brigade *bb, 
+					   const char *val) {
+  int chunk;
   char *end;
   char *line;
-  int chunk;
   char *read;
   apr_size_t chunk_cur;
   apr_size_t chunk_len;
   apr_bucket *b;
-  apr_bucket_brigade *bb;
-
   apr_status_t status = APR_SUCCESS;
-  bb = apr_brigade_create(sockreader->ppool, sockreader->alloc);
 
-  *buf = NULL;
-  (*len) = 0;
   chunk = 0;
   if (my_strcasestr(val, "chunked")) {
     while (1) {
-      while (sockreader_read_line(sockreader, &line) == APR_SUCCESS &&
+      while (sockreader_read_line(self, &line) == APR_SUCCESS &&
              line[0] == 0);
       /* test if we got a chunk info */
       if (line[0] == 0) {
@@ -378,17 +370,17 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
       if (chunk == 0) {
 	break;
       }
-      if (!(sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
-	read = apr_pcalloc(sockreader->ppool, chunk);
+      if (!(self->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
+	read = apr_pcalloc(self->pool, chunk);
       }
       chunk_len = 0;
       while (chunk_len < chunk) {
 	chunk_cur = chunk - chunk_len;
-	if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
-	  status = sockreader_read_block(sockreader, NULL, &chunk_cur);
+	if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+	  status = sockreader_read_block(self, NULL, &chunk_cur);
 	}
 	else {
-	  status = sockreader_read_block(sockreader, &read[chunk_len], 
+	  status = sockreader_read_block(self, &read[chunk_len], 
 	                                 &chunk_cur);
 	}
 	if (status != APR_SUCCESS && (status != APR_EOF || chunk_cur == 0)) {
@@ -396,9 +388,9 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
 	}
 	chunk_len += chunk_cur;
       }
-      if (!(sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
-	b = apr_bucket_pool_create(read, chunk_len, sockreader->ppool, 
-				   sockreader->alloc);
+      if (!(self->options & SOCKREADER_OPTIONS_IGNORE_BODY)) {
+	b = apr_bucket_pool_create(read, chunk_len, self->pool, 
+				   self->alloc);
 	APR_BRIGADE_INSERT_TAIL(bb, b);
       }
       if (chunk != chunk_len) {
@@ -413,15 +405,42 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
 
   if (chunk != 0) {
     /* no null chunk termination */
-    status = APR_INCOMPLETE;
+    return APR_INCOMPLETE;
+  }
+  
+  return status;
+}
+
+/**
+ * Transfer encoding reader (only chunked implemented) 
+ *
+ * @param sockreader IN sockreader object
+ * @param buf OUT content buffer
+ * @param len OUT content len
+ * @param val IN type of encoding 
+ *
+ * @return APR_SUCCESS else an APR error
+ */
+apr_status_t transfer_enc_reader(sockreader_t * self,
+                                 char **buf, apr_size_t *len, const char *val) {
+  apr_bucket_brigade *bb;
+  apr_status_t status = APR_SUCCESS;
+
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    bb = NULL;
+  }
+  else {
+    bb = apr_brigade_create(self->pool, self->alloc);
   }
 
-  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+  status = transfer_enc_reader_bb(self, bb, val);
+
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     *buf = NULL;
     *len = 0;
   }
   else {
-    apr_brigade_pflatten(bb, buf, len, sockreader->ppool);
+    apr_brigade_pflatten(bb, buf, len, self->pool);
     apr_brigade_destroy(bb);
   }
 
@@ -439,6 +458,7 @@ apr_status_t transfer_enc_reader(sockreader_t * sockreader,
  *
  * @param sockreader IN sockreader object
  * @param buf OUT content buffer
+ * @param len OUT content len
  *
  * @return APR_SUCCESS else an APR error
  */
@@ -446,8 +466,9 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
                         apr_size_t *len, const char *val) {
   char *read;
   apr_size_t block;
-  apr_size_t alloc;
   apr_size_t i;
+  apr_bucket *b;
+  apr_bucket_brigade *bb;
 
   apr_status_t status = APR_SUCCESS;
   *buf = NULL;
@@ -457,13 +478,19 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
     return APR_ENOTIMPL;
   }
 
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    bb = NULL;
+  }
+  else {
+    bb = apr_brigade_create(self->pool, self->alloc);
+  }
+
   i = 0;
-  alloc = BLOCK_MAX;
   if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     read = NULL;
   }
   else {
-    read = apr_pcalloc(self->pool, alloc);
+    read = apr_pcalloc(self->pool, BLOCK_MAX);
   }
   do {
     block = BLOCK_MAX;
@@ -475,9 +502,10 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
     }
     i += block;
     if (!self->options & SOCKREADER_OPTIONS_IGNORE_BODY &&
-	i >= alloc) {
-      alloc += BLOCK_MAX;
-      read = my_realloc(self, read, alloc - BLOCK_MAX, alloc);
+	i >= BLOCK_MAX) {
+      b = apr_bucket_pool_create(read, i, self->pool, self->alloc);
+      APR_BRIGADE_INSERT_TAIL(bb, b);
+      read = apr_pcalloc(self->pool, BLOCK_MAX);
     }
   } while (status == APR_SUCCESS); 
 
@@ -485,7 +513,12 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
   *len = i;
 
   if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+    *buf = NULL;
     *len = 0;
+  }
+  else {
+    apr_brigade_pflatten(bb, buf, len, self->pool);
+    apr_brigade_destroy(bb);
   }
 
   if (status == APR_SUCCESS || status == APR_EOF) {
@@ -504,7 +537,7 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
  *
  * @return APR_SUCCESS else an APR error
  */
-apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
+apr_status_t encapsulated_reader(sockreader_t * self, char **buf,
                                  apr_size_t *len, const char *enc_info,
 				 const char *preview) {
   char *read;
@@ -518,7 +551,7 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
   apr_size_t size;
   apr_size_t size2;
   
-  tmp = apr_pstrdup(sockreader->ppool, enc_info);
+  tmp = apr_pstrdup(self->pool, enc_info);
   cur = apr_strtok(tmp, ",", &last);
   val = cur;
   while (cur) {
@@ -543,21 +576,21 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
     return APR_SUCCESS;
   }
   
-  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     read = NULL;
   }
   else {
-    read = apr_pcalloc(sockreader->ppool, size);
+    read = apr_pcalloc(self->pool, size);
   }
-  sockreader_read_block(sockreader, read, &size);
+  sockreader_read_block(self, read, &size);
 
   if (strcasecmp(key, "null-body") != 0 && (!preview || strcasecmp(preview, "0") != 0)) {
-    if ((status = transfer_enc_reader(sockreader, &read2, &size2, "chunked")) 
+    if ((status = transfer_enc_reader(self, &read2, &size2, "chunked")) 
 	!= APR_SUCCESS) {
       return status;
     }
-    if (!sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
-      *buf = apr_pcalloc(sockreader->ppool, size + size2);
+    if (!self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+      *buf = apr_pcalloc(self->pool, size + size2);
       memcpy(*buf, read, size);
       memcpy(&(*buf)[size], read2, size2);
       *len = size + size2;
@@ -568,7 +601,7 @@ apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
     *buf = read;
   }
 
-  if (sockreader->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+  if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     *len = 0;
   }
 
@@ -642,33 +675,6 @@ static apr_status_t sockreader_fill(sockreader_t * self) {
       return status;
     }
   }
-}
-
-/**
- * realloc memory in pool
- *
- * @param p IN pool
- * @param mem_old IN old memory
- * @param size_old IN old memory size
- * @param size_new IN new memory size
- *
- * @return new memory
- */
-static void *my_realloc(sockreader_t *sockreader, void *mem_old, 
-                        apr_size_t size_old, apr_size_t size_new) {
-  void *mem_new;
-
-  apr_pool_create(&sockreader->next, sockreader->ppool);
-  mem_new = apr_palloc(sockreader->next, size_new);
-  if (mem_old != NULL) {
-    memcpy(mem_new, mem_old, size_old < size_new ? size_old : size_new);
-  }
-  apr_pool_destroy(sockreader->pool);
-  sockreader->pool = sockreader->next;
-  sockreader->next = NULL;
-
-  fflush(stderr);
-  return mem_new;
 }
 
 /*
