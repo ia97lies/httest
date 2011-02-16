@@ -190,9 +190,9 @@ apr_status_t sockreader_push_line(sockreader_t * self, const char *line) {
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
-  apr_status_t status;
   char c;
   apr_size_t i;
+  apr_status_t status = APR_SUCCESS;
 
   *line = NULL;
 
@@ -201,7 +201,7 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
   while (c != '\n') {
     if (self->i >= self->len) {
       if ((status = sockreader_fill(self)) != APR_SUCCESS) {
-        return status;
+        break;
       }
     }
 
@@ -226,7 +226,7 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
     (*line)[i] = 0;
   }
 
-  return APR_SUCCESS;
+  return status;
 }
 
 /**
@@ -307,7 +307,7 @@ apr_status_t content_length_reader(sockreader_t * self,
   apr_size_t len = *ct;
   char *read;
 
-  if (len < 0) {
+  if ((apr_ssize_t)len < 0) {
     /** shall i read until close or just quit in this case? */
     *ct = 0;
     return status;
@@ -500,10 +500,8 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
     else {
       status = sockreader_read_block(self, &read[i], &block);
     }
-    i += block;
-    if (!self->options & SOCKREADER_OPTIONS_IGNORE_BODY &&
-	i >= BLOCK_MAX) {
-      b = apr_bucket_pool_create(read, i, self->pool, self->alloc);
+    if (!self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
+      b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
       APR_BRIGADE_INSERT_TAIL(bb, b);
       read = apr_pcalloc(self->pool, BLOCK_MAX);
     }
