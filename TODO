@@ -21,3 +21,4 @@ httest
 - Store recorded stuff in a variable
 - Array variable
 - Hash variable, btw. the variables are hold in hash :)
+- Content download
