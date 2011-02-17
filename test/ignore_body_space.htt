@@ -1,7 +1,8 @@
 INCLUDE $TOP/test/config.htb
 
 CLIENT
-_IGNORE_BODY on
+# add a space after "on" this must of course work
+_IGNORE_BODY on 
 _LOOP 10
 _REQ $YOUR_HOST $YOUR_PORT
 __GET /your/path/to/your/resource?your=params HTTP/1.1
