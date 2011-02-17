@@ -21,5 +21,3 @@ httest
 - Store recorded stuff in a variable
 - Array variable
 - Hash variable, btw. the variables are hold in hash :)
-- Content download
-- _IGNORE_BODY on|off error if on or off to have a space before linefeed
