@@ -2448,26 +2448,10 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
-  if (worker->flags & FLAGS_FILTER) {
-    if ((status = apr_procattr_io_set(attr, APR_FULL_BLOCK, APR_FULL_BLOCK,
-				      APR_NO_PIPE))
-	!= APR_SUCCESS) {
-      return status;
-    }
-  }
-  else if (worker->flags & FLAGS_PIPE_IN) {
-    if ((status = apr_procattr_io_set(attr, APR_FULL_BLOCK, APR_FULL_BLOCK,
-				      APR_NO_PIPE))
-	!= APR_SUCCESS) {
-      return status;
-    }
-  }
-  else {
-    if ((status = apr_procattr_io_set(attr,  APR_NO_PIPE, APR_FULL_BLOCK,
-				      APR_NO_PIPE))
-	!= APR_SUCCESS) {
-      return status;
-    }
+  if ((status = apr_procattr_io_set(attr,  APR_FULL_BLOCK, APR_FULL_BLOCK,
+				    APR_NO_PIPE))
+      != APR_SUCCESS) {
+    return status;
   }
 
   if ((status = apr_proc_create(&worker->proc, progname, args, NULL, attr,
