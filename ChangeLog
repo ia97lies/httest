@@ -1,3 +1,12 @@
+Version 2.0.3
+ - Fixed    httest: _IGNORE_BODY did not complain if not on or off. If wrong
+                    written default is "off". If set to "on " _IGNORE_BODY
+		    command do not turn this feature on because of the space
+		    after "on".
+ - Fixed    httest: Big chunked Data do consume much more memory than the size
+                    of the received data. This could lead into a out of memory
+		    situation.
+
 Version 2.0.2
  - Fixed    httest: SSL bugfixes and refactoring
  - Fixed    httest: Uninitialized variable in command _CHECK do cause false
