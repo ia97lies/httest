@@ -2348,6 +2348,19 @@ apr_status_t worker_file_to_http(worker_t *self, apr_file_t *file, int flags) {
 }
 
 /**
+ * Report error of a child if any
+ *
+ * @param pool IN 
+ * @param err IN
+ * @param description IN error description
+ */
+static void child_errfn(apr_pool_t *pool, apr_status_t err, 
+                        const char *description) { 
+  fprintf(stderr, "\nChild error occure: %s", description);
+  fflush(stderr);
+}
+
+/**
  * Execute an external program 
  *
  * @param self IN command object
@@ -2423,6 +2436,15 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   }
 
   if ((status = apr_procattr_detach_set(attr, 0)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_procattr_error_check_set(attr, 1)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_procattr_child_errfn_set(attr, child_errfn)) 
+      != APR_SUCCESS) {
     return status;
   }
 
