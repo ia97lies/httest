@@ -213,9 +213,15 @@ apr_status_t ssl_handshake(SSL *ssl, char **error, apr_pool_t *pool) {
     case SSL_ERROR_WANT_CONNECT:
     case SSL_ERROR_SSL:
     case SSL_ERROR_SYSCALL:
-      *error = apr_pstrdup(pool, "Handshake failed");
-      status = APR_ECONNREFUSED;
-      do_next = 0;
+      {
+	char buf[256];
+	unsigned long l;
+	l = ERR_get_error_line_data(NULL, NULL, NULL, NULL);
+	ERR_error_string_n(l, buf, sizeof buf);
+	*error = apr_psprintf(pool, "Handshake failed: %s", buf);
+	status = APR_ECONNREFUSED;
+	do_next = 0;
+      }
       break;
     }
   }
