@@ -1,462 +1,702 @@
-Version 2.0.3
- - Fixed    httest: _IGNORE_BODY did not complain if not on or off. If wrong
-                    written default is "off". If set to "on " _IGNORE_BODY
-		    command do not turn this feature on because of the space
-		    after "on".
- - Fixed    httest: Big chunked Data do consume much more memory than the size
-                    of the received data. This could lead into a out of memory
-		    situation.
+                                                         -*- coding: utf-8 -*-
+Changes with httest 2.0.3
+  *) httest: Fixed _IGNORE_BODY did not complain if not on or off. If wrong
+     written default is "off". If set to "on " _IGNORE_BODY command do not
+     turn this feature on because of the space after "on".
 
-Version 2.0.2
- - Fixed    httest: SSL bugfixes and refactoring
- - Fixed    httest: Uninitialized variable in command _CHECK do cause false
-                    positive failures
- - Fixed    httest: Bug session reuse do work now. With older openssl the
-                    session id was empty.
- - New      httest: _IGNORE_BODY command
+  *) httest: Fixed big chunked Data do consume much more memory than the size
+     of the received data. This could lead into a out of memory situation.
 
-Version 2.0.1
- - New      httest: _READLINE and _RECV can turn off check match/expects. 
-                    This check can be done with a separated command _CHECK
- - New      macros: Simple POP3 implementation
- - Fixed    httest: Bugfix icap encapsulated reader
+  *) httest: SSL do log more infos on SSL handshake error.
 
-Version 2.0.0
- - New      httest: Syntax improvements for better DSL ability
- - New      httest: Automatic cookie handling
- - New      httest: Local variables useful for BLOCK
- - New      httest: BLOCK signatur with parameter and return values
- - New      httest: Add missing _ELSE for _IF command
- - New      httest: Add command _ERROR <error> ... _END ERROR to define an
-                    error which must occure with in this body.
- - New      macros: Simple get and post request for Application testing
- - New      macros: Simple SMTP implementation 
 
-Version 1.18.0
- - New      httest: _RESWAIT combines the _RES and _WAIT command ignoring
-	            TCP connections not sending any data.
+Changes with httest 2.0.2
+  *) httest: Fixed sSL bugfixes and refactoring.
 
-Version 1.17.0
- - New      httest: _PROCESS command to run a part of the script with in a
-                    separated process and wait with _PROC_WAIT for its
-		    termination. Only available on unix systems.
- - New      httest: Global command PROCESS to run the same script in multiple
-                    processes, maybe usefull for performance testing. Only
-		    available on unix systems.
- - New      httest: Automatic length information support for ICAP Encapsulated
-                    header
+  *) httest: Fixed uninitialized variable in command _CHECK do cause false
+     positive failures.
 
-Version 1.16.0
- - New      httest: Openssl engine support to use crypto devices.
- - New      httest: _MATCH do also have "." as namespace, like _EXPECT.
- - New      httest: _EXPECT do also have "Headers" and "Body" as namespace,
-                    like _MATCH.
- - New      httest: _GREP works like _MATCH but do not fail if no match.
- - New      httest: global command AUTO_CLOSE to handle automatical Connection
-                    header value "close".
- - New      httest: _AUTO_CLOSE same as global command AUTO_CLOSE.
- - New      httest: _SSL_CERT_VAL getting values from a cert.
+  *) httest: Fixed bug session reuse do work now. With older openssl the
+     session id was empty.
 
-Version 1.15.0
- - New      httest: _REQ/SERVER command supports IPV6 (address surrounded in
-	            square brackets).
- - Fixed    htproxy: does not record data any more.
- - Fixed    httest: Help text typo.
+  *) httest: New _IGNORE_BODY command.
 
-Version 1.14.2
- - Fixed    httest: Coredump on receiving negative content length header 
- - Changes  httest: Supports OpenSSL 0.9.8m Legacy TLS renegotiation is still
-                    enabled.
 
-Version 1.14.1
- - Fixed    httest: _IF condtions with GT/LT/EQ did ignore sign, i.e. -100 > 4
+Changes with httest 2.0.1
+  *) httest: New _READLINE and _RECV can turn off check match/expects. This
+     check can be done with a separated command _CHECK.
 
-Version 1.14.0
- - New      httest: _RPS request per second loop implemented
+  *) macros: New simple POP3 implementation.
 
-Version 1.13.3
- - Changed  httest: Deal with new openssel 0.9.8l which do remove
-                    renegotiation because of a security hole (man in the
-		    middle attack). Httest should be still able doing
-		    renegotiation, it is a test tool.
+  *) httest: Fixed bugfix icap encapsulated reader.
 
-Version 1.13.2
- - Changed  httest: Only ON_ERROR is noisy, FINALLY block is silent
- - Improved httest: System variable __LOG_LEVEL, can be used to make FINALLY
-                    block noisy if needed
 
-Version 1.13.1
- - Fixed    httest: Multithreaded client/server test terminate before all work
-                    is done, cause they are all started detached and
-		    uncontrolled.
+Changes with httest 2.0.0
+  *) httest: New syntax improvements for better DSL ability
 
-Version 1.13.0
- - Improved httest: Help text
- - Changed  httest: Block FINALLY and ON_ERROR are noisy again
- - Improved httest: __STATUS system variable also available in ON_ERROR block
- - Improved httest: __THREAD system variable for FINALLY and ON_ERROR block
- - New      httest: With ON_ERROR block error handling is hand over to user 
- - Changed  httest: Removed depreciated command _IGNORE_ERRORS
+  *) httest: New automatic cookie handling
 
-Version 1.12.5
- - Fixed    httest: Coredump while print debug info on _EXEC process
+  *) httest: New local variables useful for BLOCK
+
+  *) httest: New bLOCK signatur with parameter and return values
+
+  *) httest: New add missing _ELSE for _IF command
+
+  *) httest: New add command _ERROR <error> ... _END ERROR to define an error
+     which must occure with in this body.
+
+  *) macros: New simple get and post request for Application testing
+
+  *) macros: New simple SMTP implementation 
+
+
+Changes with httest 1.18.0
+  *) httest: New _RESWAIT combines the _RES and _WAIT command ignoring TCP
+     connections not sending any data.
+
+
+Changes with httest 1.17.0
+  *) httest: New _PROCESS command to run a part of the script with in a
+     separated process and wait with _PROC_WAIT for its termination. Only
+     available on unix systems.
+
+  *) httest: New global command PROCESS to run the same script in multiple
+     processes, maybe usefull for performance testing. Only available on unix
+     systems.
+
+  *) httest: New automatic length information support for ICAP Encapsulated
+     header
+
+
+Changes with httest 1.16.0
+  *) httest: New openssl engine support to use crypto devices.
+
+  *) httest: New _MATCH do also have "." as namespace, like _EXPECT.
+
+  *) httest: New _EXPECT do also have "Headers" and "Body" as namespace, like
+     _MATCH.
+
+  *) httest: New _GREP works like _MATCH but do not fail if no match.
+
+  *) httest: New global command AUTO_CLOSE to handle automatical Connection
+     header value "close".
+
+  *) httest: New _AUTO_CLOSE same as global command AUTO_CLOSE.
+
+  *) httest: New _SSL_CERT_VAL getting values from a cert.
+
+
+Changes with httest 1.15.0
+  *) httest: New _REQ/SERVER command supports IPV6 (address surrounded in
+     square brackets).
+
+  *) Fixed htproxy: does not record data any more.
+
+  *) httest: Fixed help text typo.
+
+
+Changes with httest 1.14.2
+  *) httest: Fixed coredump on receiving negative content length header 
+
+  *) httest: Changes  httest: Supports OpenSSL 0.9.8m Legacy TLS renegotiation is still
+     enabled.
+
+
+Changes with httest 1.14.1
+  *) httest: Fixed _IF condtions with GT/LT/EQ did ignore sign, i.e. -100 > 4
+
+
+Changes with httest 1.14.0
+  *) httest: New _RPS request per second loop implemented
+
+
+Changes with httest 1.13.3
+  *) httest: Changed deal with new openssel 0.9.8l which do remove
+     renegotiation because of a security hole (man in the middle attack).
+     Httest should be still able doing renegotiation, it is a test tool.
+
+
+Changes with httest 1.13.2
+  *) httest: Changed only ON_ERROR is noisy, FINALLY block is silent
+  *) httest: Improved httest: System variable __LOG_LEVEL, can be used to make FINALLY
+     block noisy if needed
+
+
+Changes with httest 1.13.1
+  *) httest: Fixed multithreaded client/server test terminate before all work
+     is done, cause they are all started detached and uncontrolled.
+
+
+Changes with httest 1.13.0 - Improved httest: Help text
+
+  *) httest: Changed block FINALLY and ON_ERROR are noisy again
+
+  *) httest: Improved httest: __STATUS system variable also available in ON_ERROR block
+
+  *) httest: Improved httest: __THREAD system variable for FINALLY and ON_ERROR block
+
+  *) httest: New with ON_ERROR block error handling is hand over to user 
+
+  *) httest: Changed removed depreciated command _IGNORE_ERRORS
+
+
+Changes with httest 1.12.5
+  *) httest: Fixed coredump while print debug info on _EXEC process
                     termination
 
-Version 1.12.4
- - Fixed    httest: Do not url encode "+"
- - Improved httest: if read huge lines, httest will grow exponentaly in memory
- - Fixed    httest: Socket eof reader do hold only the last 8KB
- - Improved httest: Read _EXEC output in one peace instead line by line
- - Fixed    httest: Reading/writing file from/to pipe do not work properly
- - Fixed    httest: Data need to be null terminated for regex even binary data
- - Improved httest: Base64 encoding/decoding support
 
-Version 1.12.3
- - Fixed    htntlm: Do not work on big endian machine 
- - Fixed    httest: _URLENC do not understand \x<hex-digit><hex-digit>
- - Fixed    htntlm: No session-key and flags set in type 3 message
- - Improved htntlm: Read given base64 message first before setting options
+Changes with httest 1.12.4
+  *) httest: Fixed do not url encode "+"
 
-Version 1.12.2
- - Improved httest: Show command specific help
- - Fixed    htntlm: Windows do not understand <number>LLU
- - Fixed    htntlm: Challenge hexd string used without translate to binary
- - Fixed    htntlm: incorrect LM2 and NTLM2 hash calculation
- - New      htntlm: NTLM2 signing and sealing scheme
+  *) httest: Improved httest: if read huge lines, httest will grow exponentaly in memory
 
-Version 1.12.1
- - Fixed    httest: If expects/matchs rules exist network error not visible
- - Fixed    htntlm: Add missed unicode support (very basic)
- - Improved htntlm: Add lm2 and ntlm2 support
- - Improved httest: Listener can be bound on a IP, scope id and port
- - Fixed    httest: Did not validate match and expect scope "VAR"
- - Improved httest: Add command _URLDEC to decode encoded urls
+  *) httest: Fixed socket eof reader do hold only the last 8KB
 
-Version 1.12.0
- - New      htntlm: Can read/write NTLM messages
- - Fixed    htproxy: Crash on windows if read configuration file
- - Fixed    hturlext: Crash if called with no arguments
+  *) httest: Improved httest: Read _EXEC output in one peace instead line by line
 
-Version 1.11.0
- - Fixed    httest: _BPS help text is incomplete
- - Fixed    httest: _BPS loops for ever if high bandwidth is defined
- - Fixed    httest: _EXEC suppress last char if not terminated with a \n
- - Improved hturlext: Add a filter to exclude tags and/or attributes
- - Improved httest: Improved usage and version text and add long options
- - Improved htproxy: Improved usage and version text and add long options
- - Improved htremote: Improved usage and version text and add long options
- - Improved Add man pages for all binaries
+  *) httest: Fixed reading/writing file from/to pipe do not work properly
 
-Version 1.10.2
- - Fixed    httest: Deadlock situation seen under windows
+  *) httest: Fixed data need to be null terminated for regex even binary data
 
-Version 1.10.1
- - Fixed    httest: _OP command did a wrong type cast
+  *) httest: Improved httest: Base64 encoding/decoding support
 
-Version 1.10.0
- - Fixed    httest: Client connect before server listener is up
- - Fixed    httest: Temp file leakage on failure
- - New      httest: _MATCH scope to match variables directly
- - Fixed    httest: Incorrect formated error output
- - Improved httest: _EXEC| and _EXEC< also work for _READLINE and _RECV
- - New      htproxy: Setup with a configuration file
 
-Version 1.9.0
- - httest: If download huge files, httest will grow exponentaly in memory
-           fixed
- - httest: New command to print duration time [ms]
- - httest: New system variables: __STATUS and __START_TIME
- - httest: Do for each command implemented
- - httest: Improved _IF command, can handle now [NOT] MATCH|EQ|LT|GT|LE|GE
- - htpcap: Removed
+Changes with httest 1.12.3
+  *) Fixed htntlm: Do not work on big endian machine 
 
-Version 1.8.0
- - httest: _BREAK to interrupt a loop
- - httest: Extend _RECV with "Chunked" and "Close"
- - httest: _PRINT_HEX command to print and match hex output
- - httest: Write to file with a loop to be sure we realy write the hole buf
- - httest: BLOCK / _CALL can handle arguments
- - httest: Bugfixed _SOCKSTATE command, handle no peeklen correctly
- - httest: Do handle Connection: close header incorrect on server side
- - httest: Bugfix possible division by zero in the _BPS command
- - httest: Bugfix the strftime command for windows
- - Windows combatibilty patches for httest, htproxy, htremote and htpcap
+  *) httest: Fixed _URLENC do not understand \x<hex-digit><hex-digit>
 
-Version 1.7.1
- - httest: _RENEG command do not work, nor does _VERIFY_PEER work correctly
- - htproxy: Do not compile on solaris
- - htpcap: Do not compile on solaris
+  *) Fixed htntlm: No session-key and flags set in type 3 message
+  *) httest: Improved htntlm: Read given base64 message first before setting options
 
-Version 1.7.0
- - httest: Improved release build script
- - httest: Add _READLINE command to read a line terminated with \r\n or \n
- - httest: Add _RENEG command. Performs an SSL renegotiation.
- - httest: Add _TUNNEL command. Build up a tunnel to another server.
- - htproxy: Add _EXPECT before last _WAIT works now in all cases
- - htremote: Control interactiv shell commands over TCP/IP for testing
-             purpose
 
-Version 1.6.1
- - httest: Improved testsuite, more checks for release build 
- - httest: Bugfix all client/server called the finally block
- - httest: Reformat the output of httest -L
+Changes with httest 1.12.2 - Improved httest: Show command specific help
+  *) Fixed htntlm: Windows do not understand <number>LLU
 
-Version 1.6.0
- - httest: Bugfix command _WAIT <bytes>
- - httest: Add command to spawn a socket reader over a set of _WAIT/_RECV
+  *) Fixed htntlm: Challenge hexd string used without translate to binary
+
+  *) Fixed htntlm: incorrect LM2 and NTLM2 hash calculation
+
+  *) New htntlm: NTLM2 signing and sealing scheme
+
+
+Changes with httest 1.12.1
+  *) httest: Fixed if expects/matchs rules exist network error not visible
+
+  *) Fixed htntlm: Add missed unicode support (very basic)
+
+  *) httest: Improved htntlm: Add lm2 and ntlm2 support
+
+  *) httest: Improved httest: Listener can be bound on a IP, scope id and port
+
+  *) httest: Fixed did not validate match and expect scope "VAR"
+
+  *) httest: Improved httest: Add command _URLDEC to decode encoded urls
+
+
+Changes with httest 1.12.0
+  *) New htntlm: Can read/write NTLM messages
+
+  *) Fixed htproxy: Crash on windows if read configuration file
+
+  *) Fixed hturlext: Crash if called with no arguments
+
+
+Changes with httest 1.11.0
+  *) httest: Fixed _BPS help text is incomplete
+
+  *) httest: Fixed _BPS loops for ever if high bandwidth is defined
+
+  *) httest: Fixed _EXEC suppress last char if not terminated with a \n
+
+  *) httest: Improved hturlext: Add a filter to exclude tags and/or attributes
+
+  *) httest: Improved httest: Improved usage and version text and add long options
+
+  *) httest: Improved htproxy: Improved usage and version text and add long options
+
+  *) httest: Improved htremote: Improved usage and version text and add long options
+
+  *) httest: Improved Add man pages for all binaries
+
+
+Changes with httest 1.10.2
+  *) httest: Fixed deadlock situation seen under windows
+
+
+Changes with httest 1.10.1
+  *) httest: Fixed _OP command did a wrong type cast
+
+
+Changes with httest 1.10.0
+  *) httest: Fixed client connect before server listener is up
+
+  *) httest: Fixed temp file leakage on failure
+
+  *) httest: New _MATCH scope to match variables directly
+
+  *) httest: Fixed incorrect formated error output
+
+  *) httest: Improved httest: _EXEC| and _EXEC< also work for _READLINE and _RECV
+
+  *) New htproxy: Setup with a configuration file
+
+
+Changes with httest 1.9.0
+  *) httest: If download huge files, httest will grow exponentaly in memory
+     fixed
+
+  *) httest: New command to print duration time [ms]
+
+  *) httest: New system variables: __STATUS and __START_TIME
+
+  *) httest: Do for each command implemented
+
+  *) httest: Improved _IF command, can handle now [NOT] MATCH|EQ|LT|GT|LE|GE
+
+  *) httest: htpcap: Removed
+
+
+Changes with httest 1.8.0
+  *) httest: _BREAK to interrupt a loop
+
+  *) httest: Extend _RECV with "Chunked" and "Close"
+
+  *) httest: _PRINT_HEX command to print and match hex output
+
+  *) httest: Write to file with a loop to be sure we realy write the hole buf
+
+  *) httest: BLOCK / _CALL can handle arguments
+
+  *) httest: Bugfixed _SOCKSTATE command, handle no peeklen correctly
+
+  *) httest: Do handle Connection: close header incorrect on server side
+
+  *) httest: Bugfix possible division by zero in the _BPS command
+
+  *) httest: Bugfix the strftime command for windows
+
+  *) httest: Windows combatibilty patches for httest, htproxy, htremote and htpcap
+
+
+Changes with httest 1.7.1
+  *) httest: _RENEG command do not work, nor does _VERIFY_PEER work correctly
+
+  *) htproxy: Do not compile on solaris
+
+  *) httest: htpcap: Do not compile on solaris
+
+
+Changes with httest 1.7.0
+  *) httest: Improved release build script
+
+  *) httest: Add _READLINE command to read a line terminated with \r\n or \n
+
+  *) httest: Add _RENEG command. Performs an SSL renegotiation.
+
+  *) httest: Add _TUNNEL command. Build up a tunnel to another server.
+
+  *) htproxy: Add _EXPECT before last _WAIT works now in all cases
+
+  *) httest: htremote: Control interactiv shell commands over TCP/IP for testing
+     purpose
+
+
+Changes with httest 1.6.1
+  *) httest: Improved testsuite, more checks for release build 
+
+  *) httest: Bugfix all client/server called the finally block
+
+  *) httest: Reformat the output of httest -L
+
+
+Changes with httest 1.6.0
+  *) httest: Bugfix command _WAIT <bytes>
+
+  *) httest: Add command to spawn a socket reader over a set of _WAIT/_RECV
  
-Version 1.5.2
- - httest: _STRFTIME can choose between Local and GMT
 
-Version 1.5.1
- - httest: Bugfix, use local time for STRFTIME
+Changes with httest 1.5.2
+  *) httest: _STRFTIME can choose between Local and GMT
 
-Version 1.5.0
- - httest: Embedded file implementation
- - httest: Add new expect scope exec to expect patterns from _EXEC stdout
- - httest: Add new command _STRFTIME to print a number time formated
- - httest: Command _OP operates now with long long instead of int, avoids
-           overflow wiht time calculations
- - httest: Overworked the testsuit, do tests more exactly more detailed
 
-Version 1.4.1
- - httest: Add check if include headers exist with APR_HAVE_XXX for windows
-           build
- - httest: Bugfix cordump in _URLENC
+Changes with httest 1.5.1
+  *) httest: Bugfix, use local time for STRFTIME
 
-Version 1.4.0
- - httest: Add _URLENC command to encode a string for post requests
- - httest: Add _EXEC< command to filter a receiving http stream (i.e. deflate)
- - httest: Bugfix missing file and line output on error, add a test
 
-Version 1.3.4
- - httest: Bugfix bug #2644424 segfault on solaris with the _EXEC command
- - httest: Bugfix bug #2645093 _RECV POLL allways end with the incomplete
-           error
+Changes with httest 1.5.0
+  *) httest: Embedded file implementation
 
-Version 1.3.3
- - httest: Bugfix body output, do not skip empty lines
+  *) httest: Add new expect scope exec to expect patterns from _EXEC stdout
 
-Version 1.3.2
- - httest: Bugfix missing null termination on file EOF
- - httest: Reactivate displaying stdout of EXEC
- - httest: Bugfix wrong chars in variables do not fail
+  *) httest: Add new command _STRFTIME to print a number time formated
 
-Version 1.3.1
- - httest: Throws incomplete error if content is incomplete.
- - httest: _EXEC did not read last line without a newline
+  *) httest: Command _OP operates now with long long instead of int, avoids
+     overflow wiht time calculations
 
-Version 1.3.0
- - httest: Embedded shell scripts
- - httest: Add new match scope exec to cut from _EXEC stdout
- - httest: Bugfix the encapsulated content reader (ICAP)
- - httest: Bugfix a problem if no HTTP headers (HTTP/0.9)
+  *) httest: Overworked the testsuit, do tests more exactly more detailed
 
-Version 1.2.2
- - httest: Bugfix _ONLY_PRINTABLE
 
-Version 1.2.1
- - htproxy: Initial session only if requested via shell
- - htproxy: If SSL tunneling via CONNECT method send back "400 Bad Request"
- - httest: Can handle now plain HTML without HTTP headers at all (HTTP/0.9)
- - httest: Add command _ONLY_PRINTABLE to replace non printable chars with a space
+Changes with httest 1.4.1
+  *) httest: Add check if include headers exist with APR_HAVE_XXX for windows
+     build
 
-Version 1.2.0
- - httest: Bandwidth restriction command
- - httest: Inherit the enviroment variables to commands called through _EXEC
+  *) httest: Bugfix cordump in _URLENC
 
-Version 1.1.0
- - htproxy: Generate automated httest scripts
- - htproxy: Support for automatical MATCH for cookies
- - htproxy: Replace host and port with customized variable names
- - htproxy: Admin interface over stdin to control the htproxy
- - httest: Bugfix error code for _VERIFY_PEER is now EACCES and not EINVAL
- - httest: Bugfix problem while reading headers with values containing ":"
 
-Version 1.0.3
- - Bugfix data loss while using _SOCKSTATE command
- - Bugfix segfault if useing accidentaly the same port for plain and ssl
+Changes with httest 1.4.0
+  *) httest: Add _URLENC command to encode a string for post requests
+
+  *) httest: Add _EXEC< command to filter a receiving http stream (i.e. deflate)
+
+  *) httest: Bugfix missing file and line output on error, add a test
+
+
+Changes with httest 1.3.4
+  *) httest: Bugfix bug #2644424 segfault on solaris with the _EXEC command
+
+  *) httest: Bugfix bug #2645093 _RECV POLL allways end with the incomplete
+     error
+
+
+Changes with httest 1.3.3
+  *) httest: Bugfix body output, do not skip empty lines
+
+
+Changes with httest 1.3.2
+  *) httest: Bugfix missing null termination on file EOF
+
+  *) httest: Reactivate displaying stdout of EXEC
+
+  *) httest: Bugfix wrong chars in variables do not fail
+
+
+Changes with httest 1.3.1
+  *) httest: Throws incomplete error if content is incomplete.
+
+  *) httest: _EXEC did not read last line without a newline
+
+
+Changes with httest 1.3.0
+  *) httest: Embedded shell scripts
+
+  *) httest: Add new match scope exec to cut from _EXEC stdout
+
+  *) httest: Bugfix the encapsulated content reader (ICAP)
+
+  *) httest: Bugfix a problem if no HTTP headers (HTTP/0.9)
+
+
+Changes with httest 1.2.2
+  *) httest: Bugfix _ONLY_PRINTABLE
+
+
+Changes with httest 1.2.1
+  *) htproxy: Initial session only if requested via shell
+
+  *) htproxy: If SSL tunneling via CONNECT method send back "400 Bad Request"
+
+  *) httest: Can handle now plain HTML without HTTP headers at all (HTTP/0.9)
+
+  *) httest: Add command _ONLY_PRINTABLE to replace non printable chars with a space
+
+
+Changes with httest 1.2.0
+  *) httest: Bandwidth restriction command
+
+  *) httest: Inherit the enviroment variables to commands called through _EXEC
+
+
+Changes with httest 1.1.0
+  *) htproxy: Generate automated httest scripts
+
+  *) htproxy: Support for automatical MATCH for cookies
+
+  *) htproxy: Replace host and port with customized variable names
+
+  *) htproxy: Admin interface over stdin to control the htproxy
+
+  *) httest: Bugfix error code for _VERIFY_PEER is now EACCES and not EINVAL
+
+  *) httest: Bugfix problem while reading headers with values containing ":"
+
+
+Changes with httest 1.0.3 
+  *) httest: Bugfix data loss while using _SOCKSTATE command
+
+  *) httest: Bugfix segfault if useing accidentaly the same port for plain and ssl
    connection 
- - Marked _IGNORE_ERR as depricated
- - Bugfix spaces instead of tabs in the generated ebuild
 
-Version 1.0.2
- - Bugfix configure script
- - Bugfix critical problem with sending data
+  *) httest: Marked _IGNORE_ERR as depricated
 
-Version 1.0.1
- - Add --with-apr, --with-apr-util, --with-pcre and with-ssl to configure
-   script to specify alternativ libs
- - Add --enable-use-static to force the linker to use archives where ever
-   possible instead of shared libraries
- - Add --enable-full-static to build a static binary
+  *) httest: Bugfix spaces instead of tabs in the generated ebuild
 
-Version 1.0.0
- - Classical configure && make && install mechanisme added
- - Load server certs in SERVER command only if they are there
- - Overworked test suit to fit make check and make distcheck
 
-Version 0.12.2
- - Suppress start line with OK|FAILED option
- - Check if SSL is enabled when calling _CERT
- - Check if SSL port is set
+Changes with httest 1.0.2 
+  *) httest: Bugfix configure script
 
-Version 0.12.1
- - Bugfix gentoo package
+  *) httest: Bugfix critical problem with sending data
 
-Version 0.12.0
- - Extend REQ command with a tag to hold multiple connections to same target
- - MATCH improved, ERROR added like EXPECT ERROR 
- - Bugfix error text for negated EXPECT clauses
- - Peer certificate verification command _VERIFY_PEER
- - Extend _REQ and _CERT to add a CA certificate
 
-Version 0.11.2
- - Bugfix line reader to get headers 
- - Bugfix error trace on failure
- - Bugfix possible coredump on startup if server port is missing
- 
-Version 0.11.1
- - Match/Expect regular expression can now be encolsed with any char, 
-   escaping support
- - Close listener if server terminates (and all its started servers)
- 
-Version 0.11.0
- - Match/Expect also supports single quotes to enclose the regular expression
- - Match with more than one variable assignment
- - _RECV POLL takes now the socket timeout set by _TIMEOUT
+Changes with httest 1.0.1 
+  *) httest: Add --with-apr, --with-apr-util, --with-pcre and with-ssl to configure
+     script to specify alternativ libs
 
-Version 0.10.0
- - Add a final block called on exit
- - Set cert/key for ssl used for example to set a alternativ server cert 
+  *) httest: Add --enable-use-static to force the linker to use archives where ever
+     possible instead of shared libraries
 
-Version 0.9.1
- - Stability patches
+  *) httest: Add --enable-full-static to build a static binary
 
-Version 0.9.0
- - Add getter method for workers concurrency number
- - Add math operations: ADD, SUB, MUL, DIV 
- - Bugfix warnings appeare under solaris
- - Bugfix problem with global EXEC on failure
 
-Version 0.8.1
- - Better log out
- - Better syntax check
- - LOOP statement with a FOREVER value
- - Add scripts for distributed script calling
- - Add scripts for rampup performance tests
- - Bugfix problem with unknown Connection headers
+Changes with httest 1.0.0 
+  *) httest: Classical configure && make && install mechanisme added
 
-Version 0.8.0
- - Receive in polling mode
- - Can manage more than one socket per CLIENT/SERVER
- - Every command has now variable resolving
- - Remove base64 encoding/decoding will do it external (later)
+  *) httest: Load server certs in SERVER command only if they are there
 
-Version 0.7.2
- - Overworked the help text
- - Enviroment variable support
- - Receive an amount of bytes, do not expect headers in this case
- - Wait with optional expected bytes length
+  *) httest: Overworked test suit to fit make check and make distcheck
 
-Version 0.7.1
- - Bugfix variable declaration for solaris compiler (gcc has no problem with that)
- - Bugfix base64 encode/decode did not work
- - DAEMON for supervisor jobs
 
-Version 0.7.0
- - base64 encode/decode support
- - Sync command to synchronise timeout tests
+Changes with httest 0.12.2 
+  *) httest: Suppress start line with OK|FAILED option
 
-Version 0.6.2
- - BLOCK now thread safe
- - Bugfixed problems with the msdos line termination \r\n
- - Error message now with correct filename
+  *) httest: Check if SSL is enabled when calling _CERT
 
-Version 0.6.1
- - Set log level with in script
- - Load client cert/key in _REQ command
- - Removed _SET_CERT/_SET_KEY
- - Bugfixed SET command
- 
-Version 0.6.0
- - Load individual certs and keys for server/client
- - Define simple blocks to call them later 
- - Nested LOOP and IF implemented
+  *) httest: Check if SSL port is set
 
-Version 0.5.1
- - Listen on any host
- - Bugfixes uninitalized variables
- 
-Version 0.5.0
- - Add possibility to store time in ms to a variable
 
-Version 0.4.4
- - Fixed the help text again
- - Bugfix a segfault in the _IF command
- - Bugfix unknown Connection: keep-alive
- - Reworked the log modes
- 
-Version 0.4.3
- - Server _UP/_DOWN feature
- - WAIT [<size>] feature
+Changes with httest 0.12.1 
+  *) httest: Bugfix gentoo package
 
-Version 0.4.2
- - Bugfix EXPECT ERROR handling
- - Fixed stability problems
 
-Version 0.4.1
- - Improved EXPECT handling
+Changes with httest 0.12.0 
+  *) httest: Extend REQ command with a tag to hold multiple connections to same target
 
-Version 0.4.0
- - ICAP support
+  *) httest: MATCH improved, ERROR added like EXPECT ERROR 
 
-Version 0.3.0
- - Many fixes around the coredump problematic
- - Imporved pool stragtegy and reduce memory usage 
- 
-Version 0.2.3
- - Pipe received data to a shell command line
- - A simple _LOOP command
- - _IF overworked
- 
-Version 0.2.2
- - Improved server performance
- - Improved error reporting
- - Solved broken pipe problem by ignoring SIGPIPE signal
- - Add a possibility to ignore all errors within a child or server
- - Pipe binary data support
- - Add possibility to force an exit and return OK or FAILED
- - Improved header allow, add filter possibilty to force for example HTTP/1.0 client
+  *) httest: Bugfix error text for negated EXPECT clauses
 
-Version 0.2.1
- - Get the socket state for reconnect 
- - Cleaner variable processing 
- - Server side SSL support
- - Segfault on a single 0 chunk fixed
+  *) httest: Peer certificate verification command _VERIFY_PEER
 
-Version 0.2.0
- - Refactoring of the global commands
- - Simple shell
- - Cleaner log output
+  *) httest: Extend _REQ and _CERT to add a CA certificate
 
-Version 0.1.2
- - Allowed header filter (Client only) 
- - Pipe _EXEC output into the HTTP stream 
- - Use variables even in _EXPECT and _MATCH commands 
- - Send data without a CRLF at the end
 
-Version 0.1.1
- - If command 
- - Shell command execution 
+Changes with httest 0.11.2 
+  *) httest: Bugfix line reader to get headers 
 
-Version 0.1.0
- - Can act as client and server 
- - Concurrency 
- - Looping - do one job many times for performance measurement
- - Enhanced variable support 
- - Check response on defined expects 
- - Include files 
- - SSL support (SSL23, SSL3, SSL2, TLS1) 
- - Autocompletion for Content-Length 
- - Full chunked encoding data support
+  *) httest: Bugfix error trace on failure
+
+  *) httest: Bugfix possible coredump on startup if server port is missing
+
+
+Changes with httest 0.11.1 
+  *) httest: Match/Expect regular expression can now be encolsed with any char, 
+     escaping support
+
+  *) httest: Close listener if server terminates (and all its started servers)
+
+
+Changes with httest 0.11.0 
+  *) httest: Match/Expect also supports single quotes to enclose the regular expression
+
+  *) httest: Match with more than one variable assignment
+
+  *) httest: _RECV POLL takes now the socket timeout set by _TIMEOUT
+
+
+Changes with httest 0.10.0 
+  *) httest: Add a final block called on exit
+
+  *) httest: Set cert/key for ssl used for example to set a alternativ server cert 
+
+
+Changes with httest 0.9.1 
+  *) httest: Stability patches
+
+
+Changes with httest 0.9.0 
+  *) httest: Add getter method for workers concurrency number
+
+  *) httest: Add math operations: ADD, SUB, MUL, DIV 
+
+  *) httest: Bugfix warnings appeare under solaris
+
+  *) httest: Bugfix problem with global EXEC on failure
+
+
+Changes with httest 0.8.1 
+  *) httest: Better log out
+
+  *) httest: Better syntax check
+
+  *) httest: LOOP statement with a FOREVER value
+
+  *) httest: Add scripts for distributed script calling
+
+  *) httest: Add scripts for rampup performance tests
+
+  *) httest: Bugfix problem with unknown Connection headers
+
+
+Changes with httest 0.8.0 
+  *) httest: Receive in polling mode
+
+  *) httest: Can manage more than one socket per CLIENT/SERVER
+
+  *) httest: Every command has now variable resolving
+
+  *) httest: Remove base64 encoding/decoding will do it external (later)
+
+
+Changes with httest 0.7.2 
+  *) httest: Overworked the help text
+
+  *) httest: Enviroment variable support
+
+  *) httest: Receive an amount of bytes, do not expect headers in this case
+
+  *) httest: Wait with optional expected bytes length
+
+
+Changes with httest 0.7.1 
+  *) httest: Bugfix variable declaration for solaris compiler (gcc has no problem with that)
+
+  *) httest: Bugfix base64 encode/decode did not work
+
+  *) httest: DAEMON for supervisor jobs
+
+
+Changes with httest 0.7.0
+  *) httest: base64 encode/decode support
+
+  *) httest: Sync command to synchronise timeout tests
+
+
+Changes with httest 0.6.2
+  *) httest: BLOCK now thread safe
+
+  *) httest: Bugfixed problems with the msdos line termination \r\n
+
+  *) httest: Error message now with correct filename
+
+
+Changes with httest 0.6.1
+  *) httest: Set log level with in script
+
+  *) httest: Load client cert/key in _REQ command
+
+  *) httest: Removed _SET_CERT/_SET_KEY
+
+  *) httest: Bugfixed SET command
+
+
+Changes with httest 0.6.0 
+  *) httest: Load individual certs and keys for server/client
+  *) httest: Define simple blocks to call them later 
+  *) httest: Nested LOOP and IF implemented
+
+
+Changes with httest 0.5.1 
+  *) httest: Listen on any host
+  *) httest: Bugfixes uninitalized variables
+
+
+Changes with httest 0.5.0 
+  *) httest: Add possibility to store time in ms to a variable
+
+
+Changes with httest 0.4.4 
+  *) httest: Fixed the help text again
+
+  *) httest: Bugfix a segfault in the _IF command
+
+  *) httest: Bugfix unknown Connection: keep-alive
+
+  *) httest: Reworked the log modes
+
+
+Changes with httest 0.4.3 
+  *) httest: Server _UP/_DOWN feature
+
+  *) httest: WAIT [<size>] feature
+
+
+Changes with httest 0.4.2 
+  *) httest: Bugfix EXPECT ERROR handling
+
+  *) httest: Fixed stability problems
+
+
+Changes with httest 0.4.1 
+  *) httest: Improved EXPECT handling
+
+
+Changes with httest 0.4.0 
+  *) httest: ICAP support
+
+
+Changes with httest 0.3.0 - Many fixes around the coredump problematic
+  *) httest: Imporved pool stragtegy and reduce memory usage 
+
+
+Changes with httest 0.2.3 - Pipe received data to a shell command line
+  *) httest: A simple _LOOP command
+
+  *) httest: _IF overworked
+
+
+Changes with httest 0.2.2 - Improved server performance
+  *) httest: Improved error reporting
+
+  *) httest: Solved broken pipe problem by ignoring SIGPIPE signal
+
+  *) httest: Add a possibility to ignore all errors within a child or server
+
+  *) httest: Pipe binary data support
+
+  *) httest: Add possibility to force an exit and return OK or FAILED
+
+  *) httest: Improved header allow, add filter possibilty to force for example HTTP/1.0 client
+
+
+Changes with httest 0.2.1 - Get the socket state for reconnect 
+  *) httest: Cleaner variable processing 
+
+  *) httest: Server side SSL support
+
+  *) httest: Segfault on a single 0 chunk fixed
+
+
+Changes with httest 0.2.0 - Refactoring of the global commands
+  *) httest: Simple shell
+
+  *) httest: Cleaner log output
+
+
+Changes with httest 0.1.2 - Allowed header filter (Client only) 
+  *) httest: Pipe _EXEC output into the HTTP stream 
+
+  *) httest: Use variables even in _EXPECT and _MATCH commands 
+
+  *) httest: Send data without a CRLF at the end
+
+
+Changes with httest 0.1.1 - If command 
+  *) httest: Shell command execution 
+
+
+Changes with httest 0.1.0 - Can act as client and server 
+  *) httest: Concurrency 
+
+  *) httest: Looping - do one job many times for performance measurement
+
+  *) httest: Enhanced variable support 
+
+  *) httest: Check response on defined expects 
+
+  *) httest: Include files 
+
+  *) httest: SSL support (SSL23, SSL3, SSL2, TLS1) 
+
+  *) httest: Autocompletion for Content-Length 
+
+  *) httest: Full chunked encoding data support
