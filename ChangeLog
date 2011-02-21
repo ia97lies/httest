@@ -9,6 +9,9 @@ Changes with httest 2.0.3
 
   *) httest: SSL do log more infos on SSL handshake error.
 
+  *) httest: SSL_OP_NO_TICKET is available in openssl 0.9.8f did add a compile
+     check to avoid compile errors with older openssl versions.
+
 
 Changes with httest 2.0.2
   *) httest: Fixed sSL bugfixes and refactoring.
