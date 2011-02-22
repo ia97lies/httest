@@ -18,6 +18,7 @@ EXTRA_DIST= \
 	bps.htt \
 	break.htt \
 	ca.cert.pem \
+	chunk.htt \
 	client.cert.pem \
 	client.key.pem \
 	concurrent.htt \
@@ -80,6 +81,7 @@ EXTRA_DIST= \
 	ifelse.htt \
 	ifvareq.htt \
 	ignore_body.htt \
+	ignore_body_space.htt \
 	incomplete.htt \
 	leftovertmpf.htt \
 	loop_auto.htt \
