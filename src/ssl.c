@@ -48,9 +48,6 @@
 #include <openssl/engine.h>
 #endif
 
-//#error aaaaaaaaaaaaaaaaaaaaaaa
-
-
 #include <apr.h>
 #include <apr_strings.h>
 #include <apr_file_io.h>
@@ -214,11 +211,19 @@ apr_status_t ssl_handshake(SSL *ssl, char **error, apr_pool_t *pool) {
     case SSL_ERROR_SSL:
     case SSL_ERROR_SYSCALL:
       {
+	char *cascade_err = NULL;
 	char buf[256];
 	unsigned long l;
-	l = ERR_get_error_line_data(NULL, NULL, NULL, NULL);
-	ERR_error_string_n(l, buf, sizeof buf);
-	*error = apr_psprintf(pool, "Handshake failed: %s", buf);
+	while ((l = ERR_get_error()) != 0) {
+	  ERR_error_string_n(l, buf, sizeof buf);
+	  if (cascade_err) {
+	    apr_pstrcat(pool, cascade_err, ";", buf, NULL);
+	  }
+	  else {
+	    cascade_err = apr_pstrdup(pool, buf);
+	  }
+	}
+	*error = apr_psprintf(pool, "Handshake failed: %s", cascade_err ? cascade_err : "<null>");
 	status = APR_ECONNREFUSED;
 	do_next = 0;
       }
