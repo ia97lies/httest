@@ -625,6 +625,11 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
 	doit = 1;
       }
     }
+    else {
+      if (not) {
+	doit = 1;
+      }
+    }
   }
   else {
     left_val = apr_atoi64(left);

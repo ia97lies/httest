@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.4
+  *) httest: Serious fix: _IF "<string>" NOT EQUAL "<string>" is not equal
+     the if condition do not execute its execute its body. This can lead to
+     tests which should fail but do not.
+
+
 Changes with httest 2.0.3
   *) httest: Fixed _IGNORE_BODY did not complain if not on or off. If wrong
      written default is "off". If set to "on " _IGNORE_BODY command do not
