@@ -5097,10 +5097,9 @@ apr_status_t worker_flush(worker_t * self) {
 
 error:
   {
-    //apr_pool_t *parent = apr_pool_parent_get(self->pcache);
-    apr_pool_clear(self->pcache);
-    //apr_pool_destroy(self->pcache);
-    //apr_pool_create(&self->pcache, parent);
+    apr_pool_t *parent = apr_pool_parent_get(self->pcache);
+    apr_pool_destroy(self->pcache);
+    apr_pool_create(&self->pcache, parent);
     self->cache = apr_table_make(self->pcache, 20);
   }
 
