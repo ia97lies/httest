@@ -447,6 +447,14 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
   }
 }
 
+/**
+ * Get a specific block and handle reserved block names
+ *
+ * @param worker IN thread data object
+ * @param data IN block name
+ *
+ * @return a block
+ */
 static apr_hash_t *worker_lookup_block(worker_t * worker, char *data) {
   apr_size_t len = 0;
   char *block_name;
@@ -981,7 +989,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
  
  if ((status = apr_tokenize_to_argv(copy, &argv, worker->pcmd)) == APR_SUCCESS) {
     if (!argv[0]) {
-      worker_log_error(worker, "No argument found, need an regex for expected errof.");
+      worker_log_error(worker, "No argument found, need an regex for expected error.");
       return APR_EINVAL;
     }
   }
@@ -1341,7 +1349,6 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
     }
   }
   if (parent == self) {
-    //apr_pool_clear(self->pcmd);
     apr_pool_destroy(self->pcmd);
     apr_pool_create(&self->pcmd, self->heartbeat);
   }
