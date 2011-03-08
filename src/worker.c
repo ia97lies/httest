@@ -1149,7 +1149,7 @@ static void worker_set_cookie(worker_t *worker) {
       char *last;
       char *key;
       char *value;
-      char *cookie = apr_pstrdup(worker->pcmd, e[i].val);
+      char *cookie = apr_pstrdup(worker->pbody, e[i].val);
       key = apr_strtok(cookie, "=", &last);
       value = apr_strtok(NULL, ";", &last);
       apr_table_set(worker->socket->cookies, key, value); 
@@ -1469,7 +1469,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
     socket = apr_pcalloc(self->pool, sizeof(*socket));
     socket->socket_state = SOCKET_CLOSED;
     tag = apr_pstrdup(self->pbody, portname);
-    apr_hash_set(self->sockets, apr_pstrcat(self->pcmd, hostname, tag,
+    apr_hash_set(self->sockets, apr_pstrcat(self->pbody, hostname, tag,
 	                                    NULL),
 	         APR_HASH_KEY_STRING, socket);
   }
@@ -4718,6 +4718,7 @@ apr_status_t worker_body(worker_t **body, worker_t *worker, char *command) {
   memcpy(*body, worker, sizeof(worker_t));
   /* give it an own heartbeat :) */
   (*body)->heartbeat = p;
+  apr_pool_create(&(*body)->pcmd, p);
 
   /* fill lines */
   (*body)->lines = apr_table_make(p, 20);

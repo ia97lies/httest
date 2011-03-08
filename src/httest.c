@@ -1100,17 +1100,17 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("Need a block name: <block> <input-vars>* : <output-vars>*");
 
-  apr_pool_create(&call_pool, worker->pcmd);
-  my_get_args(copy, worker->params, worker->pcmd);
+  apr_pool_create(&call_pool, worker->pbody);
+  my_get_args(copy, worker->params, call_pool);
   block_name = apr_table_get(worker->params, "0");
-  module = apr_pstrdup(worker->pcmd, block_name);
+  module = apr_pstrdup(call_pool, block_name);
 
   /* determine module if any */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
     /* always jump over prefixing "_" */
     module++;
-    block_name = apr_pstrcat(worker->pcmd, "_", last, NULL);
+    block_name = apr_pstrcat(call_pool, "_", last, NULL);
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1337,7 +1337,6 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       else {
 	status = command_CALL(NULL, self, line);
       }
-      //apr_pool_clear(self->pcmd);
       if (APR_STATUS_IS_ENOENT(status)) {
 	worker_log_error(self, "%s syntax error", self->name);
 	worker_set_global_error(self);
@@ -1347,6 +1346,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
     if (status != APR_SUCCESS) {
       return status;
     }
+    apr_pool_clear(self->pcmd);
   }
   if (parent == self) {
     apr_pool_destroy(self->pcmd);
