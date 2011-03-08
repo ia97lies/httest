@@ -3408,7 +3408,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data) {
       if ((status = apr_file_mktemp(&worker->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, 
-				    worker->pcmd))
+				    worker->pbody))
 	  != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Could not mk temp file %s(%d)", 
 	           my_status_str(worker->pool, status), status);
