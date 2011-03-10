@@ -1,0 +1,32 @@
+SET MAX_DURATION=3600000
+INCLUDE $TOP/test/config.htb
+
+SET LEN=1000000
+
+CLIENT
+
+_LOOP $LEN
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: AUTO
+__
+__$1K$1K$1K$1K$1K
+_WAIT
+_END LOOP
+
+END
+
+SERVER $YOUR_PORT
+
+_LOOP $LEN
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__$1K$1K$1K$1K$1K
+_END LOOP
+
+END
+
