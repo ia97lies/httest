@@ -1060,9 +1060,9 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       apr_file_close(worker->proc.in);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
       ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(*command_EXEC));
-      apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
       if (ptmp) {
 	apr_pool_destroy(ptmp);
+	apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
       }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
@@ -1112,9 +1112,9 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       apr_thread_join(&tmp_status, thread);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
       ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(*command_EXEC));
-      apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
       if (ptmp) {
 	apr_pool_destroy(ptmp);
+	apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
       }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
@@ -1876,29 +1876,29 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 
   interm = apr_pstrdup(worker->pool, match);
 
-  if (interm[0] == '!') {
-    ++interm;
+  if (match[0] == '!') {
+    ++match;
   }
 
-  if (!(compiled = pregcomp(worker->pool, interm, &err, &off))) {
+  if (!(compiled = pregcomp(worker->pool, match, &err, &off))) {
     worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
     return APR_EINVAL;
   }
 
   if (strcmp(type, ".") == 0) {
-    apr_table_addn(worker->expect.dot, match, (char *) compiled);
+    apr_table_addn(worker->expect.dot, interm, (char *) compiled);
   }
   else if (strcasecmp(type, "Headers") == 0) {
-    apr_table_addn(worker->expect.headers, match, (char *) compiled);
+    apr_table_addn(worker->expect.headers, interm, (char *) compiled);
   }
   else if (strcasecmp(type, "Body") == 0) {
-    apr_table_addn(worker->expect.body, match, (char *) compiled);
+    apr_table_addn(worker->expect.body, interm, (char *) compiled);
   }
   else if (strcasecmp(type, "Exec") == 0) {
-    apr_table_addn(worker->expect.exec, match, (char *) compiled);
+    apr_table_addn(worker->expect.exec, interm, (char *) compiled);
   }
   else if (strcasecmp(type, "Error") == 0) {
-    apr_table_addn(worker->expect.error, match, (char *) compiled);
+    apr_table_addn(worker->expect.error, interm, (char *) compiled);
   }
   else if (strncasecmp(type, "Var(", 4) == 0) {
     const char *val;
@@ -1912,7 +1912,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 	worker->tmp_table = apr_table_make(worker->pool, 1);
       }
       apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, match, (char *) compiled);
+      apr_table_addn(worker->tmp_table, interm, (char *) compiled);
       worker_expect(worker, worker->tmp_table, val, strlen(val));
       return worker_validate_expect(worker, worker->tmp_table, "EXPECT var", 
 	                            APR_SUCCESS);
