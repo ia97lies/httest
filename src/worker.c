@@ -2427,9 +2427,6 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 
   progname = args[0];
 
-  fprintf(stderr, "XXXXX: %p; line: %s\n", args[1], copy);
-  fflush(stderr);
-
   if (!progname) {
     worker_log(worker, LOG_ERR, "No program name specified");
     return APR_EGENERAL;
