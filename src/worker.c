@@ -351,7 +351,7 @@ void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
 	 hexbuf = apr_psprintf(pool, "%s%02X", hexbuf, (*buf)[j]);
       }
     }
-    *buf = apr_pstrdup(self->pool, hexbuf);
+    *buf = apr_pstrdup(self->pcmd, hexbuf);
     *len = strlen(*buf);
     apr_pool_destroy(pool);
   }
@@ -596,15 +596,15 @@ go_out:
  *
  * @return new line 
  */
-char * worker_replace_vars(worker_t * worker, char *line) {
+char * worker_replace_vars(worker_t * worker, apr_pool_t *pool, char *line) {
   char *new_line;
 
   /* replace all locals first */
-  new_line = my_replace_vars(worker->pool, line, worker->locals, 0); 
+  new_line = my_replace_vars(pool, line, worker->locals, 0); 
   /* replace all parameters first */
-  new_line = my_replace_vars(worker->pool, line, worker->params, 0); 
+  new_line = my_replace_vars(pool, line, worker->params, 0); 
   /* replace all vars */
-  new_line = my_replace_vars(worker->pool, new_line, worker->vars, 1); 
+  new_line = my_replace_vars(pool, new_line, worker->vars, 1); 
 
   return new_line;
 }
@@ -811,8 +811,8 @@ apr_status_t worker_check_error(worker_t *self, apr_status_t status) {
     return status;
   }
 
-  error = apr_psprintf(self->pool, "%s(%d)",
-		     my_status_str(self->pool, status), status);
+  error = apr_psprintf(self->pcmd, "%s(%d)",
+		     my_status_str(self->pcmd, status), status);
 
   worker_match(self, self->match.error, error, strlen(error));
   worker_match(self, self->grep.error, error, strlen(error));
@@ -1046,6 +1046,7 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
   bufreader_t *br;
   char *line;
   apr_status_t tmp_status;
+  apr_pool_t *ptmp;
 
   if (buf) {
     worker_buf_convert(worker, &buf, &len);
@@ -1058,6 +1059,11 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       apr_file_close(worker->proc.in);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(*command_EXEC));
+      apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
+      if (ptmp) {
+	apr_pool_destroy(ptmp);
+      }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
 	goto out_err;
@@ -1105,6 +1111,11 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       apr_thread_join(&tmp_status, thread);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(*command_EXEC));
+      apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
+      if (ptmp) {
+	apr_pool_destroy(ptmp);
+      }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
 	goto out_err;
@@ -1487,13 +1498,13 @@ void worker_get_socket(worker_t *self, const char *hostname,
  * @return an apr status
  */
 apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker, 
-		                             char *data) {
-	char *copy;
-	char *last;
-	char *sslstr;
+		                 char *data) {
+  char *copy;
+  char *last;
+  char *sslstr;
   int is_ssl;
-	BIO *bio;
-	apr_os_sock_t fd;
+  BIO *bio;
+  apr_os_sock_t fd;
 
   COMMAND_NEED_ARG("SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]");
 
@@ -1524,8 +1535,8 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
       }
 
       if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
-				worker_log(worker, LOG_ERR, "SSL_new failed.");
-				return APR_ECONNREFUSED;
+	worker_log(worker, LOG_ERR, "SSL_new failed.");
+	return APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(worker->socket->ssl, worker->meth);
       ssl_rand_seed();
@@ -1533,21 +1544,21 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(worker->socket->ssl, bio, bio);
       if (worker->socket->sess) {
-				SSL_set_session(worker->socket->ssl, worker->socket->sess);
-				SSL_SESSION_free(worker->socket->sess);
-				worker->socket->sess = NULL;
+	SSL_set_session(worker->socket->ssl, worker->socket->sess);
+	SSL_SESSION_free(worker->socket->sess);
+	worker->socket->sess = NULL;
       }
       SSL_set_connect_state(worker->socket->ssl);
 
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
-				return status;
+	return status;
       }
     }
 #endif
   }
   else {
-	  worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
-	  return APR_EGENERAL;
+    worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+    return APR_EGENERAL;
   }
   return APR_SUCCESS;
 }
@@ -2238,7 +2249,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   }
     
   copy = apr_pstrdup(worker->pcmd, data); 
-  copy = worker_replace_vars(worker, copy);
+  copy = worker_replace_vars(worker, worker->pcmd, copy);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
 
@@ -2376,19 +2387,18 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   char *copy;
   apr_status_t status;
   apr_procattr_t *attr;
-  apr_table_t *table;
-  apr_table_entry_t *e;
   bufreader_t *br;
   const char *progname;
-  const char **args;
+  char **args;
   apr_exit_why_e exitwhy;
   int exitcode;
-  char *last;
-  char *val;
-  int i;
   int flags;
+  apr_pool_t *pool;
 
   COMMAND_NEED_ARG("Need a shell command");
+
+  apr_pool_create(&pool, NULL);
+  apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), pool);
 
   flags = worker->flags;
   worker->flags &= ~FLAGS_PIPE;
@@ -2405,31 +2415,24 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     ++copy;
     worker->flags |= FLAGS_FILTER;
   }
-  
-  table = apr_table_make(worker->pcmd, 5);
-  progname = apr_strtok(copy, " ", &last);
+
+  if ((status = apr_tokenize_to_argv(copy, &args, pool)) 
+      != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "Could not tokenize the command line");
+    return status;
+  }
+
+  progname = args[0];
+
+  fprintf(stderr, "XXXXX: %p; line: %s\n", args[1], copy);
+  fflush(stderr);
 
   if (!progname) {
     worker_log(worker, LOG_ERR, "No program name specified");
     return APR_EGENERAL;
   }
   
-  apr_table_addn(table, progname, "TRUE");
-
-  while ((val = apr_strtok(NULL, " ", &last))) {
-    apr_table_add(table, val, "TRUE");
-  }
-
-  args = apr_pcalloc(worker->pool,
-                     (apr_table_elts(table)->nelts + 1) * sizeof(const char *));
-
-  e = (apr_table_entry_t *) apr_table_elts(table)->elts;
-  for (i = 0; i < apr_table_elts(table)->nelts; i++) {
-    args[i] = e[i].key;
-  }
-  args[i] = NULL;
-
-  if ((status = apr_procattr_create(&attr, worker->pool)) != APR_SUCCESS) {
+  if ((status = apr_procattr_create(&attr, pool)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2456,8 +2459,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
-  if ((status = apr_proc_create(&worker->proc, progname, args, NULL, attr,
-                                worker->pool)) != APR_SUCCESS) {
+  if ((status = apr_proc_create(&worker->proc, progname, (const char **)args, NULL, attr,
+                                pool)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2472,7 +2475,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     char *buf = NULL;
 
     worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    if ((status = bufreader_new(&br, worker->proc.out, worker->pcmd)) == APR_SUCCESS) {
+    if ((status = bufreader_new(&br, worker->proc.out, pool)) == APR_SUCCESS) {
       bufreader_read_eof(br, &buf, &len);
       if (buf) {
 	worker_log(worker, LOG_INFO, "<%s", buf);
@@ -2505,6 +2508,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     if (exitcode != 0) {
       status = APR_EGENERAL;
     }
+    apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
+    apr_pool_destroy(pool);
   }
 
   return status;
@@ -2605,8 +2610,8 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
                                    char *data) {
   char *copy;
 
-  copy = apr_pstrdup(worker->pool, data); 
-  copy = worker_replace_vars(worker, copy);
+  copy = apr_pstrdup(worker->pcmd, data); 
+  copy = worker_replace_vars(worker, worker->pcmd, copy);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
   apr_table_add(worker->cache, "NOCRLF", copy);
@@ -4560,6 +4565,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->pcache = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
+  (*self)->config = apr_hash_make(p);
   (*self)->interpret = interpret;
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
@@ -4639,6 +4645,7 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->pcache = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
+  (*self)->config = apr_hash_copy(p, orig->config);
   (*self)->interpret = orig->interpret;
   (*self)->flags = orig->flags;
   (*self)->prefix = apr_pstrdup(p, orig->prefix);

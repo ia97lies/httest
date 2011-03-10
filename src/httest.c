@@ -1816,6 +1816,8 @@ static apr_status_t global_new(global_t **self, apr_table_t *vars,
     return status;
   }
 
+  /* use mutex also for global pool */
+
   (*self)->state = GLOBAL_STATE_NONE;
   (*self)->socktmo = 300000000;
   (*self)->prefix = apr_pstrdup(p, "");

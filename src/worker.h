@@ -66,6 +66,9 @@ typedef struct recorder_s {
 typedef struct worker_s worker_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
 struct worker_s {
+  /* generic data holder */
+  apr_hash_t *config;
+  /* interpreter for this worker */
   interpret_f interpret;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
@@ -228,8 +231,8 @@ struct command_s {
     worker_log(worker, LOG_ERR, err_text); \
     return APR_EGENERAL; \
   } \
-  copy = apr_pstrdup(worker->pool, &data[i]); \
-  copy = worker_replace_vars(worker, copy); \
+  copy = apr_pstrdup(worker->pcmd, &data[i]); \
+  copy = worker_replace_vars(worker, worker->pcmd, copy); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
   } \
@@ -244,8 +247,8 @@ struct command_s {
   while (data[i] == ' ') { \
     ++i; \
   } \
-  copy = apr_pstrdup(worker->pool, &data[i]); \
-  copy = worker_replace_vars(worker, copy); \
+  copy = apr_pstrdup(worker->pcmd, &data[i]); \
+  copy = worker_replace_vars(worker, worker->pcmd, copy); \
   worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
 }
 
@@ -332,6 +335,7 @@ apr_status_t command_SSL_GET_SESSION(command_t *self, worker_t *worker, char *da
 apr_status_t command_SSL_SET_SESSION(command_t *self, worker_t *worker, char *data); 
 
 /** helper */
+char * worker_replace_vars(worker_t * worker, apr_pool_t *pool, char *line); 
 void worker_log(worker_t * self, int log_mode, char *fmt, ...); 
 void worker_log_error(worker_t * self, char *fmt, ...); 
 void worker_log_buf(worker_t * self, int log_mode, char *buf, char *prefix, 
@@ -342,7 +346,6 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
                            const char *data, apr_size_t len); 
 apr_status_t worker_check_expect(worker_t * self, apr_status_t status); 
 apr_status_t worker_check_error(worker_t *self, apr_status_t status); 
-char * worker_replace_vars(worker_t * worker, char *line); 
 apr_status_t worker_flush(worker_t * self);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
 apr_status_t worker_body(worker_t **body, worker_t *worker, char *end); 
