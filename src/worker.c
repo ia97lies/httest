@@ -2007,6 +2007,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   char *type;
   char *match;
   char *vars;
+  char *key;
   regex_t *compiled;
   const char *err;
   int off;
@@ -2043,24 +2044,26 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
+  key = apr_pstrdup(worker->pool, vars);
+
   if (!(compiled = pregcomp(worker->pool, match, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
   if (strcmp(type, ".") == 0) {
-    apr_table_addn(worker->match.dot, vars, (char *) compiled);
+    apr_table_addn(worker->match.dot, key, (char *) compiled);
   }
   else if (strcasecmp(type, "Headers") == 0) {
-    apr_table_addn(worker->match.headers, vars, (char *) compiled);
+    apr_table_addn(worker->match.headers, key, (char *) compiled);
   }
   else if (strcasecmp(type, "Body") == 0) {
-    apr_table_addn(worker->match.body, vars, (char *) compiled);
+    apr_table_addn(worker->match.body, key, (char *) compiled);
   }
   else if (strcasecmp(type, "Error") == 0) {
-    apr_table_addn(worker->match.error, vars, (char *) compiled);
+    apr_table_addn(worker->match.error, key, (char *) compiled);
   }
   else if (strcasecmp(type, "Exec") == 0) {
-    apr_table_addn(worker->match.exec, vars, (char *) compiled);
+    apr_table_addn(worker->match.exec, key, (char *) compiled);
   }
   else if (strncasecmp(type, "Var(", 4) == 0) {
     const char *val;
@@ -2074,7 +2077,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
 	worker->tmp_table = apr_table_make(worker->pool, 1);
       }
       apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, vars, (char *) compiled);
+      apr_table_addn(worker->tmp_table, key, (char *) compiled);
       worker_match(worker, worker->tmp_table, val, strlen(val));
       return worker_validate_match(worker, worker->tmp_table, "MATCH var", 
 	                           APR_SUCCESS);
