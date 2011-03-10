@@ -4306,7 +4306,7 @@ apr_status_t command_MARK(command_t *self, worker_t *worker, char *data) {
 apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data) {
   char *copy;
   COMMAND_NEED_ARG("<var-sequence>*");
-  worker->match_seq = copy;
+  worker->match_seq = apr_pstrdup(worker->pool, copy);
   return APR_SUCCESS;
 }
 
