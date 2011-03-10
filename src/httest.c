@@ -1242,7 +1242,8 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
     worker->procs = apr_hash_make(worker->pbody);
   }
 
-  apr_hash_set(worker->procs, copy, APR_HASH_KEY_STRING, proc);
+  apr_hash_set(worker->procs, apr_pstrdup(worker->pbody, copy), 
+               APR_HASH_KEY_STRING, proc);
 
   return APR_SUCCESS; 
 }
