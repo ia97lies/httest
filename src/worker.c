@@ -1059,10 +1059,9 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       apr_file_close(worker->proc.in);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(*command_EXEC));
+      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(void *));
       if (ptmp) {
-	apr_pool_destroy(ptmp);
-	apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
+	apr_pool_clear(ptmp);
       }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
@@ -1111,10 +1110,9 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       apr_thread_join(&tmp_status, thread);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(*command_EXEC));
+      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(void *));
       if (ptmp) {
-	apr_pool_destroy(ptmp);
-	apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
+	apr_pool_clear(ptmp);
       }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
@@ -2403,8 +2401,11 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 
   COMMAND_NEED_ARG("Need a shell command");
 
-  apr_pool_create(&pool, NULL);
-  apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), pool);
+  pool = apr_hash_get(worker->config, command_EXEC, sizeof(void *));
+  if (!pool) {
+    apr_pool_create(&pool, worker->heartbeat);
+    apr_hash_set(worker->config, command_EXEC, sizeof(void *), pool);
+  }
 
   flags = worker->flags;
   worker->flags &= ~FLAGS_PIPE;
@@ -2511,8 +2512,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     if (exitcode != 0) {
       status = APR_EGENERAL;
     }
-    apr_hash_set(worker->config, command_EXEC, sizeof(*command_EXEC), NULL);
-    apr_pool_destroy(pool);
+    apr_pool_clear(pool);
   }
 
   return status;
