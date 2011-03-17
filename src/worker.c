@@ -1046,7 +1046,6 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
   bufreader_t *br;
   char *line;
   apr_status_t tmp_status;
-  apr_pool_t *ptmp;
 
   if (buf) {
     worker_buf_convert(worker, &buf, &len);
@@ -1059,10 +1058,6 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       apr_file_close(worker->proc.in);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(void *));
-      if (ptmp) {
-	apr_pool_clear(ptmp);
-      }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
 	goto out_err;
@@ -1110,10 +1105,6 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       apr_thread_join(&tmp_status, thread);
       apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      ptmp = apr_hash_get(worker->config, command_EXEC, sizeof(void *));
-      if (ptmp) {
-	apr_pool_clear(ptmp);
-      }
       if (exitcode != 0) {
 	status = APR_EGENERAL;
 	goto out_err;
@@ -2397,15 +2388,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   apr_exit_why_e exitwhy;
   int exitcode;
   int flags;
-  apr_pool_t *pool;
 
   COMMAND_NEED_ARG("Need a shell command");
-
-  pool = apr_hash_get(worker->config, command_EXEC, sizeof(void *));
-  if (!pool) {
-    apr_pool_create(&pool, worker->heartbeat);
-    apr_hash_set(worker->config, command_EXEC, sizeof(void *), pool);
-  }
 
   flags = worker->flags;
   worker->flags &= ~FLAGS_PIPE;
@@ -2423,7 +2407,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     worker->flags |= FLAGS_FILTER;
   }
 
-  if ((status = apr_tokenize_to_argv(copy, &args, pool)) 
+  if ((status = apr_tokenize_to_argv(copy, &args, worker->pbody)) 
       != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not tokenize the command line");
     return status;
@@ -2436,7 +2420,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
   
-  if ((status = apr_procattr_create(&attr, pool)) != APR_SUCCESS) {
+  if ((status = apr_procattr_create(&attr, worker->pbody)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2464,7 +2448,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   }
 
   if ((status = apr_proc_create(&worker->proc, progname, (const char **)args, NULL, attr,
-                                pool)) != APR_SUCCESS) {
+                                worker->pbody)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2479,7 +2463,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     char *buf = NULL;
 
     worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    if ((status = bufreader_new(&br, worker->proc.out, pool)) == APR_SUCCESS) {
+    if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
       bufreader_read_eof(br, &buf, &len);
       if (buf) {
 	worker_log(worker, LOG_INFO, "<%s", buf);
@@ -2512,7 +2496,6 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     if (exitcode != 0) {
       status = APR_EGENERAL;
     }
-    apr_pool_clear(pool);
   }
 
   return status;
