@@ -1851,7 +1851,8 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 
   type = apr_strtok(copy, " ", &last);
   
-  match = my_unescape(last, &last);
+  interm = my_unescape(last, &last);
+  match = apr_pstrdup(worker->pcheck, interm);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
@@ -1992,6 +1993,7 @@ apr_status_t command_TIMEOUT(command_t * self, worker_t * worker,
  */
 apr_status_t command_MATCH(command_t * self, worker_t * worker,
                                   char *data) {
+  char *tmp;
   char *last;
   char *type;
   char *match;
@@ -2008,7 +2010,8 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   
   match = my_unescape(last, &last);
   
-  vars = apr_strtok(NULL, "", &last);
+  tmp = apr_strtok(NULL, "", &last);
+  vars = apr_pstrdup(worker->pcheck, tmp);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
@@ -2094,6 +2097,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
  */
 apr_status_t command_GREP(command_t * self, worker_t * worker,
                           char *data) {
+  char *tmp;
   char *last;
   char *type;
   char *grep;
@@ -2110,7 +2114,8 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   
   grep = my_unescape(last, &last);
   
-  vars = apr_strtok(NULL, "", &last);
+  tmp = apr_strtok(NULL, "", &last);
+  vars = apr_pstrdup(worker->pcheck, tmp);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
@@ -4549,6 +4554,8 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->pcmd = p;
   apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pcache = p;
+  apr_pool_create(&p, (*self)->heartbeat);
+  (*self)->pcheck = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->config = apr_hash_make(p);
@@ -4629,6 +4636,8 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->pcmd = p;
   apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pcache = p;
+  apr_pool_create(&p, (*self)->heartbeat);
+  (*self)->pcheck = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->config = apr_hash_copy(p, orig->config);

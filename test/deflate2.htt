@@ -1,3 +1,4 @@
+SET MAX_DURATION=5000
 INCLUDE $TOP/test/config.htb
 
 CLIENT
