@@ -2408,30 +2408,20 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     ++copy;
     worker->flags |= FLAGS_FILTER;
   }
-  
-  table = apr_table_make(worker->pcmd, 5);
-  progname = apr_strtok(copy, " ", &last);
+
+  if ((status = apr_tokenize_to_argv(copy, &args, worker->pbody)) 
+      != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "Could not tokenize the command line");
+    return status;
+  }
+
+  progname = args[0];
 
   if (!progname) {
     worker_log(worker, LOG_ERR, "No program name specified");
     return APR_EGENERAL;
   }
   
-  apr_table_addn(table, progname, "TRUE");
-
-  while ((val = apr_strtok(NULL, " ", &last))) {
-    apr_table_add(table, val, "TRUE");
-  }
-
-  args = apr_pcalloc(worker->pool,
-                     (apr_table_elts(table)->nelts + 1) * sizeof(const char *));
-
-  e = (apr_table_entry_t *) apr_table_elts(table)->elts;
-  for (i = 0; i < apr_table_elts(table)->nelts; i++) {
-    args[i] = e[i].key;
-  }
-  args[i] = NULL;
-
   if ((status = apr_procattr_create(&attr, worker->pool)) != APR_SUCCESS) {
     return status;
   }
