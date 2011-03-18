@@ -77,6 +77,8 @@ struct worker_s {
   apr_pool_t *pcmd;
   /* dies on every flush */
   apr_pool_t *pcache;
+  /* dies on check */
+  apr_pool_t *pcheck;
   const char *filename;
   X509 *foreign_cert;
   apr_file_t *tmpf;
@@ -220,15 +222,14 @@ struct command_s {
 	
 #define COMMAND_NEED_ARG(err_text) \
 { \
-  int i = 0; \
-  while (data[i] == ' ') { \
-    ++i; \
+  while (*data == ' ') { \
+    ++data; \
   } \
-  if(!data[i]) { \
+  if(!*data) { \
     worker_log(worker, LOG_ERR, err_text); \
     return APR_EGENERAL; \
   } \
-  copy = apr_pstrdup(worker->pool, &data[i]); \
+  copy = apr_pstrdup(worker->pcmd, data); \
   copy = worker_replace_vars(worker, copy); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
@@ -240,11 +241,10 @@ struct command_s {
 
 #define COMMAND_OPTIONAL_ARG \
 { \
-  int i = 0; \
-  while (data[i] == ' ') { \
-    ++i; \
+  while (*data == ' ') { \
+    ++data; \
   } \
-  copy = apr_pstrdup(worker->pool, &data[i]); \
+  copy = apr_pstrdup(worker->pcmd, data); \
   copy = worker_replace_vars(worker, copy); \
   worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
 }
