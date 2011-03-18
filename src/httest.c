@@ -447,14 +447,6 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
   }
 }
 
-/**
- * Get a specific block and handle reserved block names
- *
- * @param worker IN thread data object
- * @param data IN block name
- *
- * @return a block
- */
 static apr_hash_t *worker_lookup_block(worker_t * worker, char *data) {
   apr_size_t len = 0;
   char *block_name;
@@ -632,10 +624,10 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
       if (!not) {
 	doit = 1;
       }
-    }
-    else {
-      if (not) {
-	doit = 1;
+      else {
+        if (not) {
+          doit = 0;
+        }
       }
     }
   }
@@ -989,7 +981,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
  
  if ((status = apr_tokenize_to_argv(copy, &argv, worker->pcmd)) == APR_SUCCESS) {
     if (!argv[0]) {
-      worker_log_error(worker, "No argument found, need an regex for expected error.");
+      worker_log_error(worker, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
     }
   }
@@ -1100,17 +1092,17 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("Need a block name: <block> <input-vars>* : <output-vars>*");
 
-  apr_pool_create(&call_pool, worker->pbody);
-  my_get_args(copy, worker->params, call_pool);
+  apr_pool_create(&call_pool, worker->pcmd);
+  my_get_args(copy, worker->params, worker->pcmd);
   block_name = apr_table_get(worker->params, "0");
-  module = apr_pstrdup(call_pool, block_name);
+  module = apr_pstrdup(worker->pcmd, block_name);
 
   /* determine module if any */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
     /* always jump over prefixing "_" */
     module++;
-    block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    block_name = apr_pstrcat(worker->pcmd, "_", last, NULL);
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1242,8 +1234,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
     worker->procs = apr_hash_make(worker->pbody);
   }
 
-  apr_hash_set(worker->procs, apr_pstrdup(worker->pbody, copy), 
-               APR_HASH_KEY_STRING, proc);
+  apr_hash_set(worker->procs, copy, APR_HASH_KEY_STRING, proc);
 
   return APR_SUCCESS; 
 }
@@ -1338,6 +1329,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       else {
 	status = command_CALL(NULL, self, line);
       }
+      //apr_pool_clear(self->pcmd);
       if (APR_STATUS_IS_ENOENT(status)) {
 	worker_log_error(self, "%s syntax error", self->name);
 	worker_set_global_error(self);
@@ -1347,9 +1339,9 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
     if (status != APR_SUCCESS) {
       return status;
     }
-    apr_pool_clear(self->pcmd);
   }
   if (parent == self) {
+    //apr_pool_clear(self->pcmd);
     apr_pool_destroy(self->pcmd);
     apr_pool_create(&self->pcmd, self->heartbeat);
   }
@@ -1816,8 +1808,6 @@ static apr_status_t global_new(global_t **self, apr_table_t *vars,
                                         p)) != APR_SUCCESS) {
     return status;
   }
-
-  /* use mutex also for global pool */
 
   (*self)->state = GLOBAL_STATE_NONE;
   (*self)->socktmo = 300000000;

@@ -596,15 +596,15 @@ go_out:
  *
  * @return new line 
  */
-char * worker_replace_vars(worker_t * worker, apr_pool_t *pool, char *line) {
+char * worker_replace_vars(worker_t * worker, char *line) {
   char *new_line;
 
   /* replace all locals first */
-  new_line = my_replace_vars(pool, line, worker->locals, 0); 
+  new_line = my_replace_vars(worker->pool, line, worker->locals, 0); 
   /* replace all parameters first */
-  new_line = my_replace_vars(pool, line, worker->params, 0); 
+  new_line = my_replace_vars(worker->pool, line, worker->params, 0); 
   /* replace all vars */
-  new_line = my_replace_vars(pool, new_line, worker->vars, 1); 
+  new_line = my_replace_vars(worker->pool, new_line, worker->vars, 1); 
 
   return new_line;
 }
@@ -811,8 +811,8 @@ apr_status_t worker_check_error(worker_t *self, apr_status_t status) {
     return status;
   }
 
-  error = apr_psprintf(self->pcmd, "%s(%d)",
-		     my_status_str(self->pcmd, status), status);
+  error = apr_psprintf(self->pool, "%s(%d)",
+		     my_status_str(self->pool, status), status);
 
   worker_match(self, self->match.error, error, strlen(error));
   worker_match(self, self->grep.error, error, strlen(error));
@@ -1149,7 +1149,7 @@ static void worker_set_cookie(worker_t *worker) {
       char *last;
       char *key;
       char *value;
-      char *cookie = apr_pstrdup(worker->pbody, e[i].val);
+      char *cookie = apr_pstrdup(worker->pcmd, e[i].val);
       key = apr_strtok(cookie, "=", &last);
       value = apr_strtok(NULL, ";", &last);
       apr_table_set(worker->socket->cookies, key, value); 
@@ -1469,7 +1469,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
     socket = apr_pcalloc(self->pool, sizeof(*socket));
     socket->socket_state = SOCKET_CLOSED;
     tag = apr_pstrdup(self->pbody, portname);
-    apr_hash_set(self->sockets, apr_pstrcat(self->pbody, hostname, tag,
+    apr_hash_set(self->sockets, apr_pstrcat(self->pcmd, hostname, tag,
 	                                    NULL),
 	         APR_HASH_KEY_STRING, socket);
   }
@@ -1487,13 +1487,13 @@ void worker_get_socket(worker_t *self, const char *hostname,
  * @return an apr status
  */
 apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker, 
-		                 char *data) {
-  char *copy;
-  char *last;
-  char *sslstr;
+		                             char *data) {
+	char *copy;
+	char *last;
+	char *sslstr;
   int is_ssl;
-  BIO *bio;
-  apr_os_sock_t fd;
+	BIO *bio;
+	apr_os_sock_t fd;
 
   COMMAND_NEED_ARG("SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]");
 
@@ -1524,8 +1524,8 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
       }
 
       if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
-	worker_log(worker, LOG_ERR, "SSL_new failed.");
-	return APR_ECONNREFUSED;
+				worker_log(worker, LOG_ERR, "SSL_new failed.");
+				return APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(worker->socket->ssl, worker->meth);
       ssl_rand_seed();
@@ -1533,21 +1533,21 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(worker->socket->ssl, bio, bio);
       if (worker->socket->sess) {
-	SSL_set_session(worker->socket->ssl, worker->socket->sess);
-	SSL_SESSION_free(worker->socket->sess);
-	worker->socket->sess = NULL;
+				SSL_set_session(worker->socket->ssl, worker->socket->sess);
+				SSL_SESSION_free(worker->socket->sess);
+				worker->socket->sess = NULL;
       }
       SSL_set_connect_state(worker->socket->ssl);
 
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
-	return status;
+				return status;
       }
     }
 #endif
   }
   else {
-    worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
-    return APR_EGENERAL;
+	  worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+	  return APR_EGENERAL;
   }
   return APR_SUCCESS;
 }
@@ -1864,31 +1864,29 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
 
-  interm = apr_pstrdup(worker->pool, match);
-
-  if (match[0] == '!') {
-    ++match;
+  if (interm[0] == '!') {
+    ++interm;
   }
 
-  if (!(compiled = pregcomp(worker->pool, match, &err, &off))) {
+  if (!(compiled = pregcomp(worker->pool, interm, &err, &off))) {
     worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
     return APR_EINVAL;
   }
 
   if (strcmp(type, ".") == 0) {
-    apr_table_addn(worker->expect.dot, interm, (char *) compiled);
+    apr_table_addn(worker->expect.dot, match, (char *) compiled);
   }
   else if (strcasecmp(type, "Headers") == 0) {
-    apr_table_addn(worker->expect.headers, interm, (char *) compiled);
+    apr_table_addn(worker->expect.headers, match, (char *) compiled);
   }
   else if (strcasecmp(type, "Body") == 0) {
-    apr_table_addn(worker->expect.body, interm, (char *) compiled);
+    apr_table_addn(worker->expect.body, match, (char *) compiled);
   }
   else if (strcasecmp(type, "Exec") == 0) {
-    apr_table_addn(worker->expect.exec, interm, (char *) compiled);
+    apr_table_addn(worker->expect.exec, match, (char *) compiled);
   }
   else if (strcasecmp(type, "Error") == 0) {
-    apr_table_addn(worker->expect.error, interm, (char *) compiled);
+    apr_table_addn(worker->expect.error, match, (char *) compiled);
   }
   else if (strncasecmp(type, "Var(", 4) == 0) {
     const char *val;
@@ -1902,7 +1900,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 	worker->tmp_table = apr_table_make(worker->pool, 1);
       }
       apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, interm, (char *) compiled);
+      apr_table_addn(worker->tmp_table, match, (char *) compiled);
       worker_expect(worker, worker->tmp_table, val, strlen(val));
       return worker_validate_expect(worker, worker->tmp_table, "EXPECT var", 
 	                            APR_SUCCESS);
@@ -1998,7 +1996,6 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   char *type;
   char *match;
   char *vars;
-  char *key;
   regex_t *compiled;
   const char *err;
   int off;
@@ -2036,26 +2033,24 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  key = apr_pstrdup(worker->pool, vars);
-
   if (!(compiled = pregcomp(worker->pool, match, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
   if (strcmp(type, ".") == 0) {
-    apr_table_addn(worker->match.dot, key, (char *) compiled);
+    apr_table_addn(worker->match.dot, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Headers") == 0) {
-    apr_table_addn(worker->match.headers, key, (char *) compiled);
+    apr_table_addn(worker->match.headers, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Body") == 0) {
-    apr_table_addn(worker->match.body, key, (char *) compiled);
+    apr_table_addn(worker->match.body, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Error") == 0) {
-    apr_table_addn(worker->match.error, key, (char *) compiled);
+    apr_table_addn(worker->match.error, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Exec") == 0) {
-    apr_table_addn(worker->match.exec, key, (char *) compiled);
+    apr_table_addn(worker->match.exec, vars, (char *) compiled);
   }
   else if (strncasecmp(type, "Var(", 4) == 0) {
     const char *val;
@@ -2069,7 +2064,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
 	worker->tmp_table = apr_table_make(worker->pool, 1);
       }
       apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, key, (char *) compiled);
+      apr_table_addn(worker->tmp_table, vars, (char *) compiled);
       worker_match(worker, worker->tmp_table, val, strlen(val));
       return worker_validate_match(worker, worker->tmp_table, "MATCH var", 
 	                           APR_SUCCESS);
@@ -2102,7 +2097,6 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   char *type;
   char *grep;
   char *vars;
-  char *key;
   regex_t *compiled;
   const char *err;
   int off;
@@ -2140,26 +2134,24 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  key = apr_pstrdup(worker->pool, vars);
-
   if (!(compiled = pregcomp(worker->pool, grep, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
   if (strcmp(type, ".") == 0) {
-    apr_table_addn(worker->grep.dot, key, (char *) compiled);
+    apr_table_addn(worker->grep.dot, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Headers") == 0) {
-    apr_table_addn(worker->grep.headers, key, (char *) compiled);
+    apr_table_addn(worker->grep.headers, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Body") == 0) {
-    apr_table_addn(worker->grep.body, key, (char *) compiled);
+    apr_table_addn(worker->grep.body, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Error") == 0) {
-    apr_table_addn(worker->grep.error, key, (char *) compiled);
+    apr_table_addn(worker->grep.error, vars, (char *) compiled);
   }
   else if (strcasecmp(type, "Exec") == 0) {
-    apr_table_addn(worker->grep.exec, key, (char *) compiled);
+    apr_table_addn(worker->grep.exec, vars, (char *) compiled);
   }
   else if (strncasecmp(type, "Var(", 4) == 0) {
     const char *val;
@@ -2173,7 +2165,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
 	worker->tmp_table = apr_table_make(worker->pool, 1);
       }
       apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, key, (char *) compiled);
+      apr_table_addn(worker->tmp_table, vars, (char *) compiled);
       worker_match(worker, worker->tmp_table, val, strlen(val));
     }
     else {
@@ -2249,7 +2241,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   }
     
   copy = apr_pstrdup(worker->pcmd, data); 
-  copy = worker_replace_vars(worker, worker->pcmd, copy);
+  copy = worker_replace_vars(worker, copy);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
 
@@ -2387,11 +2379,16 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   char *copy;
   apr_status_t status;
   apr_procattr_t *attr;
+  apr_table_t *table;
+  apr_table_entry_t *e;
   bufreader_t *br;
   const char *progname;
-  char **args;
+  const char **args;
   apr_exit_why_e exitwhy;
   int exitcode;
+  char *last;
+  char *val;
+  int i;
   int flags;
 
   COMMAND_NEED_ARG("Need a shell command");
@@ -2425,7 +2422,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
   
-  if ((status = apr_procattr_create(&attr, worker->pbody)) != APR_SUCCESS) {
+  if ((status = apr_procattr_create(&attr, worker->pool)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2452,8 +2449,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
-  if ((status = apr_proc_create(&worker->proc, progname, (const char **)args, NULL, attr,
-                                worker->pbody)) != APR_SUCCESS) {
+  if ((status = apr_proc_create(&worker->proc, progname, args, NULL, attr,
+                                worker->pool)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2468,7 +2465,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     char *buf = NULL;
 
     worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
+    if ((status = bufreader_new(&br, worker->proc.out, worker->pcmd)) == APR_SUCCESS) {
       bufreader_read_eof(br, &buf, &len);
       if (buf) {
 	worker_log(worker, LOG_INFO, "<%s", buf);
@@ -2601,8 +2598,8 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
                                    char *data) {
   char *copy;
 
-  copy = apr_pstrdup(worker->pcmd, data); 
-  copy = worker_replace_vars(worker, worker->pcmd, copy);
+  copy = apr_pstrdup(worker->pool, data); 
+  copy = worker_replace_vars(worker, copy);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
   apr_table_add(worker->cache, "NOCRLF", copy);
@@ -3404,7 +3401,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data) {
       if ((status = apr_file_mktemp(&worker->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, 
-				    worker->pbody))
+				    worker->pcmd))
 	  != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Could not mk temp file %s(%d)", 
 	           my_status_str(worker->pool, status), status);
@@ -4294,7 +4291,7 @@ apr_status_t command_MARK(command_t *self, worker_t *worker, char *data) {
 apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data) {
   char *copy;
   COMMAND_NEED_ARG("<var-sequence>*");
-  worker->match_seq = apr_pstrdup(worker->pool, copy);
+  worker->match_seq = copy;
   return APR_SUCCESS;
 }
 
@@ -4558,7 +4555,6 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->pcheck = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
-  (*self)->config = apr_hash_make(p);
   (*self)->interpret = interpret;
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
@@ -4640,7 +4636,6 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->pcheck = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
-  (*self)->config = apr_hash_copy(p, orig->config);
   (*self)->interpret = orig->interpret;
   (*self)->flags = orig->flags;
   (*self)->prefix = apr_pstrdup(p, orig->prefix);
@@ -4720,7 +4715,6 @@ apr_status_t worker_body(worker_t **body, worker_t *worker, char *command) {
   memcpy(*body, worker, sizeof(worker_t));
   /* give it an own heartbeat :) */
   (*body)->heartbeat = p;
-  apr_pool_create(&(*body)->pcmd, p);
 
   /* fill lines */
   (*body)->lines = apr_table_make(p, 20);
@@ -5100,10 +5094,10 @@ apr_status_t worker_flush(worker_t * self) {
 
 error:
   {
-//    apr_pool_t *parent = apr_pool_parent_get(self->pcache);
-//    apr_pool_destroy(self->pcache);
-//    apr_pool_create(&self->pcache, parent);
+    //apr_pool_t *parent = apr_pool_parent_get(self->pcache);
     apr_pool_clear(self->pcache);
+    //apr_pool_destroy(self->pcache);
+    //apr_pool_create(&self->pcache, parent);
     self->cache = apr_table_make(self->pcache, 20);
   }
 
