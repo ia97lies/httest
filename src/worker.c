@@ -2379,16 +2379,11 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   char *copy;
   apr_status_t status;
   apr_procattr_t *attr;
-  apr_table_t *table;
-  apr_table_entry_t *e;
   bufreader_t *br;
   const char *progname;
   const char **args;
   apr_exit_why_e exitwhy;
   int exitcode;
-  char *last;
-  char *val;
-  int i;
   int flags;
 
   COMMAND_NEED_ARG("Need a shell command");

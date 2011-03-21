@@ -466,7 +466,6 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
                         apr_size_t *len, const char *val) {
   char *read;
   apr_size_t block;
-  apr_size_t i;
   apr_bucket *b;
   apr_bucket_brigade *bb;
 
@@ -485,7 +484,6 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
     bb = apr_brigade_create(self->pool, self->alloc);
   }
 
-  i = 0;
   if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     read = NULL;
   }
@@ -498,7 +496,7 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
       status = sockreader_read_block(self, NULL, &block);
     }
     else {
-      status = sockreader_read_block(self, &read[i], &block);
+      status = sockreader_read_block(self, read, &block);
     }
     if (!self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
       b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
@@ -506,9 +504,6 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
       read = apr_pcalloc(self->pool, BLOCK_MAX);
     }
   } while (status == APR_SUCCESS); 
-
-  *buf = read;
-  *len = i;
 
   if (self->options & SOCKREADER_OPTIONS_IGNORE_BODY) {
     *buf = NULL;

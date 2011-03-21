@@ -30,6 +30,7 @@
 #include <apr.h>
 #include <apr_strings.h>
 #include <apr_file_io.h>
+#include <apr_buckets.h>
 
 #include "defines.h"
 #include "file.h"
@@ -41,12 +42,12 @@
 
 struct bufreader_s {
   apr_status_t status;
-  apr_pool_t *ppool;
   apr_pool_t *pool;
-  apr_pool_t *next;
   apr_file_t *fp;
   apr_size_t i;
   apr_size_t len;
+  apr_bucket_alloc_t *alloc;
+  apr_bucket_brigade *line;
   char buf[BLOCK_MAX + 1];
 };
 
@@ -56,8 +57,6 @@ struct bufreader_s {
  ***********************************************************************/
 
 static apr_status_t bufreader_fill(bufreader_t * self); 
-static void *my_realloc(bufreader_t *self, void *mem_old, 
-                        apr_size_t size_old, apr_size_t size_new); 
 
 
 /************************************************************************
@@ -79,11 +78,12 @@ apr_status_t bufreader_new(bufreader_t ** self, apr_file_t * fp,
   apr_allocator_t *allocator;
 
   *self = apr_pcalloc(p, sizeof(bufreader_t));
-
   (*self)->fp = fp;
+  (*self)->alloc = apr_bucket_alloc_create(p);
+  (*self)->line = apr_brigade_create(p, (*self)->alloc);
   allocator = apr_pool_allocator_get(p);
   apr_allocator_max_free_set(allocator, 1024*1024);
-  (*self)->ppool = p;
+  (*self)->pool = p;
   (*self)->status = APR_SUCCESS;
   apr_pool_create(&(*self)->pool, p);
 
@@ -103,64 +103,42 @@ apr_status_t bufreader_new(bufreader_t ** self, apr_file_t * fp,
  * @return an apr status
  */
 apr_status_t bufreader_read_line(bufreader_t * self, char **line) {
-  apr_status_t status;
   char c;
   apr_size_t i;
-  apr_size_t size;
-  char *new_size_line;
+  apr_status_t status = APR_SUCCESS;
   int leave_loop = 0;
 
   *line = NULL;
-  size = 0;
 
   i = 0;
   c = 0;
-
   while (leave_loop == 0 && (status = apr_file_eof(self->fp)) != APR_EOF) {    
-    if (i >= size) {
-      new_size_line = my_realloc(self, *line, size, size + 512 + 1);
-      size += 512;
-      *line = new_size_line;
-    }	
     if (self->i >= self->len) {
       if ((status = bufreader_fill(self)) != APR_SUCCESS) {
-	goto error;
+        break;
       }
     }
 
-    c = self->buf[self->i];
-    if (c == '\r' || c == '\n') {
-      c='\0';
-      leave_loop=1;
+    if (self->i < self->len) {
+      c = self->buf[self->i];
+      if (c == '\r' || c == '\n') {
+	c='\0';
+	leave_loop=1;
+      }
+      apr_brigade_putc(self->line, NULL, NULL, c);
+      self->i++;
+      i++;
+
     }
-    (*line)[i] = c;
-    self->i++;
-    i++;
   }
-error:
-  
-  if (APR_STATUS_IS_EOF(status)) {
-    if (i >= size) {
-      new_size_line = my_realloc(self, *line, size, size + 512 + 1);
-      size += 512;
-      *line = new_size_line;
-    }
-    (*line)[i] = 0;
-  }
+
+  apr_brigade_pflatten(self->line, line, &i, self->pool);
+  apr_brigade_cleanup(self->line);
 
   while (**line == ' ') {
     ++*line;
   }
-  
-  /* do not destroy returned line on next realloc */
-  apr_pool_create(&self->pool, self->ppool);
-  
-  //if (apr_file_eof(self->fp) == APR_EOF) {
-  //  return APR_EOF;
-  //}
-  //else {
-  //  return APR_SUCCESS;
-  //}
+
   return status;
 }
 
@@ -221,36 +199,34 @@ apr_status_t bufreader_read_eof(bufreader_t * self,
                                 char **buf, apr_size_t *len) {
   char *read;
   apr_size_t block;
-  apr_size_t alloc;
-  apr_size_t i;
+  apr_bucket *b;
+  apr_bucket_brigade *bb;
 
   apr_status_t status = APR_SUCCESS;
 
   *buf = NULL;
   (*len) = 0;
 
-  i = 0;
-  alloc = BLOCK_MAX;
-  read = apr_pcalloc(self->pool, alloc);
+  bb = apr_brigade_create(self->pool, self->alloc);
+
+  read = apr_pcalloc(self->pool, BLOCK_MAX);
   do {
     block = BLOCK_MAX;
-    status = bufreader_read_block(self, &read[i], &block);
-    i += block;
-    if (i >= alloc) {
-      alloc += BLOCK_MAX;
-      read = my_realloc(self, read, alloc - BLOCK_MAX, alloc);
-    }
+    status = bufreader_read_block(self, read, &block);
+    b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
+    APR_BRIGADE_INSERT_TAIL(bb, b);
+    read = apr_pcalloc(self->pool, BLOCK_MAX);
   } while (status == APR_SUCCESS); 
 
-  *buf = read;
-  *len = i;
+  apr_brigade_pflatten(bb, buf, len, self->pool);
+  apr_brigade_destroy(bb);
 
   if (status == APR_SUCCESS || status == APR_EOF) {
     return APR_SUCCESS;
   }
   else {
     return status;
-  }
+  }  
 }
 
 /**
@@ -270,31 +246,5 @@ static apr_status_t bufreader_fill(bufreader_t * self) {
 
   self->status = apr_file_read(self->fp, self->buf, &self->len);
   return self->status;
-}
-
-/**
- * realloc memory in pool
- *
- * @param p IN pool
- * @param mem_old IN old memory
- * @param size_old IN old memory size
- * @param size_new IN new memory size
- *
- * @return new memory
- */
-static void *my_realloc(bufreader_t *self, void *mem_old, 
-                        apr_size_t size_old, apr_size_t size_new) {
-  void *mem_new;
-
-  apr_pool_create(&self->next, self->ppool);
-  mem_new = apr_palloc(self->next, size_new);
-  if (mem_old != NULL) {
-    memcpy(mem_new, mem_old, size_old < size_new ? size_old : size_new);
-  }
-  apr_pool_destroy(self->pool);
-  self->pool = self->next;
-  self->next = NULL;
-
-  return mem_new;
 }
 
