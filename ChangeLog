@@ -4,6 +4,8 @@ Changes with httest 2.0.4
      the if condition do not execute its execute its body. This can lead to
      tests which should fail but do not.
 
+  *) httest: Fixed memory consumption while reading files or piped _EXEC.
+
 
 Changes with httest 2.0.3
   *) httest: Fixed _IGNORE_BODY did not complain if not on or off. If wrong
