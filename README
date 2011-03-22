@@ -3,7 +3,6 @@ Release Build
 
 Document version
   Set new version in configure.in
-  Set new windos version in src/defines.h
   Update ChangeLog
   Update NEWS
   Update AUTHORS
@@ -16,20 +15,19 @@ Test it on Solaris (optional)
   configure && make && make check 
 
 Set version in configure.in and do
-  git commit -m"new release" configure.in src/defines.h
-
-Tag new release
-  git tag <major>.<minor>.<maint>
-  git push --tags
+  git commit -m"new release" configure.in ChangeLog NEWS AUTHORS THANKS
 
 Build release
-  ./release.sh HTT_RELEASE_<major>_<minor>_<maint>
+  ./release.sh <major>.<minor>.<maint>
+
+Push to central repository
+  git push --tags
 
 Upload release
-./upload.sh HTT_RELEASE_<major>_<minor>_<maint>
+./upload.sh <major>.<minor>.<maint>
 
-Set version in configure.in and src/defines.h to undef and do
-  cvs -q ci -m"Release build"
+Set version in configure.in to undef and do
+  git commit -m"Release build" configure.in
 
 Build Configure Script
 ----------------------

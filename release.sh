@@ -5,6 +5,13 @@ VERSION=$1
 echo
 echo "Release httest-$VERSION"
 
+echo "Tag release $VERSION"
+  git tag $VERSION
+
+echo "Checkout new tag"
+  git checkout $VERSION
+  git clean -f
+
 echo
 echo "  Check Version"
 echo "    configure.in"
