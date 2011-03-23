@@ -1092,8 +1092,8 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("Need a block name: <block> <input-vars>* : <output-vars>*");
 
-  apr_pool_create(&call_pool, worker->pcmd);
-  my_get_args(copy, worker->params, worker->pcmd);
+  apr_pool_create(&call_pool, worker->pbody);
+  my_get_args(copy, worker->params, call_pool);
   block_name = apr_table_get(worker->params, "0");
   module = apr_pstrdup(worker->pcmd, block_name);
 
