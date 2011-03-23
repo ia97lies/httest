@@ -1,4 +1,8 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.5
+  *) httest: Simplyfied the pool usage and more fixes to make it stable.
+
+
 Changes with httest 2.0.4
   *) httest: Serious fix: _IF "<string>" NOT EQUAL "<string>" is not equal
      the if condition do not execute its execute its body. This can lead to
