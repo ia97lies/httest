@@ -485,7 +485,7 @@ static apr_status_t do_request_line(self_t *self, worker_t *worker, apr_pool_t *
     //__GET /tt-nas-webui/styles/ttnas/layo...    -> replace /tt-nas-webui with variable
     tmp = apr_strtok(request_line, " /", &last);
     apr_strtok(NULL, "/", &last);
-    request_line = apr_pstrcat(worker->pcmd, tmp, " $",self->uri_var, "/", last, NULL);
+    request_line = apr_pstrcat(worker->pbody, tmp, " $",self->uri_var, "/", last, NULL);
   }  
   if (write) {
     apr_file_printf(self->ofp, "\n__%s", request_line); 
@@ -552,7 +552,7 @@ static apr_status_t do_headers(self_t *self, worker_t *worker, apr_pool_t *p,
 	else if (strcasecmp(e[i].key, "Cookie") == 0) {
 	  if (!(self->flags & SELF_FLAGS_SKIP_COOKIE_FIRST_TIME)) {
 	    apr_file_printf(self->ofp, "\n__Cookie: ");
-	    cookie = apr_pstrdup(worker->pcmd, e[i].val);
+	    cookie = apr_pstrdup(worker->pbody, e[i].val);
 	    cookie = apr_strtok(cookie, ";", &last);
 	    while (cookie) {
 	      /* split key from key=val */
@@ -560,11 +560,11 @@ static apr_status_t do_headers(self_t *self, worker_t *worker, apr_pool_t *p,
 	      while (*key == ' ') ++key;
 	      val = apr_strtok(NULL, "=", &ignore);
 	      if (val) {
-		cookie_val = apr_psprintf(worker->pcmd, "%s=$%s%s", 
+		cookie_val = apr_psprintf(worker->pbody, "%s=$%s%s", 
 		                          key, self->cookie_pre, key);
 	      }
 	      else {
-		cookie_val = apr_psprintf(worker->pcmd, "%s", key);
+		cookie_val = apr_psprintf(worker->pbody, "%s", key);
 	      }
 	      /* get next one here so we can detect last one in the next if cond */
 	      cookie = apr_strtok(NULL, ";", &last);
@@ -657,7 +657,7 @@ static apr_status_t do_body(self_t *self, worker_t *worker, apr_pool_t *p,
       }
 
       if (chunked) { 
-	line = apr_psprintf(worker->pool, "%x\r\n", len);
+	line = apr_psprintf(worker->pbody, "%x\r\n", len);
 	if ((status = worker_socket_send(worker, line, strlen(line))) != APR_SUCCESS) {
 	  return status;
 	}
@@ -1193,9 +1193,9 @@ int proxy(self_t *self) {
     client->socket->socket = listener->socket->socket;
 
     /* new thread */
-    this = apr_pcalloc(client->pool, sizeof(*this));
+    this = apr_pcalloc(client->pbody, sizeof(*this));
     memcpy(this, self, sizeof(*this));
-    this->pool = client->pool;
+    this->pool = client->pbody;
     this->client = client;
     if (this->url_filter &&
 	(compiled = pregcomp(self->pool, this->url_filter, &err, &off))) {

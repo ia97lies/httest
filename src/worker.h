@@ -71,14 +71,8 @@ struct worker_s {
   apr_pool_t *heartbeat;
   /* dies on END */
   apr_pool_t *pbody;
-  /* dies on every _CLOSE */
-  apr_pool_t *pool;
-  /* dies on every command */
-  apr_pool_t *pcmd;
   /* dies on every flush */
   apr_pool_t *pcache;
-  /* dies on check */
-  apr_pool_t *pcheck;
   const char *filename;
   X509 *foreign_cert;
   apr_file_t *tmpf;
@@ -229,7 +223,7 @@ struct command_s {
     worker_log(worker, LOG_ERR, err_text); \
     return APR_EGENERAL; \
   } \
-  copy = apr_pstrdup(worker->pcmd, data); \
+  copy = apr_pstrdup(worker->pbody, data); \
   copy = worker_replace_vars(worker, copy); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
@@ -244,7 +238,7 @@ struct command_s {
   while (*data == ' ') { \
     ++data; \
   } \
-  copy = apr_pstrdup(worker->pcmd, data); \
+  copy = apr_pstrdup(worker->pbody, data); \
   copy = worker_replace_vars(worker, copy); \
   worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
 }

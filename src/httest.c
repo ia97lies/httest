@@ -458,7 +458,7 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *data) {
   }
 
   while (data[len] != ' ' && data[len] != '\0') ++len;
-  block_name = apr_pstrndup(worker->pcmd, data, len);
+  block_name = apr_pstrndup(worker->pbody, data, len);
 
   /* if name space do handle otherwise */
   if (strchr(block_name, ':')) {
@@ -609,7 +609,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
   }
  
   if (strcmp(middle, "MATCH") == 0) {
-    if (!(compiled = pregcomp(worker->pcmd, right, &err, &off))) {
+    if (!(compiled = pregcomp(worker->pbody, right, &err, &off))) {
       worker_log(worker, LOG_ERR, "IF MATCH regcomp failed: %s", right);
       return APR_EINVAL;
     }
@@ -979,7 +979,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("<error>"); 
  
- if ((status = apr_tokenize_to_argv(copy, &argv, worker->pcmd)) == APR_SUCCESS) {
+ if ((status = apr_tokenize_to_argv(copy, &argv, worker->pbody)) == APR_SUCCESS) {
     if (!argv[0]) {
       worker_log_error(worker, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
@@ -991,7 +991,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   }
 
   /* store value by his index */
-  if (!(compiled = pregcomp(worker->pcmd, argv[0], &err, &off))) {
+  if (!(compiled = pregcomp(worker->pbody, argv[0], &err, &off))) {
     worker_log(worker, LOG_ERR, "ERROR condition compile failed: \"%s\"", argv[0]);
     return APR_EINVAL;
   }
@@ -1004,7 +1004,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   /* interpret */
   status = worker_interpret(body, worker);
   
-  status_str = my_status_str(worker->pcmd, status);
+  status_str = my_status_str(worker->pbody, status);
   if (regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
     worker_log_error(worker, "Did expect error \"%s\" but got \"%s\"", argv[0], 
 	             status_str);
@@ -1095,14 +1095,14 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
   apr_pool_create(&call_pool, worker->pbody);
   my_get_args(copy, worker->params, call_pool);
   block_name = apr_table_get(worker->params, "0");
-  module = apr_pstrdup(worker->pcmd, block_name);
+  module = apr_pstrdup(worker->pbody, block_name);
 
   /* determine module if any */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
     /* always jump over prefixing "_" */
     module++;
-    block_name = apr_pstrcat(worker->pcmd, "_", last, NULL);
+    block_name = apr_pstrcat(worker->pbody, "_", last, NULL);
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1329,7 +1329,6 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       else {
 	status = command_CALL(NULL, self, line);
       }
-      //apr_pool_clear(self->pcmd);
       if (APR_STATUS_IS_ENOENT(status)) {
 	worker_log_error(self, "%s syntax error", self->name);
 	worker_set_global_error(self);
@@ -1339,11 +1338,6 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
     if (status != APR_SUCCESS) {
       return status;
     }
-  }
-  if (parent == self) {
-    //apr_pool_clear(self->pcmd);
-    apr_pool_destroy(self->pcmd);
-    apr_pool_create(&self->pcmd, self->heartbeat);
   }
   return APR_SUCCESS;
 }
@@ -1366,7 +1360,7 @@ void worker_finally(worker_t *self, apr_status_t status) {
       apr_file_close(self->tmpf);
       self->tmpf = NULL;
 
-      apr_file_remove(name, self->pcmd);
+      apr_file_remove(name, self->pbody);
     }
   }
 
@@ -1427,7 +1421,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
   self->mythread = thread;
   self->flags |= FLAGS_CLIENT;
 
-  self->file_and_line = apr_psprintf(self->pool, "%s:-1", self->filename);
+  self->file_and_line = apr_psprintf(self->pbody, "%s:-1", self->filename);
 
   sync_lock(self->mutex);
   ++running_threads;
@@ -1469,7 +1463,7 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
   self->mythread = thread;
   self->flags |= FLAGS_CLIENT;
 
-  self->file_and_line = apr_psprintf(self->pool, "%s:-1", self->filename);
+  self->file_and_line = apr_psprintf(self->pbody, "%s:-1", self->filename);
 
   worker_log(self, LOG_INFO, "Daemon start ...");
 
@@ -1626,12 +1620,12 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 
   if ((status = apr_parse_addr_port(&self->listener_addr, &scope_id, 
 	                            &self->listener_port, portname, 
-				    self->pool)) != APR_SUCCESS) {
+				    self->pbody)) != APR_SUCCESS) {
     goto error;
   }
 
   if (!self->listener_addr) {
-    self->listener_addr = apr_pstrdup(self->pool, APR_ANYADDR);
+    self->listener_addr = apr_pstrdup(self->pbody, APR_ANYADDR);
   }
 
   if (!self->listener_port) {
@@ -1658,7 +1652,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   if (threads != 0) {
     i = 0;
 
-    if ((status = apr_threadattr_create(&tattr, self->pool)) != APR_SUCCESS) {
+    if ((status = apr_threadattr_create(&tattr, self->pbody)) != APR_SUCCESS) {
       goto error;
     }
 
@@ -1671,7 +1665,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       goto error;
     }
 
-    servers = apr_table_make(self->pool, 10);
+    servers = apr_table_make(self->pbody, 10);
 
     while(threads == -1 || i < threads) {
       if ((status = worker_clone(&clone, self)) != APR_SUCCESS) {
@@ -1691,7 +1685,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       
       if ((status =
 	   apr_socket_accept(&clone->socket->socket, self->listener,
-			     clone->pool)) != APR_SUCCESS) {
+			     clone->pbody)) != APR_SUCCESS) {
 	clone->socket->socket = NULL;
 	goto error;
       }
@@ -1710,7 +1704,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       clone->which = i;
       if ((status =
 	   apr_thread_create(&threadl, tattr, worker_thread_server,
-			     clone, self->pool)) != APR_SUCCESS) {
+			     clone, self->pbody)) != APR_SUCCESS) {
 	goto error;
       }
 
@@ -2119,7 +2113,7 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data) {
   }
   worker_add_line(worker, apr_psprintf(global->pool, "%s:%d", global->filename,
 	                               global->line_nr), 
-		  apr_pstrcat(worker->pool, "_EXEC ", &data[i], NULL));
+		  apr_pstrcat(worker->pbody, "_EXEC ", &data[i], NULL));
   status = worker_interpret(worker, worker);
   if (status != APR_SUCCESS) {
     worker_set_global_error(worker);

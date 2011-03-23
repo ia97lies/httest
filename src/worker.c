@@ -191,7 +191,7 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
   va_start(va, fmt);
   if (self->log_mode >= log_mode) {
     if (log_mode == LOG_ERR) {
-      tmp = apr_pvsprintf(self->pcmd, fmt, va);
+      tmp = apr_pvsprintf(self->pbody, fmt, va);
       fprintf(stderr, "\n%-88s", tmp);
       fflush(stderr);
     }
@@ -217,8 +217,8 @@ void worker_log_error(worker_t * self, char *fmt, ...) {
 
   va_start(va, fmt);
   if (self->log_mode >= LOG_ERR) {
-    tmp = apr_pvsprintf(self->pcmd, fmt, va);
-    tmp = apr_psprintf(self->pcmd, "%s: error: %s", self->file_and_line,
+    tmp = apr_pvsprintf(self->pbody, fmt, va);
+    tmp = apr_psprintf(self->pbody, "%s: error: %s", self->file_and_line,
 	               tmp);
     fprintf(stderr, "\n%-88s", tmp);
     fflush(stderr);
@@ -351,7 +351,7 @@ void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
 	 hexbuf = apr_psprintf(pool, "%s%02X", hexbuf, (*buf)[j]);
       }
     }
-    *buf = apr_pstrdup(self->pcmd, hexbuf);
+    *buf = apr_pstrdup(self->pbody, hexbuf);
     *len = strlen(*buf);
     apr_pool_destroy(pool);
   }
@@ -370,7 +370,7 @@ apr_status_t worker_ssl_handshake(worker_t * worker) {
   apr_status_t status;
   char *error;
   
-  if ((status = ssl_handshake(worker->socket->ssl, &error, worker->pool)) 
+  if ((status = ssl_handshake(worker->socket->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "%s", error);
   }
@@ -502,7 +502,7 @@ apr_status_t worker_ssl_accept(worker_t * worker) {
     return APR_SUCCESS;
   }
 
-  if ((status = ssl_accept(worker->socket->ssl, &error, worker->pool)) 
+  if ((status = ssl_accept(worker->socket->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "%s", error);
   }
@@ -600,11 +600,11 @@ char * worker_replace_vars(worker_t * worker, char *line) {
   char *new_line;
 
   /* replace all locals first */
-  new_line = my_replace_vars(worker->pool, line, worker->locals, 0); 
+  new_line = my_replace_vars(worker->pbody, line, worker->locals, 0); 
   /* replace all parameters first */
-  new_line = my_replace_vars(worker->pool, line, worker->params, 0); 
+  new_line = my_replace_vars(worker->pbody, line, worker->params, 0); 
   /* replace all vars */
-  new_line = my_replace_vars(worker->pool, new_line, worker->vars, 1); 
+  new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1); 
 
   return new_line;
 }
@@ -637,13 +637,13 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
     return APR_SUCCESS;
   }
 
-  vtbl = apr_table_make(worker->pcmd, 2);
+  vtbl = apr_table_make(worker->pbody, 2);
   
   e = (apr_table_entry_t *) apr_table_elts(regexs)->elts;
   for (i = 0; i < apr_table_elts(regexs)->nelts; ++i) {
     /* prepare vars if multiple */
     apr_table_clear(vtbl);
-    tmp = apr_pstrdup(worker->pcmd, e[i].key);
+    tmp = apr_pstrdup(worker->pbody, e[i].key);
     var = apr_strtok(tmp, " ", &last);
     while (var) {
       apr_table_set(vtbl, var, var);
@@ -663,7 +663,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
       v = (apr_table_entry_t *) apr_table_elts(vtbl)->elts;
       for (j = 0; j < n; j++) {
 	val =
-	  apr_pstrndup(worker->pool, &data[regmatch[j + 1].rm_so],
+	  apr_pstrndup(worker->pbody, &data[regmatch[j + 1].rm_so],
 		       regmatch[j + 1].rm_eo - regmatch[j + 1].rm_so);
 	varset(worker, v[j].key, val);
 	if (worker->match_seq) {
@@ -811,8 +811,8 @@ apr_status_t worker_check_error(worker_t *self, apr_status_t status) {
     return status;
   }
 
-  error = apr_psprintf(self->pool, "%s(%d)",
-		     my_status_str(self->pool, status), status);
+  error = apr_psprintf(self->pbody, "%s(%d)",
+		     my_status_str(self->pbody, status), status);
 
   worker_match(self, self->match.error, error, strlen(error));
   worker_match(self, self->grep.error, error, strlen(error));
@@ -976,7 +976,7 @@ void worker_conn_close_all(worker_t *self) {
   
   socket_t *cur = self->socket;
 
-  for (hi = apr_hash_first(self->pcmd, self->sockets); hi; hi = apr_hash_next(hi)) {
+  for (hi = apr_hash_first(self->pbody, self->sockets); hi; hi = apr_hash_next(hi)) {
     apr_hash_this(hi, NULL, NULL, &s);
     self->socket = s;
     worker_conn_close(self, 1);
@@ -1082,11 +1082,11 @@ static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool,
       }
       if ((status =
 	   apr_thread_create(&thread, tattr, worker_write_buf_to_file,
-			     &write_buf_to_file, worker->pcmd)) != APR_SUCCESS) {
+			     &write_buf_to_file, worker->pbody)) != APR_SUCCESS) {
 	goto out_err;
       }
       /* read from worker->proc.out to buf */
-      if ((status = bufreader_new(&br, worker->proc.out, worker->pcmd)) == APR_SUCCESS) {
+      if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
 	apr_size_t len;
 
 	bufreader_read_eof(br, &line, &len);
@@ -1149,7 +1149,7 @@ static void worker_set_cookie(worker_t *worker) {
       char *last;
       char *key;
       char *value;
-      char *cookie = apr_pstrdup(worker->pcmd, e[i].val);
+      char *cookie = apr_pstrdup(worker->pbody, e[i].val);
       key = apr_strtok(cookie, "=", &last);
       value = apr_strtok(NULL, ";", &last);
       apr_table_set(worker->socket->cookies, key, value); 
@@ -1248,7 +1248,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     apr_table_clear(worker->headers);
   }
   else {
-    worker->headers = apr_table_make(worker->pool, 5);
+    worker->headers = apr_table_make(worker->pbody, 5);
   }
   
   if (worker->headers_add) {
@@ -1461,15 +1461,15 @@ void worker_get_socket(worker_t *self, const char *hostname,
   char *tag;
 
   socket = 
-    apr_hash_get(self->sockets, apr_pstrcat(self->pcmd, hostname, portname, 
+    apr_hash_get(self->sockets, apr_pstrcat(self->pbody, hostname, portname, 
 	                                    NULL),
 	         APR_HASH_KEY_STRING);
 
   if (!socket) {
-    socket = apr_pcalloc(self->pool, sizeof(*socket));
+    socket = apr_pcalloc(self->pbody, sizeof(*socket));
     socket->socket_state = SOCKET_CLOSED;
     tag = apr_pstrdup(self->pbody, portname);
-    apr_hash_set(self->sockets, apr_pstrcat(self->pcmd, hostname, tag,
+    apr_hash_set(self->sockets, apr_pstrcat(self->pbody, hostname, tag,
 	                                    NULL),
 	         APR_HASH_KEY_STRING, socket);
   }
@@ -1588,7 +1588,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 
   hostname = apr_strtok(copy, " ", &last);
   portname = apr_strtok(NULL, " ", &last);
-  portstr = apr_pstrdup(worker->pool, portname);
+  portstr = apr_pstrdup(worker->pbody, portname);
 
   if (!hostname) {
     worker_log(worker, LOG_ERR, "no host name specified");
@@ -1660,7 +1660,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 #endif
     if ((status = apr_socket_create(&worker->socket->socket, family,
 				    SOCK_STREAM, APR_PROTO_TCP,
-                                    worker->pool)) != APR_SUCCESS) {
+                                    worker->pbody)) != APR_SUCCESS) {
       worker->socket->socket = NULL;
       return status;
     }
@@ -1699,7 +1699,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 #endif
     if ((status =
          apr_sockaddr_info_get(&remote_addr, hostname, AF_UNSPEC, port,
-                               APR_IPV4_ADDR_OK, worker->pool))
+                               APR_IPV4_ADDR_OK, worker->pbody))
         != APR_SUCCESS) {
       return status;
     }
@@ -1774,7 +1774,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
 
     if ((status =
          apr_socket_accept(&worker->socket->socket, worker->listener,
-                           worker->pool)) != APR_SUCCESS) {
+                           worker->pbody)) != APR_SUCCESS) {
       worker->socket->socket = NULL;
       return status;
     }
@@ -1852,7 +1852,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   type = apr_strtok(copy, " ", &last);
   
   interm = my_unescape(last, &last);
-  match = apr_pstrdup(worker->pcheck, interm);
+  match = apr_pstrdup(worker->pbody, interm);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
@@ -1868,7 +1868,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     ++interm;
   }
 
-  if (!(compiled = pregcomp(worker->pool, interm, &err, &off))) {
+  if (!(compiled = pregcomp(worker->pbody, interm, &err, &off))) {
     worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
     return APR_EINVAL;
   }
@@ -1897,7 +1897,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     val = varget(worker, var);
     if (val) {
       if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pool, 1);
+	worker->tmp_table = apr_table_make(worker->pbody, 1);
       }
       apr_table_clear(worker->tmp_table);
       apr_table_addn(worker->tmp_table, match, (char *) compiled);
@@ -2008,7 +2008,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   match = my_unescape(last, &last);
   
   tmp = apr_strtok(NULL, "", &last);
-  vars = apr_pstrdup(worker->pcheck, tmp);
+  vars = apr_pstrdup(worker->pbody, tmp);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
@@ -2033,7 +2033,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if (!(compiled = pregcomp(worker->pool, match, &err, &off))) {
+  if (!(compiled = pregcomp(worker->pbody, match, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
@@ -2061,7 +2061,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     val = varget(worker, var);
     if (val) {
       if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pool, 1);
+	worker->tmp_table = apr_table_make(worker->pbody, 1);
       }
       apr_table_clear(worker->tmp_table);
       apr_table_addn(worker->tmp_table, vars, (char *) compiled);
@@ -2109,7 +2109,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   grep = my_unescape(last, &last);
   
   tmp = apr_strtok(NULL, "", &last);
-  vars = apr_pstrdup(worker->pcheck, tmp);
+  vars = apr_pstrdup(worker->pbody, tmp);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
@@ -2134,7 +2134,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if (!(compiled = pregcomp(worker->pool, grep, &err, &off))) {
+  if (!(compiled = pregcomp(worker->pbody, grep, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
@@ -2162,7 +2162,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     val = varget(worker, var);
     if (val) {
       if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pool, 1);
+	worker->tmp_table = apr_table_make(worker->pbody, 1);
       }
       apr_table_clear(worker->tmp_table);
       apr_table_addn(worker->tmp_table, vars, (char *) compiled);
@@ -2240,7 +2240,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
     return APR_ENOSOCKET;
   }
     
-  copy = apr_pstrdup(worker->pcmd, data); 
+  copy = apr_pstrdup(worker->pbody, data); 
   copy = worker_replace_vars(worker, copy);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
@@ -2404,7 +2404,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     worker->flags |= FLAGS_FILTER;
   }
 
-  if ((status = apr_tokenize_to_argv(copy, &args, worker->pbody)) 
+  if ((status = apr_tokenize_to_argv(copy, (char ***)&args, worker->pbody)) 
       != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not tokenize the command line");
     return status;
@@ -2417,7 +2417,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
   
-  if ((status = apr_procattr_create(&attr, worker->pool)) != APR_SUCCESS) {
+  if ((status = apr_procattr_create(&attr, worker->pbody)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2445,7 +2445,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   }
 
   if ((status = apr_proc_create(&worker->proc, progname, args, NULL, attr,
-                                worker->pool)) != APR_SUCCESS) {
+                                worker->pbody)) != APR_SUCCESS) {
     return status;
   }
 
@@ -2460,7 +2460,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     char *buf = NULL;
 
     worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    if ((status = bufreader_new(&br, worker->proc.out, worker->pcmd)) == APR_SUCCESS) {
+    if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
       bufreader_read_eof(br, &buf, &len);
       if (buf) {
 	worker_log(worker, LOG_INFO, "<%s", buf);
@@ -2526,7 +2526,7 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
   
   if ((status =
        apr_file_open(&fp, filename, APR_READ, APR_OS_DEFAULT,
-		     worker->pcmd)) != APR_SUCCESS) {
+		     worker->pbody)) != APR_SUCCESS) {
     fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
     return APR_ENOENT;
   }
@@ -2593,7 +2593,7 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
                                    char *data) {
   char *copy;
 
-  copy = apr_pstrdup(worker->pool, data); 
+  copy = apr_pstrdup(worker->pbody, data); 
   copy = worker_replace_vars(worker, copy);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
@@ -2649,13 +2649,13 @@ apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data) {
   
   if (strcasecmp(method, "ALLOW") == 0) {
     if (!worker->headers_allow) {
-      worker->headers_allow = apr_table_make(worker->pool, 10);
+      worker->headers_allow = apr_table_make(worker->pbody, 10);
     }
     apr_table_add(worker->headers_allow, header, method);
   }
   else if (strcasecmp(method, "FILTER") == 0) {
     if (!worker->headers_filter) {
-      worker->headers_filter = apr_table_make(worker->pool, 5);
+      worker->headers_filter = apr_table_make(worker->pbody, 5);
     }
     apr_table_add(worker->headers_filter, header, method);
   }
@@ -2698,7 +2698,7 @@ apr_status_t command_RAND(command_t *self, worker_t *worker, char *data) {
   
   result = start + (rand() % (end - start)); 
 
-  varset(worker, val, apr_itoa(worker->pool, result));
+  varset(worker, val, apr_itoa(worker->pbody, result));
 
   return APR_SUCCESS;
 }
@@ -2742,13 +2742,13 @@ apr_status_t worker_listener_up(worker_t *worker, apr_int32_t backlog) {
   }
 
   if ((status = apr_sockaddr_info_get(&local_addr, worker->listener_addr, APR_UNSPEC,
-                                      worker->listener_port, APR_IPV4_ADDR_OK, worker->pool))
+                                      worker->listener_port, APR_IPV4_ADDR_OK, worker->pbody))
       != APR_SUCCESS) {
     goto error;
   }
 
   if ((status = apr_socket_create(&worker->listener, local_addr->family, SOCK_STREAM,
-                                  APR_PROTO_TCP, worker->pool)) != APR_SUCCESS)
+                                  APR_PROTO_TCP, worker->pbody)) != APR_SUCCESS)
   {
     worker->listener = NULL;
     goto error;
@@ -2838,7 +2838,7 @@ apr_status_t command_TIME(command_t *self, worker_t *worker, char *data) {
 
   COMMAND_NEED_ARG("Need a variable name to store time");
   
-  varset(worker, copy, apr_off_t_toa(worker->pool, apr_time_as_msec(apr_time_now())));
+  varset(worker, copy, apr_off_t_toa(worker->pbody, apr_time_as_msec(apr_time_now())));
 
   return APR_SUCCESS;
 }
@@ -3121,7 +3121,7 @@ apr_status_t command_OP(command_t *self, worker_t *worker, char *data) {
   }
 
   /* store it do var */
-  varset(worker, var, apr_off_t_toa(worker->pool, result));
+  varset(worker, var, apr_off_t_toa(worker->pbody, result));
   
   return APR_SUCCESS;
 }
@@ -3141,7 +3141,7 @@ apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data) {
 
   COMMAND_NEED_ARG("<variable> expected");
  
-  result  = apr_psprintf(worker->pool, "%d", worker->which);
+  result  = apr_psprintf(worker->pbody, "%d", worker->which);
   varset(worker, copy, result);
   
   return APR_SUCCESS;
@@ -3383,23 +3383,23 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data) {
 
       /* exec file */
       old = self->name;
-      self->name = apr_pstrdup(worker->pcmd, "_EXEC"); 
-      status = command_EXEC(self, worker, apr_pstrcat(worker->pcmd, "./", name, NULL));
+      self->name = apr_pstrdup(worker->pbody, "_EXEC"); 
+      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, "./", name, NULL));
       self->name = old;
       
-      apr_file_remove(name, worker->pcmd);
+      apr_file_remove(name, worker->pbody);
     }
   }
   else {
     if (!worker->tmpf) {
-      name = apr_pstrdup(worker->pcmd, "httXXXXXX");
+      name = apr_pstrdup(worker->pbody, "httXXXXXX");
       if ((status = apr_file_mktemp(&worker->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, 
-				    worker->pcmd))
+				    worker->pbody))
 	  != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Could not mk temp file %s(%d)", 
-	           my_status_str(worker->pool, status), status);
+	           my_status_str(worker->pbody, status), status);
 	return status;
       }
     }
@@ -3436,7 +3436,7 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data) {
   COMMAND_NEED_ARG("<header> <value>");
 
   if (!worker->headers_add) {
-    worker->headers_add = apr_table_make(worker->pool, 12);
+    worker->headers_add = apr_table_make(worker->pbody, 12);
   }
 
   header = apr_strtok(copy, " ", &value);
@@ -3472,7 +3472,7 @@ apr_status_t command_PID(command_t *self, worker_t *worker, char *data) {
 
   COMMAND_NEED_ARG("<variable>");
 
-  varset(worker, copy, apr_psprintf(worker->pool, "%u", getpid()));
+  varset(worker, copy, apr_psprintf(worker->pbody, "%u", getpid()));
   
   return APR_SUCCESS;
 }
@@ -3526,7 +3526,7 @@ apr_status_t command_URLENC(command_t *self, worker_t *worker, char *data) {
 
   len = strlen(string);
   /* allocate worste case -> every char enc with pattern %XX */
-  result = apr_pcalloc(worker->pcmd, 3 * len + 1);
+  result = apr_pcalloc(worker->pbody, 3 * len + 1);
 
   /** do the simple stuff */
   for (j = 0, i = 0; string[i]; i++) {
@@ -3681,7 +3681,7 @@ apr_status_t command_B64ENC(command_t *self, worker_t *worker, char *data) {
   apr_collapse_spaces(var, var);
 
   len = apr_base64_encode_len(strlen(string));
-  base64 = apr_pcalloc(worker->pcmd, len + 1);
+  base64 = apr_pcalloc(worker->pbody, len + 1);
   apr_base64_encode(base64, string, strlen(string));
   
   varset(worker, var, base64);
@@ -3717,7 +3717,7 @@ apr_status_t command_B64DEC(command_t *self, worker_t *worker, char *data) {
   apr_collapse_spaces(var, var);
 
   len = apr_base64_decode_len(string);
-  plain = apr_pcalloc(worker->pcmd, len + 1);
+  plain = apr_pcalloc(worker->pbody, len + 1);
   apr_base64_decode(plain, string);
   
   varset(worker, var, plain);
@@ -3770,7 +3770,7 @@ apr_status_t command_STRFTIME(command_t *self, worker_t *worker, char *data) {
 
   timems = apr_atoi64(time);
   
-  timefmt = apr_pcalloc(worker->pcmd, 255);
+  timefmt = apr_pcalloc(worker->pbody, 255);
   
   if (type && strncasecmp(type, "Local", 5) == 0) {
     if ((status = apr_time_exp_lt(&tm, timems * 1000)) != APR_SUCCESS) { 
@@ -3867,7 +3867,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
   client.sendto = worker->socket;
 
   /* need two threads reading/writing from/to backend */
-  if ((status = apr_threadattr_create(&tattr, worker->pool)) != APR_SUCCESS) {
+  if ((status = apr_threadattr_create(&tattr, worker->pbody)) != APR_SUCCESS) {
     goto error2;
   }
 
@@ -3881,12 +3881,12 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
   }
 
   if ((status = apr_thread_create(&client_thread, tattr, streamer, 
-	                          &client, worker->pool)) != APR_SUCCESS) {
+	                          &client, worker->pbody)) != APR_SUCCESS) {
     goto error2;
   }
 
   if ((status = apr_thread_create(&backend_thread, tattr, streamer, 
-	                          &backend, worker->pool)) != APR_SUCCESS) {
+	                          &backend, worker->pbody)) != APR_SUCCESS) {
     goto error2;
   }
 
@@ -3957,7 +3957,7 @@ apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data) {
 
   if (var && var[0] != 0) {
     varset(worker, var, 
-		  apr_off_t_toa(worker->pool, apr_time_as_msec(cur - worker->start_time)));
+		  apr_off_t_toa(worker->pbody, apr_time_as_msec(cur - worker->start_time)));
   }
   return APR_SUCCESS;
 }
@@ -4062,7 +4062,7 @@ apr_status_t command_SSL_SESSION_ID(command_t *self, worker_t *worker, char *dat
   sess = SSL_get_session(worker->socket->ssl);
 
   if (sess) {
-    val = apr_pcalloc(worker->pool, apr_base64_encode_len(sess->session_id_length));
+    val = apr_pcalloc(worker->pbody, apr_base64_encode_len(sess->session_id_length));
     apr_base64_encode_binary(val, sess->session_id, sess->session_id_length);
 
     varset(worker, copy, val);
@@ -4100,7 +4100,7 @@ apr_status_t command_SSL_CERT_VAL(command_t *self, worker_t *worker, char *data)
     return APR_EINVAL;
   }
   
-  val = ssl_var_lookup_ssl_cert(worker->pcmd, worker->foreign_cert, cmd);
+  val = ssl_var_lookup_ssl_cert(worker->pbody, worker->foreign_cert, cmd);
 
   if (!val) {
     worker_log(worker, LOG_ERR, "SSL value for \"%s\" not found", cmd);
@@ -4437,7 +4437,7 @@ apr_status_t command_SSL_GET_SESSION(command_t *self, worker_t *worker, char *da
       SSL_SESSION *sess = SSL_get_session(worker->socket->ssl);
       /* serialize to a variable an store it */
       enc_len = i2d_SSL_SESSION(sess, NULL);
-      enc = apr_pcalloc(worker->pcmd, enc_len);
+      enc = apr_pcalloc(worker->pbody, enc_len);
       tmp = enc;
       enc_len = i2d_SSL_SESSION(sess, &tmp);
       b64_len = apr_base64_encode_len(enc_len);
@@ -4476,7 +4476,7 @@ apr_status_t command_SSL_SET_SESSION(command_t *self, worker_t *worker, char *da
     const char *b64_str = copy;
     if (b64_str) {
       enc_len = apr_base64_decode_len(b64_str);
-      enc = apr_pcalloc(worker->pcmd, enc_len);
+      enc = apr_pcalloc(worker->pbody, enc_len);
       apr_base64_decode_binary(enc, b64_str);
       tmp = enc;
       worker->socket->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
@@ -4541,13 +4541,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pbody = p;
   apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pool = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pcmd = p;
-  apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pcache = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pcheck = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = interpret;
@@ -4597,10 +4591,10 @@ apr_status_t worker_new(worker_t ** self, char *additional,
 #endif
   (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
 
-  apr_table_add((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pool, 
+  apr_table_add((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
 	        global->log_mode));
   
-  worker_log(*self, LOG_DEBUG, "worker_new: pool: %p, pcmd: %p\n", (*self)->pool, (*self)->pcmd);
+  worker_log(*self, LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
   return APR_SUCCESS;
 }
 
@@ -4622,13 +4616,7 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pbody = p;
   apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pool = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pcmd = p;
-  apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pcache = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pcheck = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = orig->interpret;
@@ -4675,7 +4663,7 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
 #endif
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
 
-  worker_log(*self, LOG_DEBUG, "worker_clone: pool: %p, pcmd: %p\n", (*self)->pool, (*self)->pcmd);
+  worker_log(*self, LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
   return APR_SUCCESS;
 }
 
@@ -4764,7 +4752,7 @@ void worker_body_end(worker_t *body, worker_t *worker) {
  * @param self IN thread data object
  */
 void worker_destroy(worker_t * self) {
-  worker_log(self, LOG_DEBUG, "worker_destroy: %p, pcmd: %p", self->pool, self->pcmd);
+  worker_log(self, LOG_DEBUG, "worker_destroy: %p, pbody: %p", self->pbody, self->pbody);
   apr_pool_destroy(self->heartbeat);
 }
 
@@ -4932,7 +4920,7 @@ apr_status_t worker_flush(worker_t * self) {
       (hdr = apr_table_get(self->cache, "Encapsulated"))) {
    char *nv;
     char *last;
-    char *copy = apr_pstrdup(self->pcmd, hdr);
+    char *copy = apr_pstrdup(self->pbody, hdr);
 
     /* start counting till last body of ICAP message */
     i = 0;
@@ -4975,7 +4963,7 @@ apr_status_t worker_flush(worker_t * self) {
     }
 
     apr_table_set(self->cache, "Content-Length",
-                  apr_psprintf(self->pool, "Content-Length: %d", len));
+                  apr_psprintf(self->pbody, "Content-Length: %d", len));
 
     ct_len = len;
   }
@@ -4985,7 +4973,7 @@ apr_status_t worker_flush(worker_t * self) {
     char *nv;
     char *last;
     char *res = NULL;
-    char *copy = apr_pstrdup(self->pcmd, hdr);
+    char *copy = apr_pstrdup(self->pbody, hdr);
 
     /* restart counting */
     i = 0;
@@ -5018,7 +5006,7 @@ apr_status_t worker_flush(worker_t * self) {
 	}
 	/* count also the empty line */
 	len += 2;
-	val = apr_itoa(self->pcmd, len);
+	val = apr_itoa(self->pbody, len);
 	++i;
       }
       else {
@@ -5030,20 +5018,20 @@ apr_status_t worker_flush(worker_t * self) {
       }
 
       if (!res) {
-	res = apr_pstrcat(self->pcmd, var, "=", val, NULL); 
+	res = apr_pstrcat(self->pbody, var, "=", val, NULL); 
       }
       else {
-	res = apr_pstrcat(self->pcmd, res, ", ", var, "=", val, NULL); 
+	res = apr_pstrcat(self->pbody, res, ", ", var, "=", val, NULL); 
       }
       nv = apr_strtok(NULL, ",", &last);
     }
     apr_table_setn(self->cache, "Encapsulated",
-                   apr_psprintf(self->pool, "Encapsulated: %s", res));
+                   apr_psprintf(self->pbody, "Encapsulated: %s", res));
 
     /* only chunk body automatic if Content-Length: AUTO */
     if (icap_body && apr_table_get(self->cache, "Content-Length")) {
       icap_body_start = i;
-      chunked = apr_psprintf(self->pool, "%x\r\n", ct_len);
+      chunked = apr_psprintf(self->pbody, "%x\r\n", ct_len);
     }
   }
 
@@ -5072,14 +5060,14 @@ apr_status_t worker_flush(worker_t * self) {
 	len += strlen(e[i].val);
       }
     }
-    chunked = apr_psprintf(self->pool, "\r\n%x\r\n", len);
+    chunked = apr_psprintf(self->pbody, "\r\n%x\r\n", len);
   }
   if (icap_body) {
     /* send all except the req/res body */
     status = worker_flush_part(self, NULL, 0, icap_body_start); 
     status = worker_flush_part(self, chunked, icap_body_start, apr_table_elts(self->cache)->nelts); 
     if (chunked) {
-      chunked = apr_psprintf(self->pool, "\r\n0\r\n\r\n");
+      chunked = apr_psprintf(self->pbody, "\r\n0\r\n\r\n");
       status = worker_flush_part(self, chunked, 0, 0); 
     }
   }
@@ -5115,7 +5103,7 @@ apr_status_t worker_to_file(worker_t * self) {
 
   if ((status =
        apr_file_open(&fp, self->name, APR_CREATE | APR_WRITE, APR_OS_DEFAULT,
-		     self->pcmd)) != APR_SUCCESS) {
+		     self->pbody)) != APR_SUCCESS) {
     return status;
   }
 
