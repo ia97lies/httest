@@ -127,7 +127,6 @@ EXTRA_DIST= \
 	pipe_to_file.htt \
 	pop3_simple.htt \
 	print_hex_match.htt \
-	process_global.htt \
 	process.hte \
 	process.htt \
 	process.txt \

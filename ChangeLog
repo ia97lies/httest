@@ -1,4 +1,8 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.6
+  *) httest: Serious fix: _IF "<string>" NOT EQUAL still not work.
+
+
 Changes with httest 2.0.5
   *) httest: Simplyfied the pool usage and more fixes to make it stable.
 
