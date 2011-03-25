@@ -13,9 +13,14 @@ EXTRA_DIST= \
 	block.htb \
 	block.hte \
 	block.htt \
+	block_not_found.hte \
+	block_not_found.txt \
 	block_params.htt \
 	block.txt \
+	block_var_missmatch.hte \
+	block_var_missmatch.txt \
 	bps.htt \
+	breakfor.htt \
 	break.htt \
 	ca.cert.pem \
 	chunk.htt \
@@ -79,6 +84,8 @@ EXTRA_DIST= \
 	icap_main.htt \
 	ifcond.htt \
 	ifelse.htt \
+	ifequal.htt \
+	ifnumber.htt \
 	ifvareq.htt \
 	ignore_body.htt \
 	ignore_body_space.htt \
@@ -120,6 +127,7 @@ EXTRA_DIST= \
 	pipe_to_file.htt \
 	pop3_simple.htt \
 	print_hex_match.htt \
+	process_global.htt \
 	process.hte \
 	process.htt \
 	process.txt \
