@@ -64,6 +64,7 @@ echo "  Build Configuration"
 
 echo
 echo "  Make Distribution"
+export CFLAGS="-g -Wall"
 make distcheck 
 
 echo
