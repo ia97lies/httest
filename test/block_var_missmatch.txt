@@ -1,0 +1,8 @@
+
+block_var_missmatch.hte:7: error: Param missmatch for block "_FOO"                       FAILED
+profiling:/home/cli/workspace/htt/src/file.gcda:Merge mismatch for summaries
+profiling:/home/cli/workspace/htt/src/socket.gcda:Merge mismatch for summaries
+profiling:/home/cli/workspace/htt/src/regex.gcda:Merge mismatch for summaries
+profiling:/home/cli/workspace/htt/src/util.gcda:Merge mismatch for summaries
+profiling:/home/cli/workspace/htt/src/ssl.gcda:Merge mismatch for summaries
+profiling:/home/cli/workspace/htt/src/worker.gcda:Merge mismatch for summaries

@@ -1,0 +1,3 @@
+
+block_not_found.hte:4: error: Could not find block _NOT_FOUND                           
+block_not_found.hte:4: error: CLT0-0 syntax error                                        FAILED

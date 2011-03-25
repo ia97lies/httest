@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+_FOR I "a b c d e f"
+_SET RET=$I
+_IF "$I" EQUAL "c"
+_BREAK
+_END IF
+_END FOR
+_IF "$I" EQUAL "c"
+_EXIT OK
+_END IF
+_EXIT FAILED
+END

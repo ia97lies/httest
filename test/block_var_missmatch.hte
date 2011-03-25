@@ -1,0 +1,8 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK _FOO BAR
+END
+
+CLIENT
+_FOO
+END

@@ -1,0 +1,13 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+_IF "3" EQ "3"
+  _IF "4" NOT EQ "3"
+    _IF "4" EQ "!3"
+      _EXIT OK
+    _END IF
+  _END IF
+_END IF
+_EXIT FAILED
+END

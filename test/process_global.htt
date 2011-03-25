@@ -1,0 +1,7 @@
+INCLUDE $TOP/test/config.htb
+
+PROCESS 2
+
+CLIENT
+END
+
