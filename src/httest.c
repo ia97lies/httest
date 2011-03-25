@@ -1139,9 +1139,15 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
       index = apr_itoa(call_pool, i);
       if (!(arg = apr_table_get(block->params, index))) {
 	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
+	sync_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
       }
       if (!(val = apr_table_get(worker->params, index))) {
 	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
+	sync_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
       }
       if (arg && val) {
 	apr_table_set(worker->params, arg, val);
@@ -1155,9 +1161,15 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
       index = apr_itoa(call_pool, j);
       if (!(arg = apr_table_get(block->retvars, index))) {
 	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
+	sync_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
       }
       if (!(val = apr_table_get(worker->params, index))) {
 	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
+	sync_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
       }
       if (arg && val) {
 	apr_table_set(worker->retvars, arg, val);
