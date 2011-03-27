@@ -42,7 +42,7 @@ syn match   httSpecial contained "\\\d\d\d\|\\."
 syn region  httString		  start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=basicSpecial,httIdentifier
 syn region httComment	        display oneline start="^ *#" end="$" contains=httTodo
 syn keyword httTodo             contained TODO FIXME XXX NOTE
-syn keyword httType             EXEC HEADER BODY VAR exec headers body var
+syn keyword httType             EXEC HEADERS BODY VAR exec headers body var Exec Headers Body Var
 
 " Define the default highlighting.
 " For version 5.7 and earlier: only when not done already
