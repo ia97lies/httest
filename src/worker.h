@@ -324,6 +324,7 @@ apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data);
 apr_status_t command_USE(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_SSL_GET_SESSION(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_SSL_SET_SESSION(command_t *self, worker_t *worker, char *data); 
+apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data); 
 
 /** helper */
 void worker_log(worker_t * self, int log_mode, char *fmt, ...); 

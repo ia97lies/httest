@@ -398,6 +398,8 @@ command_t local_commands[] = {
   "Play back recorded stuff either on socket or into a variable."},
   {"_USE", (command_f )command_USE, "<module>", 
   "Use the name space of a module."},
+  {"_LOCAL", (command_f )command_LOCAL, "<var>+", 
+  "Define BLOCK local variables."},
   {NULL, NULL, NULL, 
   NULL},
 };
@@ -1201,6 +1203,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
 error:
   apr_pool_destroy(call_pool);
+  apr_table_clear(worker->locals);
   apr_table_clear(worker->params);
   return status;
 }

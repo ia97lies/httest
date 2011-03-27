@@ -4381,7 +4381,7 @@ apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data) {
 
   var = apr_strtok(copy, " ", &last);
   while (var) {
-    apr_table_set(worker->locals, var, NULL);
+    apr_table_set(worker->locals, var, "");
     var = apr_strtok(NULL, " ", &last);
   }
 

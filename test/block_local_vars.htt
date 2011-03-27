@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK _TEST
+_LOCAL A B C
+_SET A=foo
+END
+
+CLIENT
+_SET A=bla
+_TEST
+_IF "$A" EQUAL "bla"
+  _EXIT OK
+_END IF
+_EXIT FAILED
+END
