@@ -1,0 +1,16 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK _QUIT
+  _IF "bla" EQUAL "bla"
+    _IF "bla" EQUAL "bla"
+      _IF "bla" EQUAL "bla"
+	_EXIT OK
+      _END IF
+    _END IF
+  _END IF
+END
+
+CLIENT
+  _QUIT
+  _EXIT FAILED
+END
