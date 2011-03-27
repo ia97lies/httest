@@ -2,6 +2,8 @@
 Changes with httest 2.0.6
   *) httest: Serious fix: _IF "<string>" NOT EQUAL still not work.
 
+  *) httest: Add local variable support with command _LOCAL <var>+
+
 
 Changes with httest 2.0.5
   *) httest: Simplyfied the pool usage and more fixes to make it stable.
