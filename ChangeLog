@@ -6,6 +6,8 @@ Changes with httest 2.0.6
 
   *) httest: Command list is now sorted, makes it easier to get an overview.
 
+  *) httest: Improved the vim colour coding plugin. 
+
 
 Changes with httest 2.0.5
   *) httest: Simplyfied the pool usage and more fixes to make it stable.
