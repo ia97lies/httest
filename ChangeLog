@@ -8,6 +8,8 @@ Changes with httest 2.0.6
 
   *) httest: Improved the vim colour coding plugin. 
 
+  *) httest: Tabs before local commands are also allowed.
+
 
 Changes with httest 2.0.5
   *) httest: Simplyfied the pool usage and more fixes to make it stable.
