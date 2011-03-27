@@ -32,6 +32,7 @@
 #endif
 #include "defines.h"
 
+#include <openssl/stack.h>
 #include <openssl/ssl.h>
 #include <openssl/rsa.h>
 #include <openssl/crypto.h>
@@ -2652,6 +2653,11 @@ static void print_command_formated(apr_pool_t *p, command_t command) {
   }
 }
 
+static int commands_compare(const char * const * right, 
+                            const char * const *left) {
+  return strcmp(*left, *right);
+}
+
 /**
  * Show all commands
  *
@@ -2659,24 +2665,41 @@ static void print_command_formated(apr_pool_t *p, command_t command) {
  */
 static void show_commands(apr_pool_t *p) {
   int i;
+  STACK *sorted;
+  char *line;
 
   fprintf(stdout, "Global commands");
-  i = 0;
-  while (global_commands[i].name) { 
-    fprintf(stdout, "\n");
-    fprintf(stdout, "\t%s %s", global_commands[i].name, 
-	    global_commands[i].syntax);
-    ++i;
+  sorted = sk_new(commands_compare);
+  for (i = 0; global_commands[i].name; i++) {
+    line = apr_psprintf(p, "%s %s", global_commands[i].name, 
+	                global_commands[i].syntax);
+    sk_push(sorted, line);
   }
-  
+  sk_sort(sorted);
+
+  line = sk_pop(sorted);  
+  while (line) {
+    fprintf(stdout, "\n");
+    fprintf(stdout, "\t%s", line);
+    line = (void *)sk_pop(sorted);  
+  }
+
   fprintf(stdout, "\n\nLocal commands");
-  i = 0;
-  while (local_commands[i].name) { 
-    fprintf(stdout, "\n");
-    fprintf(stdout, "\t%s %s", local_commands[i].name, 
-	    local_commands[i].syntax);
-    ++i;
+  sorted = sk_new(commands_compare);
+  for (i = 0; local_commands[i].name; i++) {
+    line = apr_psprintf(p, "%s %s", local_commands[i].name, 
+	                local_commands[i].syntax);
+    sk_push(sorted, line);
   }
+  sk_sort(sorted);
+
+  line = sk_pop(sorted);  
+  while (line) {
+    fprintf(stdout, "\n");
+    fprintf(stdout, "\t%s", line);
+    line = (void *)sk_pop(sorted);  
+  }
+
   fprintf(stdout, "\n\n(Get detailed help with --help-command <command>)\n");
   fflush(stdout);
   exit(0);
