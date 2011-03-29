@@ -1,9 +1,0 @@
-all:
-	cc -pthread -O2 -Wall -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -I. -I../3thrdparty/apr/include -I../3thrdparty/apr-util/include -I../3thrdparty/openssl/include -c httest.c -o httest.o
-	cc -O2 -o httest httest.o -lpcre ../3thrdparty/apr-util/.libs/libaprutil-1.a ../3thrdparty/apr/.libs/libapr-1.a -lpthread ../3thrdparty/openssl/libssl.a ../3thrdparty/openssl/libcrypto.a -ldl
-
-clean:
-	rm -f httest *.o *~
-
-test:
-	./run_all_test.sh ../test/*.txt
