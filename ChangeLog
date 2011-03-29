@@ -10,6 +10,8 @@ Changes with httest 2.0.6
 
   *) httest: Tabs before local commands are also allowed.
 
+  *) httest: Serious fix: _EXEC echo "foo('bar')" do not work anymore.
+
 
 Changes with httest 2.0.5
   *) httest: Simplyfied the pool usage and more fixes to make it stable.
