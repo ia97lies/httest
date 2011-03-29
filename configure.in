@@ -35,7 +35,6 @@ AC_CHECK_FUNCS([bzero select socket])
 # customize settings
 AC_ARG_ENABLE([use-static], AS_HELP_STRING(--enable-use-static,Try to use archives instead of shared libraries))
 AC_ARG_ENABLE([full-static], AS_HELP_STRING(--enable-full-static,Try to compile a statical linked executable))
-AC_ARG_ENABLE([ssl], AS_HELP_STRING(--disable-ssl,Disable ssl support (not supported yet)))
 AC_ARG_ENABLE([ssl-legacy-reneg], AS_HELP_STRING(--enable-ssl-legacy-reneg, enable unsafe legacy renegotation only needed for openssl 0.9.8l))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
