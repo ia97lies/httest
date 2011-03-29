@@ -2381,7 +2381,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   apr_procattr_t *attr;
   bufreader_t *br;
   const char *progname;
-  const char **args;
+  char *last;
+  const char *args[3];
   apr_exit_why_e exitwhy;
   int exitcode;
   int flags;
@@ -2404,11 +2405,9 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     worker->flags |= FLAGS_FILTER;
   }
 
-  if ((status = apr_tokenize_to_argv(copy, (char ***)&args, worker->pbody)) 
-      != APR_SUCCESS) {
-    worker_log(worker, LOG_ERR, "Could not tokenize the command line");
-    return status;
-  }
+  args[0] = apr_strtok(copy, " ", &last);
+  args[1] = last;
+  args[2] = NULL;
 
   progname = args[0];
 
