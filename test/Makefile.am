@@ -55,6 +55,7 @@ EXTRA_DIST= \
 	exec_httest.htt \
 	exec_last_line_not_newline.htt \
 	exec_no_output.htt \
+	exec_quotes.htt \
 	exec_threaded.htt \
 	exit.hte \
 	exit.htt \
@@ -179,6 +180,7 @@ EXTRA_DIST= \
 	syntax_global_in_body.txt \
 	syntax_invalid_local.hte \
 	syntax_invalid_local.txt \
+	tab_and_space_before_local.htt \
 	tagged_sockets.htt \
 	threaded_server.htt \
 	time.htt \
