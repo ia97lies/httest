@@ -2589,7 +2589,8 @@ apr_getopt_option_t options[] = {
   { "error", 'e', 0, "log level error" },
   { "warn", 'w', 0, "log level warn" },
   { "info", 'i', 0, "log level info" },
-  { "debug", 'd', 0, "log level debug" },
+  { "debug", 'd', 0, "log level debug for script debugging" },
+  { "debug-system", 'p', 0, "log level debug-system to log more details" },
   { "list-commands", 'L', 0, "List all available script commands" },
   { "help-command", 'C', 1, "Print help for specific command" },
   { "timestamp", 'T', 0, "Time stamp on every run" },
@@ -2830,7 +2831,7 @@ int main(int argc, const char *const argv[]) {
     case 'e':
       log_mode = LOG_ERR;
       break;
-    case 'd':
+    case 'p':
       log_mode = LOG_DEBUG;
       break;
     case 'w':
@@ -2838,6 +2839,9 @@ int main(int argc, const char *const argv[]) {
       break;
     case 'i':
       log_mode = LOG_INFO;
+      break;
+    case 'd':
+      log_mode = LOG_ALL_CMD;
       break;
     case 'L':
       show_commands(pool);

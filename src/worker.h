@@ -137,7 +137,8 @@ struct worker_s {
 #define LOG_WARN 2
 #define LOG_INFO 3
 #define LOG_CMD 4
-#define LOG_DEBUG 5
+#define LOG_ALL_CMD 5
+#define LOG_DEBUG 6
   int log_mode;
 #ifdef USE_SSL
   int is_ssl;
