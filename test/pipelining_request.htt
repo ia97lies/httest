@@ -1,0 +1,66 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_FLUSH
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_FLUSH
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_FLUSH
+
+_SOCKET
+_EXPECT body "OK 0"
+_EXPECT body "!OK 1"
+_EXPECT body "!OK 2"
+_WAIT
+_EXPECT body "!OK 0"
+_EXPECT body "OK 1"
+_EXPECT body "!OK 2"
+_WAIT
+_EXPECT body "!OK 0"
+_EXPECT body "!OK 1"
+_EXPECT body "OK 2"
+_WAIT
+_END SOCKET
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_SOCKET
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK 0 ==
+
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK 1 ==
+
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK 2 ==
+_END SOCKET
+
+END
+

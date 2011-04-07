@@ -1,0 +1,3 @@
+
+socketbody.hte:4: error: Call _RES or REQ before you spawn a long life _SOCKET          
+socketbody.hte:4: error: CLT0-0 No socket was provided and one was required.(20011)      FAILED
