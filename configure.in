@@ -44,8 +44,14 @@ AC_ARG_WITH(apr-util,AS_HELP_STRING(--with-apr-util=PATH,path to apu-1-config sc
 	[if test ! -x $withval/apu-1-config; then AC_MSG_ERROR($withval/apu-1-config do not exist or is not executable); else APU_CONFIG="$withval/apu-1-config"; fi],
 	[APU_CONFIG="apu-1-config"])
 AC_ARG_WITH(apr-iconv,AS_HELP_STRING(--with-apr-iconv=PATH,path to apr-iconv directory),
-	[if test ! -x $withval/include/apr_iconv.h; then AC_MSG_ERROR($withval/include/apr_iconv.h do not exist); else APR_ICONV_CONFIG="-I $withval/include"; fi],
-	[APR_ICONV_CONFIG=""])
+	[if test ! -f $withval/include/apr_iconv.h; then 
+	   AC_MSG_ERROR($withval/include/apr_iconv.h do not exist); 
+	 else 
+	   APR_ICONV_INCLUDES="-I$withval/include"; 
+	   APR_ICONV_LIBS="-L$withval/lib/.libs"; 
+	 fi],
+	[APR_ICONV_INCLUDES="";
+	 APR_ICONV_LIBS=""])
 AC_ARG_WITH(pcre,AS_HELP_STRING(--with-pcre=PATH,path to pcre-config script),
 	[if test ! -x $withval/pcre-config; then AC_MSG_ERROR($withval/pcre-config do not exist or is not executable); else PCRE_CONFIG="$withval/pcre-config"; fi],
 	[PCRE_CONFIG="pcre-config"])
@@ -87,6 +93,11 @@ fi
 # if link static
 if test "$enable_use_static" = "yes"; then
   LDFLAGS="-static"
+fi
+
+if test "$enable_iconv_support" = "yes"; then
+  CFLAGS="$CFLAGS $APR_ICONV_INCLUDES -DICONV_SUPPORT"
+  LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
 # generate makefiles
