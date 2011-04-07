@@ -1046,6 +1046,11 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
 
   COMMAND_NO_ARG;
 
+  if (!worker->socket) {
+    worker_log_error(worker, "Call _RES or REQ before you spawn a long life _SOCKET");
+    return APR_ENOSOCKET;
+  }
+
   worker_flush(worker);
 
   /* create a new worker body */
