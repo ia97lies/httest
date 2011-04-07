@@ -197,6 +197,9 @@ struct command_s {
   command_f func;
   char *syntax;
   char *help;
+#define COMMAND_FLAGS_NONE 0x0
+#define COMMAND_FLAGS_DEPRECIATED 0x1
+  int flags;
 };
 
 #ifndef min
@@ -217,6 +220,10 @@ struct command_s {
 	
 #define COMMAND_NEED_ARG(err_text) \
 { \
+  if (self && self->flags & COMMAND_FLAGS_DEPRECIATED) { \
+    fprintf(stderr, "Command %s is depreciated", self->name); \
+    fflush(stderr); \
+  } \
   while (*data == ' ') { \
     ++data; \
   } \
@@ -236,16 +243,31 @@ struct command_s {
 
 #define COMMAND_OPTIONAL_ARG \
 { \
+  if (self && self->flags & COMMAND_FLAGS_DEPRECIATED) { \
+    fprintf(stderr, "\n*** Command %s is depreciated ***", self->name); \
+    fflush(stderr); \
+  } \
   while (*data == ' ') { \
     ++data; \
   } \
   copy = apr_pstrdup(worker->pbody, data); \
   copy = worker_replace_vars(worker, copy); \
-  worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
+  if (self) { \
+    worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
+  } \
+  else { \
+    worker_log(worker, LOG_CMD, "%s", copy); \
+  } \
 }
 
 #define COMMAND_NO_ARG \
-  worker_log(worker, LOG_CMD, "%s", self->name)
+  if (self && self->flags & COMMAND_FLAGS_DEPRECIATED) { \
+    fprintf(stderr, "\n*** Command %s is depreciated ***", self->name); \
+    fflush(stderr); \
+  } \
+  if (self) { \
+    worker_log(worker, LOG_CMD, "%s", self->name); \
+  }
 
 apr_status_t worker_new(worker_t ** self, char *additional,
                         char *prefix, global_t *global, interpret_f interpret);
