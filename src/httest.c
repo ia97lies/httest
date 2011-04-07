@@ -2743,8 +2743,14 @@ static void print_command_formated(apr_pool_t *p, command_t command) {
   char *last;
   char *val;
 
-  fprintf(stdout, "%s %s", command.name, 
-	  command.syntax);
+  if (command.flags & COMMAND_FLAGS_DEPRECIATED) {
+    fprintf(stdout, "%s %s\n\t*** This command is depreciated ***", 
+	    command.name, command.syntax);
+  }
+  else {
+    fprintf(stdout, "%s %s", command.name, 
+	    command.syntax);
+  }
   help = apr_pstrdup(p, command.help);
   val = apr_strtok(help, "\n", &last);
   while (val) {
@@ -2771,8 +2777,14 @@ static void show_commands(apr_pool_t *p) {
   fprintf(stdout, "Global commands");
   sorted = SKM_sk_new(char, commands_compare);
   for (i = 0; global_commands[i].name; i++) {
-    line = apr_psprintf(p, "%s %s", global_commands[i].name, 
-	                global_commands[i].syntax);
+    if (global_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
+      line = apr_psprintf(p, "%s *** This command is depreciated ***", 
+	                  global_commands[i].name);
+    }
+    else {
+      line = apr_psprintf(p, "%s %s", global_commands[i].name, 
+			  global_commands[i].syntax);
+    }
     SKM_sk_push(char, sorted, line);
   }
   SKM_sk_sort(char, sorted);
@@ -2787,8 +2799,14 @@ static void show_commands(apr_pool_t *p) {
   fprintf(stdout, "\n\nLocal commands");
   sorted = SKM_sk_new(char, commands_compare);
   for (i = 0; local_commands[i].name; i++) {
-    line = apr_psprintf(p, "%s %s", local_commands[i].name, 
-	                local_commands[i].syntax);
+    if (local_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
+      line = apr_psprintf(p, "%s *** This command is depreciated ***", 
+	                  local_commands[i].name);
+    }
+    else {
+      line = apr_psprintf(p, "%s %s", local_commands[i].name, 
+			  local_commands[i].syntax);
+    }
     SKM_sk_push(char, sorted, line);
   }
   SKM_sk_sort(char, sorted);
