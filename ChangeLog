@@ -3,6 +3,10 @@ Changes with httest 2.0.7
   *) httest: Changed the --debug option for script debugging and add a
   --debug-system for logging more system details.
 
+  *) httest: Bugfix coredump if using _SOCKET before any _RES or _REQ
+
+  *) httest: Add a test for piplining requests.
+
 
 Changes with httest 2.0.6
   *) httest: Serious fix: _IF "<string>" NOT EQUAL still not work.
