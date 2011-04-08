@@ -13,3 +13,4 @@ tags
 win
 .deps
 .libs
+*.log

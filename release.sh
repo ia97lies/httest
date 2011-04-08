@@ -55,17 +55,24 @@ fi
 cd ..
 
 echo
-echo "  Build Man Pages"
-./generate_man_pages.sh
-
-echo
 echo "  Build Configuration"
 ./buildconf.sh
 
 echo
 echo "  Make Distribution"
 CFLAGS="-g -Wall" ./configure
+make clean all
 make distcheck 
+
+echo
+echo "  Build Man Pages"
+./generate_man_pages.sh
+
+echo
+echo "  Build User Guide"
+cd doc/users-guide
+make all
+cd -
 
 echo
 echo "Build Packages"
