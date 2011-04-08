@@ -11,7 +11,7 @@ Changes with httest 2.0.7
      stack. Compiles and works now also under openssl 1.0.0. 
 
   *) httest: Marked command _PEER_VERIFY as depreciated. Use "_RENEG verify"
-     instead. This command will vanish in the next minor release.
+     instead. This command will be removed in the next minor release.
 
 
 Changes with httest 2.0.6
