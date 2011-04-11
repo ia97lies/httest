@@ -124,6 +124,7 @@ EXTRA_DIST= \
 	only_printable.htt \
 	overflow.htt \
 	pipe_exec_out.htt \
+	pipelining_request.htt \
 	pipe_recv_to_file.htt \
 	pipe_simple.htt \
 	pipe_to_file.htt \
@@ -159,7 +160,9 @@ EXTRA_DIST= \
 	server_reswait.htt \
 	server_up_down.htt \
 	smtp_simple.htt \
+	socketbody.hte \
 	socketbody.htt \
+	socketbody.txt \
 	sockstate.htt \
 	ssl_big_content.htt \
 	ssl_multi_socket.htt \
