@@ -1,0 +1,33 @@
+% =========================================
+% COMMAND: _BPS
+% =========================================
+
+\newpage
+\section{\_BPS}
+\label{cmd:_BPS}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_BPS <number of bytes> <duration>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a code body which limits the maximum number of bytes  
+that may be sent during a certain period of time (specified in number of seconds). 
+
+\subparagraph{}
+The body must be closed with the \texttt{\_END BPS} command.
+
+\subparagraph{}
+The following example limits the number of bytes to be sent within 
+the next 300 seconds to 50000:
+
+\begin{usplisting}
+    _BPS 50000 300
+    _REQ localhost 8080
+    __GET / HTTP/1.1
+    __Host: localhost
+    __
+    _WAIT
+    _END RPS
+\end{usplisting}

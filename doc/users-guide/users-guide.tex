@@ -2,6 +2,7 @@
 \usepackage{verbatim}
 \usepackage[pdftex]{xcolor}
 \usepackage{listings}
+\usepackage{hyperref}
 \usepackage{graphicx}    % needed for including graphics e.g. EPS, PS
 \topmargin -1.5cm        % read Lamport p.163
 \oddsidemargin -0.04cm   % read Lamport p.163
@@ -49,7 +50,102 @@
 \input{script-structure.tex}
 \input{variables.tex}
 \input{bodytypes.tex}
+\input{upload.tex}
 \input{commands.tex}
+
+\input{global-commands-list.tex}
+\input{global-commands/cmd_auto_close.tex}
+\input{global-commands/cmd_block.tex}
+\input{global-commands/cmd_client.tex}
+\input{global-commands/cmd_daemon.tex}
+\input{global-commands/cmd_end.tex}
+\input{global-commands/cmd_exec.tex}
+\input{global-commands/cmd_file.tex}
+\input{global-commands/cmd_go.tex}
+\input{global-commands/cmd_include.tex}
+\input{global-commands/cmd_module.tex}
+\input{global-commands/cmd_process.tex}
+\input{global-commands/cmd_server.tex}
+\input{global-commands/cmd_set.tex}
+\input{global-commands/cmd_timeout.tex}
+
+\input{local-commands-list.tex}
+
+\input{local-commands/cmd_double_underscore.tex}
+\input{local-commands/cmd_underscore_line.tex}
+\input{local-commands/cmd_add_header.tex}
+\input{local-commands/cmd_auto_close.tex}
+\input{local-commands/cmd_auto_cookie.tex}
+\input{local-commands/cmd_bps.tex}
+\input{local-commands/cmd_b64dec.tex}
+\input{local-commands/cmd_b64enc.tex}
+\input{local-commands/cmd_break.tex}
+\input{local-commands/cmd_call.tex}
+\input{local-commands/cmd_cert.tex}
+\input{local-commands/cmd_chunk.tex}
+\input{local-commands/cmd_close.tex}
+\input{local-commands/cmd_debug.tex}
+\input{local-commands/cmd_detach.tex}
+%% \input{local-commands/cmd_down.tex}
+\input{local-commands/cmd_else.tex}
+\input{local-commands/cmd_error.tex}
+\input{local-commands/cmd_exec.tex}
+\input{local-commands/cmd_exit.tex}
+\input{local-commands/cmd_expect.tex}
+\input{local-commands/cmd_flush.tex}
+\input{local-commands/cmd_for.tex}
+\input{local-commands/cmd_grep.tex}
+\input{local-commands/cmd_header.tex}
+\input{local-commands/cmd_if.tex}
+\input{local-commands/cmd_ignore_body.tex}
+\input{local-commands/cmd_log_level.tex}
+\input{local-commands/cmd_loop.tex}
+\input{local-commands/cmd_match.tex}
+\input{local-commands/cmd_only_printable.tex}
+\input{local-commands/cmd_op.tex}
+\input{local-commands/cmd_pid.tex}
+\input{local-commands/cmd_pipe.tex}
+\input{local-commands/cmd_play.tex}
+\input{local-commands/cmd_print_hex.tex}
+%% \input{local-commands/cmd_proc_wait.tex}
+%% \input{local-commands/cmd_process.tex}
+\input{local-commands/cmd_rand.tex}
+\input{local-commands/cmd_record.tex}
+\input{local-commands/cmd_recv.tex}
+\input{local-commands/cmd_reneg.tex}
+\input{local-commands/cmd_req.tex}
+\input{local-commands/cmd_res.tex}
+\input{local-commands/cmd_reswait.tex}
+\input{local-commands/cmd_rps.tex}
+%% \input{local-commands/cmd_sendfile.tex}
+\input{local-commands/cmd_sequence.tex}
+\input{local-commands/cmd_set.tex}
+\input{local-commands/cmd_sh.tex}
+\input{local-commands/cmd_sleep.tex}
+\input{local-commands/cmd_socket.tex}
+\input{local-commands/cmd_sockstate.tex}
+\input{local-commands/cmd_ssl_buf_2_cert.tex}
+\input{local-commands/cmd_ssl_cert_val.tex}
+\input{local-commands/cmd_ssl_connect.tex}
+\input{local-commands/cmd_ssl_engine.tex}
+\input{local-commands/cmd_ssl_get_session.tex}
+\input{local-commands/cmd_ssl_legacy.tex}
+\input{local-commands/cmd_ssl_secure_reneg_supported.tex}
+\input{local-commands/cmd_ssl_session_id.tex}
+\input{local-commands/cmd_ssl_set_session.tex}
+\input{local-commands/cmd_strftime.tex}
+\input{local-commands/cmd_sync.tex}
+\input{local-commands/cmd_time.tex}
+\input{local-commands/cmd_timeout.tex}
+\input{local-commands/cmd_timer.tex}
+\input{local-commands/cmd_tunnel.tex}
+\input{local-commands/cmd_urldec.tex}
+\input{local-commands/cmd_urlenc.tex}
+%% \input{local-commands/cmd_up.tex}
+\input{local-commands/cmd_use.tex}
+%% \input{local-commands/cmd_verify_peer.tex}
+\input{local-commands/cmd_wait.tex}
+\input{local-commands/cmd_which.tex}
 
 % -------------- References ---------------------------
  

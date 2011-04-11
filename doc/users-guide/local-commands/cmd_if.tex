@@ -1,0 +1,46 @@
+% =========================================
+% COMMAND: _IF
+% =========================================
+
+\newpage
+\section{\_IF}
+\label{cmd:_IF}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_IF ("<string>" [NOT] MATCH "regex")|"<string>" EQUAL "<string>"|("<number>" [NOT] EQ|LT|GT|LE|GT "<number>)"}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Allows to define a body of script code (similar to a \texttt{BLOCK}) which 
+is executed only if the given condition is true. The condition is based 
+on either a given string which must match a regular expression or another string, or on 
+a numerical value to be equal, less than or greater than a certain number.
+
+\subparagraph{}
+The \texttt{\_IF}-body must be closed with a corresponding \texttt{\_END IF} command.
+
+\paragraph{String example:}
+\subparagraph{}
+Tests if the given $<$string$>$ matches the regular expression (that string 
+can be a variable, of course):
+
+\begin{usplisting}
+    _IF $MyVar MATCH ".*xyz.*"
+      _CALL SomeBlock
+    _END IF
+\end{usplisting}
+
+\paragraph{Number example:}
+\subparagraph{}
+Tests if the given $<$string$>$ containing a numerical value is larger than
+a given threshold value:
+
+\begin{usplisting}
+    _IF $MyNumber GT "1500"
+    _CALL SomeBlock
+    _END IF
+\end{usplisting}
+
+
+% TODO: Gilt EQUAL auch (statt EQ)??

@@ -1,0 +1,24 @@
+% =========================================
+% COMMAND: AUTO_CLOSE
+% =========================================
+
+\newpage
+\section{SET}
+\label{cmd:SET}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{SET <variable>=<value>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Sets a global variable. The variable can then be 
+used in the script with a "\char`\$"-sign prefix.
+
+Example:
+
+\begin{usplisting}
+    SET MyHost=www.acme.com
+    ...
+    _REQ $MyHost 80
+\end{usplisting}

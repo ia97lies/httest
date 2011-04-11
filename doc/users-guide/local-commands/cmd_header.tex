@@ -1,0 +1,20 @@
+% =========================================
+% COMMAND: _HEADER
+% =========================================
+
+\newpage
+\section{\_HEADER}
+\label{cmd:_HEADER}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_HEADER ALLOW|FILTER <header name>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a filter for incoming request headers. The filter can
+either be a blacklist ("\texttt{\_HEADER FILTER $<$headers$>$}") 
+or a whitelist ("\texttt{\_HEADER ALLOW $<$headers$>$}").
+
+\subparagraph{}
+By default, there's no filtering; all headers are allowed.

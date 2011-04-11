@@ -1,0 +1,39 @@
+% =========================================
+% COMMAND: _ERROR
+% =========================================
+
+\newpage
+\section{\_ERROR}
+\label{cmd:_ERROR}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_ERROR <message>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a body wherein a certain error is expected to happen. 
+The body must be closed with the \texttt{\_END ERROR} command.
+
+\subparagraph{}
+In the following example, the error message "Broken pipe" is 
+expected to be received during one of the three requests: 
+
+\begin{usplisting}
+    _ERROR "Broken pipe"
+    _REQ localhost 8080
+    __GET /foo HTTP/1.1
+    __Host: localhost
+    _WAIT
+
+    _REQ localhost 8080
+    __GET /bar HTTP/1.1
+    __Host: localhost
+    _WAIT
+
+    _REQ localhost 8080
+    __GET /and/another/one HTTP/1.1
+    __Host: localhost
+    _WAIT
+    _END ERROR
+\end{usplisting}

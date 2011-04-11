@@ -1,0 +1,30 @@
+% =========================================
+% COMMAND: _ELSE
+% =========================================
+
+\newpage
+\section{\_ELSE}
+\label{cmd:_ELSE}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_ELSE}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a code body which is executed if the 
+condition defined in the preceeding \texttt{\_IF} 
+command was not fulfilled. The body must then be 
+closed by the \texttt{\_END IF} command.
+
+\subparagraph{}
+NOTE: This command can only be used together with, 
+and following the \texttt{\_IF} command. Example:
+
+\begin{usplisting}
+    _IF "foo" EQUAL "foo"
+      _DO_SOMETHING
+    _ELSE
+      _DO_SOMETHING_OTHER
+    _END IF
+\end{usplisting}

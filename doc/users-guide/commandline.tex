@@ -19,7 +19,7 @@ The htt binary uses the following commandline syntax:
 
 % ---------------------- SAMPLE BOX ----- BEGIN ------------
 \begin{usplisting}
-    $ httest [OPTIONS] scripts
+    %> httest [OPTIONS] scripts
 \end{usplisting}
 % ---------------------- SAMPLE BOX ----- END ------------
 
@@ -27,7 +27,7 @@ Where \textit{scripts} is just one or multiple ".htt"-files, for example:
 
 % ---------------------- SAMPLE BOX ----- BEGIN ------------
 \begin{usplisting}
-    $ httest -Ts testone.htt testtwo.htt
+    %> httest -Ts testone.htt testtwo.htt
 \end{usplisting}
 % ---------------------- SAMPLE BOX ----- END ------------
 
@@ -40,7 +40,7 @@ A list of all options can always be retrieved by using the "--help" argument:
 
 % ---------------------- SAMPLE BOX ----- BEGIN ------------
 \begin{usplisting}
-    $ httest -Ts testone.htt testtwo.htt
+    %> httest -Ts testone.htt testtwo.htt
 
     httest is a script based tool for testing and benchmarking web 
     applications, web servers, proxy servers and web browsers. httest 
@@ -54,6 +54,7 @@ A list of all options can always be retrieved by using the "--help" argument:
       -h --help            Display usage information (this message)
       -n --suppress        do no print start and OK|FAILED
       -s --silent          silent mode
+      -i --info            log level info
       -e --error           log level error
       -w --warn            log level warn
       -d --debug           log level debug

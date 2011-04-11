@@ -7,7 +7,7 @@ different types of commands:
 
 \begin{itemize}
 \item \textit{Global} commands always begin with a capital letter (e.g. "\texttt{INCLUDE}") and 
-      can be placed in the "root" of the script, outside of any body (block).
+      can be placed in the "root" of the script, outside of any \textit{body} (such as a block).
 \item \textit{Local} commands always begin with an underscore (e.g. "\texttt{\_GET}") and 
       can only be placed within a \textit{body}.
 \end{itemize}
@@ -26,6 +26,7 @@ command and its argument.
 
 \newpage
 \section{Global Commands}
+\label{chap:globalCommands}
 
 Global commands are used to perform initialization work, clean-up steps, 
 start and end bodies etc.
@@ -40,13 +41,14 @@ and local command.
 The following global commands perform an operation by themselves:
 
 \begin{itemize}
-\item \texttt{SET} - Sets a global variable.
-\item \texttt{INCLUDE} - Includes content from a file.
-\item \texttt{GO} - 
-\item \texttt{EXEC} - 
-\item \texttt{TIMEOUT} - 
 \item \texttt{AUTO\_CLOSE} - 
+\item \texttt{EXEC} - 
 \item \texttt{FILE} - 
+\item \texttt{GO} - 
+\item \texttt{INCLUDE} - Includes content from a file.
+\item \texttt{PROCESS} - Runs the test in multiple processes.
+\item \texttt{SET} - Sets a global variable.
+\item \texttt{TIMEOUT} - 
 \end{itemize}
 
 While the global commands listed below are used to start or end 
@@ -59,17 +61,18 @@ a body (a block of script code):
 \item \texttt{END} - Ends the current body.
 \end{itemize}
 
-All these commands are explained in more detail in TODO-REF.
+All these commands are explained in more detail in \ref{chap:globalCommandsList}.
 
 % ---------------------------- Local commands -----------------------------
 
 \newpage
 \section{Local Commands}
+\label{chap:localCommands}
 
 Local commands always begin with an underscore ("\_") character. There are a 
-large number of local commands, and they are explained in more detail in TODO-REF.
+large number of local commands, and they are explained in more detail in \ref{chap:localCommandsList}.
 
-\subsection*{Double Underscore Command}
+\subsection{Double Underscore Command} 
 
 Please note that the double-underscore is also a local command! But contrary to 
 all other commands, with the double-underscore there's no blank character between 
@@ -82,193 +85,3 @@ cases it is necessary to calculate the exact length of a line in order to know t
 correct length of the HTTP request body; in that case, the length of a line 
 displayed by a text editor can be used directly as the length of the actual line 
 of HTTP data for body length calculations.
-
-% ============================================================================
-% ---------------------- List of GLOBAL commands -----------------------------
-% ============================================================================
-
-\newpage
-\section{List Of Global Commands}
-
-
-% ---------------------- Command: AUTO_CLOSE -----------------------------
-\subsection{AUTO\_CLOSE}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{AUTO\char`\_CLOSE on|off}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Closes the current connection automatically.
-
-
-% ---------------------- Command: BLOCK -----------------------------
-\subsection{BLOCK}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{BLOCK <name>}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Begins a body with scripting code that can be invoked from anywhere 
-else, using the \texttt{CALL} or \texttt{\char`\_CALL} command.
-
-The \texttt{BLOCK} must be closed using the \texttt{END} command.
-
-
-% ---------------------- Command: CLIENT -----------------------------
-\subsection{CLIENT}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{CLIENT [<number of concurrent clients>]}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Begin of a body which starts one or multiple threads running a test client for sending 
-HTTP requests to a server, and evaluating the response.
-
-The number of threads started depends on the value of the argument for 
-the number of concurrent clients. If none is given, it defaults to 1 and 
-only a single thread will be started. Otherwise, the same \texttt{CLIENT} body will 
-be executed in the specified number of parallel threads.
-
-The \texttt{CLIENT} must be closed using the \texttt{END} command.
-
-
-% ---------------------- Command: DAEMON -----------------------------
-\subsection{DAEMON}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{DAEMON}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Begins a body with scripting code that is executed in a separate 
-thread, and can be used to perform tasks like monitoring the 
-tests, enforcing timeouts etc.
-
-The \texttt{DAEMON} must be closed using the \texttt{END} command.
-
-
-% ---------------------- Command: END -----------------------------
-\subsection{END}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{END}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Ends the current body (either a \texttt{CLIENT}, \texttt{SERVER}, \texttt{DAEMON} 
-or \texttt{BLOCK} body). 
-
-
-% ---------------------- Command: EXEC -----------------------------
-\subsection{EXEC}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{EXEC <shell command>}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Executes the given command, e.g. an external shell script. Note: The 
-execution will not join any of the CLIENT or SERVER threads (TODO: WAS 
-GENAU HEISST DAS?)
-
-
-% ---------------------- Command: FILE -----------------------------
-\subsection{FILE}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{FILE <name>}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Creates a temporary file with the given name. TODO: WHAT FOR? EMPTY? HOW TO USE?
-
-
-% ---------------------- Command: GO -----------------------------
-\subsection{GO}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{GO}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Starts all \texttt{CLIENT}, \texttt{SERVER} and \texttt{DAEMON} bodies that 
-have been defined up to this point. 
-
-TODO: WANN IST DAS NOETIG? BEI EINEM EINFACHEN CLIENT JA NICHT.
-
-
-% ---------------------- Command: INCLUDE -----------------------------
-\subsection{INCLUDE}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{INCLUDE <include file>}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Includes the given file into the current script code. The file name parameter 
-is processed relative to the working directory of the current process, if it 
-is not an absolute path.
-
-
-% ---------------------- Command: SERVER -----------------------------
-\subsection{SERVER}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{SERVER [<SSL>:]<addr\char`\_port> [<number of concurrent servers>]}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Begin of a body which starts one or multiple threads running a test server for responding  
-to HTTP requests in predefined ways.
-
-The number of threads started depends on the value of the argument for 
-the number of concurrent servers. If none is given, it defaults to 1 and 
-only a single thread will be started. Otherwise, the same \texttt{SERVER} body will 
-be executed in the specified number of parallel threads.
-
-The \texttt{SERVER} must be closed using the \texttt{END} command.
-
-Please see chapter TODO-REF for details about how to correctly set up SSL connections.
-
-
-% ---------------------- Command: TIMEOUT -----------------------------
-\subsection{TIMEOUT}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{TIMEOUT <timeout in ms>}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Sets the global TCP socket connection timeout.
-
-
-% ============================================================================
-% ---------------------- List of LOCAL commands -----------------------------
-% ============================================================================
-
-\newpage
-\section{List Of Local Commands}
-
-\subsection{\char`\_\char`\_ (Double Underscore)}
-
-\paragraph{Syntax:}
-\subparagraph{}
-\texttt{\_\_<data>}
-
-\paragraph{Purpose:}
-\subparagraph{}
-Bla bla

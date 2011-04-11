@@ -1,0 +1,36 @@
+% =========================================
+% COMMAND: BLOCK
+% =========================================
+
+\newpage
+\section{BLOCK}
+\label{cmd:BLOCK}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{BLOCK <name>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Begins a body with scripting code that can be invoked from anywhere 
+else, using the \texttt{CALL} or \texttt{\char`\_CALL} command.
+
+The \texttt{BLOCK} must be closed using the \texttt{END} command.
+
+\paragraph{Error Handler}
+\subparagraph{}
+A special, reserved name for a \texttt{BLOCK} is \texttt{ON\_ERROR}. It 
+designates the block to be invoked if an unexpected error occurs during 
+a test. The block can then handle the error, output some information etc. 
+Example:
+
+\begin{usplisting}
+    BLOCK ON_ERROR
+    _DEBUG
+    _DEBUG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    _DEBUG An error occurred, please fix it and try again!
+    _DEBUG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    _DEBUG
+    _EXIT FAILED
+    END
+\end{usplisting}

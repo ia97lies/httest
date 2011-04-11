@@ -1,0 +1,26 @@
+% =========================================
+% COMMAND: _WAIT
+% =========================================
+
+\newpage
+\section{\_WAIT}
+\label{cmd:_WAIT}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_WAIT [<amount of bytes]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Waits for data on a connection and reads it. Without this 
+command, the script would just continue after sending out 
+data, without reading the response.
+
+\subparagraph{}
+\texttt{\_EXPECT} and \texttt{\_MATCH} commands will be 
+applied to the incoming data at this point. This is why 
+they must always preceed the \texttt{\_WAIT} command. 
+
+\subparagraph{}
+Optionally, it's also possible to just read a given amount 
+of bytes.

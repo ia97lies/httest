@@ -1,0 +1,35 @@
+% =========================================
+% COMMAND: MODULE
+% =========================================
+
+\newpage
+\section{MODULE}
+\label{cmd:MODULE}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{MODULE <name>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+A module represents a collection of \texttt{BLOCKs}. It adds a namespace 
+element that can help organize re-usable blocks by adding the module 
+name as a prefix for each block.
+
+So, every block contained in a module must be invoked by adding the 
+module name as a prefix.
+
+\begin{usplisting}
+    # Begin a module "utility"
+    MODULE utility
+
+    BLOCK one
+    ...
+    END
+\end{usplisting}
+
+Invoke the block "one" from this example then like that:
+
+\begin{usplisting}
+    _CALL utility:one
+\end{usplisting}

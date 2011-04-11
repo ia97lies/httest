@@ -1,0 +1,30 @@
+% =========================================
+% COMMAND: _TUNNEL
+% =========================================
+
+\newpage
+\section{\_TUNNEL}
+\label{cmd:_TUNNEL}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_TUNNEL <host> [<SSL>:]<port>[:<tag>] [<cert-file> <key-file> [<ca-cert-file>]]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Opens a tunnel to the defined host and port, with SSL support. If 
+a connection to that host and port already exists, it will be re-used 
+and no connect will be performed.
+
+\paragraph{Parameters:}
+\subparagraph{}
+Valid parameter values are:
+
+\begin{itemize}
+\item \texttt{SSL}: \texttt{SSL}, \texttt{SSL2}, \texttt{SSL3}, \texttt{TLS1}
+\item \texttt{tag}: The tag of the connection, if multiple connections to the same
+                    target host and port are used.
+\end{itemize}
+
+$<$cert-file$>$, $<$key-file$>$ and $<$ca-cert-file$>$ are optional, 
+for client/server authentication.

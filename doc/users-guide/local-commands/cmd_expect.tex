@@ -1,0 +1,42 @@
+% =========================================
+% COMMAND: _EXPECT
+% =========================================
+
+\newpage
+\section{\_EXPECT}
+\label{cmd:_EXPECT}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_EXPECT .|headers|body|error|exec|var() "|'[!]<regex>"|'}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines what data is expected to be received, either on the current connection, 
+or the stdout of an executed program, or in a certain variable. 
+A regular expression is used to define the expected data.
+
+\subparagraph{}
+Use a preceeding exclamation mark ("!") before the regular expression 
+to negate the check.
+
+\subparagraph{}
+NOTE: This command does not perform any check yet. The actual check 
+on the data is performed in the following \texttt{\_WAIT} command. 
+
+\subparagraph{}
+Example 1: Expect a certain output from an executed binary:
+
+\begin{usplisting}
+    _EXPECT exec "myValue"
+    _EXEC echo myValue
+\end{usplisting}
+
+\subparagraph{}
+Example 2: Expect a certain value in variable \$A:
+
+\begin{usplisting}
+    _SET A=myValue
+    _EXPECT var(A) "myValue"
+\end{usplisting}
+

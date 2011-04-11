@@ -1,0 +1,35 @@
+% =========================================
+% COMMAND: _SSL_CERT_VAL
+% =========================================
+
+\newpage
+\section{\_SSL\_CERT\_VAL}
+\label{cmd:_SSL_CERT_VAL}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_SSL\_CERT\_VAL <cert entry> <variable>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Extracts a $<$cert entry$>$ from a certificate which was received
+with \texttt{\_RENEG} or \texttt{\_VERIFY\_PEER}, and stores it in $<$variable$>$.
+
+Valid values for $<$cert-entry$>$ are:
+
+\begin{itemize}
+\item \texttt{M\_VERSION}
+\item \texttt{M\_SERIAL}
+\item \texttt{V\_START}
+\item \texttt{V\_END}
+\item \texttt{V\_REMAIN}
+\item \texttt{S\_DN}
+\item \texttt{S\_DN $<$var$>$}
+\item \texttt{I\_DN}
+\item \texttt{I\_DN $<$var$>$}
+\item \texttt{A\_SIG}
+\item \texttt{A\_KEY}
+\item \texttt{CERT}
+\end{itemize}
+
+% TODO: Erklaerungen zu den einzelnen Werten

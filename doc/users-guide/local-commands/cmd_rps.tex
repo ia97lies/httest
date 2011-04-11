@@ -1,0 +1,34 @@
+% =========================================
+% COMMAND: _RPS
+% =========================================
+
+\newpage
+\section{\_RPS}
+\label{cmd:_RPS}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_RPS <number of requests> <duration>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a code body which limits the maximum number of requests 
+that may be sent during a certain period of time (specified in number of seconds). 
+The requests are counted during the invocation of the \texttt{\_WAIT} command.
+
+\subparagraph{}
+The body must be closed with the \texttt{\_END RPS} command.
+
+\subparagraph{}
+The following example limits the number of requests to be sent within 
+the next 300 seconds to 20:
+
+\begin{usplisting}
+    _RPS 20 300
+    _REQ localhost 8080
+    __GET / HTTP/1.1
+    __Host: localhost
+    __
+    _WAIT
+    _END RPS
+\end{usplisting}

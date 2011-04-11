@@ -1,0 +1,41 @@
+\chapter{htt How To's}
+\label{chap:howtos}
+
+\section{File Upload}
+
+Performing a file upload with httest can be a bit tricky. Here's an example of 
+how to upload a file, where the actual data to be posted is read from a local 
+file \texttt{./data.xml}:
+
+\begin{usplisting}
+    _REQ $HOST $PORT
+    __POST /myapp HTTP/1.1
+    __Host: $HOST:$PORT
+    __Connection: keep-alive
+    __Content-Type: multipart/form-data; boundary=AaB03x
+    __Content-Length: AUTO
+    __
+    __--AaB03x
+    __Content-Disposition: form-data; name="xy"; filename="data.xml"
+    __Content-Type: text/xml
+    __
+    _PIPE
+    _EXEC cat ./data.xml
+    __
+    __--AaB03x
+    __Content-Disposition: form-data; name="file_upload"
+    __
+    __Upload
+    _--AaB03x--
+    _EXPECT headers "HTTP/1.1 200"
+    _WAIT
+\end{usplisting}
+
+Note the additional empty line after the \texttt{\_EXEC} call; this may be necessary 
+depending on the content of the posted file data.
+
+Also, the \texttt{Content-Type} header value must match the type of data 
+being posted, of course.
+
+Using a tool like the Firefox add-on "HTTP Live-Headers" can be very helpful to 
+get the correct request data for posting a given file!

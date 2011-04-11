@@ -1,0 +1,36 @@
+% =========================================
+% COMMAND: _TIMER
+% =========================================
+
+\newpage
+\section{\_TIMER}
+\label{cmd:_TIMER}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_TIMER GET|RESET <variable>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Stores the time duration since the last reset, 
+or since the start of the test.
+
+\paragraph{Start measuring time:}
+\subparagraph{}
+
+Starts time measuring, using the variable \texttt{\$HOLDER} 
+to store the result:
+
+\begin{usplisting}
+    _TIMER RESET $HOLDER
+\end{usplisting}
+
+\paragraph{Measure time:}
+\subparagraph{}
+This makes the time available as a text string in 
+the variable \texttt{\$HOLDER}:
+
+\begin{usplisting}
+    _TIMER GET $HOLDER
+\end{usplisting}
+

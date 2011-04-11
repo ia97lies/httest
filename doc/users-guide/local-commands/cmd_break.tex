@@ -1,0 +1,29 @@
+% =========================================
+% COMMAND: _BREAK
+% =========================================
+
+\newpage
+\section{\_BREAK}
+\label{cmd:_BREAK}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_BREAK}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Breaks out of the current loop.
+
+\paragraph{String example:}
+\subparagraph{}
+Break the loop if variable \texttt{\$ABC} has been
+set to "\texttt{Stop}":
+
+\begin{usplisting}
+    _LOOP 500
+    _CALL SomeBlock
+    _IF $ABC MATCH "Stop"
+    _BREAK
+    _END IF
+    _END LOOP
+\end{usplisting}

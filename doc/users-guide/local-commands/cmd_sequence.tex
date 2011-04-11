@@ -1,0 +1,39 @@
+% =========================================
+% COMMAND: _SEQUENCE
+% =========================================
+
+\newpage
+\section{\_SEQUENCE}
+\label{cmd:_SEQUENCE}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_SEQUENCE <variable-sequence>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a sequence of \texttt{\_MATCH} or \texttt{\_GREP} variables which must 
+appear in the given order in the response.
+
+\subparagraph{}
+With \texttt{\_MATCH} or \texttt{\_GREP}, it is possible to define certain 
+values that are expected in a response, one at a time. But the order of 
+those values within the response is not determined by those commands. 
+In the following example, the \texttt{\_MATCH} commands make sure that 
+the response contains three strings "one", "two" and "three". And the 
+\texttt{\_SEQUENCE} command then makes sure that they are in exact 
+this order within the response:
+
+\begin{usplisting}
+    CLIENT
+    _REQ localhost 8080
+    __GET /index.html HTTP/1.1
+    __Host: localhost
+    __
+    _MATCH body "(one)" first
+    _MATCH body "(two)" second
+    _MATCH body "(three)" third
+    _SEQUENCE first second third
+    _WAIT
+    END
+\end{usplisting}

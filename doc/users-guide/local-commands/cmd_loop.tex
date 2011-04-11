@@ -1,0 +1,27 @@
+% =========================================
+% COMMAND: _LOOP
+% =========================================
+
+\newpage
+\section{\_LOOP}
+\label{cmd:_LOOP}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_LOOP <n>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Allows to define a body of script code (similar to a \texttt{BLOCK}) which 
+is executed $<$n$>$ times. The \texttt{\_LOOP}-body must be closed with a 
+corresponding \texttt{\_END LOOP} command.
+
+\paragraph{String example:}
+\subparagraph{}
+Calls the block "SomeBlock" 15 times:
+
+\begin{usplisting}
+    _LOOP 15
+    _CALL SomeBlock
+    _END LOOP
+\end{usplisting}

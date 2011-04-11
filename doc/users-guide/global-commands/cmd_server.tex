@@ -1,0 +1,25 @@
+% =========================================
+% COMMAND: SERVER
+% =========================================
+
+\newpage
+\section{SERVER}
+\label{cmd:SERVER}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{SERVER [<SSL>:]<addr\char`\_port> [<number of concurrent servers>]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Begin of a body which starts one or multiple threads running a test server for responding  
+to HTTP requests in predefined ways.
+
+The number of threads started depends on the value of the argument for 
+the number of concurrent servers. If none is given, it defaults to 1 and 
+only a single thread will be started. Otherwise, the same \texttt{SERVER} body will 
+be executed in the specified number of parallel threads.
+
+The \texttt{SERVER} must be closed using the \texttt{END} command.
+
+% Please see chapter TODO-REF for details about how to correctly set up SSL connections.

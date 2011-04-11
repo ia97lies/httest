@@ -1,0 +1,20 @@
+% =========================================
+% COMMAND: _MATCH
+% =========================================
+
+\newpage
+\section{\_MATCH}
+\label{cmd:_MATCH}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_MATCH (.|headers|body|error|exec|var()) "|'<regex>"|' <variable>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a regular expression for a match which has two purposes:
+
+\begin{enumerate}
+\item If it matches, the matching data is stored in the $<$variable$>$.
+\item If there is no match, the test fails (just the other way around than \texttt{\_GREP})..
+\end{enumerate}

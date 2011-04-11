@@ -1,8 +1,7 @@
 \chapter{Body Types}
 \label{chap:bodytypes}
 
-The following body 
-types exist:
+The following global body types exist:
 
 \begin{itemize}
 \item \texttt{CLIENT} - The main HTTP test client logic.
@@ -28,6 +27,21 @@ a separate thread that can be used to monitor or control the execution of the te
 functionality to interrupt a hanging test etc.
 
 \end{itemize}
+
+
+The following local body types exist:
+
+\begin{itemize}
+\item \texttt{\_BPS} - Limits the number of bytes sent during a period of time.
+\item \texttt{\_ERROR} - Ensures that a certain expected error happened within the body.
+\item \texttt{\_FOR} - Allows to define code with is executed for a given number of elements.
+\item \texttt{\_IF} - Allows to define code with is executed only if a given condition is true.
+\item \texttt{\_LOOP} - Allows to execute the given block of code a certain number of times.
+% \item \texttt{\_PROCESS} - Forks a process to run the body in.
+\item \texttt{\_RPS} - Limits the number of requests sent during a period of time.
+\item \texttt{\_SOCKET} - Spawns a socket reader.
+\end{itemize}
+
 
 \newpage 
 \section{Bodies And Threads}

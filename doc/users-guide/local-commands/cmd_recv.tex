@@ -1,0 +1,23 @@
+% =========================================
+% COMMAND: _RECV
+% =========================================
+
+\newpage
+\section{\_RECV}
+\label{cmd:_RECV}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_RECV <bytes>|POLL|CHUNKED|CLOSE [DO\_NOT\_CHECK]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Receives an amount of bytes, either specified by the number of bytes to read, 
+or until a socket timeout will occur in \texttt{POLL} mode.
+
+Optional: \texttt{DO\_NOT\_CHECK} does not check the \texttt{\_MATCH} and \texttt{\_EXPECT} clauses. 
+
+With \texttt{\_CHECK} this can be done later, over a couple of not yet checked \texttt{\_RECVs}.
+
+
+% TODO: Was ist default? POLL Mode? Was macht CHUNKED genau?

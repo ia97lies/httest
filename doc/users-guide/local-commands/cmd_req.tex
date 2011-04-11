@@ -1,0 +1,37 @@
+% =========================================
+% COMMAND: _REQ
+% =========================================
+
+\newpage
+\section{\_REQ}
+\label{cmd:_REQ}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_REQ <host> [<SSL>:]<port>[:<tag>] [<cert-file> <key-file> <ca-cert-file>]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Opens a new TCP connection to the given host and port. If the connection exists already, 
+no new connection will be created.
+
+\paragraph{Parameters:}
+\subparagraph{}
+\textit{\texttt{SSL}}: Defines the type of SSL connection. Must be one of these values: 
+\texttt{SSL}, \texttt{SSL2}, \texttt{SSL3} or \texttt{TLS1}.
+
+\subparagraph{}
+\textit{\texttt{host}}: The host name or IPv4 / IPv6 address of the target system. Note: An IPv6 address 
+must be enclosed in square brackets!
+
+\subparagraph{}
+\textit{\texttt{tag}}: Setting a tag on a connection allows to open multiple connections to the same 
+target. If a connection with the same tag already exists, that connection will be selected (for the 
+following request).
+
+\subparagraph{}
+\textit{\texttt{cert-file}}, \textit{\texttt{key-file}}, \textit{\texttt{ca-cert-file}}: Optional; required 
+for SSL connections. 
+
+% See TODO for details.
+

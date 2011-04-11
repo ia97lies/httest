@@ -1,0 +1,23 @@
+% =========================================
+% COMMAND: CLIENT
+% =========================================
+
+\newpage
+\section{CLIENT}
+\label{cmd:CLIENT}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{CLIENT [<number of concurrent clients>]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Begin of a body which starts one or multiple threads running a test client for sending 
+HTTP requests to a server, and evaluating the response.
+
+The number of threads started depends on the value of the argument for 
+the number of concurrent clients. If none is given, it defaults to 1 and 
+only a single thread will be started. Otherwise, the same \texttt{CLIENT} body will 
+be executed in the specified number of parallel threads.
+
+The \texttt{CLIENT} must be closed using the \texttt{END} command.

@@ -1,0 +1,72 @@
+% =========================================
+% COMMAND: USE
+% =========================================
+
+\newpage
+\section{\_USE}
+\label{cmd:USE}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_USE <module>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Allows to invoke blocks from the given module without 
+having to specify the module prefix. So, it's quite 
+similar to a static import in a Java source file.
+
+For example, assume a htt file that contains a module 
+named "UTILITY" like this:
+
+\begin{usplisting}
+    MODULE UTILITY
+
+    BLOCK ONE
+    ...
+    END
+
+    BLOCK _TWO
+    ...
+    END
+\end{usplisting}
+
+Usually, to invoke the block "ONE", the code in the 
+actual test script would look like this:
+
+\begin{usplisting}
+    _CALL UTILITY:ONE
+\end{usplisting}
+
+Instead, with \texttt{USE} the call gets simpler:
+
+\begin{usplisting}
+    _USE UTILITY
+    ...
+    _CALL ONE
+\end{usplisting}
+
+\newpage
+Or, in case of the second block named "\_TWO", it can 
+be even simpler (because blocks whose name starts with 
+an underscore don't need to be invoked with \texttt{CALL}):
+
+\begin{usplisting}
+    _USE UTILITY
+    ...
+    _TWO
+\end{usplisting}
+
+So, in a sense, by using modules and naming the blocks with 
+underscores, it is possible to really create custom htt local 
+commands.
+
+\subsection{Overriding commands}
+
+Using this mechanism, it's possible to override the existing 
+htt commands (by creating a custom \texttt{\_WAIT} command in 
+a module, for example). However, overriding isn't really a 
+tested feature, so results can be unpredictable.
+
+For this reason, it's not recommended to override existing, 
+real htt commands!

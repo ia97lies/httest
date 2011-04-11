@@ -1,0 +1,24 @@
+% =========================================
+% COMMAND: _CERT
+% =========================================
+
+\newpage
+\section{\_CERT}
+\label{cmd:_CERT}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_CERT <cert-file> <key-file> [<ca-cert-file>]}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Configures the certificate to use for the current SSL connection. This 
+is mainly necessary for server certificates (because an SSL server always 
+must present a certificate). For clients, this is necessary only if mutual authentication 
+is required.
+
+\subparagraph{}
+The file formats are basically the same ones used to configure 
+SSL in an Apache webserver (PEM certificate and key files).
+
+% TODO: Chapter mit SSL Setup Beispiel

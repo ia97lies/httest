@@ -53,3 +53,15 @@ In the example above, \texttt{INCLUDE} is a global statement used to include ano
 script file with some re-usable code blocks. It is followed by the \texttt{CLIENT} 
 block which starts the actual HTTP test client, a block of re-usable functionality 
 named "DOIT" and a \texttt{DAEMON} body which contains some test monitoring functionality.
+
+\section{Control Flow}
+
+The following options are available to control the flow of a httest script:
+
+\begin{itemize}
+\item{Conditions}: The \texttt{\_IF} command supports the execution of a code body 
+                   depending on a condition.
+\item{Loops}: While the \texttt{\_FOR} command allows to execute a code body for a given
+             list of elements, the \texttt{\_LOOP} command allows to do the same for a 
+             certain number of times.
+\end{itemize}

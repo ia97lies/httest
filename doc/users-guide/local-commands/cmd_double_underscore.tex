@@ -1,0 +1,39 @@
+% =========================================
+% COMMAND: __
+% =========================================
+
+\newpage
+\section{\_\_}
+\label{cmd:__}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_\_<string>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Sends the given string data to the current socket, with  
+CRLF line termination characters.
+
+\subparagraph{}
+NOTE: There MUST NOT BE a blank between the command and the 
+following string data (or the blank itself will be part of the 
+string data as well).
+
+\subparagraph{}
+The reason for using this peculiar design lies in the history 
+of the httest utility. In early versions, the value of the "content-length" 
+HTTP header of a request had to be calculated and set manually. In that 
+situation, it $<$n$>$ was easier to calculate the actual number of bytes 
+a line of data would take up, because the two underscores at the 
+beginning of the line allowed to just use the number of columns 
+value displayed by any text editor. The reason: Without 
+these two characters, a text editor would display only the number 
+of visible characters, but the CRLF characters had also to be taken 
+into account for a correct "content-length" header value. So the 
+double underscore was a replacement for the invisible line termination 
+characters.
+
+\subparagraph{}
+However, it's not necessary for this purpose anymore as httest 
+allows to set the correct content length value automatically now.

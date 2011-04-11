@@ -1,0 +1,20 @@
+% =========================================
+% COMMAND: _GREP
+% =========================================
+
+\newpage
+\section{\_GREP}
+\label{cmd:_GREP}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_GREP (.|headers|body|error|exec|var()) "|'<regex>"|' <variable>}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Defines a regular expression for a match which has two purposes:
+
+\begin{enumerate}
+\item If it matches, the matching data is stored in the $<$variable$>$.
+\item If there is a match, the test fails (just the other way around than \texttt{\_MATCH}).
+\end{enumerate}
