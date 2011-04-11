@@ -13,6 +13,9 @@ Changes with httest 2.0.7
   *) httest: Marked command _PEER_VERIFY as depreciated. Use "_RENEG verify"
      instead. This command will be removed in the next minor release.
 
+  *) users-guide: Syntax, structure and commands are documented. Updated by
+     Marcel Schoen.
+
 
 Changes with httest 2.0.6
   *) httest: Serious fix: _IF "<string>" NOT EQUAL still not work.
