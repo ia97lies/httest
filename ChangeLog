@@ -1,4 +1,7 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.8
+
+
 Changes with httest 2.0.7
   *) httest: Changed the --debug option for script debugging and add a
      --debug-system for logging more system details.
