@@ -71,7 +71,7 @@ echo "  Build Man Pages"
 echo
 echo "  Build User Guide"
 cd doc/users-guide
-make all
+make all VERSION=$VERSION
 cd -
 
 echo
