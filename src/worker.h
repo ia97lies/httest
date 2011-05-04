@@ -67,6 +67,8 @@ typedef struct worker_s worker_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
 struct worker_s {
   interpret_f interpret;
+  /* new style config management for new commands */
+  apr_hash_t *config;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
   /* dies on END */
