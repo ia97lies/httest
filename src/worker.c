@@ -2254,6 +2254,9 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   else if (strncasecmp(copy, "Cookie: AUTO", 12) == 0) {
     apr_table_add(worker->cache, "Cookie", "Cookie");
   }
+  else if (strncasecmp(copy, "Expect: 100-Continue", 20) == 0) {
+    apr_table_add(worker->cache, "100-Continue", copy);
+  }
   else {
     apr_table_add(worker->cache, "TRUE", copy);
   }
@@ -4544,6 +4547,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = interpret;
+  (*self)->config = apr_hash_make(p);
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
@@ -4619,6 +4623,7 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = orig->interpret;
+  (*self)->config = apr_hash_make(p);
   (*self)->flags = orig->flags;
   (*self)->prefix = apr_pstrdup(p, orig->prefix);
   (*self)->additional = apr_pstrdup(p, orig->additional);
@@ -5033,6 +5038,28 @@ apr_status_t worker_flush(worker_t * self) {
       chunked = apr_psprintf(self->pbody, "%x\r\n", ct_len);
     }
   }
+  else if (apr_table_get(self->cache, "Content-Length") && 
+           apr_table_get(self->cache, "100-Continue")) {
+    /* do this only if Content-Length and 100-Continue is set */
+    /* flush headers and empty line but not body */
+    if ((status = worker_flush_part(self, NULL, 0, i)) != APR_SUCCESS) { 
+      goto error;
+    }
+    /* wait for a 100 continue response */
+    if ((status = command_EXPECT(NULL, self, "HTTP/1.1 100 Continue")) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    if ((status = command_WAIT(NULL, self, "")) != APR_SUCCESS) {
+      goto error;
+    }
+    /* send body then */
+    if ((status = worker_flush_part(self, NULL, i + 1, 
+	                            apr_table_elts(self->cache)->nelts)) 
+	!= APR_SUCCESS) { 
+      goto error;
+    }
+  }
 
   if (apr_table_get(self->cache, "Cookie")) {
     if (self->socket->cookie) {
@@ -5063,8 +5090,15 @@ apr_status_t worker_flush(worker_t * self) {
   }
   if (icap_body) {
     /* send all except the req/res body */
-    status = worker_flush_part(self, NULL, 0, icap_body_start); 
-    status = worker_flush_part(self, chunked, icap_body_start, apr_table_elts(self->cache)->nelts); 
+    if ((status = worker_flush_part(self, NULL, 0, icap_body_start)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    if ((status = worker_flush_part(self, chunked, icap_body_start, 
+	                            apr_table_elts(self->cache)->nelts)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
     if (chunked) {
       chunked = apr_psprintf(self->pbody, "\r\n0\r\n\r\n");
       status = worker_flush_part(self, chunked, 0, 0); 
