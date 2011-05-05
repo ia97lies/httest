@@ -19,13 +19,14 @@ END
 SERVER $YOUR_PORT
 
 _RES
+_MATCH headers "Content-Length: (.*)" CL
 _WAIT 0 
 __HTTP/1.1 100 Continue 
 __
 
 _RES
 _EXPECT . "01234567"
-_RECV 10 
+_RECV $CL
 __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __

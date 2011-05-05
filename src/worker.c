@@ -4933,8 +4933,6 @@ apr_status_t worker_flush(worker_t * self) {
 
   /* test if we should skip it */
   if (flush->flags & FLUSH_DO_SKIP) {
-    fprintf(stderr, "\nXXXX: flush skip\n");
-    fflush(stderr);
     return APR_SUCCESS;
   }
 
@@ -5064,8 +5062,6 @@ apr_status_t worker_flush(worker_t * self) {
   }
   else if (apr_table_get(self->cache, "Content-Length") && 
            apr_table_get(self->cache, "100-Continue")) {
-    fprintf(stderr, "\nXXXX: 100-Continue : from 0 to %d\n", body_start);
-    fflush(stderr);
     /* do this only if Content-Length and 100-Continue is set */
     /* flush headers and empty line but not body */
     if ((status = worker_flush_part(self, NULL, 0, body_start)) 
@@ -5085,13 +5081,12 @@ apr_status_t worker_flush(worker_t * self) {
     /* do not skip flush */
     flush->flags &= ~FLUSH_DO_SKIP;
     /* send body then */
-    fprintf(stderr, "\nXXXX: body : from %d to %d\n", body_start, apr_table_elts(self->cache)->nelts);
-    fflush(stderr);
     if ((status = worker_flush_part(self, NULL, body_start, 
 	                            apr_table_elts(self->cache)->nelts)) 
 	!= APR_SUCCESS) { 
       goto error;
     }
+    goto error;
   }
 
   if (apr_table_get(self->cache, "Cookie")) {
