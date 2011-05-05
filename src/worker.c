@@ -4912,6 +4912,7 @@ apr_status_t worker_flush(worker_t * self) {
   flush_t *flush;
 
   int i = 0;
+  int body_start = 0;
   int icap_body = 0;
   int icap_body_start = 0;
   int start = 0;
@@ -4932,6 +4933,8 @@ apr_status_t worker_flush(worker_t * self) {
 
   /* test if we should skip it */
   if (flush->flags & FLUSH_DO_SKIP) {
+    fprintf(stderr, "\nXXXX: flush skip\n");
+    fflush(stderr);
     return APR_SUCCESS;
   }
 
@@ -4971,6 +4974,7 @@ apr_status_t worker_flush(worker_t * self) {
       if (!start && !e[i].val[0]) {
         /* start body len */
         start = 1;
+	body_start = i + 1;
       }
       else if (start) {
         /* do not forget the \r\n */
@@ -5060,13 +5064,16 @@ apr_status_t worker_flush(worker_t * self) {
   }
   else if (apr_table_get(self->cache, "Content-Length") && 
            apr_table_get(self->cache, "100-Continue")) {
+    fprintf(stderr, "\nXXXX: 100-Continue : from 0 to %d\n", body_start);
+    fflush(stderr);
     /* do this only if Content-Length and 100-Continue is set */
     /* flush headers and empty line but not body */
-    if ((status = worker_flush_part(self, NULL, 0, i)) != APR_SUCCESS) { 
+    if ((status = worker_flush_part(self, NULL, 0, body_start)) 
+	!= APR_SUCCESS) {
       goto error;
     }
     /* wait for a 100 continue response */
-    if ((status = command_EXPECT(NULL, self, "HTTP/1.1 100 Continue")) 
+    if ((status = command_EXPECT(NULL, self, "headers \"HTTP/1.1 100 Continue\"")) 
 	!= APR_SUCCESS) {
       goto error;
     }
@@ -5078,7 +5085,9 @@ apr_status_t worker_flush(worker_t * self) {
     /* do not skip flush */
     flush->flags &= ~FLUSH_DO_SKIP;
     /* send body then */
-    if ((status = worker_flush_part(self, NULL, i + 1, 
+    fprintf(stderr, "\nXXXX: body : from %d to %d\n", body_start, apr_table_elts(self->cache)->nelts);
+    fflush(stderr);
+    if ((status = worker_flush_part(self, NULL, body_start, 
 	                            apr_table_elts(self->cache)->nelts)) 
 	!= APR_SUCCESS) { 
       goto error;
