@@ -78,6 +78,12 @@ typedef struct tunnel_s {
   socket_t *sendto;
 } tunnel_t;
 
+typedef struct flush_s {
+#define FLUSH_DO_NONE 0
+#define FLUSH_DO_SKIP 1
+  int flags;
+} flush_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -4903,6 +4909,7 @@ error:
 apr_status_t worker_flush(worker_t * self) {
   apr_size_t len;
   const char *hdr;
+  flush_t *flush;
 
   int i = 0;
   int icap_body = 0;
@@ -4914,6 +4921,19 @@ apr_status_t worker_flush(worker_t * self) {
   apr_status_t status = APR_SUCCESS;
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(self->cache)->elts;
+
+  /* sept flush contex */
+  if (!(flush = apr_hash_get(self->config, "worker_flush", 
+	                     APR_HASH_KEY_STRING))) {
+    flush = apr_pcalloc(self->pbody, sizeof(*flush));
+    apr_hash_set(self->config, apr_pstrdup(self->pbody, "worker_flush"), 
+	         APR_HASH_KEY_STRING, flush); 
+  }
+
+  /* test if we should skip it */
+  if (flush->flags & FLUSH_DO_SKIP) {
+    return APR_SUCCESS;
+  }
 
   if (!self->socket || !self->socket->socket) {
     goto error;
@@ -5050,9 +5070,13 @@ apr_status_t worker_flush(worker_t * self) {
 	!= APR_SUCCESS) {
       goto error;
     }
+    /* do skip call flush in command _WAIT */
+    flush->flags |= FLUSH_DO_SKIP;
     if ((status = command_WAIT(NULL, self, "")) != APR_SUCCESS) {
       goto error;
     }
+    /* do not skip flush */
+    flush->flags &= ~FLUSH_DO_SKIP;
     /* send body then */
     if ((status = worker_flush_part(self, NULL, i + 1, 
 	                            apr_table_elts(self->cache)->nelts)) 

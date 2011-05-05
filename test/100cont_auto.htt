@@ -1,0 +1,32 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: 10 
+__Expect: 100-Continue
+__
+__01234567
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT 0 
+__HTTP/1.1 100 Continue 
+__
+
+_RES
+_EXPECT . "01234567"
+_RECV 10 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+
+END
+
