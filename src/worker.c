@@ -4553,7 +4553,6 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = interpret;
-  (*self)->config = apr_hash_make(p);
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
@@ -4629,7 +4628,6 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = orig->interpret;
-  (*self)->config = apr_hash_make(p);
   (*self)->flags = orig->flags;
   (*self)->prefix = apr_pstrdup(p, orig->prefix);
   (*self)->additional = apr_pstrdup(p, orig->additional);
@@ -4909,7 +4907,6 @@ error:
 apr_status_t worker_flush(worker_t * self) {
   apr_size_t len;
   const char *hdr;
-  flush_t *flush;
 
   int i = 0;
   int body_start = 0;
@@ -4923,16 +4920,8 @@ apr_status_t worker_flush(worker_t * self) {
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(self->cache)->elts;
 
-  /* sept flush contex */
-  if (!(flush = apr_hash_get(self->config, "worker_flush", 
-	                     APR_HASH_KEY_STRING))) {
-    flush = apr_pcalloc(self->pbody, sizeof(*flush));
-    apr_hash_set(self->config, apr_pstrdup(self->pbody, "worker_flush"), 
-	         APR_HASH_KEY_STRING, flush); 
-  }
-
   /* test if we should skip it */
-  if (flush->flags & FLUSH_DO_SKIP) {
+  if (self->flags & FLAGS_SKIP_FLUSH) {
     return APR_SUCCESS;
   }
 
@@ -5074,12 +5063,12 @@ apr_status_t worker_flush(worker_t * self) {
       goto error;
     }
     /* do skip call flush in command _WAIT */
-    flush->flags |= FLUSH_DO_SKIP;
+    self->flags |= FLAGS_SKIP_FLUSH;
     if ((status = command_WAIT(NULL, self, "")) != APR_SUCCESS) {
       goto error;
     }
     /* do not skip flush */
-    flush->flags &= ~FLUSH_DO_SKIP;
+    self->flags &= ~FLAGS_SKIP_FLUSH;
     /* send body then */
     if ((status = worker_flush_part(self, NULL, body_start, 
 	                            apr_table_elts(self->cache)->nelts)) 

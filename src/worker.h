@@ -67,8 +67,6 @@ typedef struct worker_s worker_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
 struct worker_s {
   interpret_f interpret;
-  /* new style config management for new commands */
-  apr_hash_t *config;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
   /* dies on END */
@@ -91,6 +89,7 @@ struct worker_s {
 #define FLAGS_AUTO_CLOSE     0x00000400
 #define FLAGS_AUTO_COOKIE    0x00000800
 #define FLAGS_IGNORE_BODY    0x00001000
+#define FLAGS_SKIP_FLUSH     0x00002000
   int flags;
   apr_proc_t proc;
   int cmd;
