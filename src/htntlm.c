@@ -593,9 +593,9 @@ static char * str_copy_to_upper(apr_pool_t *pool, const char *str) {
  *
  * @return upper case string
  */
-static char * strn_copy_to_upper(apr_pool_t *pool, const char *str, apr_size_t n) {
+static unsigned char * strn_copy_to_upper(apr_pool_t *pool, const char *str, apr_size_t n) {
   int i = 0;
-  char *tmp = apr_pcalloc(pool, n + 1);
+  unsigned char *tmp = apr_pcalloc(pool, n + 1);
   
   while (str && str[i] && i < n) {
     tmp[i] = apr_toupper(str[i]);
@@ -660,7 +660,7 @@ static unsigned char *get_hash(htntlm_t *hook, unsigned char *key24, DES_cblock 
  * @return lm hash (24 bytes)
  */
 static unsigned char * get_lm_hash(htntlm_t *hook) {
-  char *passwd;
+  unsigned char *passwd;
   DES_key_schedule *key_sched;
   unsigned char lmbuffer[21];
   uint64_t chl = hton64(hook->challenge);
@@ -722,9 +722,9 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   apr_size_t uuser_len;
   char *udomain;
   apr_size_t udomain_len;
-  char *buf;
+  unsigned char *buf;
   HMAC_CTX hmac;
-  char challenges[16];
+  unsigned char challenges[16];
   uint64_t chl = hton64(hook->challenge);
 
   /* 1. get ntlm hash */
@@ -780,7 +780,7 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
 static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   char *uuser;
   char *udomain;
-  char *part;
+  unsigned char *part;
   apr_size_t uuser_len;
   apr_size_t udomain_len;
   const EVP_MD *md5 = EVP_md5();
@@ -873,8 +873,8 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
  */
 static unsigned char * get_ntlm2_sess(htntlm_t *hook, uint16_t *hash_len) {
   char challenges[16];
-  char ntlm2_hash[16];
-  char ntlm_hash[21];
+  unsigned char ntlm2_hash[16];
+  unsigned char ntlm_hash[21];
   MD4_CTX MD4;
   MD5_CTX MD5;
   char *passwd; 
@@ -1028,7 +1028,7 @@ static void write_type1_msg(htntlm_t *hook) {
   /* allocate message */
   msg = apr_pcalloc(hook->pool, len);
   /* start string */
-  strcpy(msg, "NTLMSSP");
+  strcpy((char *)msg, "NTLMSSP");
   /* type */
   *((uint32_t *)&msg[8]) = hton32(hook->type);
   /* flags */
@@ -1105,7 +1105,7 @@ static void write_type2_msg(htntlm_t *hook) {
   /* allocate message initialize with zeros*/
   msg = apr_pcalloc(hook->pool, len);
   /* start string */
-  strcpy(msg, "NTLMSSP");
+  strcpy((char *)msg, "NTLMSSP");
   /* type */
   *((uint32_t *)&msg[8]) = hton32(hook->type);
   /* target */
@@ -1216,7 +1216,7 @@ static void write_type3_msg(htntlm_t *hook) {
   /* allocate message initialize with zeros*/
   msg = apr_pcalloc(hook->pool, len);
   /* start string */
-  strcpy(msg, "NTLMSSP");
+  strcpy((char *)msg, "NTLMSSP");
   /* type */
   *((uint32_t *)&msg[8]) = hton32(hook->type);
 
@@ -1327,7 +1327,7 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   alloc = ntoh16(*((uint16_t *)&msg[18]));
   offset = ntoh32(*((uint32_t *)&msg[20]));
   if (len) {
-    hook->domain = apr_pstrndup(hook->pool, &msg[offset], len);
+    hook->domain = apr_pstrndup(hook->pool, (char *)&msg[offset], len);
   }
   /* test if optional workstation is there */
   if (msg_len < 32) {
@@ -1338,7 +1338,7 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   alloc = ntoh16(*((uint16_t *)&msg[26]));
   offset = ntoh32(*((uint32_t *)&msg[28]));
   if (len) {
-    hook->workstation = apr_pstrndup(hook->pool, &msg[offset], len);
+    hook->workstation = apr_pstrndup(hook->pool, (char *)&msg[offset], len);
   }
 
 }
@@ -1362,7 +1362,7 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   alloc = ntoh16(*((uint16_t *)&msg[14]));
   offset = ntoh32(*((uint32_t *)&msg[16]));
   if (len) {
-    hook->target = handle_oem(hook, &msg[offset], len);
+    hook->target = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* flags */
   hook->flags = ntoh32(*((uint32_t *)&msg[20]));
@@ -1400,16 +1400,16 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
       offset += 4;
       switch (subblk) {
       case HTNTLM_SUBBLK_SERVER_NAME:
-	hook->server = from_unicode(hook->pool, &msg[offset], len); 
+	hook->server = from_unicode(hook->pool, (char *)&msg[offset], len); 
 	break;
       case HTNTLM_SUBBLK_DOMAIN_NAME:
-	hook->domain = from_unicode(hook->pool, &msg[offset], len); 
+	hook->domain = from_unicode(hook->pool, (char *)&msg[offset], len); 
 	break;
       case HTNTLM_SUBBLK_DNS_SERVER:
-	hook->dns_server = from_unicode(hook->pool, &msg[offset], len); 
+	hook->dns_server = from_unicode(hook->pool, (char *)&msg[offset], len); 
 	break;
       case HTNTLM_SUBBLK_DNS_DOMAIN:
-	hook->dns_domain = from_unicode(hook->pool, &msg[offset], len); 
+	hook->dns_domain = from_unicode(hook->pool, (char *)&msg[offset], len); 
 	break;
       default:
 	break;
@@ -1453,21 +1453,21 @@ static void read_type3_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   alloc = ntoh16(*((uint16_t *)&msg[30]));
   offset = ntoh32(*((uint32_t *)&msg[32]));
   if (len) {
-    hook->domain = handle_oem(hook, &msg[offset], len);
+    hook->domain = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* user */
   len = ntoh16(*((uint16_t *)&msg[36]));
   alloc = ntoh16(*((uint16_t *)&msg[38]));
   offset = ntoh32(*((uint32_t *)&msg[40]));
   if (len) {
-    hook->user = handle_oem(hook, &msg[offset], len);
+    hook->user = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* workstation */
   len = ntoh16(*((uint16_t *)&msg[44]));
   alloc = ntoh16(*((uint16_t *)&msg[46]));
   offset = ntoh32(*((uint32_t *)&msg[48]));
   if (len) {
-    hook->workstation = handle_oem(hook, &msg[offset], len);
+    hook->workstation = handle_oem(hook, (char *)&msg[offset], len);
   }
 
   /* session key */
@@ -1487,7 +1487,7 @@ static void read_message(htntlm_t *hook, char *message) {
   b64len = apr_base64_decode_binary(msg, message);
 
   /* check start cause this is allways the same */
-  if (strncmp("NTLMSSP", msg, 8) != 0) {
+  if (strncmp("NTLMSSP", (char *)msg, 8) != 0) {
     hook->exception = apr_pstrdup(hook->pool, "NTLM magic error");
     return;
   }
@@ -1678,7 +1678,8 @@ int main(int argc, const char *const argv[]) {
 
   /* test for wrong options */
   if (!APR_STATUS_IS_EOF(status) || flags == ACTION_NONE) {
-    fprintf(stderr, "try \"%s --help\" to get more information\n", filename(pool, argv[0]));
+    fprintf(stderr, "try \"%s --help\" to get more information\n", 
+	    filename(pool, argv[0]));
     exit(1);
   }
 
@@ -1688,7 +1689,8 @@ int main(int argc, const char *const argv[]) {
   }
 
   if (!c_chl_str) {
-    RAND_pseudo_bytes((char *)&hook->client_challenge, sizeof(hook->client_challenge));
+    RAND_pseudo_bytes((unsigned char *)&hook->client_challenge, 
+	              sizeof(hook->client_challenge));
   }
   else {
     sscanf(c_chl_str, FMT_LLX, &hook->client_challenge);
