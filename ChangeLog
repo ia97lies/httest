@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.0.8
+  *) htntlm: Removed compile warnings
+
+  *) httest: automatic 100 continue support for requests.
+
+  *) user-guide: add httest version
 
 
 Changes with httest 2.0.7
