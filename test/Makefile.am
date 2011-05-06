@@ -1,4 +1,5 @@
 EXTRA_DIST= \
+	100cont_auto.htt \
 	100cont.htt \
 	autoclose2.hte \
 	autoclose2.htt \

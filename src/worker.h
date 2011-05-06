@@ -89,6 +89,7 @@ struct worker_s {
 #define FLAGS_AUTO_CLOSE     0x00000400
 #define FLAGS_AUTO_COOKIE    0x00000800
 #define FLAGS_IGNORE_BODY    0x00001000
+#define FLAGS_SKIP_FLUSH     0x00002000
   int flags;
   apr_proc_t proc;
   int cmd;

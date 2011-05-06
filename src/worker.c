@@ -78,6 +78,12 @@ typedef struct tunnel_s {
   socket_t *sendto;
 } tunnel_t;
 
+typedef struct flush_s {
+#define FLUSH_DO_NONE 0
+#define FLUSH_DO_SKIP 1
+  int flags;
+} flush_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -2253,6 +2259,9 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   }
   else if (strncasecmp(copy, "Cookie: AUTO", 12) == 0) {
     apr_table_add(worker->cache, "Cookie", "Cookie");
+  }
+  else if (strncasecmp(copy, "Expect: 100-Continue", 20) == 0) {
+    apr_table_add(worker->cache, "100-Continue", copy);
   }
   else {
     apr_table_add(worker->cache, "TRUE", copy);
@@ -4900,6 +4909,7 @@ apr_status_t worker_flush(worker_t * self) {
   const char *hdr;
 
   int i = 0;
+  int body_start = 0;
   int icap_body = 0;
   int icap_body_start = 0;
   int start = 0;
@@ -4909,6 +4919,11 @@ apr_status_t worker_flush(worker_t * self) {
   apr_status_t status = APR_SUCCESS;
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(self->cache)->elts;
+
+  /* test if we should skip it */
+  if (self->flags & FLAGS_SKIP_FLUSH) {
+    return APR_SUCCESS;
+  }
 
   if (!self->socket || !self->socket->socket) {
     goto error;
@@ -4946,6 +4961,7 @@ apr_status_t worker_flush(worker_t * self) {
       if (!start && !e[i].val[0]) {
         /* start body len */
         start = 1;
+	body_start = i + 1;
       }
       else if (start) {
         /* do not forget the \r\n */
@@ -5033,6 +5049,34 @@ apr_status_t worker_flush(worker_t * self) {
       chunked = apr_psprintf(self->pbody, "%x\r\n", ct_len);
     }
   }
+  else if (apr_table_get(self->cache, "Content-Length") && 
+           apr_table_get(self->cache, "100-Continue")) {
+    /* do this only if Content-Length and 100-Continue is set */
+    /* flush headers and empty line but not body */
+    if ((status = worker_flush_part(self, NULL, 0, body_start)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    /* wait for a 100 continue response */
+    if ((status = command_EXPECT(NULL, self, "headers \"HTTP/1.1 100 Continue\"")) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    /* do skip call flush in command _WAIT */
+    self->flags |= FLAGS_SKIP_FLUSH;
+    if ((status = command_WAIT(NULL, self, "")) != APR_SUCCESS) {
+      goto error;
+    }
+    /* do not skip flush */
+    self->flags &= ~FLAGS_SKIP_FLUSH;
+    /* send body then */
+    if ((status = worker_flush_part(self, NULL, body_start, 
+	                            apr_table_elts(self->cache)->nelts)) 
+	!= APR_SUCCESS) { 
+      goto error;
+    }
+    goto error;
+  }
 
   if (apr_table_get(self->cache, "Cookie")) {
     if (self->socket->cookie) {
@@ -5063,8 +5107,15 @@ apr_status_t worker_flush(worker_t * self) {
   }
   if (icap_body) {
     /* send all except the req/res body */
-    status = worker_flush_part(self, NULL, 0, icap_body_start); 
-    status = worker_flush_part(self, chunked, icap_body_start, apr_table_elts(self->cache)->nelts); 
+    if ((status = worker_flush_part(self, NULL, 0, icap_body_start)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    if ((status = worker_flush_part(self, chunked, icap_body_start, 
+	                            apr_table_elts(self->cache)->nelts)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
     if (chunked) {
       chunked = apr_psprintf(self->pbody, "\r\n0\r\n\r\n");
       status = worker_flush_part(self, chunked, 0, 0); 
