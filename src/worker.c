@@ -932,7 +932,7 @@ apr_status_t worker_test_unused_errors(worker_t * self) {
  *
  * @return apr status
  */
-apr_status_t worker_conn_close(worker_t * self, int ssl) {
+apr_status_t worker_conn_close(worker_t * self, int ssl, int tcp) {
   apr_status_t status;
 #ifdef USE_SSL
   int i;
@@ -960,11 +960,13 @@ apr_status_t worker_conn_close(worker_t * self, int ssl) {
     self->socket->is_ssl = 0;
   }
 #endif
-  if ((status = apr_socket_close(self->socket->socket)) != APR_SUCCESS) {
-    return status;
+  if (tcp) {
+    if ((status = apr_socket_close(self->socket->socket)) != APR_SUCCESS) {
+      return status;
+    }
+    self->socket->socket_state = SOCKET_CLOSED;
+    self->socket->socket = NULL;
   }
-  self->socket->socket_state = SOCKET_CLOSED;
-  self->socket->socket = NULL;
 
   return APR_SUCCESS;
 }
@@ -985,7 +987,7 @@ void worker_conn_close_all(worker_t *self) {
   for (hi = apr_hash_first(self->pbody, self->sockets); hi; hi = apr_hash_next(hi)) {
     apr_hash_this(hi, NULL, NULL, &s);
     self->socket = s;
-    worker_conn_close(self, 1);
+    worker_conn_close(self, 1, 1);
   }
   self->socket = cur;
   if (self->listener) {
@@ -1789,12 +1791,12 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
 	!= APR_SUCCESS) {
       return status;
     }
+    worker->socket->socket_state = SOCKET_CONNECTED;
 #ifdef USE_SSL
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
     }
 #endif
-    worker->socket->socket_state = SOCKET_CONNECTED;
   }
 
   apr_table_clear(worker->match.dot);
@@ -1938,6 +1940,7 @@ apr_status_t command_CLOSE(command_t * self, worker_t * worker,
   apr_status_t status;
   char *copy;
   int ssl = 1;
+  int tcp = 1;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -1945,19 +1948,23 @@ apr_status_t command_CLOSE(command_t * self, worker_t * worker,
     ssl = 0;
   }
 
+  if (strcmp(copy, "SSL") == 0) {
+    tcp = 0;
+  }
+
   if ((status = worker_flush(worker)) != APR_SUCCESS) {
-    worker_conn_close(worker, 1);
+    worker_conn_close(worker, 1, 1);
     return status;
   }
 
   if (strcmp(copy, "do not test expects") != 0) {
     if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
-      worker_conn_close(worker, 1);
+      worker_conn_close(worker, 1, 1);
       return status;
     }
   }
 
-  if ((status = worker_conn_close(worker, ssl)) != APR_SUCCESS) {
+  if ((status = worker_conn_close(worker, ssl, tcp)) != APR_SUCCESS) {
     return status;
   }
 
