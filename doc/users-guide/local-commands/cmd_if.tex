@@ -26,7 +26,7 @@ Tests if the given $<$string$>$ matches the regular expression (that string
 can be a variable, of course):
 
 \begin{usplisting}
-    _IF $MyVar MATCH ".*xyz.*"
+    _IF "$MyVar" MATCH ".*xyz.*"
       _CALL SomeBlock
     _END IF
 \end{usplisting}
@@ -37,7 +37,7 @@ Tests if the given $<$string$>$ containing a numerical value is larger than
 a given threshold value:
 
 \begin{usplisting}
-    _IF $MyNumber GT "1500"
+    _IF "$MyNumber" GT "1500"
     _CALL SomeBlock
     _END IF
 \end{usplisting}
