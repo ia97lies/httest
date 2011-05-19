@@ -22,3 +22,4 @@ httest
 - Array variable
 - Hash variable, btw. the variables are hold in hash :)
 - Need more information on ssl failure
+- global vars can not resolve allready set vars on SET
