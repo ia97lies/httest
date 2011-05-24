@@ -2,9 +2,15 @@
 Changes with httest 2.0.8
   *) htntlm: Removed compile warnings
 
-  *) httest: automatic 100 continue support for requests.
+  *) httest: Automatic 100 continue support for requests.
 
-  *) user-guide: add httest version
+  *) httest: Ssl connect and accept command which can be run on a TCP
+             connection. With this command even POP3 with TLS is possible
+	     either for server or client.
+
+  *) httest: A global lock for synchronize CLIENT SERVER script parts.
+
+  *) user-guide: Add httest version
 
 
 Changes with httest 2.0.7

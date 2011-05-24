@@ -4626,6 +4626,46 @@ apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data) 
 }
 
 /**
+ * LOCK command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+apr_status_t command_LOCK(command_t *self, worker_t *worker, char *data) {
+  apr_status_t status;
+  COMMAND_NO_ARG;
+
+  if ((status = apr_thread_mutex_lock(worker->sync_mutex)) != APR_SUCCESS) {
+    return status;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * UNLOCK command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data) {
+  apr_status_t status;
+  COMMAND_NO_ARG;
+
+  if ((status = apr_thread_mutex_unlock(worker->sync_mutex)) != APR_SUCCESS) {
+    return status;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
  * Object thread data
  */
 
