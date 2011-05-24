@@ -446,14 +446,14 @@ apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, char
 }
 
 /**
- * Get method 
+ * Get client method 
  *
  * @param self IN thread object data
  * @param sslstr IN SSL|SSL2|SSL3|TLS1
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-int worker_set_method(worker_t * worker, char *sslstr) {
+int worker_set_client_method(worker_t * worker, char *sslstr) {
   int is_ssl = 0;
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
@@ -470,6 +470,35 @@ int worker_set_method(worker_t * worker, char *sslstr) {
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
     worker->meth = TLSv1_client_method();
+  }
+  return is_ssl;
+}
+
+/**
+ * Get server method 
+ *
+ * @param self IN thread object data
+ * @param sslstr IN SSL|SSL2|SSL3|TLS1
+ *
+ * @return APR_SUCCESS or APR_ECONNABORTED
+ */
+int worker_set_server_method(worker_t * worker, char *sslstr) {
+  int is_ssl = 0;
+  if (strcasecmp(sslstr, "SSL") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv23_server_method();
+  }
+  else if (strcasecmp(sslstr, "SSL2") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv2_server_method();
+  }
+  else if (strcasecmp(sslstr, "SSL3") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv3_server_method();
+  }
+  else if (strcasecmp(sslstr, "TLS1") == 0) {
+    is_ssl = 1;
+    worker->meth = TLSv1_server_method();
   }
   return is_ssl;
 }
@@ -1510,7 +1539,7 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
 #ifndef USE_SSL
 	return APR_SUCCESS;
 #else
-  is_ssl = worker_set_method(worker, sslstr);
+  is_ssl = worker_set_client_method(worker, sslstr);
   if (!is_ssl) {
     worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
     return APR_EGENERAL;
@@ -1554,8 +1583,71 @@ apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker,
 #endif
   }
   else {
-	  worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
-	  return APR_EGENERAL;
+    worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+    return APR_EGENERAL;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Do an ssl accept on a connected socket
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
+ * @param data IN aditional data
+ *
+ * @return an apr status
+ */
+apr_status_t command_SSL_ACCEPT(command_t *self, worker_t *worker, 
+		                char *data) {
+	char *copy;
+	char *last;
+	char *sslstr;
+  int is_ssl;
+
+  COMMAND_NEED_ARG("SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]");
+
+  sslstr = apr_strtok(copy, " ", &last);
+
+#ifndef USE_SSL
+  return APR_SUCCESS;
+#else
+  is_ssl = worker_set_server_method(worker, sslstr);
+  if (!is_ssl) {
+    worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
+    return APR_EGENERAL;
+  }
+  worker->socket->is_ssl = is_ssl;
+
+  if (worker->socket->socket_state == SOCKET_CONNECTED) {
+    if (worker->socket->is_ssl) {
+      char *cert;
+      char *key;
+      char *ca;
+      apr_status_t status;
+
+      cert = apr_strtok(NULL, " ", &last);
+      key = apr_strtok(NULL, " ", &last);
+      ca = apr_strtok(NULL, " ", &last);
+      if (!cert) {
+	cert = RSA_SERVER_CERT;
+      }
+      if (!key) {
+	key = RSA_SERVER_KEY;
+      }
+      if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
+	return status;
+      }
+
+      if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
+	return status;
+      }
+    }
+#endif
+  }
+  else {
+    worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+    return APR_EGENERAL;
   }
   return APR_SUCCESS;
 }
@@ -1610,7 +1702,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 
 #ifdef USE_SSL
   sslstr = apr_strtok(portstr, ":", &tag);
-  is_ssl = worker_set_method(worker, sslstr);
+  is_ssl = worker_set_client_method(worker, sslstr);
   if (!is_ssl) {
     portstr = sslstr;
   }
