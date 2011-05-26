@@ -3,17 +3,17 @@
 % =========================================
 
 \newpage
-\section{\_SSL\_CONNECT}
-\label{cmd:_SSL_CONNECT}
+\section{\_SSL\_ACCEPT}
+\label{cmd:_SSL_ACCEPT}
 
 \paragraph{Syntax:}
 \subparagraph{}
-\texttt{\_SSL\_CONNECT SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]}
+\texttt{\_SSL\_ACCEPT SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file> [ca-cert-file]]}
 
 \paragraph{Purpose:}
 \subparagraph{}
-Performs an SSL connect on an already existing TCP socket. This is usefule for protocols where
-the SSL handshake is done after some plain text exchange, for example pop3 TLS.
+Performs an SSL accept on an already accepted TCP socket. This is usefule for protocols where
+the SSL handshake is done after some plain text exchange, for example POP3 TLS server.
 
 \paragraph{Parameters:}
 \subparagraph{}
@@ -21,6 +21,6 @@ the SSL handshake is done after some plain text exchange, for example pop3 TLS.
 \texttt{SSL}, \texttt{SSL2}, \texttt{SSL3} or \texttt{TLS1}.
 
 \subparagraph{}
-\textit{\texttt{cert-file}}, \textit{\texttt{key-file}}: Optional; required 
+\textit{\texttt{cert-file}}, \textit{\texttt{key-file}}, \textit{\texttt{ca-cert-file}}: Optional; required 
 for SSL connections. 
 

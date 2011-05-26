@@ -12,6 +12,5 @@
 
 \paragraph{Purpose:}
 \subparagraph{}
-Stores the SSL session of this connection in a variable as a Base64 encoded string.
-
-% TODO: Was genau wird gespeichert? Unterschied zu \_SSL\_SESSION\_ID?
+Gets the SSL session of this connection and stores it in a variable as a Base64 encoded string.
+This session can be set with SSL\_SET\_SESSION for example to implement session reuse.
