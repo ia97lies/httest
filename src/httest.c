@@ -301,10 +301,10 @@ command_t local_commands[] = {
   "Wait for processes <name>*\n",
   COMMAND_FLAGS_NONE},
 #endif
-  {"_SLEEP", (command_f )command_SLEEP, "<milisecond>", 
+  {"_SLEEP", (command_f )command_SLEEP, "<miliseconds>", 
    "Sleep for defined amount of time",
   COMMAND_FLAGS_NONE},
-  {"_TIMEOUT", (command_f )command_TIMEOUT, "<milisecond", 
+  {"_TIMEOUT", (command_f )command_TIMEOUT, "<miliseconds>", 
    "Set socket timeout of current socket",
   COMMAND_FLAGS_NONE},
   {"_SET", (command_f )command_SET, "<variable>=<value>", 
