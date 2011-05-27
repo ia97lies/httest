@@ -94,6 +94,7 @@ EXTRA_DIST= \
 	ignore_body_space.htt \
 	incomplete.htt \
 	leftovertmpf.htt \
+	lock.htt \
 	loop_auto.htt \
 	loop.htt \
 	macro.htt \
@@ -129,7 +130,9 @@ EXTRA_DIST= \
 	pipe_recv_to_file.htt \
 	pipe_simple.htt \
 	pipe_to_file.htt \
+	plain2ssl.htt \
 	pop3_simple.htt \
+	pop3_tls.htt \
 	print_hex_match.htt \
 	process.hte \
 	process.htt \
@@ -172,6 +175,7 @@ EXTRA_DIST= \
 	ssl_mutual.hte \
 	ssl_mutual.htt \
 	ssl_mutual.txt \
+	ssl_plain_first.htt \
 	ssl_session_reuse.htt \
 	sslsimple2.htt \
 	sslsimple.htt \

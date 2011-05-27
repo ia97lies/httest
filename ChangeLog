@@ -6,7 +6,10 @@ Changes with httest 2.0.8
 
   *) httest: Ssl connect and accept command which can be run on a TCP
              connection. With this command even POP3 with TLS is possible
-	     either for server or client.
+	     either for server or client. The test pop3_tls.htt demonstrates
+	     the useage of this new commands.
+
+  *) httest: A global lock for synchronize CLIENT SERVER script parts.
 
   *) httest: A global lock for synchronize CLIENT SERVER script parts.
 
