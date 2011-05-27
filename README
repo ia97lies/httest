@@ -23,6 +23,11 @@ Build release
 Push to central repository
   git push --tags
 
+Build the windows binary. Get its sources 
+  ./generate_win_src.sh
+
+And copy the windows exe in this directory
+
 Upload release
 ./upload.sh <major>.<minor>.<maint>
 
