@@ -1,23 +1,68 @@
-Ideas for httest 2.0
-- Microkernel for network, compare, threads and cut
-- be able to emulate any TCP(/UDP) protocol for testing
-- httest commands can be construct out of this microkernel
-- Configuration file defines protocol and its test commands
-- Microkernel commands are directly accessible
-- Microkernel supports, functions, if, while, variables, context, threads, ....
-- Microkernel need support for ssl, asn.1, compress, crypto and many more
-- All procotols should log the same way to be able to expect/match the stream
+DATA FLOW FRAMEWORK
+-------------------
 
-What we need with in the syntax
-- Functions which automaticaly get a thread/process wide context
-- The process context must be protected with mutexes
-- Functions can be called with arguments like that
-  SERVER 8080
-  WAIT
-  REQ localhost SSL:443 client.key.pem client.cert.pem
-  ...
-  END
-- Function can be a body for more functions to call like SERVER, CLIENT, BLOCK, ...
-- Enviroment variables: system, process and thread with variables
+Simple Data Flow Object
+-----------------------
+data_flow_t
+  object_object_register
+  object_unobject_register
+  object_find
+  user_data_set
+  user_data_get
+  connect
+  close
+  accept
+  read
+  readln
+  write
+  writeln
 
+  ^  
+  |
+  +-------+-------+-------+-------+
+  |       |       |       |       |
+ tcp_t   ssl_t  reader_t http_t  .... 
+              
+
+Connect them together
+---------------------
+reader->object_register("cache", cache);
+cache->object_register("ssl", ssl);
+ssl->object_register("socket", socket);
+
+or that way
+
+reader->object_register("socket", socket);
+reader->object_register("ssl", socket);
+reader->object_register("cache", socket);
+
+Bind User Data to Object
+------------------------
+reader->user_data_set(reader, worker);
+worker_t *worker = reader->user_data_get(reader);
+
+Function Call Flow
+------------------
+reader->connect() --> cache->connect --> ssl->connect() --> socket->connect()
+reader->read() --> cache->read() --> ssl->read() --> socket->read()
+
+Function Signatures
+-------------------
+status = reader->connect(reader);
+status = reader->accept(reader);
+status = reader->read(reader, brigade, len);
+status = reader->readln(reader, brigade);
+status = reader->write(reader, brigade);
+status = reader->writeln(reader, brigade);
+
+HTTP Object
+-----------
+status = http->read(http, brigade, len);
+status = http->write(http, brigade);
+
+Remove an Object in the Chain
+-----------------------------
+data_flow_t *ssl = http->object_find("ssl");
+status = ssl->close(ssl);
+http->object_unregister(ssl);
 
