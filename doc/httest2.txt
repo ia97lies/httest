@@ -9,9 +9,11 @@ preparation for httest3 test microkernel.
 DATA FLOW FRAMEWORK
 -------------------
 
-Simple Data Flow Object
+Simple Stream Object
 -----------------------
-data_flow_t
+This object do handle streams
+
+stream_t
   object_object_register
   object_unobject_register
   object_find
@@ -70,7 +72,16 @@ status = http->write(http, brigade);
 
 Remove an Object in the Chain
 -----------------------------
-data_flow_t *ssl = http->object_find("ssl");
+stream_t *ssl = http->object_find("ssl");
 status = ssl->close(ssl);
 http->object_unregister(ssl);
+
+
+Match Object
+------------
+To expect and cut specific parts within a stream.
+
+match_t
+  regex_register
+  
 
