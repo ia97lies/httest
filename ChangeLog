@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.9
+  *) httest: Send hex digits as binary data, usefull for binary protocol
+             testing.
+
+
 Changes with httest 2.0.8
   *) htntlm: Removed compile warnings
 

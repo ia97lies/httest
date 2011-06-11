@@ -215,6 +215,9 @@ command_t local_commands[] = {
   {"_-", (command_f )command_NOCRLF, "<string>", 
   "Same like __ but no CRLF at the end of line",
   COMMAND_FLAGS_NONE},
+  {"_X", (command_f )command_BIN_DATA, "<hex digits>", 
+  "Send hex digits as binary data",
+  COMMAND_FLAGS_NONE},
   {"_FLUSH", (command_f )command_FLUSH, "", 
   "Flush the cached lines, \n"
   "the AUTO Content-Length calculation will take place here",
