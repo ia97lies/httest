@@ -144,7 +144,7 @@ struct worker_s {
 #ifdef USE_SSL
   int is_ssl;
   SSL_CTX *ssl_ctx;
-  const SSL_METHOD *meth;
+  SSL_METHOD *meth;
   BIO *bio_out;
   BIO *bio_err;
   char *ssl_info;
@@ -288,6 +288,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker, char *data);
 apr_status_t command_GREP(command_t * self, worker_t * worker, char *data);
 apr_status_t command_SET(command_t * self, worker_t * worker, char *data);
 apr_status_t command_DATA(command_t * self, worker_t * worker, char *data);
+apr_status_t command_BIN_DATA(command_t * self, worker_t * worker, char *data);
 apr_status_t command_FLUSH(command_t * self, worker_t * worker, char *data);
 apr_status_t command_CHUNK(command_t * self, worker_t * worker, char *data);
 apr_status_t command_EXEC(command_t * self, worker_t * worker, char *data);

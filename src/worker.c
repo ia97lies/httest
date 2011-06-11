@@ -2384,8 +2384,6 @@ apr_status_t command_BIN_DATA(command_t *self, worker_t *worker, char *data) {
   apr_size_t len;
   apr_size_t i;
 
-  apr_status_t status = APR_SUCCESS;
-
   if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
@@ -2409,8 +2407,8 @@ apr_status_t command_BIN_DATA(command_t *self, worker_t *worker, char *data) {
 
   for (i = 0; i < len; i++) {
     char hex[3];
-    hex[0] = copy[len * 2];
-    hex[1] = copy[len * 2 + 1];
+    hex[0] = copy[i * 2];
+    hex[1] = copy[i * 2 + 1];
     hex[2] = 0;
     buf[i] = (char )apr_strtoi64(hex, NULL, 16);
   }
@@ -2418,7 +2416,7 @@ apr_status_t command_BIN_DATA(command_t *self, worker_t *worker, char *data) {
   apr_table_addn(worker->cache, 
 		 apr_psprintf(worker->pcache, "NOCRLF:%d", len), buf);
 
-  return status;
+  return APR_SUCCESS;
 }
 
 /**
