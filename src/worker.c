@@ -4729,7 +4729,7 @@ apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data) {
  */
 apr_status_t worker_new(worker_t ** self, char *additional,
                         char *prefix, global_t *global, 
-			interpret_f interpret) {
+			interpret_f function) {
   apr_pool_t *p;
 
   apr_pool_create(&p, NULL);
@@ -4741,7 +4741,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->pcache = p;
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
-  (*self)->interpret = interpret;
+  (*self)->interpret = function;
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
@@ -4777,8 +4777,8 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->retvars = apr_table_make(p, 4);
   (*self)->locals = apr_table_make(p, 4);
   (*self)->vars = my_table_deep_copy(p, global->vars);
-  (*self)->modules = global->modules;
-  (*self)->blocks = global->blocks;
+  (*self)->modules = apr_hash_copy(p, global->modules);
+  (*self)->blocks = apr_hash_copy(p, global->blocks);
   (*self)->start_time = apr_time_now();
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;

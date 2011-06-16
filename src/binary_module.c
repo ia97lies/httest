@@ -43,9 +43,9 @@ static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
     return APR_ENOSOCKET;
   }
     
-  copy = apr_pstrdup(worker->pbody, data); 
+  copy = apr_table_get(worker->params, "1"); 
   copy = worker_replace_vars(worker, copy);
-  worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
+  worker_log(worker, LOG_CMD, "_BINARY.SEND %s", copy); 
   apr_collapse_spaces(copy, copy);
 
   /* callculate buf len */
@@ -81,7 +81,7 @@ static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
  ***********************************************************************/
 apr_status_t binary_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "BINARY", "SEND", 
+  if ((status = module_command_new(global, "BINARY", "_SEND", 
 	                           command_SEND)) != APR_SUCCESS) {
     return status;
   }

@@ -1305,7 +1305,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     if (call->log_mode == LOG_CMD) {
       call->log_mode = LOG_INFO;
     }
-    status = worker->interpret(call, worker);
+    status = block->interpret(call, worker);
     call->log_mode = log_mode;
     cmd = worker->cmd;
     lines = worker->lines;

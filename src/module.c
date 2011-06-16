@@ -69,12 +69,12 @@
  * Implementation
  ***********************************************************************/
 apr_status_t module_command_new(global_t *global, const char *module, 
-                                const char *command, interpret_f interpret) {
+                                const char *command, interpret_f function) {
   apr_status_t status;
   worker_t *worker;
   apr_hash_t *blocks;
 
-  if ((status = worker_new(&worker, "", "", global, interpret)) != APR_SUCCESS) {
+  if ((status = worker_new(&worker, "", "", global, function)) != APR_SUCCESS) {
     return status;
   }
 
@@ -84,7 +84,7 @@ apr_status_t module_command_new(global_t *global, const char *module,
   }
 
   /* add workers to commands hash */
-    apr_hash_set(blocks, command, APR_HASH_KEY_STRING, worker);
+  apr_hash_set(blocks, command, APR_HASH_KEY_STRING, worker);
   return APR_SUCCESS;
 }
 
