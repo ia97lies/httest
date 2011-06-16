@@ -33,7 +33,46 @@
 /************************************************************************
  * Globals 
  ***********************************************************************/
-apr_status_t command_HTON(worker_t * worker, worker_t *parent) {
+static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
+  char *copy;
+  char *buf;
+  apr_size_t len;
+  apr_size_t i;
+
+  if (!worker->socket || !worker->socket->socket) {
+    return APR_ENOSOCKET;
+  }
+    
+  copy = apr_pstrdup(worker->pbody, data); 
+  copy = worker_replace_vars(worker, copy);
+  worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
+  apr_collapse_spaces(copy, copy);
+
+  /* callculate buf len */
+  len = strlen(copy);
+  if (len && len%2 != 1) {
+    len /= 2;
+  }
+  else {
+    worker_log_error(worker, "Binary data must have an equal number of digits");
+    return APR_EINVAL;
+  }
+
+  buf = apr_pcalloc(worker->pcache, len);
+
+  for (i = 0; i < len; i++) {
+    char hex[3];
+    hex[0] = copy[i * 2];
+    hex[1] = copy[i * 2 + 1];
+    hex[2] = 0;
+    buf[i] = (char )apr_strtoi64(hex, NULL, 16);
+  }
+
+  apr_table_addn(worker->cache, 
+		 apr_psprintf(worker->pcache, "NOCRLF:%d", len), buf);
+
+  return APR_SUCCESS;
+
   return APR_SUCCESS;
 }
 
@@ -42,8 +81,8 @@ apr_status_t command_HTON(worker_t * worker, worker_t *parent) {
  ***********************************************************************/
 apr_status_t binary_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "BINARY", "HTON", 
-	                           command_HTON)) != APR_SUCCESS) {
+  if ((status = module_command_new(global, "BINARY", "SEND", 
+	                           command_SEND)) != APR_SUCCESS) {
     return status;
   }
   return APR_SUCCESS;

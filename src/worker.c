@@ -4716,55 +4716,6 @@ apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data) {
 }
 
 /**
- * HTON command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN <16|32|64> <number>
- *
- * @return APR_SUCCESS or apr error code
- */
-apr_status_t command_HTON(command_t *self, worker_t *worker, char *data) {
-  char *copy;
-  char *last;
-  char *bytes;
-  char *number;
-  char *variable;
-
-  COMMAND_NEED_ARG("16|32|64 <integer> <variable>");
-
-  bytes = apr_strtok(copy, " ", &last);
-  number = apr_strtok(NULL, " ", &last);
-  if (!number) {
-    worker_log_error(worker, "missing integer");
-    return APR_EINVAL;
-  }
-  variable = apr_strtok(NULL, " ", &last);
-  if (!variable) {
-    worker_log_error(worker, "missing variable to store new value");
-    return APR_EINVAL;
-  }
-
-  if (strcmp(bytes, "16") == 0) {
-    apr_uint16_t len = atoi(number);
-    apr_uint16_t new_len = htons(len);
-
-    fprintf(stderr, "\nXXX %20x\n", new_len);
-    fflush(stderr);
-  }
-  else if (strcmp(bytes, "32") == 0) {
-  }
-  else if (strcmp(bytes, "64") == 0) {
-  }
-  else {
-    worker_log_error(worker, "\"%s\" not supported by HTON", bytes);
-    return APR_EINVAL;
-  }
-
-  return APR_SUCCESS;
-}
-
-/**
  * Object thread data
  */
 

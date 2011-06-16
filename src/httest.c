@@ -85,6 +85,7 @@
 #include "util.h"
 #include "ssl.h"
 #include "worker.h"
+#include "module.h"
 
 /************************************************************************
  * Defines 
@@ -97,6 +98,8 @@
 /************************************************************************
  * Globals 
  ***********************************************************************/
+extern module_t modules[];
+
 static apr_status_t command_EXIT(command_t * self, worker_t * worker, 
                                  char *data);
 static apr_status_t command_IF(command_t * self, worker_t * worker,
@@ -2666,7 +2669,14 @@ static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
       != APR_SUCCESS) {
     return status;
   }
-  
+    
+  /**
+   * Initialize registered modules
+   */
+  for(i = 0; modules[i].module_init; i++) {
+    modules[i].module_init(global);
+  }
+
   process_global = global;
   
   apr_file_name_get(&global->filename, fp);
