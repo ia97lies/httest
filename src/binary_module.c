@@ -24,19 +24,7 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <apr.h>
-#include <apr_lib.h>
-#include <apr_errno.h>
-#include <apr_strings.h>
-
 #include "module.h"
-#include "defines.h"
-#include "worker.h"
-
 
 /************************************************************************
  * Definitions 
@@ -45,9 +33,19 @@
 /************************************************************************
  * Globals 
  ***********************************************************************/
+apr_status_t command_HTON(worker_t * worker, worker_t *parent) {
+  return APR_SUCCESS;
+}
 
 /************************************************************************
  * Implementation
  ***********************************************************************/
-
+apr_status_t binary_module_init(global_t *global) {
+  apr_status_t status;
+  if ((status = module_command_new(global, "BINARY", "HTON", 
+	                           command_HTON)) != APR_SUCCESS) {
+    return status;
+  }
+  return APR_SUCCESS;
+}
 
