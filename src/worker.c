@@ -354,7 +354,7 @@ void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
 	 hexbuf = apr_psprintf(pool, "%02X", (*buf)[j]);
       }
       else {
-	 hexbuf = apr_psprintf(pool, "%s%02X", hexbuf, (*buf)[j]);
+	 hexbuf = apr_psprintf(pool, "%s %02X", hexbuf, (*buf)[j]);
       }
     }
     *buf = apr_pstrdup(self->pbody, hexbuf);
@@ -1071,8 +1071,8 @@ static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, vo
   return NULL;
 }
 
-static apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, 
-                                      char *buf, apr_size_t len) {
+apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
+                               apr_size_t len) {
   apr_status_t status = APR_SUCCESS;
   apr_size_t inlen;
   apr_exit_why_e exitwhy;
@@ -2365,56 +2365,6 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   else {
     apr_table_add(worker->cache, "PLAIN", copy);
   }
-
-  return APR_SUCCESS;
-}
-
-/**
- * BIN_DATA command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN bin data (hex digit) to send
- *
- * @return APR_SUCCESS or apr error code
- */
-apr_status_t command_BIN_DATA(command_t *self, worker_t *worker, char *data) {
-  char *copy;
-  char *buf;
-  apr_size_t len;
-  apr_size_t i;
-
-  if (!worker->socket || !worker->socket->socket) {
-    return APR_ENOSOCKET;
-  }
-    
-  copy = apr_pstrdup(worker->pbody, data); 
-  copy = worker_replace_vars(worker, copy);
-  worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
-  apr_collapse_spaces(copy, copy);
-
-  /* callculate buf len */
-  len = strlen(copy);
-  if (len && len%2 != 1) {
-    len /= 2;
-  }
-  else {
-    worker_log_error(worker, "Binary data must have an equal number of digits");
-    return APR_EINVAL;
-  }
-
-  buf = apr_pcalloc(worker->pcache, len);
-
-  for (i = 0; i < len; i++) {
-    char hex[3];
-    hex[0] = copy[i * 2];
-    hex[1] = copy[i * 2 + 1];
-    hex[2] = 0;
-    buf[i] = (char )apr_strtoi64(hex, NULL, 16);
-  }
-
-  apr_table_addn(worker->cache, 
-		 apr_psprintf(worker->pcache, "NOCRLF:%d", len), buf);
 
   return APR_SUCCESS;
 }

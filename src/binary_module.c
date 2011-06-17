@@ -33,7 +33,16 @@
 /************************************************************************
  * Globals 
  ***********************************************************************/
-static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
+/**
+ * SEND HEX strings as binary data
+ *
+ * @param worker IN 
+ * @param parent IN
+ *
+ * @return APR_SUCCESS or an APR error
+ */
+static apr_status_t command_BINARY_SEND(worker_t * worker, worker_t *parent) {
+  const char *data;
   char *copy;
   char *buf;
   apr_size_t len;
@@ -43,7 +52,8 @@ static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
     return APR_ENOSOCKET;
   }
     
-  copy = apr_table_get(worker->params, "1"); 
+  data = apr_table_get(worker->params, "1"); 
+  copy = apr_pstrdup(worker->pbody, data);
   copy = worker_replace_vars(worker, copy);
   worker_log(worker, LOG_CMD, "_BINARY.SEND %s", copy); 
   apr_collapse_spaces(copy, copy);
@@ -72,8 +82,73 @@ static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
 		 apr_psprintf(worker->pcache, "NOCRLF:%d", len), buf);
 
   return APR_SUCCESS;
+}
 
-  return APR_SUCCESS;
+/**
+ * RECV binary data and makes a hex dump
+ *
+ * @param worker IN 
+ * @param parent IN
+ *
+ * @return APR_SUCCESS or an APR error
+ */
+static apr_status_t command_BINARY_RECV(worker_t * worker, worker_t *parent) {
+  char *copy;
+  apr_pool_t *pool;
+  apr_status_t status;
+  apr_size_t recv_len;
+  apr_size_t peeklen;
+  sockreader_t *sockreader;
+  char *buf;
+  char *last;
+  const char *val;
+  int j;
+
+  int poll = 0;
+
+  val = apr_table_get(worker->params, "1");
+  /* must be a number */
+  recv_len = apr_atoi64(val);
+
+  apr_pool_create(&pool, NULL);
+
+  if (worker->sockreader == NULL) {
+    peeklen = worker->socket->peeklen;
+    worker->socket->peeklen = 0;
+    if ((status = sockreader_new(&sockreader, worker->socket->socket,
+#ifdef USE_SSL
+				 worker->socket->is_ssl ? worker->socket->ssl : NULL,
+#endif
+				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
+      goto out_err;
+    }
+  }
+  else {
+    sockreader = worker->sockreader;
+  }
+
+  if ((status = content_length_reader(sockreader, &buf, &recv_len, "")) != APR_SUCCESS) {
+    if (poll && APR_STATUS_IS_INCOMPLETE(status)) {
+      status = APR_SUCCESS;
+    }
+    else {
+      goto out_err;
+    }
+  }
+
+  worker->flags |= FLAGS_PRINT_HEX;
+  if ((status = worker_handle_buf(worker, pool, buf, recv_len)) 
+      != APR_SUCCESS) {
+    goto out_err;
+  }
+
+out_err:
+  if (strcasecmp(last, "DO_NOT_CHECK") != 0) {
+    status = worker_check_expect(worker, status);
+  }
+  apr_pool_destroy(pool);
+
+  return status;
 }
 
 /************************************************************************
@@ -82,7 +157,11 @@ static apr_status_t command_SEND(worker_t * worker, worker_t *parent) {
 apr_status_t binary_module_init(global_t *global) {
   apr_status_t status;
   if ((status = module_command_new(global, "BINARY", "_SEND", 
-	                           command_SEND)) != APR_SUCCESS) {
+	                           command_BINARY_SEND)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "BINARY", "_RECV", 
+	                           command_BINARY_RECV)) != APR_SUCCESS) {
     return status;
   }
   return APR_SUCCESS;

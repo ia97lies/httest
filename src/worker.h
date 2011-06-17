@@ -274,6 +274,8 @@ struct command_s {
 apr_status_t worker_new(worker_t ** self, char *additional,
                         char *prefix, global_t *global, interpret_f interpret);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
+apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
+                               apr_size_t len); 
 
 /** commands */
 apr_status_t command_REQ(command_t * self, worker_t * worker, char *data);
