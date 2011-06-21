@@ -813,6 +813,8 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
   memset(&global, 0, sizeof(global));
   global.log_mode = self->log_mode;
   global.socktmo = 1000 * 300000;
+  global.modules = apr_hash_make(self->pool);
+  global.blocks = apr_hash_make(self->pool);
   
   if ((status = worker_new(&server, "", "", &global, NULL)) != APR_SUCCESS) {
     apr_thread_exit(thread, status);
@@ -1165,6 +1167,8 @@ int proxy(self_t *self) {
   memset(&global, 0, sizeof(global));
   global.log_mode = self->log_mode;
   global.socktmo = 1000 * 300000;
+  global.modules = apr_hash_make(self->pool);
+  global.blocks = apr_hash_make(self->pool);
   
   if ((status = worker_new(&listener, "", "", &global, NULL)) != APR_SUCCESS) {
     return status;

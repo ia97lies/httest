@@ -1510,6 +1510,7 @@ void worker_finally(worker_t *self, apr_status_t status) {
     if (local_commands[k].func) {
       mode = self->log_mode;
       self->log_mode = 0;
+      self->blocks = apr_hash_get(self->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(self->blocks, "FINALLY", APR_HASH_KEY_STRING)) {
 	local_commands[k].func(&local_commands[k], self, "FINALLY");
       }
@@ -2363,7 +2364,6 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   prev_filename = global->filename;
   global->filename = argv[i];
   status = interpret_recursiv(fp, global);
-  /* TODO reset module name */
   if (!(global->blocks = apr_hash_get(global->modules, "DEFAULT", APR_HASH_KEY_STRING))) {
     fprintf(stderr, "\nDEFAULT module not found?!\n");
     return APR_EGENERAL;

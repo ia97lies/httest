@@ -100,7 +100,6 @@ static apr_status_t command_BINARY_RECV(worker_t * worker, worker_t *parent) {
   apr_size_t peeklen;
   sockreader_t *sockreader;
   char *buf;
-  char *last;
   const char *val;
   int j;
 
@@ -143,9 +142,7 @@ static apr_status_t command_BINARY_RECV(worker_t * worker, worker_t *parent) {
   }
 
 out_err:
-  if (strcasecmp(last, "DO_NOT_CHECK") != 0) {
-    status = worker_check_expect(worker, status);
-  }
+  status = worker_check_expect(worker, status);
   apr_pool_destroy(pool);
 
   return status;

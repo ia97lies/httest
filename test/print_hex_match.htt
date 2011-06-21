@@ -7,7 +7,7 @@ __Host: $YOUR_HOST
 __User-Agent: mozilla
 __
 _EXPECT . "HTTP/1.1 200 OK"
-_EXPECT . "4153310D0A"
+_EXPECT . "41 53 31 0D 0A"
 _PRINT_HEX on
 _WAIT
 _PRINT_HEX off
