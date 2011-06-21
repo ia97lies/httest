@@ -1,7 +1,9 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest 2.0.9
-  *) httest: Send hex digits as binary data, usefull for binary protocol
-             testing.
+Changes with httest 2.1.0
+  *) httest: Support for capsulating new features with in modules.
+
+  *) httest: Send/receive hex digits as binary data, usefull for binary
+             protocol testing. Implemented as a httest module.
 
 
 Changes with httest 2.0.8
