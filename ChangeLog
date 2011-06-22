@@ -1,9 +1,18 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.1.0
-  *) httest: Support for capsulating new features with in modules.
+  *) httest: Support for capsulating new features into modules.
 
   *) httest: Send/receive hex digits as binary data, usefull for binary
              protocol testing. Implemented as a httest module.
+
+  *) httest: SSL operations capsulated in a httest module. Mark old SSL
+             related calls opsolete.
+
+  *) httest: Add AUTO variable support. Base for various features around
+             data length calculation.
+
+  *) httest: Add a migration script for old httest scripts. Obsolet calls will
+             vanish in the httest 2.2.0.
 
 
 Changes with httest 2.0.8

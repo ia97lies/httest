@@ -2870,7 +2870,7 @@ static void show_commands(apr_pool_t *p, global_t *global) {
 	for (hi = apr_hash_first(p, block); hi; hi = apr_hash_next(hi)) {
 	  apr_hash_this(hi, (const void **)&command, NULL, (void **)&worker);
 	  if (command) {
-	    ++command; /* skip _ */
+	    ++command; /* skip "_" */
 	    line = apr_psprintf(p, "_%s:%s %s", module, command, 
 		    worker->short_desc?worker->short_desc:"");
 	    SKM_sk_push(char, sorted, line);
@@ -2879,6 +2879,7 @@ static void show_commands(apr_pool_t *p, global_t *global) {
       }
     }
   }
+  SKM_sk_sort(char, sorted);
 
   line = SKM_sk_pop(char, sorted);  
   while (line) {
