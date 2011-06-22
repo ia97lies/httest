@@ -74,13 +74,13 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
  ***********************************************************************/
 apr_status_t ssl_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "SSL", "_CONNECT", "",
+  if ((status = module_command_new(global, "SSL", "_CONNECT", "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to establish a ssl "
 				   "connection on it.",
 	                           block_SSL_CONNECT)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_ACCEPT", "",
+  if ((status = module_command_new(global, "SSL", "_ACCEPT", "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to accept a ssl "
 				   "connection on it.",
 	                           block_SSL_ACCEPT)) != APR_SUCCESS) {
