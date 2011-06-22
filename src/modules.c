@@ -18,8 +18,10 @@
 extern module_t modules[];
 
 apr_status_t binary_module_init(global_t *global);
+apr_status_t ssl_module_init(global_t *global);
 
 module_t modules[] = {
   { binary_module_init },
+  { ssl_module_init },
   { NULL }
 };

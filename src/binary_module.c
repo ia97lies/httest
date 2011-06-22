@@ -72,7 +72,7 @@ static apr_status_t __BINARY_SEND(worker_t * worker, const char *copy) {
   return APR_SUCCESS;
 }
 
-static apr_status_t command_BINARY_SEND(worker_t * worker, worker_t *parent) {
+static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent) {
   apr_status_t status;
   const char *data;
   char *copy;
@@ -108,7 +108,7 @@ error:
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t command_BINARY_RECV(worker_t * worker, worker_t *parent) {
+static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent) {
   char *copy;
   apr_pool_t *pool;
   apr_status_t status;
@@ -171,12 +171,12 @@ apr_status_t binary_module_init(global_t *global) {
   apr_status_t status;
   if ((status = module_command_new(global, "BINARY", "_SEND", "<hex-digits>*",
 	                           "send hex digits as binary data",
-	                           command_BINARY_SEND)) != APR_SUCCESS) {
+	                           block_BINARY_SEND)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "BINARY", "_RECV", "<number-of-bytes>",
 	                           "prints received data as hex digit",
-	                           command_BINARY_RECV)) != APR_SUCCESS) {
+	                           block_BINARY_RECV)) != APR_SUCCESS) {
     return status;
   }
   return APR_SUCCESS;
