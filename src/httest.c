@@ -2856,6 +2856,7 @@ static void show_commands(apr_pool_t *p, global_t *global) {
   }
 
   fprintf(stdout, "\n\nModule commands");
+  sorted = SKM_sk_new(char, commands_compare);
   {
     apr_hash_index_t *hi;
     const char *module;
@@ -2870,13 +2871,20 @@ static void show_commands(apr_pool_t *p, global_t *global) {
 	  apr_hash_this(hi, (const void **)&command, NULL, (void **)&worker);
 	  if (command) {
 	    ++command; /* skip _ */
-	    fprintf(stdout, "\n");
-	    fprintf(stdout, "\t_%s:%s %s", module, command, 
+	    line = apr_psprintf(p, "_%s:%s %s", module, command, 
 		    worker->short_desc?worker->short_desc:"");
+	    SKM_sk_push(char, sorted, line);
 	  }
 	}
       }
     }
+  }
+
+  line = SKM_sk_pop(char, sorted);  
+  while (line) {
+    fprintf(stdout, "\n");
+    fprintf(stdout, "\t%s", line);
+    line = SKM_sk_pop(char, sorted);  
   }
 
   fprintf(stdout, "\n\n(Get detailed help with --help-command <command>)\n");
