@@ -15,3 +15,22 @@
 Automatically handles incoming cookies, so that they are sent 
 with the next request on the same connection they were received on. 
 Does not check cookie expiration or path.
+This only works if the header "\texttt{Cookie: AUTO}" is available in the request.
+
+\begin{usplisting}
+    _AUTO_COOKIE on
+
+    _REQ localhost 8080
+    __GET / HTTP/1.1
+    __Host: localhost
+    __Cookie: AUTO
+    __
+    _WAIT
+
+    _REQ localhost 8080
+    __GET /foo HTTP/1.1
+    __Host: localhost
+    __Cookie: AUTO
+    __
+    _WAIT
+\end{usplisting}
