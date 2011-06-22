@@ -260,7 +260,9 @@ void worker_log_buf(worker_t * self, int log_mode, char *buf,
   }
   if (self->log_mode >= log_mode) {
     i = 0;
-    fprintf(fd, "\n%s%s", self->prefix, prefix);
+    if (prefix) {
+      fprintf(fd, "\n%s%s", self->prefix, prefix);
+    }
     while (i < len) {
       while (i < len && buf[i] != '\r' && buf[i] != '\n') {
 	if (buf[i] >= 0x20) {
@@ -4989,6 +4991,7 @@ apr_status_t worker_socket_send(worker_t *self, char *buf,
 apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) {
   int i;
   int len;
+  int nocrlf = 0;
 
   apr_status_t status = APR_SUCCESS;
 
@@ -5010,12 +5013,28 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
   for (i = from; i < to; ++i) {
     if (strncasecmp(e[i].key, "NOCRLF:", 7) == 0) { 
       len = apr_atoi64(&e[i].key[7]);
-      worker_log_buf(self, LOG_INFO, e[i].val, ">", len);
+      if (nocrlf) {
+	worker_log_buf(self, LOG_INFO, e[i].val, NULL, len);
+      }
+      else {
+	worker_log_buf(self, LOG_INFO, e[i].val, ">", len);
+      }
+      nocrlf = 1;
     }
+    else if (strcasecmp(e[i].key, "NOCRLF") == 0) {
+      len = strlen(e[i].val);
+      if (nocrlf) {
+	worker_log_buf(self, LOG_INFO, e[i].val, NULL, len);
+      }
+      else {
+	worker_log_buf(self, LOG_INFO, e[i].val, ">", len);
+      }
+      nocrlf = 1;
+    } 
     else {
       len = strlen(e[i].val);
-      worker_log(self, LOG_INFO, ">%s %s", e[i].val, 
-	         strcasecmp(e[i].key, "NOCRLF") ? "" : e[i].key);
+      worker_log(self, LOG_INFO, ">%s", e[i].val);
+      nocrlf = 0;
     }
 
     if ((status = worker_socket_send(self, e[i].val, len)) 

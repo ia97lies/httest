@@ -100,6 +100,8 @@ struct worker_s {
   char *prefix;
   char *additional;
   char *file_and_line;
+  const char *short_desc;
+  const char *desc;
   int chunksize;
   apr_size_t sent;
   int req_cnt;

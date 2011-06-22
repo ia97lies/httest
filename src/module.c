@@ -69,7 +69,8 @@
  * Implementation
  ***********************************************************************/
 apr_status_t module_command_new(global_t *global, const char *module, 
-                                const char *command, interpret_f function) {
+                                const char *command, const char *short_desc, 
+				const char *desc, interpret_f function) {
   apr_status_t status;
   worker_t *worker;
   apr_hash_t *blocks;
@@ -77,6 +78,9 @@ apr_status_t module_command_new(global_t *global, const char *module,
   if ((status = worker_new(&worker, "", "", global, function)) != APR_SUCCESS) {
     return status;
   }
+
+  worker->short_desc = short_desc;
+  worker->desc = desc;
 
   if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
     blocks = apr_hash_make(global->pool);

@@ -100,6 +100,10 @@
  ***********************************************************************/
 extern module_t modules[];
 
+static void show_commands(apr_pool_t *p, global_t *global); 
+static void show_command_help(apr_pool_t *p, global_t *global, 
+                              const char *command); 
+
 static apr_status_t command_EXIT(command_t * self, worker_t * worker, 
                                  char *data);
 static apr_status_t command_IF(command_t * self, worker_t * worker,
@@ -2653,7 +2657,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
  * @return an apr status
  */
 static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
-                              int log_mode, apr_pool_t * p) {
+                              int log_mode, apr_pool_t * p, char *additional) {
   apr_status_t status;
   apr_status_t retstat = APR_SUCCESS;
   apr_table_entry_t *e;
@@ -2672,6 +2676,20 @@ static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
    */
   for(i = 0; modules[i].module_init; i++) {
     modules[i].module_init(global);
+  }
+
+  /* must be that late for builtin modules */
+  /* for modules in includes it must be even later */
+  if (log_mode == -1) {
+    show_commands(p, global);
+    return APR_SUCCESS;
+  }
+
+  /* must be that late for builtin modules */
+  /* for modules in includes it must be even later */
+  if (log_mode == -2) {
+    show_command_help(p, global, additional); 
+    return APR_SUCCESS;
   }
 
   process_global = global;
@@ -2788,7 +2806,7 @@ static int commands_compare(const char * const * right,
  *
  * @param p IN pool
  */
-static void show_commands(apr_pool_t *p) {
+static void show_commands(apr_pool_t *p, global_t *global) {
   int i;
   STACK_OF(char) *sorted;
   char *line;
@@ -2837,6 +2855,30 @@ static void show_commands(apr_pool_t *p) {
     line = SKM_sk_pop(char, sorted);  
   }
 
+  fprintf(stdout, "\n\nModule commands");
+  {
+    apr_hash_index_t *hi;
+    const char *module;
+    apr_hash_t *block;
+    for (hi = apr_hash_first(p, global->modules); hi; hi = apr_hash_next(hi)) {
+      apr_hash_this(hi, (const void **)&module, NULL, (void **)&block);
+      if (strcmp(module, "DEFAULT") != 0 && block) {
+	const char *command;
+	apr_hash_index_t *hi;
+	worker_t *worker;
+	for (hi = apr_hash_first(p, block); hi; hi = apr_hash_next(hi)) {
+	  apr_hash_this(hi, (const void **)&command, NULL, (void **)&worker);
+	  if (command) {
+	    ++command; /* skip _ */
+	    fprintf(stdout, "\n");
+	    fprintf(stdout, "\t_%s:%s %s", module, command, 
+		    worker->short_desc?worker->short_desc:"");
+	  }
+	}
+      }
+    }
+  }
+
   fprintf(stdout, "\n\n(Get detailed help with --help-command <command>)\n");
   fflush(stdout);
   exit(0);
@@ -2848,7 +2890,9 @@ static void show_commands(apr_pool_t *p) {
  * @param pool IN pool
  * @param command IN command name
  */
-static void show_command_help(apr_pool_t *p, const char *command) {
+static void show_command_help(apr_pool_t *p, global_t *global, 
+                              const char *command) {
+  char *last;
   int i;
 
   for (i = 0; global_commands[i].name; i++) {
@@ -2862,6 +2906,45 @@ static void show_command_help(apr_pool_t *p, const char *command) {
       print_command_formated(p, local_commands[i]);
       goto exit;
     }
+  }
+
+  if ((last = strchr(command, ':'))) {
+    char *last;
+    char *module;
+    char *block_name;
+    char *copy;
+    apr_hash_t *blocks;
+    worker_t *worker;
+
+    copy = apr_pstrdup(p, command);
+    /* determine module if any */
+    module = apr_strtok(copy, ":", &last);
+    /* always jump over prefixing "_" */
+    module++;
+    block_name = apr_pstrcat(p, "_", last, NULL);
+    if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
+      fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+      goto exit;
+    }
+    block_name = apr_pstrcat(p, "_", last, NULL);
+    if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
+      fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+      goto exit;
+    }
+    else {
+      char *help;
+      char *val;
+      char *last;
+      fprintf(stdout, "%s %s", command, worker->short_desc?worker->short_desc:"");
+      help = apr_pstrdup(p, worker->desc);
+      val = apr_strtok(help, "\n", &last);
+      while (val) {
+	fprintf(stdout, "\n\t%s", val);
+	val = apr_strtok(NULL, "\n", &last);
+      }
+      goto exit;
+    }
+
   }
 
   fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
@@ -2980,10 +3063,10 @@ int main(int argc, const char *const argv[]) {
       log_mode = LOG_ALL_CMD;
       break;
     case 'L':
-      show_commands(pool);
+      interpret(NULL, NULL, -1, pool, NULL);
       break;
     case 'C':
-      show_command_help(pool, apr_pstrdup(pool, optarg)); 
+      interpret(NULL, NULL, -2, pool, apr_pstrdup(pool, optarg));
       exit(0);
       break;
     case 'T':
@@ -3002,7 +3085,7 @@ int main(int argc, const char *const argv[]) {
   }
 
   /* test at least one file */
-  if (!(flags & MAIN_FLAGS_USE_STDIN) && !(argc - opt->ind)) {
+  if (!log_mode == -1 && !(flags & MAIN_FLAGS_USE_STDIN) && !(argc - opt->ind)) {
     fprintf(stderr, "%s: wrong number of arguments\n\n", filename(pool, 
 	    argv[0]));
     fprintf(stderr, "try \"%s --help\" to get more information\n", filename(pool, argv[0]));
@@ -3081,7 +3164,7 @@ int main(int argc, const char *const argv[]) {
     vars_table = apr_table_make(pool, 20);
 
     /* interpret current file */
-    if ((status = interpret(fp, vars_table, log_mode, pool)) != APR_SUCCESS) {
+    if ((status = interpret(fp, vars_table, log_mode, pool, NULL)) != APR_SUCCESS) {
       success = 0;
       exit(1);
     }

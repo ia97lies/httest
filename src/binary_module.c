@@ -34,29 +34,17 @@
  * Globals 
  ***********************************************************************/
 /**
- * SEND HEX strings as binary data
+ * SEND HEX string as binary data
  *
  * @param worker IN 
  * @param parent IN
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t command_BINARY_SEND(worker_t * worker, worker_t *parent) {
-  const char *data;
-  char *copy;
-  char *buf;
+static apr_status_t __BINARY_SEND(worker_t * worker, const char *copy) {
   apr_size_t len;
+  char *buf;
   apr_size_t i;
-
-  if (!worker->socket || !worker->socket->socket) {
-    return APR_ENOSOCKET;
-  }
-    
-  data = apr_table_get(worker->params, "1"); 
-  copy = apr_pstrdup(worker->pbody, data);
-  copy = worker_replace_vars(worker, copy);
-  worker_log(worker, LOG_CMD, "_BINARY.SEND %s", copy); 
-  apr_collapse_spaces(copy, copy);
 
   /* callculate buf len */
   len = strlen(copy);
@@ -82,6 +70,34 @@ static apr_status_t command_BINARY_SEND(worker_t * worker, worker_t *parent) {
 		 apr_psprintf(worker->pcache, "NOCRLF:%d", len), buf);
 
   return APR_SUCCESS;
+}
+
+static apr_status_t command_BINARY_SEND(worker_t * worker, worker_t *parent) {
+  apr_status_t status;
+  const char *data;
+  char *copy;
+  apr_size_t i;
+  apr_table_entry_t *e;
+
+  if (!worker->socket || !worker->socket->socket) {
+    return APR_ENOSOCKET;
+  }
+    
+  e = (apr_table_entry_t *) apr_table_elts(worker->params)->elts;
+  for (i = 1; i < apr_table_elts(worker->params)->nelts; i++) {
+    data = e[i].val;
+    copy = apr_pstrdup(worker->pbody, data);
+    copy = worker_replace_vars(worker, copy);
+    worker_log(worker, LOG_CMD, "_BINARY.SEND %s", copy); 
+    apr_collapse_spaces(copy, copy);
+
+    if((status = __BINARY_SEND(worker, copy)) != APR_SUCCESS) {
+      goto error;
+    }
+  }
+
+error:
+  return status;
 }
 
 /**
@@ -153,11 +169,13 @@ out_err:
  ***********************************************************************/
 apr_status_t binary_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "BINARY", "_SEND", 
+  if ((status = module_command_new(global, "BINARY", "_SEND", "<hex-digits>*",
+	                           "send hex digits as binary data",
 	                           command_BINARY_SEND)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "BINARY", "_RECV", 
+  if ((status = module_command_new(global, "BINARY", "_RECV", "<number-of-bytes>",
+	                           "prints received data as hex digit",
 	                           command_BINARY_RECV)) != APR_SUCCESS) {
     return status;
   }
