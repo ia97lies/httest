@@ -2454,7 +2454,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     return APR_EGENERAL; 
   } 
   copy = apr_pstrdup(global->pool, &data[i]); 
-  copy = my_replace_vars(global->pool, copy, global->vars, 0);
+  copy = my_replace_vars(global->pool, copy, global->vars, 0, NULL);
 
   no = apr_strtok(copy, " ", &last);
   var = apr_strtok(NULL, " ", &last);
@@ -2592,7 +2592,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
 	/* replace all variables */
-	line = my_replace_vars(global->pool, &line[i], global->vars, 0);
+	line = my_replace_vars(global->pool, &line[i], global->vars, 0, NULL);
 
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
 	  i += 3;
@@ -2615,7 +2615,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       }
       else {
 	/* replace all variables */
-	line = my_replace_vars(global->pool, &line[i], global->vars, 1);
+	line = my_replace_vars(global->pool, &line[i], global->vars, 1, NULL);
 
         /* lookup function index */
 	i = 0;

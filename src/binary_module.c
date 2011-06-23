@@ -85,9 +85,11 @@ static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent) {
     
   e = (apr_table_entry_t *) apr_table_elts(worker->params)->elts;
   for (i = 1; i < apr_table_elts(worker->params)->nelts; i++) {
+    int unresolved; 
+
     data = e[i].val;
     copy = apr_pstrdup(worker->pbody, data);
-    copy = worker_replace_vars(worker, copy);
+    copy = worker_replace_vars(worker, copy, &unresolved);
     worker_log(worker, LOG_CMD, "_BINARY.SEND %s", copy); 
     apr_collapse_spaces(copy, copy);
 
@@ -163,6 +165,11 @@ out_err:
 
   return status;
 }
+
+/**
+ * XXX: Do need a hook for flushing the lines and do there the transformation
+ *      from hex digits to binary and late variable replacement
+ */
 
 /************************************************************************
  * Implementation

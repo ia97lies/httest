@@ -236,7 +236,7 @@ struct command_s {
     return APR_EGENERAL; \
   } \
   copy = apr_pstrdup(worker->pbody, data); \
-  copy = worker_replace_vars(worker, copy); \
+  copy = worker_replace_vars(worker, copy, NULL); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
   } \
@@ -255,7 +255,7 @@ struct command_s {
     ++data; \
   } \
   copy = apr_pstrdup(worker->pbody, data); \
-  copy = worker_replace_vars(worker, copy); \
+  copy = worker_replace_vars(worker, copy, NULL); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
   } \
@@ -370,7 +370,7 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
                            const char *data, apr_size_t len); 
 apr_status_t worker_check_expect(worker_t * self, apr_status_t status); 
 apr_status_t worker_check_error(worker_t *self, apr_status_t status); 
-char * worker_replace_vars(worker_t * worker, char *line); 
+char * worker_replace_vars(worker_t * worker, char *line, int *unresolved); 
 apr_status_t worker_flush(worker_t * self);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
 apr_status_t worker_body(worker_t **body, worker_t *worker, char *end); 

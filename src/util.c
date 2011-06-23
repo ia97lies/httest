@@ -184,11 +184,12 @@ char *my_status_str(apr_pool_t * p, apr_status_t rc) {
  * @param line IN line where to replace the vars with values
  * @param vars IN table of key value pairs
  * @param env IN do also lookup system enviroment
+ * @param unresolved OUT 1 if there are unresolved variables
  *
  * @return new line
  */
 char *my_replace_vars(apr_pool_t * p, char *line, apr_table_t * vars, 
-                      int lookup_env) {
+                      int lookup_env, int *unresolved) {
   int i;
   int start;
   int line_end;
@@ -196,6 +197,10 @@ char *my_replace_vars(apr_pool_t * p, char *line, apr_table_t * vars,
   char *new_line;
   const char *val;
   char *env;
+
+  if (unresolved) {
+    *unresolved = 0;
+  }
 
   new_line = line;
 
@@ -227,6 +232,11 @@ once_again:
         new_line = apr_pstrcat(p, line, val, &line[i], NULL);
         line = new_line;
         goto once_again;
+      }
+      else {
+	if (unresolved) {
+	  *unresolved = 1;
+	}
       }
     }
     ++i;

@@ -633,15 +633,24 @@ go_out:
  *
  * @return new line 
  */
-char * worker_replace_vars(worker_t * worker, char *line) {
+char * worker_replace_vars(worker_t * worker, char *line, int *unresolved) {
   char *new_line;
+  int trak_unresolved = 0;
 
   /* replace all locals first */
-  new_line = my_replace_vars(worker->pbody, line, worker->locals, 0); 
+  new_line = my_replace_vars(worker->pbody, line, worker->locals, 0, 
+                             unresolved); 
+  if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all parameters first */
-  new_line = my_replace_vars(worker->pbody, line, worker->params, 0); 
+  new_line = my_replace_vars(worker->pbody, line, worker->params, 0, 
+                             unresolved); 
+  if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all vars */
-  new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1); 
+  new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1, 
+                             unresolved); 
+  if (unresolved) { trak_unresolved |= *unresolved; }
+
+  if (unresolved) { *unresolved = trak_unresolved; }
 
   return new_line;
 }
@@ -2342,13 +2351,14 @@ apr_status_t command_SET(command_t * self, worker_t * worker,
 apr_status_t command_DATA(command_t * self, worker_t * worker,
                                  char *data) {
   char *copy;
+  int unresolved;
 
   if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
     
   copy = apr_pstrdup(worker->pbody, data); 
-  copy = worker_replace_vars(worker, copy);
+  copy = worker_replace_vars(worker, copy, &unresolved);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
 
@@ -2365,7 +2375,12 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
     apr_table_add(worker->cache, "100-Continue", copy);
   }
   else {
-    apr_table_add(worker->cache, "PLAIN", copy);
+    if (unresolved) {
+      apr_table_add(worker->cache, "PLAIN;resolve", copy);
+    }
+    else {
+      apr_table_add(worker->cache, "PLAIN", copy);
+    }
   }
 
   return APR_SUCCESS;
@@ -2701,12 +2716,18 @@ apr_status_t command_PIPE(command_t * self, worker_t * worker,
 apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
                                    char *data) {
   char *copy;
+  int unresolved; 
 
   copy = apr_pstrdup(worker->pbody, data); 
-  copy = worker_replace_vars(worker, copy);
+  copy = worker_replace_vars(worker, copy, &unresolved);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
-  apr_table_add(worker->cache, "NOCRLF", copy);
+  if (unresolved) {
+    apr_table_add(worker->cache, "NOCRLF;resolve", copy);
+  }
+  else {
+    apr_table_add(worker->cache, "NOCRLF", copy);
+  }
 
   return APR_SUCCESS;
 }
@@ -5011,6 +5032,14 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
   }
   /* iterate through all cached lines and send them */
   for (i = from; i < to; ++i) {
+    if (strstr(e[i].key, "resolve")) {
+      /* do only local var resolve the only var pool which could have new vars
+       * with values
+       */
+      /* replace all vars */
+      e[i].val = my_replace_vars(self->pbody, e[i].val, self->vars, 1, 
+	                         NULL); 
+    }
     if (strncasecmp(e[i].key, "NOCRLF:", 7) == 0) { 
       len = apr_atoi64(&e[i].key[7]);
       if (nocrlf) {
