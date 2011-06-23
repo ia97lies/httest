@@ -1,0 +1,25 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Late: $MY_UNRESOLVED_VAR
+__
+_SET MY_UNRESOLVED_VAR=foo
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+
+END
+
