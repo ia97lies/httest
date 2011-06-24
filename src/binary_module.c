@@ -60,8 +60,14 @@ static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent) {
     copy = apr_pstrdup(worker->pbody, data);
     copy = worker_replace_vars(worker, copy, &unresolved);
 
-    apr_table_addn(worker->cache, 
-		   apr_pstrdup(worker->pcache, "BINARY"), copy);
+    if (unresolved) {
+      apr_table_addn(worker->cache, 
+		     apr_pstrdup(worker->pcache, "BINARY;resolve"), copy);
+    }
+    else {
+      apr_table_addn(worker->cache, 
+		     apr_pstrdup(worker->pcache, "BINARY"), copy);
+    }
   }
 
 error:
@@ -145,7 +151,7 @@ static void binary_flush_resolved_line(worker_t *worker, line_t *line) {
   apr_size_t i;
 
   /* lets see if we do have work */
-  if (strcmp(line->info, "BINARY") != 0) {
+  if (strncmp(line->info, "BINARY", 6) != 0) {
     return;
   }
 
