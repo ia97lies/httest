@@ -24,6 +24,8 @@
 #ifndef HTTEST_WORKER_H
 #define HTTEST_WORKER_H
 
+#include <apr_hooks.h>
+
 typedef struct socket_s {
   apr_socket_t *socket;
 #define SOCKET_CLOSED 0
@@ -205,6 +207,15 @@ struct command_s {
 #define COMMAND_FLAGS_EXPERIMENTAL 0x2
   int flags;
 };
+
+typedef struct line_s {
+  char *info;
+  char *buf;
+  apr_size_t len;
+} line_t;
+
+# define HTT_DECLARE(type)    type
+APR_DECLARE_EXTERNAL_HOOK(htt,HTT,void,flush_line,(worker_t *worker, line_t *line));
 
 #ifndef min
 #define min(a,b) ((a)<(b))?(a):(b)

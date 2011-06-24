@@ -41,6 +41,7 @@
 #include <apr_portable.h>
 #include <apr_hash.h>
 #include <apr_base64.h>
+#include <apr_hooks.h>
 
 #include <pcre.h>
 #if APR_HAVE_UNISTD_H
@@ -5032,46 +5033,52 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
   }
   /* iterate through all cached lines and send them */
   for (i = from; i < to; ++i) {
-    if (strstr(e[i].key, "resolve")) {
+    line_t line; 
+    line.info = e[i].key;
+    line.buf = e[i].val;
+    /** XXX: here is a good place for a module hook */
+    htt_run_flush_line(self, &line);
+    /* use in this case the copied key */
+    if (strstr(line.info, "resolve")) {
       /* do only local var resolve the only var pool which could have new vars
        * with values
        */
       /* replace all vars */
-      e[i].val = my_replace_vars(self->pbody, e[i].val, self->vars, 1, 
+      line.buf = my_replace_vars(self->pbody, line.buf, self->vars, 1, 
 	                         NULL); 
     }
-    if (strncasecmp(e[i].key, "NOCRLF:", 7) == 0) { 
-      len = apr_atoi64(&e[i].key[7]);
+    if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
+      line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {
-	worker_log_buf(self, LOG_INFO, e[i].val, NULL, len);
+	worker_log_buf(self, LOG_INFO, line.buf, NULL, line.len);
       }
       else {
-	worker_log_buf(self, LOG_INFO, e[i].val, ">", len);
+	worker_log_buf(self, LOG_INFO, line.buf, ">", line.len);
       }
       nocrlf = 1;
     }
-    else if (strcasecmp(e[i].key, "NOCRLF") == 0) {
-      len = strlen(e[i].val);
+    else if (strcasecmp(line.info, "NOCRLF") == 0) {
+      line.len = strlen(line.buf);
       if (nocrlf) {
-	worker_log_buf(self, LOG_INFO, e[i].val, NULL, len);
+	worker_log_buf(self, LOG_INFO, line.buf, NULL, line.len);
       }
       else {
-	worker_log_buf(self, LOG_INFO, e[i].val, ">", len);
+	worker_log_buf(self, LOG_INFO, line.buf, ">", line.len);
       }
       nocrlf = 1;
     } 
     else {
-      len = strlen(e[i].val);
-      worker_log(self, LOG_INFO, ">%s", e[i].val);
+      line.len = strlen(line.buf);
+      worker_log(self, LOG_INFO, ">%s", line.buf);
       nocrlf = 0;
     }
 
-    if ((status = worker_socket_send(self, e[i].val, len)) 
+    if ((status = worker_socket_send(self, line.buf, line.len)) 
 	!= APR_SUCCESS) {
       goto error;
     }
-    self->sent += len;
-    if (strncasecmp(e[i].key, "NOCRLF", 6) != 0) {
+    self->sent += line.len;
+    if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
       len = 2;
       if ((status = worker_socket_send(self, "\r\n", len)) != APR_SUCCESS) {
 	goto error;
@@ -5354,3 +5361,9 @@ apr_status_t worker_to_file(worker_t * self) {
 
   return APR_SUCCESS;
 }
+
+APR_HOOK_STRUCT(
+  APR_HOOK_LINK(flush_line)
+)
+APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_line, (worker_t *worker, line_t *line), (worker, line));
+
