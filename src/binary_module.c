@@ -34,46 +34,15 @@
  * Globals 
  ***********************************************************************/
 /**
- * SEND HEX string as binary data
+ * SEND binary data
  *
- * @param worker IN 
+ * @param worker IN
  * @param parent IN
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t __BINARY_SEND(worker_t * worker, const char *copy) {
-  apr_size_t len;
-  char *buf;
-  apr_size_t i;
-
-  /* callculate buf len */
-  len = strlen(copy);
-  if (len && len%2 != 1) {
-    len /= 2;
-  }
-  else {
-    worker_log_error(worker, "Binary data must have an equal number of digits");
-    return APR_EINVAL;
-  }
-
-  buf = apr_pcalloc(worker->pcache, len);
-
-  for (i = 0; i < len; i++) {
-    char hex[3];
-    hex[0] = copy[i * 2];
-    hex[1] = copy[i * 2 + 1];
-    hex[2] = 0;
-    buf[i] = (char )apr_strtoi64(hex, NULL, 16);
-  }
-
-  apr_table_addn(worker->cache, 
-		 apr_psprintf(worker->pcache, "NOCRLF:%d", len), buf);
-
-  return APR_SUCCESS;
-}
-
 static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent) {
-  apr_status_t status;
+  apr_status_t status = APR_SUCCESS;
   const char *data;
   char *copy;
   apr_size_t i;
@@ -90,12 +59,9 @@ static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent) {
     data = e[i].val;
     copy = apr_pstrdup(worker->pbody, data);
     copy = worker_replace_vars(worker, copy, &unresolved);
-    worker_log(worker, LOG_CMD, "_BINARY.SEND %s", copy); 
-    apr_collapse_spaces(copy, copy);
 
-    if((status = __BINARY_SEND(worker, copy)) != APR_SUCCESS) {
-      goto error;
-    }
+    apr_table_addn(worker->cache, 
+		   apr_pstrdup(worker->pcache, "BINARY"), copy);
   }
 
 error:
@@ -174,6 +140,39 @@ out_err:
  * @param line IN line informations
  */
 static void binary_flush_line(worker_t *worker, line_t *line) {
+  apr_size_t len;
+  char *buf;
+  apr_size_t i;
+
+  /* lets see if we do have work */
+  if (strcmp(line->info, "BINARY") != 0) {
+    return;
+  }
+
+  apr_collapse_spaces(line->buf, line->buf);
+  /* callculate buf len */
+  len = strlen(line->buf);
+  if (len && len%2 != 1) {
+    len /= 2;
+  }
+  else {
+    worker_log_error(worker, "Binary data must have an equal number of digits");
+    return;
+  }
+
+  buf = apr_pcalloc(worker->pcache, len);
+
+  for (i = 0; i < len; i++) {
+    char hex[3];
+    hex[0] = line->buf[i * 2];
+    hex[1] = line->buf[i * 2 + 1];
+    hex[2] = 0;
+    buf[i] = (char )apr_strtoi64(hex, NULL, 16);
+  }
+  line->buf = buf;
+  line->len = len;
+
+  line->info = apr_psprintf(worker->pcache, "NOCRLF:%d", len);
 }
 
 /************************************************************************
