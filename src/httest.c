@@ -72,6 +72,7 @@
 #include <apr_hash.h>
 #include <apr_base64.h>
 #include <apr_env.h>
+#include <apr_hooks.h>
 
 #include <pcre.h>
 
@@ -2670,7 +2671,8 @@ static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
       != APR_SUCCESS) {
     return status;
   }
-    
+
+  apr_hook_global_pool = global->pool;
   /**
    * Initialize registered modules
    */

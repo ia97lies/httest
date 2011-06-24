@@ -5036,8 +5036,6 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
     line_t line; 
     line.info = e[i].key;
     line.buf = e[i].val;
-    /** XXX: here is a good place for a module hook */
-    htt_run_flush_line(self, &line);
     /* use in this case the copied key */
     if (strstr(line.info, "resolve")) {
       /* do only local var resolve the only var pool which could have new vars
@@ -5047,6 +5045,7 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
       line.buf = my_replace_vars(self->pbody, line.buf, self->vars, 1, 
 	                         NULL); 
     }
+    htt_run_flush_line(self, &line);
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
       line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {

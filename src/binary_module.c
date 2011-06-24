@@ -167,9 +167,14 @@ out_err:
 }
 
 /**
- * XXX: Do need a hook for flushing the lines and do there the transformation
- *      from hex digits to binary and late variable replacement
+ * Do hex to bin transformation with this hook, this is called
+ * after late variable replacement.
+ *
+ * @param worker IN worker context
+ * @param line IN line informations
  */
+static void binary_flush_line(worker_t *worker, line_t *line) {
+}
 
 /************************************************************************
  * Implementation
@@ -186,6 +191,7 @@ apr_status_t binary_module_init(global_t *global) {
 	                           block_BINARY_RECV)) != APR_SUCCESS) {
     return status;
   }
+  htt_hook_flush_line(binary_flush_line, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
