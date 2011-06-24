@@ -139,7 +139,7 @@ out_err:
  * @param worker IN worker context
  * @param line IN line informations
  */
-static void binary_flush_line(worker_t *worker, line_t *line) {
+static void binary_flush_resolved_line(worker_t *worker, line_t *line) {
   apr_size_t len;
   char *buf;
   apr_size_t i;
@@ -190,7 +190,7 @@ apr_status_t binary_module_init(global_t *global) {
 	                           block_BINARY_RECV)) != APR_SUCCESS) {
     return status;
   }
-  htt_hook_flush_line(binary_flush_line, NULL, NULL, 0);
+  htt_hook_flush_resolved_line(binary_flush_resolved_line, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

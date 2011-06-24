@@ -5045,7 +5045,7 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
       line.buf = my_replace_vars(self->pbody, line.buf, self->vars, 1, 
 	                         NULL); 
     }
-    htt_run_flush_line(self, &line);
+    htt_run_flush_resolved_line(self, &line);
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
       line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {
@@ -5362,7 +5362,10 @@ apr_status_t worker_to_file(worker_t * self) {
 }
 
 APR_HOOK_STRUCT(
-  APR_HOOK_LINK(flush_line)
+  APR_HOOK_LINK(flush_resolved_line)
 )
-APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_line, (worker_t *worker, line_t *line), (worker, line));
+
+APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
+                                 (worker_t *worker, line_t *line), 
+				 (worker, line));
 

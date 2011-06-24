@@ -215,7 +215,8 @@ typedef struct line_s {
 } line_t;
 
 # define HTT_DECLARE(type)    type
-APR_DECLARE_EXTERNAL_HOOK(htt,HTT,void,flush_line,(worker_t *worker, line_t *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, void, flush_resolved_line,
+                          (worker_t *worker, line_t *line));
 
 #ifndef min
 #define min(a,b) ((a)<(b))?(a):(b)
