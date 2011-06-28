@@ -62,6 +62,7 @@ typedef struct module_s {
 } module_t;
 
 apr_status_t module_command_new(global_t *global, const char *module, 
-                                const char *command, const char *short_desc,
-			       	const char *desc, interpret_f interpret); 
+                                const char *command, const char *params,
+				const char *retvars, const char *short_desc, 
+				const char *desc, interpret_f function); 
 #endif

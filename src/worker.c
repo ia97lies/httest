@@ -404,7 +404,8 @@ apr_status_t worker_ssl_handshake(worker_t * worker) {
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-apr_status_t worker_ssl_ctx(worker_t * self, char *certfile, char *keyfile, char *ca, int check) {
+apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
+                            const char *keyfile, const char *ca, int check) {
   worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
              keyfile?keyfile:"(null)",
