@@ -5,7 +5,7 @@ CLIENT
 
 # also test if we could load cert and key in a client
 _REQ $YOUR_HOST $YOUR_PORT
-_SSL_CONNECT SSL client.cert.pem client.key.pem
+_SSL:CONNECT SSL client.cert.pem client.key.pem
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
