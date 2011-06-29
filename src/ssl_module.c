@@ -34,7 +34,7 @@
  * Globals 
  ***********************************************************************/
 /**
- * SSL_CONNECT block
+ * Connect block
  *
  * @param worker IN 
  * @param parent IN
@@ -48,6 +48,10 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
   apr_os_sock_t fd;
 
   sslstr = apr_table_get(worker->params, "1");
+  if (!sslstr) {
+    worker_log_error(worker, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
+    return APR_EGENERAL;
+  }
 
   is_ssl = worker_set_client_method(worker, sslstr);
   if (!is_ssl) {
@@ -99,7 +103,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 }
 
 /**
- * SSL_ACCEPT block
+ * Accept block 
  *
  * @param worker IN 
  * @param parent IN
@@ -111,6 +115,10 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
   int is_ssl;
 
   sslstr = apr_table_get(worker->params, "1");
+  if (!sslstr) {
+    worker_log_error(worker, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
+    return APR_EGENERAL;
+  }
 
   is_ssl = worker_set_server_method(worker, sslstr);
   if (!is_ssl) {
@@ -152,7 +160,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
 }
 
 /**
- * SSL_CLOSE block
+ * Close block 
  *
  * @param worker IN 
  * @param parent IN
@@ -160,6 +168,51 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
  * @return APR_SUCCESS or an APR error
  */
 static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
+  return command_CLOSE(NULL, worker, "SSL");
+}
+
+
+/**
+ * Set session block 
+ *
+ * @param worker IN 
+ * @param parent IN
+ *
+ * @return APR_SUCCESS or an APR error
+ */
+static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
+  const char *copy = apr_table_get(worker->params, "1");
+
+  if (!copy) {
+    worker_log_error(worker, "Missing varibale name to store session in");
+    return APR_EGENERAL;
+  }
+
+  if (!worker->socket || !worker->socket->socket || !worker->socket->is_ssl) {
+    worker_log_error(worker, "No established ssl socket");
+    return APR_ENOSOCKET;
+  }
+
+  if (worker->socket->is_ssl) {
+    if (worker->socket->ssl) {
+      apr_size_t b64_len;
+      char *b64_str;
+      apr_size_t enc_len;
+      unsigned char *enc;
+      unsigned char *tmp;
+      SSL_SESSION *sess = SSL_get_session(worker->socket->ssl);
+      /* serialize to a variable an store it */
+      enc_len = i2d_SSL_SESSION(sess, NULL);
+      enc = apr_pcalloc(worker->pbody, enc_len);
+      tmp = enc;
+      enc_len = i2d_SSL_SESSION(sess, &tmp);
+      b64_len = apr_base64_encode_len(enc_len);
+      b64_str = apr_pcalloc(worker->pbody, b64_len);
+      apr_base64_encode_binary(b64_str, enc, enc_len);
+      varset(worker, copy, b64_str);
+    }
+  }
+
   return APR_SUCCESS;
 }
 
@@ -168,24 +221,24 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
  ***********************************************************************/
 apr_status_t ssl_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "SSL", "_CONNECT", "TYPE CERT KEY CA", "",
+  if ((status = module_command_new(global, "SSL", "_CONNECT",
 	                           "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to establish a ssl "
 				   "connection on it.",
 	                           block_SSL_CONNECT)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_ACCEPT", "TYPE, CERT KEY CA", "",
+  if ((status = module_command_new(global, "SSL", "_ACCEPT",
 	                           "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to accept a ssl "
 				   "connection on it.",
 	                           block_SSL_ACCEPT)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_CLOSE", "", "", "",
+  if ((status = module_command_new(global, "SSL", "_CLOSE", "",
 	                           "Close the ssl connect, but not the "
 				   "underlying socket.",
-	                           block_SSL_ACCEPT)) != APR_SUCCESS) {
+	                           block_SSL_CLOSE)) != APR_SUCCESS) {
     return status;
   }
   return APR_SUCCESS;

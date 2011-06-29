@@ -186,13 +186,13 @@ static void binary_flush_resolved_line(worker_t *worker, line_t *line) {
  ***********************************************************************/
 apr_status_t binary_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "BINARY", "_SEND", "HEX", "", 
+  if ((status = module_command_new(global, "BINARY", "_SEND",
 	                           "<hex-digits>*",
 	                           "send hex digits as binary data",
 	                           block_BINARY_SEND)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "BINARY", "_RECV", "NUM", "",
+  if ((status = module_command_new(global, "BINARY", "_RECV",
 	                           "<number-of-bytes>",
 	                           "prints received data as hex digit",
 	                           block_BINARY_RECV)) != APR_SUCCESS) {

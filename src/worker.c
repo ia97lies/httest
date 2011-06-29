@@ -2041,7 +2041,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_CLOSE(command_t * self, worker_t * worker,
-                                  char *data) {
+                           char *data) {
   apr_status_t status;
   char *copy;
   int ssl = 1;
