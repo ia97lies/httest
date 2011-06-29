@@ -668,7 +668,7 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
     }
   }
 
-      worker_log(worker, LOG_DEBUG, "No _ELSE found");
+  worker_log(worker, LOG_DEBUG, "No _ELSE found");
   return APR_ENOENT;
 }
 
@@ -1913,31 +1913,37 @@ static apr_status_t global_new(global_t **self, apr_table_t *vars,
   apr_hash_set((*self)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*self)->blocks);
 
   if ((status = apr_threadattr_create(&(*self)->tattr, (*self)->pool)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not create thread attr");
     return status;
   }
 
   if ((status = apr_threadattr_stacksize_set((*self)->tattr, DEFAULT_THREAD_STACKSIZE))
       != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not set stacksize");
     return status;
   }
 
   if ((status = apr_threadattr_detach_set((*self)->tattr, 0)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not set detach");
     return status;
   }
 
   if ((status = apr_thread_cond_create(&(*self)->cond, p)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not create condition");
     return status;
   }
 
   if ((status = apr_thread_mutex_create(&(*self)->sync, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         p)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not create sync mutex");
     return status;
   }
  
   if ((status = apr_thread_mutex_create(&(*self)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         p)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not create mutex");
     return status;
   }
 
@@ -2083,6 +2089,7 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
   global->state = state;
   if ((status = worker_new(&global->worker, data, global->prefix, global, 
                            worker_interpret)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal worker: could not create worker");
     return status;
   }
   global->prefix = apr_pstrcat(global->pool, global->prefix, 
@@ -2201,6 +2208,7 @@ static apr_status_t global_FILE(command_t * self, global_t * global,
   /* Start a new worker */
   if ((status = worker_new(&global->worker, data, global->prefix, global, 
                            worker_interpret)) != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not initiate worker instance");
     return status;
   }
 
@@ -2247,6 +2255,7 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data) {
 
   if ((status = worker_new(&worker, &data[i], "", global, worker_interpret))
       != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not initiate worker instance");
     return status;
   }
   worker_add_line(worker, apr_psprintf(global->pool, "%s:%d", global->filename,
@@ -2452,6 +2461,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     ++i; 
   } 
   if(!data[i]) { 
+    fprintf(stderr, "\nNumber missing");
     return APR_EGENERAL; 
   } 
   copy = apr_pstrdup(global->pool, &data[i]); 
@@ -2461,6 +2471,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
   var = apr_strtok(NULL, " ", &last);
 
   if (!no) {
+    fprintf(stderr, "\nNumber missing");
     return APR_EGENERAL;
   }
 
@@ -2517,6 +2528,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data) {
     if ((status =
 	 apr_thread_create(&thread, global->tattr, worker_thread_daemon,
 			   worker, global->pool)) != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not create deamon thread");
       return status;
     }
   }
@@ -2529,6 +2541,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data) {
     if ((status =
 	 apr_thread_create(&thread, global->tattr, worker_thread_listener,
 			   worker, global->pool)) != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not create server thread");
       return status;
     }
     apr_table_addn(global->threads, worker->name, (char *) thread);
@@ -2544,6 +2557,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data) {
     if ((status =
 	 apr_thread_create(&thread, global->tattr, worker_thread_client,
 			   worker, global->pool)) != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not create client thread");
       return status;
     }
     apr_table_addn(global->threads, worker->name, (char *) thread);
@@ -2581,6 +2595,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   }
 
   if ((status = bufreader_new(&bufreader, fp, global->pool)) != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not create buf reader for interpreter");
     return status;
   }
 
@@ -2598,6 +2613,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
 	  i += 3;
 	  if ((status = global_END(&global_commands[0], global, &line[i])) != APR_SUCCESS) {
+	    fprintf(stderr, "\nError on global END");
 	    return status;
 	  }
         }
@@ -2607,6 +2623,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 					                global->filename, 
 							line_nr), line)) !=
                  APR_SUCCESS) {
+	  fprintf(stderr, "\nCould not add line lines table");
           return status;
         }
 	else if (line[0] != '_') {
@@ -2669,6 +2686,7 @@ static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
 
   if ((status = global_new(&global, vars, log_mode, p)) 
       != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not create global");
     return status;
   }
 
@@ -2709,9 +2727,11 @@ static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
     thread = (apr_thread_t *) e[i].val;
     name = e[i].key;
     if ((retstat = apr_thread_join(&status, thread))) {
+      fprintf(stderr, "\nCould not join thread: %d", retstat);
       return retstat;
     }
     if (status != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not join thread: %d", status);
       return status;
     }
   }
