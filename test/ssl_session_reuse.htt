@@ -5,7 +5,7 @@ CLIENT
 
 # also test if we could load cert and key in a client
 _REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
-_SSL_GET_SESSION SESSION
+_SSL:GET_SESSION SESSION
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
@@ -16,7 +16,7 @@ _SSL_SESSION_ID ID1
 
 _CLOSE
 
-_SSL_SET_SESSION $SESSION
+_SSL:SET_SESSION $SESSION
 _REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 

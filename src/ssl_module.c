@@ -173,14 +173,14 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
 
 
 /**
- * Set session block 
+ * Get session block 
  *
  * @param worker IN 
  * @param parent IN
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
   const char *copy = apr_table_get(worker->params, "1");
 
   if (!copy) {
@@ -216,6 +216,48 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
   return APR_SUCCESS;
 }
 
+/**
+ * Get session block 
+ *
+ * @param worker IN 
+ * @param parent IN
+ *
+ * @return APR_SUCCESS or an APR error
+ */
+static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
+  const char *copy = apr_table_get(worker->params, "1");
+
+  if (!copy) {
+    worker_log_error(worker, "Missing varibale name to store session in");
+    return APR_EGENERAL;
+  }
+
+  if (!worker->socket) {
+    worker_log_error(worker, "No established ssl socket");
+    return APR_ENOSOCKET;
+  }
+
+  {
+    apr_size_t enc_len;
+    unsigned char *enc;
+    const unsigned char *tmp;
+    const char *b64_str = copy;
+    if (b64_str) {
+      enc_len = apr_base64_decode_len(b64_str);
+      enc = apr_pcalloc(worker->pbody, enc_len);
+      apr_base64_decode_binary(enc, b64_str);
+      tmp = enc;
+      worker->socket->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
+    }
+    else {
+      worker_log_error(worker, "Variable \"%s\" do not exist", copy);
+      return APR_ENOENT;
+    }
+  }
+
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Implementation
  ***********************************************************************/
@@ -241,6 +283,18 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_CLOSE)) != APR_SUCCESS) {
     return status;
   }
+  if ((status = module_command_new(global, "SSL", "_GET_SESSION", "<var>",
+	                           "Stores the SSL session in <var>.",
+	                           block_SSL_GET_SESSION)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_SET_SESSION", "<var>",
+	                           "Get a SSL session from <var> and set it in "
+				   "the current SSL.",
+	                           block_SSL_SET_SESSION)) != APR_SUCCESS) {
+    return status;
+  }
+
   return APR_SUCCESS;
 }
 
