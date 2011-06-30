@@ -23,7 +23,7 @@ syn keyword httStatement	_TIME _CALL _LOG_LEVEL _SYNC _RECV _READLINE _OP _WHICH
 syn keyword httStatement	_VERIFY_PEER _RENEG _ONLY_PRINTABLE _PRINT_HEX _SH _ADD_HEADER 
 syn keyword httStatement	_DETACH _PID _URLENC _URLDEC _B64ENC _B64DEC _STRFTIME _SSL_LEGACY 
 syn keyword httStatement	_SSL_ENGINE _SSL_SECURE_RENEG_SUPPORTED _AUTO_CLOSE _AUTO_COOKIE 
-syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT _SSL_SESSION_ID 
+syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT 
 syn keyword httStatement	_TUNNEL _RECORD _PLAY _USE _CHUNK _CHECK
 syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY
 syn match httRepeat             "\<_END SOCKET\>"
@@ -36,7 +36,7 @@ syn match httConditional        "\<_END IF\>"
 syn match httConditional        "\<_END ERROR\>" 
 
 " Module commands
-syn keyword httStatement	_SSL GET_SESSION SET_SESSION CONNECT ACCEPT CLOSE 
+syn keyword httStatement	_SSL GET_SESSION SET_SESSION CONNECT ACCEPT CLOSE GET_SESSION_ID RENEG
 
 " Constants
 syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO on off On Off SSL SSL2 SSL3 TLS1 OK FAILED

@@ -32,5 +32,6 @@ apr_status_t ssl_accept(SSL *ssl, char **error, apr_pool_t *pool);
 ENGINE *setup_engine(BIO *err, const char *engine, int debug); 
 #endif
 char *ssl_var_lookup_ssl_cert(apr_pool_t *p, X509 *xs, char *var); 
+int debug_verify_callback(int cur_ok, X509_STORE_CTX *ctx); 
 
 #endif

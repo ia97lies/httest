@@ -217,7 +217,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
 }
 
 /**
- * Get session block 
+ * Set session block 
  *
  * @param worker IN 
  * @param parent IN
@@ -228,7 +228,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
   const char *copy = apr_table_get(worker->params, "1");
 
   if (!copy) {
-    worker_log_error(worker, "Missing varibale name to store session in");
+    worker_log_error(worker, "Missing session to set on SSL");
     return APR_EGENERAL;
   }
 
@@ -258,6 +258,127 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
   return APR_SUCCESS;
 }
 
+/**
+ * Set session block 
+ *
+ * @param worker IN 
+ * @param parent IN
+ *
+ * @return APR_SUCCESS or an APR error
+ */
+static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent) {
+  const char *copy = apr_table_get(worker->params, "1");
+  SSL_SESSION *sess;
+  char *val;
+
+  if (!copy) {
+    worker_log_error(worker, "Missing varibale name to store session in");
+    return APR_EGENERAL;
+  }
+
+  if (!worker->socket || !worker->socket->ssl) {
+    worker_log_error(worker, "Need an ssl connection");
+    return APR_ENOSOCKET;
+  }
+
+  sess = SSL_get_session(worker->socket->ssl);
+
+  if (sess) {
+    val = apr_pcalloc(worker->pbody, apr_base64_encode_len(sess->session_id_length));
+    apr_base64_encode_binary(val, sess->session_id, sess->session_id_length);
+
+    varset(worker, copy, val);
+  }
+  else {
+    return APR_ENOENT;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Set session block 
+ *
+ * @param worker IN 
+ * @param parent IN
+ *
+ * @return APR_SUCCESS or an APR error
+ */
+static apr_status_t block_SSL_RENEG(worker_t * worker, worker_t *parent) {
+  int rc;
+  const char *copy = apr_table_get(worker->params, "1");
+
+  if (worker->foreign_cert) {
+    X509_free(worker->foreign_cert);
+  }
+  
+  worker->foreign_cert = NULL;
+
+  if (!worker->socket->is_ssl || !worker->socket->ssl) {
+    worker_log(worker, LOG_ERR, 
+	       "No ssl connection established can not verify peer");
+    return APR_ENOSOCKET;
+  }
+
+  if (worker->flags & FLAGS_SERVER) {
+    if (strcasecmp(copy, "verify") == 0) {
+      /* if we are server request the peer cert */
+      if (worker->log_mode >= LOG_DEBUG) {
+	SSL_set_verify(worker->socket->ssl,
+		       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+		       debug_verify_callback);
+      }
+      else {
+	SSL_set_verify(worker->socket->ssl,
+		       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+		       NULL);
+      }
+    }
+
+    if (worker->flags & FLAGS_SSL_LEGACY) {
+#if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
+#ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
+      worker->socket->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+#else
+      SSL_set_options(worker->socket->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
+#endif
+#endif
+    }
+
+    if((rc = SSL_renegotiate(worker->socket->ssl) <= 0)) {
+      worker_log(worker, LOG_ERR, "SSL renegotiation a error: %d", rc);
+      return APR_EACCES;
+    }
+    worker_ssl_handshake(worker);
+    worker->socket->ssl->state=SSL_ST_ACCEPT;
+    worker_ssl_handshake(worker);
+
+    if (strcasecmp(copy, "verify") == 0) {
+      worker->foreign_cert = SSL_get_peer_certificate(worker->socket->ssl);
+      if (!worker->foreign_cert) {
+	worker_log(worker, LOG_ERR, "No peer certificate");
+	return APR_EACCES;
+      }
+    }
+  }
+  else {
+    if (strcasecmp(copy, "verify") == 0) {
+      worker->foreign_cert = SSL_get_peer_certificate(worker->socket->ssl);
+      if (!worker->foreign_cert) {
+	worker_log(worker, LOG_ERR, "No peer certificate");
+	return APR_EACCES;
+      }
+
+      if((rc = SSL_get_verify_result(worker->socket->ssl)) != X509_V_OK) {
+	worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
+	X509_verify_cert_error_string(rc), rc);
+	return APR_EACCES;
+      }
+    }
+  }
+
+  return APR_SUCCESS;
+}
 /************************************************************************
  * Implementation
  ***********************************************************************/
@@ -289,9 +410,19 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SET_SESSION", "<var>",
-	                           "Get a SSL session from <var> and set it in "
+	                           "Set a base64 encoded <session> in "
 				   "the current SSL.",
 	                           block_SSL_SET_SESSION)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_GET_SESSION_ID", "<var>",
+	                           "Get a SSL session id and store it in <var>",
+	                           block_SSL_GET_SESSION_ID)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_RENEG", "[verify]",
+	                           "Performs an SSL renegotiation.",
+	                           block_SSL_RENEG)) != APR_SUCCESS) {
     return status;
   }
 

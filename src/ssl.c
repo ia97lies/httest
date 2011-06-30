@@ -751,6 +751,26 @@ void modssl_var_extract_dns(apr_table_t *t, SSL *ssl, apr_pool_t *p)
     }
 }
 
+/**
+ * verify callback for peer cert verification for debugging purpose
+ * @param cur_ok IN current ok state
+ * @param ctx IN X509 store context
+ */
+int debug_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
+  char buf[256];
+  X509 *err_cert;
+  int err, depth;
+
+  err_cert = X509_STORE_CTX_get_current_cert(ctx);
+  err = X509_STORE_CTX_get_error(ctx);
+  depth = X509_STORE_CTX_get_error_depth(ctx);
+
+  X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+  fprintf(stdout, "\nverify error:num=%d:%s:depth=%d:%s",
+	  err, X509_verify_cert_error_string(err), depth, buf);
+  return cur_ok;
+}
+
 #endif
 
 #endif
