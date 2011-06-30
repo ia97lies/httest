@@ -5,7 +5,7 @@ CLIENT
 
 # also test if we could load cert and key in a client
 _REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
-_RENEG verify
+_SSL:RENEG verify
 
 END
 

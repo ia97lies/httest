@@ -12,7 +12,7 @@ __User-Agent: mozilla
 __
 _EXPECT . "HTTP/1.1 200 OK"
 _WAIT
-_SSL_SESSION_ID ID1
+_SSL:GET_SESSION_ID ID1
 
 _CLOSE
 
@@ -24,7 +24,7 @@ __User-Agent: mozilla
 __
 _EXPECT . "HTTP/1.1 200 OK"
 _WAIT
-_SSL_SESSION_ID ID2
+_SSL:GET_SESSION_ID ID2
 
 _IF "$ID1" NOT EQUAL "$ID2"
   _EXIT FAILED
