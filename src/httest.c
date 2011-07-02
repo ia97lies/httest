@@ -1456,7 +1456,6 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       /* lookup function index */
       j = 0;
       k = lookup_func_index(local_commands, line);
-      /* TODO: command overwriting by calling _OVERWRITE:<command-name> */
       /* get command and test if found */
       if (local_commands[k].func) {
 	j += strlen(local_commands[k].name);
@@ -1465,6 +1464,10 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       }
       else {
 	status = command_CALL(NULL, self, line);
+	/* ignore not found error else the error message is not understandable */
+	if (!APR_STATUS_IS_ENOENT(status)) {
+	  status = worker_check_error(parent, status);
+	}
       }
       if (APR_STATUS_IS_ENOENT(status)) {
 	worker_log_error(self, "%s syntax error", self->name);
