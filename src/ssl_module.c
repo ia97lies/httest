@@ -409,7 +409,7 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_GET_SESSION)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_SET_SESSION", "<var>",
+  if ((status = module_command_new(global, "SSL", "_SET_SESSION", "<session>",
 	                           "Set a base64 encoded <session> in "
 				   "the current SSL.",
 	                           block_SSL_SET_SESSION)) != APR_SUCCESS) {

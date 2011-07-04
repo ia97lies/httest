@@ -36,7 +36,14 @@ syn match httConditional        "\<_END IF\>"
 syn match httConditional        "\<_END ERROR\>" 
 
 " Module commands
-syn keyword httStatement	_SSL GET_SESSION SET_SESSION CONNECT ACCEPT CLOSE GET_SESSION_ID RENEG
+"syn keyword httStatement	_SSL GET_SESSION SET_SESSION CONNECT ACCEPT CLOSE GET_SESSION_ID
+syn match httStatement		"\<_SSL:GET_SESSION\>"
+syn match httStatement		"\<_SSL:SET_SESSION\>"
+syn match httStatement		"\<_SSL:CONNECT ACCEPT\>" 
+syn match httStatement		"\<_SSL:CLOSE GET_SESSION_ID\>"
+syn match httStatement		"<\_SSL:RENEG\>"
+syn match httStatement		"\<_BINARY:SEND\>" 
+syn match httStatement		"\<_BINARY:RECV\>"
 
 " Constants
 syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO on off On Off SSL SSL2 SSL3 TLS1 OK FAILED
