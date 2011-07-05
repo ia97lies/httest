@@ -205,6 +205,7 @@ struct command_s {
 #define COMMAND_FLAGS_NONE 0x0
 #define COMMAND_FLAGS_DEPRECIATED 0x1
 #define COMMAND_FLAGS_EXPERIMENTAL 0x2
+#define COMMAND_FLAGS_LINK 0x4
   int flags;
 };
 

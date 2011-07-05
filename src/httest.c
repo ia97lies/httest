@@ -396,9 +396,9 @@ command_t local_commands[] = {
   {"_VERIFY_PEER", (command_f )command_VERIFY_PEER, "", 
   "This command is marked depreciated, use \"_RENEG verify\" instead",
   COMMAND_FLAGS_DEPRECIATED},
-  {"_RENEG", (command_f )command_RENEG, "[verify]", 
-  "This command is marked depreciated, use \"_SSL:RENEG\" instead",
-  COMMAND_FLAGS_DEPRECIATED},
+  {"_RENEG", NULL, "_SSL:RENEG", 
+  NULL,
+  COMMAND_FLAGS_LINK},
   {"_ONLY_PRINTABLE", (command_f )command_ONLY_PRINTABLE, "on|off", 
   "Replace all chars below 32 and above 127 with a space",
   COMMAND_FLAGS_NONE},
@@ -1457,6 +1457,9 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       k = lookup_func_index(local_commands, line);
       /* get command and test if found */
       if (local_commands[k].func) {
+	/* XXX */
+	if (local_commans[k].flags & COMMAND_FLAGS_LINK) {
+	}
 	j += strlen(local_commands[k].name);
 	status = local_commands[k].func(&local_commands[k], self, &line[j]);
 	status = worker_check_error(parent, status);
@@ -2842,6 +2845,10 @@ static void show_commands(apr_pool_t *p, global_t *global) {
       line = apr_psprintf(p, "%s *** This command is depreciated ***", 
 	                  global_commands[i].name);
     }
+    else if (global_commands[i].flags & COMMAND_FLAGS_LINK) {
+      line = apr_psprintf(p, "%s -> %s", global_commands[i].name,
+	                  global_commands[i].syntax);
+    }
     else {
       line = apr_psprintf(p, "%s %s", global_commands[i].name, 
 			  global_commands[i].syntax);
@@ -2863,6 +2870,10 @@ static void show_commands(apr_pool_t *p, global_t *global) {
     if (local_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
       line = apr_psprintf(p, "%s *** This command is depreciated ***", 
 	                  local_commands[i].name);
+    }
+    else if (local_commands[i].flags & COMMAND_FLAGS_LINK) {
+      line = apr_psprintf(p, "%s -> %s", local_commands[i].name,
+	                  local_commands[i].syntax);
     }
     else {
       line = apr_psprintf(p, "%s %s", local_commands[i].name, 
@@ -2930,12 +2941,22 @@ static void show_command_help(apr_pool_t *p, global_t *global,
 
   for (i = 0; global_commands[i].name; i++) {
     if (strcmp(command, global_commands[i].name) == 0) {
+      if (global_commands[i].flags & COMMAND_FLAGS_LINK) {
+	/* this is a link, follow link */
+	command = global_commands[i].syntax;
+	break;
+      }
       print_command_formated(p, global_commands[i]);
       goto exit;
     }
   }
   for (i = 0; local_commands[i].name; i++) {
     if (strcmp(command, local_commands[i].name) == 0) {
+      if (local_commands[i].flags & COMMAND_FLAGS_LINK) {
+	/* this is a link, follow link */
+	command = local_commands[i].syntax;
+	break;
+      }
       print_command_formated(p, local_commands[i]);
       goto exit;
     }
