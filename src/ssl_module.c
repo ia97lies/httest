@@ -379,6 +379,70 @@ static apr_status_t block_SSL_RENEG(worker_t * worker, worker_t *parent) {
 
   return APR_SUCCESS;
 }
+
+/**
+ * SSL_CERT_VAL command
+ 
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN ssl variable and a variable name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent) {
+  char *val = NULL;
+  const char *cmd = apr_table_get(worker->params, "1");
+  const char *var = apr_table_get(worker->params, "2");
+
+  if (!cmd) {
+    worker_log_error(worker, "SSL variable name is missing");
+    return APR_EGENERAL;
+  }
+
+  if (!var) {
+    worker_log_error(worker, "variable name to store result is missing");
+    return APR_EGENERAL;
+  }
+
+  if (!worker->foreign_cert) {
+    worker_log_error(worker, "no peer cert");
+    return APR_EINVAL;
+  }
+  
+  val = ssl_var_lookup_ssl_cert(worker->pbody, worker->foreign_cert, cmd);
+
+  if (!val) {
+    worker_log_error(worker, "SSL value for \"%s\" not found", cmd);
+    return APR_ENOENT;
+  }
+
+  varset(worker, var, val);
+
+  return APR_SUCCESS;
+}
+
+/**
+ * SSL_SECURE_RENEG_SUPPORTED command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent) {
+#ifndef OPENSSL_NO_ENGINE
+  const char *copy = apr_table_get(worker->params, "1");
+  BIO *bio_err = BIO_new_fp(stderr,BIO_NOCLOSE);
+
+  if (!setup_engine(bio_err, copy, worker->log_mode == LOG_DEBUG ? 1 : 0)) {
+    worker_log(worker, LOG_ERR, "Could not initialize engine \"%s\".", copy);
+    return APR_EINVAL;
+  }
+#endif
+  return APR_ENOTIMPL;
+}
+
 /************************************************************************
  * Implementation
  ***********************************************************************/
@@ -423,6 +487,31 @@ apr_status_t ssl_module_init(global_t *global) {
   if ((status = module_command_new(global, "SSL", "_RENEG", "[verify]",
 	                           "Performs an SSL renegotiation.",
 	                           block_SSL_RENEG)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_GET_CERT_VALUE", "<cert entry> <variable>",
+	                           "Get <cert entry> and store it into <variable>\n"
+  				   "Get cert with _RENEG or _VERIFY_PEER\n"
+				   "<cert entry> are\n" 
+				   "  M_VERSION\n" 
+				   "  M_SERIAL\n" 
+				   "  V_START\n" 
+				   "  V_END\n" 
+				   "  V_REMAIN\n" 
+				   "  S_DN\n" 
+				   "  S_DN_<var>\n" 
+				   "  I_DN\n" 
+				   "  I_DN_<var>\n" 
+				   "  A_SIG\n" 
+				   "  A_KEY\n" 
+				   "  CERT"
+				   "Performs an SSL renegotiation.",
+	                           block_SSL_GET_CERT_VALUE)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_SET_ENGINE", "<engine>",
+				   "Set an openssl crypto <engine> to run tests with crypto devices",
+	                           block_SSL_SET_ENGINE)) != APR_SUCCESS) {
     return status;
   }
 

@@ -393,12 +393,6 @@ command_t local_commands[] = {
   {"_CERT", (command_f )command_CERT, "<cert-file> <key-file> [<ca-cert-file>]", 
   "Sets cert for the current ssl connection, mainly used for server cert",
   COMMAND_FLAGS_NONE},
-  {"_VERIFY_PEER", (command_f )command_VERIFY_PEER, "", 
-  "This command is marked depreciated, use \"_RENEG verify\" instead",
-  COMMAND_FLAGS_DEPRECIATED},
-  {"_RENEG", NULL, "_SSL:RENEG", 
-  NULL,
-  COMMAND_FLAGS_LINK},
   {"_ONLY_PRINTABLE", (command_f )command_ONLY_PRINTABLE, "on|off", 
   "Replace all chars below 32 and above 127 with a space",
   COMMAND_FLAGS_NONE},
@@ -432,17 +426,8 @@ command_t local_commands[] = {
   {"_STRFTIME", (command_f )command_STRFTIME, "<time> \"<format-string>\" <variable> [Local|GMT]", 
   "Stores given time [ms] formated to variable",
   COMMAND_FLAGS_NONE},
-  {"_SSL_CONNECT", (command_f )command_SSL_CONNECT, "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]", 
-  "Do a ssl connect on an already connected TCP socket",
-  COMMAND_FLAGS_NONE},
-  {"_SSL_ACCEPT", (command_f )command_SSL_ACCEPT, "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]", 
-  "Do a ssl accept on an already accepted TCP socket",
-  COMMAND_FLAGS_NONE},
   {"_SSL_LEGACY", (command_f )command_SSL_LEGACY, "on|off", 
   "Turn on|off SSL legacy behavour for renegotiation for openssl libraries 0.9.8l and above",
-  COMMAND_FLAGS_NONE},
-  {"_SSL_ENGINE", (command_f )command_SSL_ENGINE, "<engine>", 
-  "Set an openssl engine to run tests with crypto devices",
   COMMAND_FLAGS_NONE},
   {"_SSL_SECURE_RENEG_SUPPORTED", (command_f )command_SSL_SECURE_RENEG_SUPPORTED, "", 
   "Test if remote peer do support secure renegotiation",
@@ -456,35 +441,9 @@ command_t local_commands[] = {
   {"_IGNORE_BODY", (command_f )command_IGNORE_BODY, "on|off", 
   "Recv but do not store or inspect body, used for performance testing.",
   COMMAND_FLAGS_NONE},
-  {"_SSL_CERT_VAL", (command_f )command_SSL_CERT_VAL, "<cert entry> <variable>", 
-  "Get <cert entry> and store it into <variable>\n"
-  "Get cert with _RENEG or _VERIFY_PEER\n"
-  "<cert entry> are\n"
-  "  M_VERSION\n"
-  "  M_SERIAL\n"
-  "  V_START\n"
-  "  V_END\n"
-  "  V_REMAIN\n"
-  "  S_DN\n"
-  "  S_DN_<var>\n"
-  "  I_DN\n"
-  "  I_DN_<var>\n"
-  "  A_SIG\n"
-  "  A_KEY\n"
-  "  CERT",
-  COMMAND_FLAGS_NONE},
   {"_SSL_BUF_2_CERT", (command_f )command_SSL_BUF_2_CERT, "pem cert", 
   "Read the given buf as a pem cert, ussable with SSL_CERT_VAL",
   COMMAND_FLAGS_NONE},
-  {"_SSL_SESSION_ID", (command_f )command_SSL_SESSION_ID, "<variable>", 
-  "This command is marked depreciated, use \"_SSL:GET_SESSION_ID\" instead",
-  COMMAND_FLAGS_DEPRECIATED},
-  {"_SSL_GET_SESSION", (command_f )command_SSL_GET_SESSION, "<variabl>", 
-  "This command is marked depreciated, use \"_SSL:GET_SESSION\" instead",
-  COMMAND_FLAGS_DEPRECIATED},
-  {"_SSL_SET_SESSION", (command_f )command_SSL_SET_SESSION, "<variable>", 
-  "This command is marked depreciated, use \"_SSL:SET_SESSION\" instead",
-  COMMAND_FLAGS_DEPRECIATED},
   {"_TUNNEL", (command_f )command_TUNNEL, "<host> [<SSL>:]<port>[:<tag>] [<cert-file> <key-file> [<ca-cert-file>]]", 
   "Open tunnel to defined host:port, with SSL support.\n"
   "If connection exist no connect will be performed\n"
@@ -510,6 +469,17 @@ command_t local_commands[] = {
   {"_UNLOCK", (command_f )command_UNLOCK, "", 
   "Undraw the global lock",
   COMMAND_FLAGS_NONE},
+  /* Link section */
+  {"_SSL_CONNECT", NULL, "_SSL:CONNECT", NULL, COMMAND_FLAGS_LINK},
+  {"_SSL_ACCEPT", NULL, "_SSL:ACCEPT", NULL, COMMAND_FLAGS_LINK},
+  {"_RENEG", NULL, "_SSL:RENEG", NULL, COMMAND_FLAGS_LINK},
+  {"_VERIFY_PEER", NULL, "_SSL:RENEG verify", NULL, COMMAND_FLAGS_LINK},
+  {"_SSL_SESSION_ID", NULL, "_SSL:GET_SESSION_ID", NULL, COMMAND_FLAGS_LINK},
+  {"_SSL_GET_SESSION", NULL, "_SSL:GET_SESSION", NULL, COMMAND_FLAGS_LINK},
+  {"_SSL_SET_SESSION", NULL, "_SSL:SET_SESSION", NULL, COMMAND_FLAGS_LINK},
+  {"_SSL_CERT_VAL", NULL, "_SSL:GET_CERT_VALUE", NULL, COMMAND_FLAGS_LINK},
+  {"_SSL_ENGINE", NULL, "_SSL:SET_ENGINE", NULL, COMMAND_FLAGS_LINK},
+  /* mark end of list */
   {NULL, NULL, NULL, 
   NULL,
   COMMAND_FLAGS_NONE},

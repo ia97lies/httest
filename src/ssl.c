@@ -91,7 +91,7 @@ static unsigned long ssl_util_thr_id(void);
 static void ssl_util_thr_lock(int mode, int type, const char *file, int line); 
 static int ssl_rand_choosenum(int l, int h); 
 static apr_status_t ssl_util_thread_cleanup(void *data); 
-static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, char *var);
+static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, const char *var);
 static char *ssl_var_lookup_ssl_cert_valid(apr_pool_t *p, ASN1_UTCTIME *tm);
 static char *ssl_var_lookup_ssl_cert_remain(apr_pool_t *p, ASN1_UTCTIME *tm);
 static char *ssl_var_lookup_ssl_cert_serial(apr_pool_t *p, X509 *xs);
@@ -441,7 +441,7 @@ ENGINE *setup_engine(BIO *err, const char *engine, int debug) {
  *
  * @return Variable value
  */
-char *ssl_var_lookup_ssl_cert(apr_pool_t *p, X509 *xs, char *var) {
+char *ssl_var_lookup_ssl_cert(apr_pool_t *p, X509 *xs, const char *var) {
     char *result;
     X509_NAME *xsname;
     int nid;
@@ -529,7 +529,7 @@ static const struct {
     { NULL,    0,                          0 }
 };
 
-static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, char *var)
+static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, const char *var)
 {
     char *result, *ptr;
     X509_NAME_ENTRY *xsne;
