@@ -1456,10 +1456,13 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
       j = 0;
       k = lookup_func_index(local_commands, line);
       /* get command and test if found */
-      if (local_commands[k].func) {
-	/* XXX */
-	if (local_commans[k].flags & COMMAND_FLAGS_LINK) {
-	}
+      if (local_commands[k].flags & COMMAND_FLAGS_LINK) {
+	j += strlen(local_commands[k].name);
+	status = command_CALL(NULL, self, apr_pstrcat(self->pbody, 
+	                                              local_commands[k].syntax,
+						      " ", &line[j], NULL));
+      }
+      else if (local_commands[k].func) {
 	j += strlen(local_commands[k].name);
 	status = local_commands[k].func(&local_commands[k], self, &line[j]);
 	status = worker_check_error(parent, status);
