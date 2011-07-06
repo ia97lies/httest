@@ -29,9 +29,15 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+void * ssl_module;
+
+typedef struct ssl_config_s {
+  X509 *cert;
+  EVP_PKEY *pkey;
+} ssl_config_t;
 
 /************************************************************************
- * Globals 
+ * Commands
  ***********************************************************************/
 /**
  * Connect block
@@ -308,11 +314,17 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   int rc;
   const char *copy = apr_table_get(worker->params, "1");
 
-  if (worker->foreign_cert) {
-    X509_free(worker->foreign_cert);
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->config, ssl_module, config);
+  }
+
+  if (config->cert) {
+    X509_free(config->cert);
   }
   
-  worker->foreign_cert = NULL;
+  config->cert = NULL;
 
   if (!worker->socket->is_ssl || !worker->socket->ssl) {
     worker_log(worker, LOG_ERR, 
@@ -354,8 +366,8 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
     worker_ssl_handshake(worker);
 
     if (strcasecmp(copy, "verify") == 0) {
-      worker->foreign_cert = SSL_get_peer_certificate(worker->socket->ssl);
-      if (!worker->foreign_cert) {
+      config->cert = SSL_get_peer_certificate(worker->socket->ssl);
+      if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");
 	return APR_EACCES;
       }
@@ -363,8 +375,8 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   }
   else {
     if (strcasecmp(copy, "verify") == 0) {
-      worker->foreign_cert = SSL_get_peer_certificate(worker->socket->ssl);
-      if (!worker->foreign_cert) {
+      config->cert = SSL_get_peer_certificate(worker->socket->ssl);
+      if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");
 	return APR_EACCES;
       }
@@ -394,6 +406,8 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
   const char *cmd = apr_table_get(worker->params, "1");
   const char *var = apr_table_get(worker->params, "2");
 
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+
   if (!cmd) {
     worker_log_error(worker, "SSL variable name is missing");
     return APR_EGENERAL;
@@ -404,12 +418,12 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
     return APR_EGENERAL;
   }
 
-  if (!worker->foreign_cert) {
+  if (!config || !config->cert) {
     worker_log_error(worker, "no peer cert");
     return APR_EINVAL;
   }
   
-  val = ssl_var_lookup_ssl_cert(worker->pbody, worker->foreign_cert, cmd);
+  val = ssl_var_lookup_ssl_cert(worker->pbody, config->cert, cmd);
 
   if (!val) {
     worker_log_error(worker, "SSL value for \"%s\" not found", cmd);
@@ -465,7 +479,7 @@ static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent) {
 }
 
 /**
- * SSL_SET_CERT command
+ * SSL_LOAD_CERT command
  *
  * @param self IN command
  * @param worker IN thread data object
@@ -478,14 +492,54 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
-  if (worker->foreign_cert) {
-    X509_free(worker->foreign_cert);
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->config, ssl_module, config);
+  }
+
+  if (config->cert) {
+    X509_free(config->cert);
   }
   
   mem = BIO_new_mem_buf(copy, strlen(copy));
-  worker->foreign_cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
+  config->cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
 
-  if (!worker->foreign_cert) {
+  if (!config->cert) {
+    worker_log_error(worker, "Not a valid cert (PEM)");
+    return APR_EINVAL;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * SSL_LOAD_KEY command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN ssl variable and a variable name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
+  const char *val = apr_table_get(worker->params, "1");
+  char *copy = apr_pstrdup(worker->pbody, val);
+  BIO *mem;
+
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->config, ssl_module, config);
+  }
+
+  if (config->pkey) {
+    EVP_PKEY_free(config->pkey);
+  }
+  
+  mem = BIO_new_mem_buf(copy, strlen(copy));
+  config->pkey = PEM_read_bio_PrivateKey(mem,NULL,NULL,NULL);
+
+  if (!config->pkey) {
     worker_log_error(worker, "Not a valid cert (PEM)");
     return APR_EINVAL;
   }
@@ -502,17 +556,32 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
  * @return APR_SUCCESS
  */
 static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+
   if (!worker->ssl_ctx) {
     worker_log_error(worker, "You are not in a ssl context");
     return APR_EINVAL;
   }
 
-  if (!worker->foreign_cert) {
-    worker_log_error(worker, "No cert to use, get a cert with _SSL:RENEG_CERT of _SSL:LOAD_CERT");
+  /* check if we have parameters */
+  if (apr_table_elts(worker->params)->nelts) {
+    const char *cert;
+    const char *key;
+    const char *ca;
+    cert = apr_table_get(worker->params, "1");
+    key = apr_table_get(worker->params, "2");
+    ca = apr_table_get(worker->params, "3");
+    worker_ssl_ctx(worker, cert, key, ca, 1);
+    return  APR_SUCCESS;
+  }
+
+  /* else set cert */
+  if (!config || !config->cert || !config->pkey) {
+    worker_log_error(worker, "No cert and key to use, get a cert and key with _SSL:LOAD_KEY of _SSL:LOAD_CERT");
     return APR_EINVAL;
   }
 
-  if (SSL_CTX_use_certificate(worker->ssl_ctx, worker->foreign_cert) <=0) {
+  if (SSL_CTX_use_certificate(worker->ssl_ctx, config->cert) <=0) {
     worker_log_error(worker, "Can not use this cert");
     return APR_EINVAL;
   }
@@ -542,10 +611,11 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, worker_t
 }
 
 /************************************************************************
- * Implementation
+ * Module 
  ***********************************************************************/
 apr_status_t ssl_module_init(global_t *global) {
   apr_status_t status;
+  ssl_module = apr_pcalloc(global->pool, sizeof(*ssl_module));
   if ((status = module_command_new(global, "SSL", "_CONNECT",
 	                           "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to establish a ssl "
@@ -595,8 +665,9 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_LOAD_CERT)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_SET_CERT", "",
-	                           "Use a cert got with _SSL:RENEG_CERT or _SSL:LOAD_CERT",
+  if ((status = module_command_new(global, "SSL", "_SET_CERT", "[<cert> <key> [<ca>]]",
+	                           "set cert either from file <cert> <key> <ca> "
+				   "or got with _SSL:RENEG_CERT or _SSL:LOAD_CERT/_SSL:LOAD_KEY",
 	                           block_SSL_SET_CERT)) != APR_SUCCESS) {
     return status;
   }

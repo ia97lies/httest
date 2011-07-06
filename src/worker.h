@@ -69,6 +69,8 @@ typedef struct worker_s worker_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
 struct worker_s {
   interpret_f interpret;
+  /* module config */
+  apr_hash_t *config;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
   /* dies on END */
@@ -76,7 +78,6 @@ struct worker_s {
   /* dies on every flush */
   apr_pool_t *pcache;
   const char *filename;
-  X509 *foreign_cert;
   apr_file_t *tmpf;
 #define FLAGS_NONE           0x00000000
 #define FLAGS_PIPE           0x00000001
@@ -326,10 +327,6 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data);
 apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data);
 apr_status_t command_OP(command_t * self, worker_t * worker, char *data);
 apr_status_t command_WHICH(command_t * self, worker_t * worker, char *data);
-apr_status_t command_CERT(command_t * self, worker_t * worker, char *data);
-apr_status_t command_VERIFY_PEER(command_t *self, worker_t * worker, 
-                                 char *data);
-apr_status_t command_RENEG(command_t *self, worker_t * worker, char *data);
 apr_status_t command_ONLY_PRINTABLE(command_t *self, worker_t *worker, 
                                     char *data); 
 apr_status_t command_SH(command_t *self, worker_t *worker, char *data); 
@@ -345,20 +342,9 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data);
 apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_SSL_CONNECT(command_t *self, worker_t *worker, char *data);
-apr_status_t command_SSL_ACCEPT(command_t *self, worker_t *worker, char *data);
-apr_status_t command_SSL_LEGACY(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_SSL_SECURE_RENEG_SUPPORTED(command_t *self, 
-                                                worker_t *worker, char *data);
-apr_status_t command_SSL_ENGINE(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_SSL_CERT_VAL(command_t *self, worker_t *worker, 
-                                  char *data); 
-apr_status_t command_SSL_SESSION_ID(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_SSL_BUF_2_CERT(command_t *self, worker_t *worker, 
-                                    char *data);
 #if APR_HAS_FORK
 apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data); 
 #endif
@@ -366,8 +352,6 @@ apr_status_t command_MATCH_SEQ(command_t * self, worker_t * worker, char *data);
 apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_USE(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_SSL_GET_SESSION(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_SSL_SET_SESSION(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_LOCK(command_t *self, worker_t *worker, char *data); 
 apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data); 

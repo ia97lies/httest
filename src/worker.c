@@ -1724,7 +1724,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_RES(command_t * self, worker_t * worker,
-                                char *data) {
+                         char *data) {
   apr_status_t status;
 
   COMMAND_NO_ARG;
@@ -3142,39 +3142,6 @@ apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data) {
 }
 
 /**
- * CERT command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN cert, key and optional ca file
- *
- * @return APR_SUCCESS or apr error code
- */
-apr_status_t command_CERT(command_t *self, worker_t *worker, char *data) {
-  char *copy;
-  char *last;
-
-  COMMAND_NEED_ARG("<cert-file> <key-file> [<ca-file>]");
-  
-  if (worker->ssl_ctx) {
-    char *cert;
-    char *key;
-    char *ca;
-
-    cert = apr_strtok(copy, " ", &last);
-    key = apr_strtok(NULL, " ", &last);
-    ca = apr_strtok(NULL, " ", &last);
-    worker_ssl_ctx(worker, cert, key, ca, 1);
-  }
-  else {
-    worker_log(worker, LOG_ERR, "Can not set cert, ssl not enabled in CLIENT/SERVER");
-    return APR_EINVAL;
-  }
-  
-  return APR_SUCCESS;
-}
-
-/**
  * ONLY_PRINTABLE command
  *
  * @param self IN command
@@ -4170,6 +4137,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = function;
+  (*self)->config = apr_hash_make(p);
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
@@ -4245,6 +4213,7 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   /* this stuff muss last until END so take pbody pool for this */
   p = (*self)->pbody;
   (*self)->interpret = orig->interpret;
+  (*self)->config = apr_hash_make(p);
   (*self)->flags = orig->flags;
   (*self)->prefix = apr_pstrdup(p, orig->prefix);
   (*self)->additional = apr_pstrdup(p, orig->additional);
