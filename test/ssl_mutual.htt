@@ -32,7 +32,7 @@ _CERT server.cert.pem server.key.pem ca.cert.pem
 _RES
 _EXPECT body "Cert version 3"
 _WAIT
-_SSL:RENEG verify
+_SSL:RENEG_CERT verify
 __HTTP/1.1 200 OK
 __Content-Length: AUTO 
 __Content-Type: text/html

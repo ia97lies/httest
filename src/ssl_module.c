@@ -304,7 +304,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_RENEG(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   int rc;
   const char *copy = apr_table_get(worker->params, "1");
 
@@ -443,6 +443,104 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent) {
   return APR_ENOTIMPL;
 }
 
+/**
+ * SSL_LEGACY command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent) {
+  const char *copy = apr_table_get(worker->params, "1");
+
+  if (strcasecmp(copy,  "on") == 0) {
+    worker->flags |= FLAGS_SSL_LEGACY;
+  }
+  else {
+    worker->flags &= ~FLAGS_SSL_LEGACY;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * SSL_SET_CERT command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN ssl variable and a variable name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
+  const char *val = apr_table_get(worker->params, "1");
+  char *copy = apr_pstrdup(worker->pbody, val);
+  BIO *mem;
+
+  if (worker->foreign_cert) {
+    X509_free(worker->foreign_cert);
+  }
+  
+  mem = BIO_new_mem_buf(copy, strlen(copy));
+  worker->foreign_cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
+
+  if (!worker->foreign_cert) {
+    worker_log_error(worker, "Not a valid cert (PEM)");
+    return APR_EINVAL;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * SSL_SET_CERT command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN ssl variable and a variable name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
+  if (!worker->ssl_ctx) {
+    worker_log_error(worker, "You are not in a ssl context");
+    return APR_EINVAL;
+  }
+
+  if (!worker->foreign_cert) {
+    worker_log_error(worker, "No cert to use, get a cert with _SSL:RENEG_CERT of _SSL:LOAD_CERT");
+    return APR_EINVAL;
+  }
+
+  if (SSL_CTX_use_certificate(worker->ssl_ctx, worker->foreign_cert) <=0) {
+    worker_log_error(worker, "Can not use this cert");
+    return APR_EINVAL;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * SSL_SECURE_RENEG_SUPPORTED command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, worker_t *parent) {
+#if (define USE_SSL && OPENSSL_VERSION_NUMBER >= 0x009080ff)
+  if (SSL_get_secure_renegotiation_support(worker->socket->ssl)) {
+    return APR_SUCCESS;
+  }
+  else {
+    return APR_EINVAL;
+  }
+#else
+  return APR_ENOTIMPL;
+#endif
+}
+
 /************************************************************************
  * Implementation
  ***********************************************************************/
@@ -484,14 +582,27 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_GET_SESSION_ID)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_RENEG", "[verify]",
-	                           "Performs an SSL renegotiation.",
-	                           block_SSL_RENEG)) != APR_SUCCESS) {
+  if ((status = module_command_new(global, "SSL", "_RENEG_CERT", "[verify]",
+	                           "Performs an SSL renegotiation and optional a verification. "
+				   "Stores the cert for later use with commands like"
+				   "_SSL_GET_CERT_VALUE or _SSL:SET_CERT",
+	                           block_SSL_RENEG_CERT)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_LOAD_CERT", "<pem-cert>",
+				   "Read the given pem formated <pem-cert>. Stores it for later use "
+				   "with commands like _SSL:GET_CERT_VALUE or _SSL:SET_CERT",
+	                           block_SSL_LOAD_CERT)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_SET_CERT", "",
+	                           "Use a cert got with _SSL:RENEG_CERT or _SSL:LOAD_CERT",
+	                           block_SSL_SET_CERT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_GET_CERT_VALUE", "<cert entry> <variable>",
 	                           "Get <cert entry> and store it into <variable>\n"
-  				   "Get cert with _RENEG or _VERIFY_PEER\n"
+  				   "Get cert with _SSL:RENEG_CERT or _SSL:LOAD_CERT\n"
 				   "<cert entry> are\n" 
 				   "  M_VERSION\n" 
 				   "  M_SERIAL\n" 
@@ -512,6 +623,16 @@ apr_status_t ssl_module_init(global_t *global) {
   if ((status = module_command_new(global, "SSL", "_SET_ENGINE", "<engine>",
 				   "Set an openssl crypto <engine> to run tests with crypto devices",
 	                           block_SSL_SET_ENGINE)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_SET_LEGACY", "on | off",
+				   "Turn on|off SSL legacy behavour for renegotiation for openssl libraries 0.9.8l and above",
+	                           block_SSL_SET_LEGACY)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_SECURE_RENEG_SUPPORTED", "",
+				   "Test if remote peer do support secure renegotiation",
+	                           block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
     return status;
   }
 
