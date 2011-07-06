@@ -3,7 +3,9 @@
 bin_PROGRAMS=httest htproxy htremote htntlm
 
 httest_SOURCES= \
-	httest.c file.c socket.c regex.c util.c ssl.c worker.c module.c binary_module.c ssl_module.c modules.c
+	httest.c file.c socket.c regex.c util.c ssl.c worker.c module.c \
+	binary_module.c ssl_module.c modules.c skeleton_module.c \
+	date_module.c
 
 htproxy_SOURCES= \
 	htproxy.c file.c socket.c regex.c util.c ssl.c worker.c conf.c
