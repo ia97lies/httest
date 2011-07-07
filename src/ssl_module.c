@@ -597,7 +597,8 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, 
+                                                     worker_t *parent) {
 #if (define USE_SSL && OPENSSL_VERSION_NUMBER >= 0x009080ff)
   if (SSL_get_secure_renegotiation_support(worker->socket->ssl)) {
     return APR_SUCCESS;
@@ -608,6 +609,59 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, worker_t
 #else
   return APR_ENOTIMPL;
 #endif
+}
+
+/**
+ * parse line and extract the SSL relevant stuff
+ *
+ * @param worker IN
+ * @param line IN original line
+ * @param new_line OUT manipulated
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo, 
+                                         char **new_portinfo, char *rest) {
+  apr_status_t status;
+  char *port;
+  char *last;
+  char *copy = apr_pstrdup(worker->pbody, portinfo);
+  char *sslstr = apr_strtok(copy, ":", &port);
+  char *cert = NULL;
+  char *key = NULL;
+  char *ca = NULL;
+
+  if (!worker->socket) {
+    worker_log_error(worker, "No socket available");
+    return APR_ENOSOCKET;
+  }
+
+  worker->socket->is_ssl = worker_set_client_method(worker, sslstr);
+  
+  if (!worker->socket->is_ssl) {
+    /* nothing to do give the port info back */
+    *new_portinfo = portinfo;
+  }
+  else {
+    *new_portinfo = port;
+
+    /* lets see if we have cert infos */
+    if (rest && rest[0]) {
+      cert = apr_strtok(rest, " ", &last);
+      key = apr_strtok(NULL, " ", &last);
+      ca = apr_strtok(NULL, " ", &last);
+    }
+    if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) 
+	!= APR_SUCCESS) {
+      return status;
+    }
+    SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
+    SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+#if (OPENSSL_VERSION_NUMBER >= 0x0090806f)
+    SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_NO_TICKET);
+#endif
+  }
+  return APR_SUCCESS;
 }
 
 /************************************************************************
@@ -707,6 +761,7 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
 
+  htt_hook_client_port_args(ssl_client_port_args, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

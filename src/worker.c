@@ -1541,8 +1541,6 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   apr_status_t status;
   apr_sockaddr_t *remote_addr;
   char *portname;
-  char *sslstr;
-  char *portstr;
   char *hostname;
   char *tag;
   char *last;
@@ -1561,11 +1559,19 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     return status;
   }
 
-  /** TODO: htt_run_client_port_args(copy, &copy) */
-
   hostname = apr_strtok(copy, " ", &last);
   portname = apr_strtok(NULL, " ", &last);
-  portstr = apr_pstrdup(worker->pbody, portname);
+
+  /* use hostname and portname for unique id of sockets, portname may also have 
+   * additional tags and infos which are possible resolved in the following
+   * hook
+   */
+  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
+  worker_get_socket(worker, hostname, portname);
+
+  if ((status = htt_run_client_port_args(worker, portname, &portname, last)) != APR_SUCCESS) {
+    return status;
+  }
 
   if (!hostname) {
     worker_log(worker, LOG_ERR, "no host name specified");
@@ -1577,56 +1583,15 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
 
-#ifdef USE_SSL
-  sslstr = apr_strtok(portstr, ":", &tag);
-  is_ssl = worker_set_client_method(worker, sslstr);
-  if (!is_ssl) {
-    portstr = sslstr;
-  }
-  else {
-    portstr = tag;
-  }
-#endif
-
-  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
-  worker_get_socket(worker, hostname, portname);
-
   /* remove tag from port */
-  portstr = apr_strtok(portstr, ":", &tag);
-  if (!portstr) {
-    if (is_ssl) {
-      worker_log(worker, LOG_ERR, "no SSL port specified");
-    }
-    else {
-      worker_log(worker, LOG_ERR, "no port specified");
-    }
+  portname = apr_strtok(portname, ":", &tag);
+  if (!portname) {
+    worker_log(worker, LOG_ERR, "no port specified");
     return APR_EGENERAL;
   }
-  port = apr_atoi64(portstr);
+  port = apr_atoi64(portname);
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
-    worker->socket->is_ssl = is_ssl;
-
-#ifdef USE_SSL
-    if (worker->socket->is_ssl) {
-      char *cert;
-      char *key;
-      char *ca;
-
-      cert = apr_strtok(NULL, " ", &last);
-      key = apr_strtok(NULL, " ", &last);
-      ca = apr_strtok(NULL, " ", &last);
-      if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) 
-	  != APR_SUCCESS) {
-	return status;
-      }
-      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
-      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
-#if (OPENSSL_VERSION_NUMBER >= 0x0090806f)
-      SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_NO_TICKET);
-#endif
-    }
-#endif
 #if APR_HAVE_IPV6
     /* hostname/address must be surrounded in square brackets */
     if((hostname[0] == '[') && (hostname[strlen(hostname)-1] == ']')) {
@@ -1652,29 +1617,6 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       return status;
     }
 
-#ifdef USE_SSL
-    /** TODO: move this down after tcp connect */
-    if (worker->socket->is_ssl) {
-      BIO *bio;
-      apr_os_sock_t fd;
-
-      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
-	worker_log(worker, LOG_ERR, "SSL_new failed.");
-	status = APR_ECONNREFUSED;
-      }
-      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
-      ssl_rand_seed();
-      apr_os_sock_get(&fd, worker->socket->socket);
-      bio = BIO_new_socket(fd, BIO_NOCLOSE);
-      SSL_set_bio(worker->socket->ssl, bio, bio);
-      if (worker->socket->sess) {
-	SSL_set_session(worker->socket->ssl, worker->socket->sess);
-	SSL_SESSION_free(worker->socket->sess);
-	worker->socket->sess = NULL;
-      }
-      SSL_set_connect_state(worker->socket->ssl);
-    }
-#endif
     if ((status =
          apr_sockaddr_info_get(&remote_addr, hostname, AF_UNSPEC, port,
                                APR_IPV4_ADDR_OK, worker->pbody))
@@ -1698,8 +1640,26 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     /** TODO: status = htt_run_connect(worker->socket->socket); */
 #ifdef USE_SSL
     if (worker->socket->is_ssl) {
+      BIO *bio;
+      apr_os_sock_t fd;
+
+      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+	worker_log(worker, LOG_ERR, "SSL_new failed.");
+	return APR_EGENERAL;
+      }
+      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+      ssl_rand_seed();
+      apr_os_sock_get(&fd, worker->socket->socket);
+      bio = BIO_new_socket(fd, BIO_NOCLOSE);
+      SSL_set_bio(worker->socket->ssl, bio, bio);
+      if (worker->socket->sess) {
+	SSL_set_session(worker->socket->ssl, worker->socket->sess);
+	SSL_SESSION_free(worker->socket->sess);
+	worker->socket->sess = NULL;
+      }
+      SSL_set_connect_state(worker->socket->ssl);
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
-				return status;
+	return status;
       }
     }
 #endif
@@ -4791,9 +4751,16 @@ apr_status_t worker_to_file(worker_t * self) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(flush_resolved_line)
+  APR_HOOK_LINK(client_port_args)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
                                  (worker_t *worker, line_t *line), 
 				 (worker, line));
+/** SINJA */
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_port_args, 
+                                      (worker_t *worker, char *portinfo, 
+				       char **new_portinfo, char *rest_of_line), 
+				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
+
 

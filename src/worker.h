@@ -219,6 +219,9 @@ typedef struct line_s {
 # define HTT_DECLARE(type)    type
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, void, flush_resolved_line,
                           (worker_t *worker, line_t *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
+                          (worker_t *worker, char *portinfo, 
+			   char **new_portinfo, char *rest_of_line));
 
 #ifndef min
 #define min(a,b) ((a)<(b))?(a):(b)
