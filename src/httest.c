@@ -1675,6 +1675,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 
   /* TODO  ["SSL:"]["*"|<IP>|<IPv6>:]<port> ["DOWN"|<concurrent>] */
   
+  /** TODO: htt_run_server_port_args(copy, &copy); */
   portname = apr_strtok(self->additional, " ", &last);
 
   if (!portname) {
@@ -1802,6 +1803,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 	  != APR_SUCCESS) {
         goto error;
       }
+      /** TODO: htt_run_accept(clone->socket->socket); */
 #ifdef USE_SSL
       if ((status = worker_ssl_accept(clone)) != APR_SUCCESS) {
 	goto error;

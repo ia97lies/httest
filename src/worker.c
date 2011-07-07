@@ -1561,6 +1561,8 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     return status;
   }
 
+  /** TODO: htt_run_client_port_args(copy, &copy) */
+
   hostname = apr_strtok(copy, " ", &last);
   portname = apr_strtok(NULL, " ", &last);
   portstr = apr_pstrdup(worker->pbody, portname);
@@ -1651,6 +1653,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     }
 
 #ifdef USE_SSL
+    /** TODO: move this down after tcp connect */
     if (worker->socket->is_ssl) {
       BIO *bio;
       apr_os_sock_t fd;
@@ -1692,6 +1695,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     }
 
     worker->socket->socket_state = SOCKET_CONNECTED;
+    /** TODO: status = htt_run_connect(worker->socket->socket); */
 #ifdef USE_SSL
     if (worker->socket->is_ssl) {
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
@@ -1759,6 +1763,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
       return status;
     }
     worker->socket->socket_state = SOCKET_CONNECTED;
+    /** TODO: htt_run_accept(worker->socket->socket) */
 #ifdef USE_SSL
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
