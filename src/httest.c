@@ -32,28 +32,7 @@
 #endif
 #include "defines.h"
 
-#include <openssl/safestack.h>
 #include <openssl/ssl.h>
-#include <openssl/rsa.h>
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#include <openssl/rand.h>
-
-/* on windows the inclusion of windows.h/wincrypt.h causes
- * X509_NAME and a few more to be defined; found no other
- * way than to undef manually before inclusion of engine.h;
- * somehow the same undef in ossl_typ.h is not enough...
- */
-#ifdef OPENSSL_SYS_WIN32
-#undef X509_NAME
-#endif
-
-#ifndef OPENSSL_NO_ENGINE
-#include <openssl/engine.h>
-#endif
 
 #include <apr.h>
 #include <apr_signal.h>
@@ -84,7 +63,6 @@
 #include "socket.h"
 #include "regex.h"
 #include "util.h"
-#include "ssl.h"
 #include "worker.h"
 #include "module.h"
 
@@ -3014,12 +2992,6 @@ int main(int argc, const char *const argv[]) {
   log_mode = LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
-#ifdef USE_SSL
-#ifndef OPENSSL_NO_ENGINE
-  ENGINE_load_builtin_engines();
-#endif
-#endif
-  
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
   while ((status = apr_getopt_long(opt, options, &c, &optarg)) == APR_SUCCESS) {
@@ -3089,18 +3061,6 @@ int main(int argc, const char *const argv[]) {
   else {
     atexit(my_exit);
   }
-
-#ifdef USE_SSL
-  /* setup ssl library */
-#ifdef RSAREF
-  R_malloc_init();
-#else
-  CRYPTO_malloc_init();
-#endif
-  SSL_load_error_strings();
-  SSL_library_init();
-  ssl_util_thread_setup(pool);
-#endif
 
   /* do for all files (no wild card support) */
   while (flags & MAIN_FLAGS_USE_STDIN || argc - opt->ind) {

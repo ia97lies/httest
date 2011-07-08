@@ -26,6 +26,19 @@
  ***********************************************************************/
 #include "module.h"
 
+/* on windows the inclusion of windows.h/wincrypt.h causes
+ * X509_NAME and a few more to be defined; found no other
+ * way than to undef manually before inclusion of engine.h;
+ * somehow the same undef in ossl_typ.h is not enough...
+ */
+#ifdef OPENSSL_SYS_WIN32
+#undef X509_NAME
+#endif
+
+#ifndef OPENSSL_NO_ENGINE
+#include <openssl/engine.h>
+#endif
+
 /************************************************************************
  * Definitions 
  ***********************************************************************/
@@ -35,6 +48,189 @@ typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
 } ssl_config_t;
+
+/************************************************************************
+ * Local 
+ ***********************************************************************/
+/**
+ * worker ssl handshake client site
+ *
+ * @param worker IN thread data object
+ *
+ * @return apr status
+ */
+apr_status_t worker_ssl_handshake(worker_t * worker) {
+  apr_status_t status;
+  char *error;
+  
+  if ((status = ssl_handshake(worker->socket->ssl, &error, worker->pbody)) 
+      != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "%s", error);
+  }
+  
+  if (worker->flags & FLAGS_SSL_LEGACY) {
+#if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
+#ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
+    worker->socket->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION; 
+#else 	 
+    SSL_set_options(worker->socket->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
+#endif
+#endif
+  }
+
+  return status;
+}
+
+/**
+ * Get server ctx with loaded cert and key file
+ *
+ * @param self IN thread object data
+ *
+ * @return APR_SUCCESS or APR_ECONNABORTED
+ */
+apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
+                            const char *keyfile, const char *ca, int check) {
+  worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
+             certfile?certfile:"(null)",
+             keyfile?keyfile:"(null)",
+             ca?ca:"(null)");
+  if (!self->ssl_ctx) {
+    if (!(self->ssl_ctx = SSL_CTX_new(self->meth))) {
+      worker_log(self, LOG_ERR, "Could not initialize SSL Context.");
+      return APR_EINVAL;
+    }
+  }
+  if (self->ssl_ctx) {
+    if (certfile && SSL_CTX_use_certificate_file(self->ssl_ctx, certfile, 
+	                                         SSL_FILETYPE_PEM) <= 0 && 
+	check) { 
+      worker_log(self, LOG_ERR, "Could not load RSA server certifacte \"%s\"",
+	         certfile);
+      return APR_EINVAL;
+    }
+    if (keyfile && SSL_CTX_use_PrivateKey_file(self->ssl_ctx, keyfile, 
+	                                       SSL_FILETYPE_PEM) <= 0 && 
+	check) {
+      worker_log(self, LOG_ERR, "Could not load RSA server private key \"%s\"",
+	         keyfile);
+      return APR_EINVAL;
+    }
+    if (ca && !SSL_CTX_load_verify_locations(self->ssl_ctx, ca,
+					     NULL) && check) {
+      worker_log(self, LOG_ERR, "Could not load CA file \"%s\"", ca);
+      return APR_EINVAL;
+    }
+
+    if (certfile && keyfile&& check && 
+	!SSL_CTX_check_private_key(self->ssl_ctx)) {
+      worker_log(self, LOG_ERR, "Private key does not match the certificate public key");
+      return APR_EINVAL;
+    }
+#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
+    SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
+#endif
+ }
+  return APR_SUCCESS;
+}
+
+/**
+ * Get client method 
+ *
+ * @param self IN thread object data
+ * @param sslstr IN SSL|SSL2|SSL3|TLS1
+ *
+ * @return APR_SUCCESS or APR_ECONNABORTED
+ */
+int worker_set_client_method(worker_t * worker, const char *sslstr) {
+  int is_ssl = 0;
+  if (strcasecmp(sslstr, "SSL") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv23_client_method();
+  }
+  else if (strcasecmp(sslstr, "SSL2") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv2_client_method();
+  }
+  else if (strcasecmp(sslstr, "SSL3") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv3_client_method();
+  }
+  else if (strcasecmp(sslstr, "TLS1") == 0) {
+    is_ssl = 1;
+    worker->meth = TLSv1_client_method();
+  }
+  return is_ssl;
+}
+
+/**
+ * Get server method 
+ *
+ * @param self IN thread object data
+ * @param sslstr IN SSL|SSL2|SSL3|TLS1
+ *
+ * @return APR_SUCCESS or APR_ECONNABORTED
+ */
+int worker_set_server_method(worker_t * worker, const char *sslstr) {
+  int is_ssl = 0;
+  if (strcasecmp(sslstr, "SSL") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv23_server_method();
+  }
+  else if (strcasecmp(sslstr, "SSL2") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv2_server_method();
+  }
+  else if (strcasecmp(sslstr, "SSL3") == 0) {
+    is_ssl = 1;
+    worker->meth = SSLv3_server_method();
+  }
+  else if (strcasecmp(sslstr, "TLS1") == 0) {
+    is_ssl = 1;
+    worker->meth = TLSv1_server_method();
+  }
+  return is_ssl;
+}
+
+/**
+ * Do a ssl accept
+ *
+ * @param worker IN thread data object
+ *
+ * @return APR_SUCCESS
+ */
+apr_status_t worker_ssl_accept(worker_t * worker) {
+  apr_status_t status;
+  char *error;
+
+  if (worker->socket->is_ssl) {
+    if (!worker->socket->ssl) {
+      BIO *bio;
+      apr_os_sock_t fd;
+
+      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+	worker_log(worker, LOG_ERR, "SSL_new failed.");
+	status = APR_ECONNREFUSED;
+      }
+      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+      ssl_rand_seed();
+      apr_os_sock_get(&fd, worker->socket->socket);
+      bio = BIO_new_socket(fd, BIO_NOCLOSE);
+      SSL_set_bio(worker->socket->ssl, bio, bio);
+    }
+    else {
+      return APR_SUCCESS;
+    }
+  }
+  else {
+    return APR_SUCCESS;
+  }
+
+  if ((status = ssl_accept(worker->socket->ssl, &error, worker->pbody)) 
+      != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "%s", error);
+  }
+  return status;
+}
 
 /************************************************************************
  * Commands
@@ -759,6 +955,20 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
 apr_status_t ssl_module_init(global_t *global) {
   apr_status_t status;
   ssl_module = apr_pcalloc(global->pool, sizeof(*ssl_module));
+
+  /* setup ssl library */
+#ifndef OPENSSL_NO_ENGINE
+  ENGINE_load_builtin_engines();
+#endif
+#ifdef RSAREF
+  R_malloc_init();
+#else
+  CRYPTO_malloc_init();
+#endif
+  SSL_load_error_strings();
+  SSL_library_init();
+  ssl_util_thread_setup(global->pool);
+
   if ((status = module_command_new(global, "SSL", "_CONNECT",
 	                           "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to establish a ssl "
