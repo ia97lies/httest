@@ -701,6 +701,58 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
   return APR_SUCCESS;
 }
 
+/**
+ * do ssl connect
+ *
+ * @param worker IN
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_hook_connect(worker_t *worker) {
+  apr_status_t status;
+  if (worker->socket->is_ssl) {
+    BIO *bio;
+    apr_os_sock_t fd;
+
+    if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+      worker_log(worker, LOG_ERR, "SSL_new failed.");
+      return APR_EGENERAL;
+    }
+    SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+    ssl_rand_seed();
+    apr_os_sock_get(&fd, worker->socket->socket);
+    bio = BIO_new_socket(fd, BIO_NOCLOSE);
+    SSL_set_bio(worker->socket->ssl, bio, bio);
+    if (worker->socket->sess) {
+      SSL_set_session(worker->socket->ssl, worker->socket->sess);
+      SSL_SESSION_free(worker->socket->sess);
+      worker->socket->sess = NULL;
+    }
+    SSL_set_connect_state(worker->socket->ssl);
+    if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
+      return status;
+    }
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * do ssl connect
+ *
+ * @param worker IN
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_hook_accept(worker_t *worker) {
+  apr_status_t status;
+
+  if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
+    return status;
+  }
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Module 
  ***********************************************************************/
@@ -800,6 +852,8 @@ apr_status_t ssl_module_init(global_t *global) {
 
   htt_hook_client_port_args(ssl_client_port_args, NULL, NULL, 0);
   htt_hook_server_port_args(ssl_server_port_args, NULL, NULL, 0);
+  htt_hook_connect(ssl_hook_connect, NULL, NULL, 0);
+  htt_hook_accept(ssl_hook_accept, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

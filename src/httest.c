@@ -1675,7 +1675,6 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 
   /* TODO  ["SSL:"]["*"|<IP>|<IPv6>:]<port> ["DOWN"|<concurrent>] */
   
-  /** TODO: htt_run_server_port_args(copy, &copy); */
   portname = apr_strtok(self->additional, " ", &last);
 
   if ((status = htt_run_server_port_args(self, portname, &portname, last)) != APR_SUCCESS) {
@@ -1700,36 +1699,6 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   else {
     threads = 0;
   }
-
-#ifdef USE_SSL
-  self->is_ssl = 0;
-  if (strncmp(portname, "SSL:", 4) == 0) {
-    self->is_ssl = 1;
-    self->meth = SSLv23_server_method();
-    portname += 4;
-  }
-  else if (strncmp(portname, "SSL2:", 4) == 0) {
-    self->is_ssl = 1;
-    self->meth = SSLv2_server_method();
-    portname += 5;
-  }
-  else if (strncmp(portname, "SSL3:", 4) == 0) {
-    self->is_ssl = 1;
-    self->meth = SSLv3_server_method();
-    portname += 5;
-  }
-  else if (strncmp(portname, "TLS1:", 4) == 0) {
-    self->is_ssl = 1;
-    self->meth = TLSv1_server_method();
-    portname += 5;
-  }
-
-  if (self->is_ssl && 
-      (status = worker_ssl_ctx(self, RSA_SERVER_CERT, RSA_SERVER_KEY, NULL, 0)) 
-      != APR_SUCCESS) {
-    goto error;
-  }
-#endif
 
   if ((status = apr_parse_addr_port(&self->listener_addr, &scope_id, 
 	                            &self->listener_port, portname, 
@@ -1807,12 +1776,9 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 	  != APR_SUCCESS) {
         goto error;
       }
-      /** TODO: htt_run_accept(clone->socket->socket); */
-#ifdef USE_SSL
-      if ((status = worker_ssl_accept(clone)) != APR_SUCCESS) {
+      if ((status = htt_run_accept(clone)) != APR_SUCCESS) {
 	goto error;
       }
-#endif
       worker_log(self, LOG_DEBUG, "--- create thread");
       clone->socket->socket_state = SOCKET_CONNECTED;
       clone->which = i;

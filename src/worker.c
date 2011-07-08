@@ -1637,32 +1637,9 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     }
 
     worker->socket->socket_state = SOCKET_CONNECTED;
-    /** TODO: status = htt_run_connect(worker->socket->socket); */
-#ifdef USE_SSL
-    if (worker->socket->is_ssl) {
-      BIO *bio;
-      apr_os_sock_t fd;
-
-      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
-	worker_log(worker, LOG_ERR, "SSL_new failed.");
-	return APR_EGENERAL;
-      }
-      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
-      ssl_rand_seed();
-      apr_os_sock_get(&fd, worker->socket->socket);
-      bio = BIO_new_socket(fd, BIO_NOCLOSE);
-      SSL_set_bio(worker->socket->ssl, bio, bio);
-      if (worker->socket->sess) {
-	SSL_set_session(worker->socket->ssl, worker->socket->sess);
-	SSL_SESSION_free(worker->socket->sess);
-	worker->socket->sess = NULL;
-      }
-      SSL_set_connect_state(worker->socket->ssl);
-      if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
-	return status;
-      }
+    if ((status = htt_run_connect(worker)) != APR_SUCCESS) {
+      return status;
     }
-#endif
   }
 
   /* reset the matcher tables */
@@ -1723,12 +1700,9 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
       return status;
     }
     worker->socket->socket_state = SOCKET_CONNECTED;
-    /** TODO: htt_run_accept(worker->socket->socket) */
-#ifdef USE_SSL
-    if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
+    if ((status = htt_run_accept(worker)) != APR_SUCCESS) {
       return status;
     }
-#endif
   }
 
   apr_table_clear(worker->match.dot);
@@ -4752,15 +4726,24 @@ apr_status_t worker_to_file(worker_t * self) {
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(flush_resolved_line)
   APR_HOOK_LINK(client_port_args)
+  APR_HOOK_LINK(connect)
+  APR_HOOK_LINK(accept)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
                                  (worker_t *worker, line_t *line), 
 				 (worker, line));
-/** SINJA */
+
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_port_args, 
                                       (worker_t *worker, char *portinfo, 
 				       char **new_portinfo, char *rest_of_line), 
 				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, connect, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
 
