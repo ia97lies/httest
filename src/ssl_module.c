@@ -636,6 +636,10 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
     return APR_ENOSOCKET;
   }
 
+  if (worker->socket->socket_state == SOCKET_CONNECTED) {
+    return APR_SUCCESS;
+  }
+
   worker->socket->is_ssl = worker_set_client_method(worker, sslstr);
   
   if (!worker->socket->is_ssl) {
@@ -660,6 +664,39 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
 #if (OPENSSL_VERSION_NUMBER >= 0x0090806f)
     SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_NO_TICKET);
 #endif
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * parse line and extract the SSL relevant stuff
+ *
+ * @param worker IN
+ * @param line IN original line
+ * @param new_line OUT manipulated
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo, 
+                                         char **new_portinfo, char *rest) {
+  apr_status_t status;
+  char *port;
+  char *copy = apr_pstrdup(worker->pbody, portinfo);
+  char *sslstr = apr_strtok(copy, ":", &port);
+
+
+  worker->is_ssl = worker_set_server_method(worker, sslstr);
+
+  if (!worker->is_ssl) {
+    /* if not ssl we do have nothing to do give back portinfo untouched */
+    *new_portinfo = portinfo;
+  }
+  else { 
+    *new_portinfo = port;
+    if ((status = worker_ssl_ctx(worker, RSA_SERVER_CERT, RSA_SERVER_KEY, NULL, 0)) 
+        != APR_SUCCESS) {
+      return status;
+    }
   }
   return APR_SUCCESS;
 }
@@ -762,6 +799,8 @@ apr_status_t ssl_module_init(global_t *global) {
   }
 
   htt_hook_client_port_args(ssl_client_port_args, NULL, NULL, 0);
+  htt_hook_server_port_args(ssl_server_port_args, NULL, NULL, 0);
   return APR_SUCCESS;
 }
+
 

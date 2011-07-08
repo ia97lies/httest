@@ -1678,6 +1678,10 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   /** TODO: htt_run_server_port_args(copy, &copy); */
   portname = apr_strtok(self->additional, " ", &last);
 
+  if ((status = htt_run_server_port_args(self, portname, &portname, last)) != APR_SUCCESS) {
+    goto error;
+  }
+
   if (!portname) {
     worker_log_error(self, "No port defined");
     status = APR_EGENERAL;
@@ -3201,4 +3205,13 @@ int main(int argc, const char *const argv[]) {
 
   return 0;
 }
+
+APR_HOOK_STRUCT(
+  APR_HOOK_LINK(server_port_args)
+)
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args, 
+                                      (worker_t *worker, char *portinfo, 
+				       char **new_portinfo, char *rest_of_line), 
+				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
 
