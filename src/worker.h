@@ -147,7 +147,6 @@ struct worker_s {
 #define LOG_DEBUG 6
   int log_mode;
 #ifdef USE_SSL
-  int is_ssl;
   SSL_CTX *ssl_ctx;
   SSL_METHOD *meth;
   BIO *bio_out;
@@ -230,6 +229,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, connect,
                           (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
                           (worker_t *worker));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
+                          (worker_t *worker, char *info, char **new_info));
 
 #ifndef min
 #define min(a,b) ((a)<(b))?(a):(b)

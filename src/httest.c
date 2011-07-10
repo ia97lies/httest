@@ -1655,6 +1655,8 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   
   portname = apr_strtok(self->additional, " ", &last);
 
+  worker_get_socket(self, "Default", "0");
+
   if ((status = htt_run_server_port_args(self, portname, &portname, last)) != APR_SUCCESS) {
     goto error;
   }
@@ -1689,7 +1691,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   }
 
   if (!self->listener_port) {
-    if (self->is_ssl) {
+    if (self->socket->is_ssl) {
       self->listener_port = 443;
     }
     else {
@@ -1698,7 +1700,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   }
   
   worker_log(self, LOG_INFO, "%s start on %s%s:%d", self->name, 
-             self->is_ssl ? "SSL:" : "", self->listener_addr, 
+             self->socket->is_ssl ? "SSL:" : "", self->listener_addr, 
 	     self->listener_port);
 
   if (!nolistener) {
@@ -1741,7 +1743,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       }
 
       worker_get_socket(clone, "Default", "0");
-      clone->socket->is_ssl = clone->is_ssl;
+      clone->socket->is_ssl = self->socket->is_ssl;
       
       if ((status =
 	   apr_socket_accept(&clone->socket->socket, self->listener,

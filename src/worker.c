@@ -792,7 +792,7 @@ apr_status_t worker_test_unused_errors(worker_t * self) {
  *
  * @return apr status
  */
-apr_status_t worker_conn_close(worker_t * self, int ssl, int tcp) {
+apr_status_t worker_conn_close(worker_t * self, char *info) {
   apr_status_t status;
 #ifdef USE_SSL
   int i;
@@ -806,21 +806,14 @@ apr_status_t worker_conn_close(worker_t * self, int ssl, int tcp) {
     return APR_SUCCESS;
   }
   
-#ifdef USE_SSL
-  if (ssl && self->socket->is_ssl) {
-    if (self->socket->ssl) {
-      for (i = 0; i < 4; i++) {
-	if (SSL_shutdown(self->socket->ssl) != 0) {
-	  break;
-	}
-      }
-      SSL_free(self->socket->ssl);
-      self->socket->ssl = NULL;
+  if ((status = htt_run_close(self, info, &info)) != APR_SUCCESS) {
+    if (APR_STATUS_IS_EINTR(status)) {
+      return APR_SUCCESS;
     }
-    self->socket->is_ssl = 0;
+    return status;
   }
-#endif
-  if (tcp) {
+
+  if (!info || !info[0] || strcmp(info, "TCP") == 0) {
     if ((status = apr_socket_close(self->socket->socket)) != APR_SUCCESS) {
       return status;
     }
@@ -847,7 +840,7 @@ void worker_conn_close_all(worker_t *self) {
   for (hi = apr_hash_first(self->pbody, self->sockets); hi; hi = apr_hash_next(hi)) {
     apr_hash_this(hi, NULL, NULL, &s);
     self->socket = s;
-    worker_conn_close(self, 1, 1);
+    worker_conn_close(self, NULL);
   }
   self->socket = cur;
   if (self->listener) {
@@ -1497,7 +1490,6 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
   }
 
   worker_get_socket(worker, "Default", "0");
-  worker->socket->is_ssl = worker->is_ssl;
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
     worker_log(worker, LOG_DEBUG, "--- accept");
@@ -1663,32 +1655,26 @@ apr_status_t command_CLOSE(command_t * self, worker_t * worker,
                            char *data) {
   apr_status_t status;
   char *copy;
-  int ssl = 1;
-  int tcp = 1;
 
   COMMAND_OPTIONAL_ARG;
 
-  if (strcmp(copy, "TCP") == 0) {
-    ssl = 0;
-  }
-
-  if (strcmp(copy, "SSL") == 0) {
-    tcp = 0;
-  }
-
   if ((status = worker_flush(worker)) != APR_SUCCESS) {
-    worker_conn_close(worker, 1, 1);
+    worker_conn_close(worker, NULL);
     return status;
   }
 
   if (strcmp(copy, "do not test expects") != 0) {
     if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
-      worker_conn_close(worker, 1, 1);
+      worker_conn_close(worker, NULL);
       return status;
     }
   }
+  else {
+    /* do not test expects and remove this string */
+    copy = NULL;
+  }
 
-  if ((status = worker_conn_close(worker, ssl, tcp)) != APR_SUCCESS) {
+  if ((status = worker_conn_close(worker, copy)) != APR_SUCCESS) {
     return status;
   }
 
@@ -4547,6 +4533,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(client_port_args)
   APR_HOOK_LINK(connect)
   APR_HOOK_LINK(accept)
+  APR_HOOK_LINK(close)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
@@ -4565,4 +4552,8 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, connect,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept, 
                                       (worker_t *worker), 
 				      (worker), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
+                                      (worker_t *worker, char *info, char **new_info), 
+				      (worker, info, new_info), APR_SUCCESS);
 

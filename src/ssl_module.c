@@ -881,9 +881,9 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
   char *sslstr = apr_strtok(copy, ":", &port);
 
 
-  worker->is_ssl = worker_set_server_method(worker, sslstr);
+  worker->socket->is_ssl = worker_set_server_method(worker, sslstr);
 
-  if (!worker->is_ssl) {
+  if (!worker->socket->is_ssl) {
     /* if not ssl we do have nothing to do give back portinfo untouched */
     *new_portinfo = portinfo;
   }
@@ -934,7 +934,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
 }
 
 /**
- * do ssl connect
+ * do ssl accept handshake
  *
  * @param worker IN
  *
@@ -945,6 +945,40 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
 
   if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
     return status;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * do ssl accept handshake
+ *
+ * @param worker IN
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_hook_close(worker_t *worker, char *info, 
+                                   char **new_info) {
+  int i;
+  *new_info = info;
+  if (!info || !info[0]) {
+    if (worker->socket->ssl) {
+      for (i = 0; i < 4; i++) {
+	if (SSL_shutdown(worker->socket->ssl) != 0) {
+	  break;
+	}
+      }
+      SSL_free(worker->socket->ssl);
+      worker->socket->ssl = NULL;
+    }
+  }
+  else if (strcmp(info, "SSL") == 0) {
+    /* do not shutdown SSL because it will also shutdown TCP 
+     * do just remove ssl methods by setting is_ssl to 0
+     */
+    worker->socket->is_ssl = 0;
+    *new_info = NULL;
+    /* work is done break hook chain here! */
+    return APR_EINTR;
   }
   return APR_SUCCESS;
 }
@@ -1064,6 +1098,7 @@ apr_status_t ssl_module_init(global_t *global) {
   htt_hook_server_port_args(ssl_server_port_args, NULL, NULL, 0);
   htt_hook_connect(ssl_hook_connect, NULL, NULL, 0);
   htt_hook_accept(ssl_hook_accept, NULL, NULL, 0);
+  htt_hook_close(ssl_hook_close, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
