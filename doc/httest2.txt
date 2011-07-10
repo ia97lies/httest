@@ -6,82 +6,70 @@ Do restructure the code base to make it readable and extentable. This is a
 preparation for httest3 test microkernel.
 
 
-DATA FLOW FRAMEWORK
--------------------
+GOAL
+----
+Capsulate topics into modules. Use ANY transport for testing i.e. socket, 
+ssl, file, pipe and io.
 
-Simple Stream Object
------------------------
-This object do handle streams
+MODULE
+------
+A init function do hook everything into httest. A uniq key (a pool alloc of
+a void pointer) will be used to store modules own stuff in a workers config 
+hash.
 
-stream_t
-  object_object_register
-  object_unobject_register
-  object_find
-  user_data_set
-  user_data_get
-  connect
-  close
-  accept
-  read
-  readln
-  write
-  writeln
+There are three types of stuff to register:
+  commands
+  hooks
+  transport object
 
-  ^  
-  |
-  +-------+-------+-------+-------+
-  |       |       |       |       |
- tcp_t   ssl_t  reader_t http_t  .... 
-              
+The transport object can be reregistered at any time by any module. For example
+SSL:CONNECT
+Or
+_REQ <host> SSL:<port>
+Will register first the socket then overwrite it with the ssl transport object
 
-Connect them together
----------------------
-reader->object_register("cache", cache);
-cache->object_register("ssl", ssl);
-ssl->object_register("socket", socket);
+_CLOSE
+will unregister socket and ssl transport object
 
-or that way
+The default registered transport should be the socket transport object.
 
-reader->object_register("socket", socket);
-reader->object_register("ssl", socket);
-reader->object_register("cache", socket);
+TRANSPORT
+---------
+Modules have a init function and implement commands and given hooks.
+The transport, do have some difficulties. I explain this in an example:
+Think about using chached SSL
+  htt -> cache -> ssl -> socket
 
-Bind User Data to Object
-------------------------
-reader->user_data_set(reader, worker);
-worker_t *worker = reader->user_data_get(reader);
+But SSL do use there own socket implementation, therefor I can not cleany
+stack this togetherr. If I add the ssl element I must avoid socket, because
+this is inside the SSL stack. But from the point of SSL I do not need the
+know that this is socket, because the following is also thinkable:
+  htt -> cache -> ssl -> pipe
 
-Function Call Flow
-------------------
-reader->connect() --> cache->connect --> ssl->connect() --> socket->connect()
-reader->read() --> cache->read() --> ssl->read() --> socket->read()
+This all starts with for example
+  htt -> cache -> socket
 
-Function Signatures
--------------------
-status = reader->connect(reader);
-status = reader->accept(reader);
-status = reader->read(reader, brigade, len);
-status = reader->readln(reader, brigade);
-status = reader->write(reader, brigade);
-status = reader->writeln(reader, brigade);
+Then extend it with 
+  htt -> cache -> ssl(socket)
 
-HTTP Object
------------
-status = http->read(http, brigade, len);
-status = http->write(http, brigade);
+Or
+  htt -> cache -> pipe
 
-Remove an Object in the Chain
------------------------------
-stream_t *ssl = http->object_find("ssl");
-status = ssl->close(ssl);
-http->object_unregister(ssl);
+With
+  htt -> cache -> ssl(pipe)
 
+For the first instance we concentrate us for that
+  htt -> cache -> transport
 
-Match Object
-------------
-To expect and cut specific parts within a stream.
+where transport is either socket, ssl or file. With the connection process
+I can fix the transport to any of this three.
 
-match_t
-  regex_register
-  
+This means also that I have to capsulate the socket into socket_module :)
+A module should be able to register a own transport hook. I think the cache may
+be a htt own function which then calls the transport over a fixed interface.
+
+status read(buf, len)
+status peek(buf, len)
+status write(buf, len)
+
 
