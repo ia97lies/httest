@@ -4527,6 +4527,35 @@ apr_status_t worker_to_file(worker_t * self) {
   return APR_SUCCESS;
 }
 
+/**
+ * Register transport to socket
+ *
+ * @param socket IN htt socket
+ * @param transport IN transport object for read/write
+ * @return APR_SUCCESS
+ */
+apr_status_t transport_register(socket_t *socket, transport_t *transport) {
+  if (socket) {
+    socket->transport = transport;
+  }
+  return APR_SUCCESS;
+}
+
+
+/**
+ * Unregister transport from socket
+ *
+ * @param socket IN htt socket
+ * @param transport IN transport object for read/write
+ * @return APR_SUCCESS
+ */
+apr_status_t transport_unregister(socket_t *socket, transport_t *transport) {
+  if (socket) {
+    socket->transport = NULL;
+  }
+  return APR_SUCCESS;
+}
+
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
   APR_HOOK_LINK(flush_resolved_line)

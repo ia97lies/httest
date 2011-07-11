@@ -25,12 +25,16 @@
 #define HTTEST_WORKER_H
 
 #include <apr_hooks.h>
+#include "transport.h" 
 
 typedef struct socket_s {
+  /* XXX: replace socket with transport here */
+  transport_t *transport;
   apr_socket_t *socket;
 #define SOCKET_CLOSED 0
 #define SOCKET_CONNECTED 1
   int socket_state;
+  /* XXX: move this to ssl module */
 #ifdef USE_SSL
   int is_ssl;
   SSL *ssl;
@@ -300,8 +304,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
                           (worker_t *worker, char *info, char **new_info));
 
-apr_status_t transport_register(transport_t *transport);
-apr_status_t transport_unregister(transport_t *transport);
+apr_status_t transport_register(socket_t *socket, transport_t *transport);
+apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
 
 /** helpers */
 apr_status_t worker_new(worker_t ** self, char *additional,

@@ -33,7 +33,8 @@ typedef struct transport_s transport_t;
  * @param size INOUT size of buffer and on return actually read bytes
  * @return APR_SUCCESS or any apr status
  */
-typedef apr_status_t (*transport_read)(transport_t *hook, char *buf, apr_size_t *size);
+typedef apr_status_t (*transport_read_f)(transport_t *hook, char *buf, 
+                                         apr_size_t *size);
 
 /**
  * write method
@@ -42,14 +43,29 @@ typedef apr_status_t (*transport_read)(transport_t *hook, char *buf, apr_size_t 
  * @param size INOUT size of buffer and on return actually read bytes
  * @return APR_SUCCESS or any apr status
  */
-typedef apr_status_t (*transport_write)(transport *hook, char *buf, apr_size_t *size);
+typedef apr_status_t (*transport_write_f)(transport_t *hook, char *buf, 
+                                          apr_size_t *size);
 
-struct transport_s {
-  /* custom data */
-  void *data;
-  transport_read read;
-  transport_write write;
-};
+/**
+ * create transport object
+ * @param data IN custom data
+ * @param read IN read method
+ * @param write IN write method
+ * @return transport object
+ */ 
+transport_t *transport_new(void *data, 
+                           apr_pool_t *pool, 
+                           transport_read_f read, 
+			   transport_write_f write);
 
+/** 
+ * call registered transport method
+ * @param transport IN hook
+ * @param buf IN buffer which contains read bytes
+ * @param size INOUT size of buffer
+ * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
+ */
+apr_status_t transport_read(transport_t *hook, char *buf, apr_size_t *size);
+apr_status_t transport_write(transport_t *hook, char *buf, apr_size_t *size);
 
 #endif
