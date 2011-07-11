@@ -17,4 +17,5 @@ htntlm_SOURCES= \
 	htntlm.c util.c
 
 noinst_HEADERS= \
-	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h module.h
+	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
+	module.h transport.h

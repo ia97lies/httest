@@ -215,23 +215,6 @@ typedef struct line_s {
   apr_size_t len;
 } line_t;
 
-# define HTT_DECLARE(type)    type
-
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, void, flush_resolved_line,
-                          (worker_t *worker, line_t *line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
-                          (worker_t *worker, char *portinfo, 
-			   char **new_portinfo, char *rest_of_line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, server_port_args,
-                          (worker_t *worker, char *portinfo, 
-			   char **new_portinfo, char *rest_of_line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, connect,
-                          (worker_t *worker));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
-                          (worker_t *worker));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
-                          (worker_t *worker, char *info, char **new_info));
-
 #ifndef min
 #define min(a,b) ((a)<(b))?(a):(b)
 #endif
@@ -299,6 +282,28 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
     worker_log(worker, LOG_CMD, "%s", self->name); \
   }
 
+/** register */
+# define HTT_DECLARE(type)    type
+
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, void, flush_resolved_line,
+                          (worker_t *worker, line_t *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
+                          (worker_t *worker, char *portinfo, 
+			   char **new_portinfo, char *rest_of_line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, server_port_args,
+                          (worker_t *worker, char *portinfo, 
+			   char **new_portinfo, char *rest_of_line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, connect,
+                          (worker_t *worker));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
+                          (worker_t *worker));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
+                          (worker_t *worker, char *info, char **new_info));
+
+apr_status_t transport_register(transport_t *transport);
+apr_status_t transport_unregister(transport_t *transport);
+
+/** helpers */
 apr_status_t worker_new(worker_t ** self, char *additional,
                         char *prefix, global_t *global, interpret_f interpret);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
