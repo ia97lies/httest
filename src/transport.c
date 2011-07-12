@@ -50,6 +50,7 @@
  ***********************************************************************/
 struct transport_s {
   void *data;
+  transport_os_desc_get_f os_desc_get;
   transport_read_f read;
   transport_write_f write;
 };
@@ -70,6 +71,7 @@ struct transport_s {
  */ 
 transport_t *transport_new(void *data, 
                            apr_pool_t *pool, 
+                           transport_os_desc_get_f os_desc_get, 
                            transport_read_f read, 
 			   transport_write_f write) {
   transport_t *hook = apr_pcalloc(pool, sizeof(*hook));
@@ -79,6 +81,22 @@ transport_t *transport_new(void *data,
   hook->write = write;
 
   return hook;
+}
+
+/**
+ * Get socket descriptor of the transport protocol
+ * @param transport IN hook
+ * @param desc OUT os descriptor of this transport
+ * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
+ */
+apr_status_t transport_os_desc_get(transport_t *hook, int *desc) {
+  if (hook && hook->os_desc_get) {
+    return hook->os_desc_get(hook->data, desc);
+  }
+  else {
+    return APR_ENOSOCKET;
+  }
+
 }
 
 /** 
@@ -101,10 +119,10 @@ apr_status_t transport_read(transport_t *hook, char *buf, apr_size_t *size) {
  * call registered transport method
  * @param transport IN hook
  * @param buf IN buffer which contains read bytes
- * @param size INOUT size of buffer
+ * @param size IN size of buffer
  * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
  */
-apr_status_t transport_write(transport_t *hook, char *buf, apr_size_t *size) {
+apr_status_t transport_write(transport_t *hook, char *buf, apr_size_t size) {
   if (hook && hook->write) {
     return hook->write(hook->data, buf, size);
   }

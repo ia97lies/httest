@@ -983,6 +983,55 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
   return APR_SUCCESS;
 }
 
+/**
+ * Get os socket descriptor
+ *
+ * @param data IN void pointer to socket
+ * @param desc OUT os socket descriptor
+ * @return APR_ENOENT
+ */
+apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
+  return APR_ENOENT;
+}
+
+/**
+ * read from socket
+ *
+ * @param data IN void pointer to socket
+ * @param buf IN buffer
+ * @param size INOUT buffer len
+ * @return apr status
+ */
+apr_status_t ssl_transport_read(void *data, char *buf, apr_size_t *size) {
+  return APR_ENOTIMPL;
+}
+
+/**
+ * write to socket
+ *
+ * @param data IN void pointer to socket
+ * @param buf IN buffer
+ * @param size INOUT buffer len
+ * @return apr status
+ */
+apr_status_t ssl_transport_write(void *data, char *buf, apr_size_t size) {
+  SSL *ssl = data;
+  apr_size_t e_ssl;
+
+tryagain:
+  apr_sleep(1);
+  e_ssl = SSL_write(ssl, buf, size);
+  if (e_ssl != size) {
+    int scode = SSL_get_error(ssl, e_ssl);
+    if (scode == SSL_ERROR_WANT_WRITE) {
+      goto tryagain;
+    }
+    return APR_ECONNABORTED;
+  }
+
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Module 
  ***********************************************************************/

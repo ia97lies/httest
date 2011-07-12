@@ -4528,6 +4528,58 @@ apr_status_t worker_to_file(worker_t * self) {
 }
 
 /**
+ * Get os socket descriptor
+ *
+ * @param data IN void pointer to socket
+ * @param desc OUT os socket descriptor
+ * @return apr status
+ */
+apr_status_t tcp_os_desc_get(void *data, int *desc) {
+  apr_socket_t *socket = data;
+  return apr_os_sock_get(desc, socket);
+}
+
+/**
+ * read from socket
+ *
+ * @param data IN void pointer to socket
+ * @param buf IN buffer
+ * @param size INOUT buffer len
+ * @return apr status
+ */
+apr_status_t tcp_read(void *data, char *buf, apr_size_t *size) {
+  apr_socket_t *socket = data;
+  return apr_socket_recv(socket, buf, size);
+}
+
+/**
+ * write to socket
+ *
+ * @param data IN void pointer to socket
+ * @param buf IN buffer
+ * @param size INOUT buffer len
+ * @return apr status
+ */
+apr_status_t tcp_write(void *data, char *buf, apr_size_t size) {
+  apr_socket_t *socket = data;
+  apr_status_t status = APR_SUCCESS;
+  apr_size_t total = size;
+  apr_size_t count = 0;
+  apr_size_t len;
+
+  while (total != count) {
+    len = total - count;
+    if ((status = apr_socket_send(socket, &buf[count], &len)) 
+	!= APR_SUCCESS) {
+      return status;
+    }
+    count += len;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
  * Register transport to socket
  *
  * @param socket IN htt socket
@@ -4541,7 +4593,6 @@ apr_status_t transport_register(socket_t *socket, transport_t *transport) {
   return APR_SUCCESS;
 }
 
-
 /**
  * Unregister transport from socket
  *
@@ -4554,6 +4605,16 @@ apr_status_t transport_unregister(socket_t *socket, transport_t *transport) {
     socket->transport = NULL;
   }
   return APR_SUCCESS;
+}
+
+/**
+ * Get current transport from socket
+ *
+ * @param socket IN htt socket
+ * @return transport
+ */
+transport_t *transport_get_current(socket_t *socket) {
+  return socket->transport;
 }
 
 APR_HOOK_STRUCT(
