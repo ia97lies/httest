@@ -77,10 +77,28 @@ transport_t *transport_new(void *data,
   transport_t *hook = apr_pcalloc(pool, sizeof(*hook));
 
   hook->data = data;
+  hook->os_desc_get = os_desc_get;
   hook->read = read;
   hook->write = write;
 
   return hook;
+}
+
+/**
+ * set new user data
+ * @param hook IN transport hook
+ * @param data IN new user data
+ * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
+ */
+apr_status_t transport_set_data(transport_t *hook, void *data) {
+  if (hook) {
+    hook->data = data;
+    return APR_SUCCESS;
+  }
+  else {
+    return APR_ENOSOCKET;
+  }
+
 }
 
 /**

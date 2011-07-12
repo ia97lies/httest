@@ -69,8 +69,16 @@ transport_t *transport_new(void *data,
 			   transport_write_f write);
 
 /**
+ * set new user data
+ * @param hook IN transport hook
+ * @param data IN new user data
+ * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
+ */
+apr_status_t transport_set_data(transport_t *hook, void *data);
+
+/**
  * Get socket descriptor of the transport protocol
- * @param transport IN hook
+ * @param hook IN transport hook
  * @param desc OUT os descriptor of this transport
  * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
  */
@@ -78,7 +86,7 @@ apr_status_t transport_os_desc_get(transport_t *hook, int *desc);
 
 /** 
  * call registered transport method
- * @param transport IN hook
+ * @param hook IN transport hook
  * @param buf IN buffer which contains read bytes
  * @param size INOUT size of buffer
  * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
@@ -87,7 +95,7 @@ apr_status_t transport_read(transport_t *hook, char *buf, apr_size_t *size);
 
 /** 
  * call registered transport method
- * @param transport IN hook
+ * @param hook IN transport hook
  * @param buf IN buffer which contains read bytes
  * @param size IN size of buffer
  * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status

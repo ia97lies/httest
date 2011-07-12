@@ -4124,17 +4124,8 @@ static apr_status_t socket_send(socket_t *socket, char *buf,
 
 #ifdef USE_SSL
   if (socket->is_ssl) {
-    apr_size_t e_ssl;
-  tryagain:
-    apr_sleep(1);
-    e_ssl = SSL_write(socket->ssl, buf, len);
-    if (e_ssl != len) {
-      int scode = SSL_get_error(socket->ssl, e_ssl);
-      if (scode == SSL_ERROR_WANT_WRITE) {
-	goto tryagain;
-      }
-      status = APR_ECONNABORTED;
-      goto error;
+    if ((status = transport_write(socket->transport, &buf[count], len)) != APR_SUCCESS) {
+      return status;
     }
   }
   else
@@ -4143,11 +4134,16 @@ static apr_status_t socket_send(socket_t *socket, char *buf,
     while (total != count) {
       len = total - count;
       if ((status = apr_socket_send(socket->socket, &buf[count], &len)) 
-	  != APR_SUCCESS) {
-	goto error;
+          != APR_SUCCESS) {
+        goto error;
       }
       count += len;
     }
+/*
+    if ((status = transport_write(socket->transport, &buf[count], len)) != APR_SUCCESS) {
+      return status;
+    }
+*/
   }
 
 error:
@@ -4523,58 +4519,6 @@ apr_status_t worker_to_file(worker_t * self) {
   }
 
   apr_file_close(fp);
-
-  return APR_SUCCESS;
-}
-
-/**
- * Get os socket descriptor
- *
- * @param data IN void pointer to socket
- * @param desc OUT os socket descriptor
- * @return apr status
- */
-apr_status_t tcp_os_desc_get(void *data, int *desc) {
-  apr_socket_t *socket = data;
-  return apr_os_sock_get(desc, socket);
-}
-
-/**
- * read from socket
- *
- * @param data IN void pointer to socket
- * @param buf IN buffer
- * @param size INOUT buffer len
- * @return apr status
- */
-apr_status_t tcp_read(void *data, char *buf, apr_size_t *size) {
-  apr_socket_t *socket = data;
-  return apr_socket_recv(socket, buf, size);
-}
-
-/**
- * write to socket
- *
- * @param data IN void pointer to socket
- * @param buf IN buffer
- * @param size INOUT buffer len
- * @return apr status
- */
-apr_status_t tcp_write(void *data, char *buf, apr_size_t size) {
-  apr_socket_t *socket = data;
-  apr_status_t status = APR_SUCCESS;
-  apr_size_t total = size;
-  apr_size_t count = 0;
-  apr_size_t len;
-
-  while (total != count) {
-    len = total - count;
-    if ((status = apr_socket_send(socket, &buf[count], &len)) 
-	!= APR_SUCCESS) {
-      return status;
-    }
-    count += len;
-  }
 
   return APR_SUCCESS;
 }

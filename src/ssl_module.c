@@ -47,6 +47,7 @@ void * ssl_module;
 typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
+  transport_t *transport;
 } ssl_config_t;
 
 /************************************************************************
@@ -232,6 +233,103 @@ apr_status_t worker_ssl_accept(worker_t * worker) {
   return status;
 }
 
+/**
+ * Get os socket descriptor
+ *
+ * @param data IN void pointer to socket
+ * @param desc OUT os socket descriptor
+ * @return APR_ENOENT
+ */
+apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
+  return APR_ENOENT;
+}
+
+/**
+ * read from socket
+ *
+ * @param data IN void pointer to socket
+ * @param buf IN buffer
+ * @param size INOUT buffer len
+ * @return apr status
+ */
+apr_status_t ssl_transport_read(void *data, char *buf, apr_size_t *size) {
+  SSL *ssl = data;
+  apr_status_t status;
+
+tryagain:
+  apr_sleep(1);
+  status = SSL_read(ssl, buf, *size);
+  if (status <= 0) {
+    int scode = SSL_get_error(ssl, status);
+
+    if (scode == SSL_ERROR_ZERO_RETURN) {
+      *size = 0;
+      return APR_EOF;
+    }
+    else if (scode != SSL_ERROR_WANT_WRITE && scode != SSL_ERROR_WANT_READ) {
+      *size = 0;
+      return APR_ECONNABORTED;
+    }
+    else {
+      goto tryagain;
+    }
+  }
+  else {
+    *size = status;
+    return APR_SUCCESS;
+  }
+
+  return APR_ENOTIMPL;
+}
+
+/**
+ * write to socket
+ *
+ * @param data IN void pointer to socket
+ * @param buf IN buffer
+ * @param size INOUT buffer len
+ * @return apr status
+ */
+apr_status_t ssl_transport_write(void *data, char *buf, apr_size_t size) {
+  SSL *ssl = data;
+  apr_size_t e_ssl;
+
+tryagain:
+  apr_sleep(1);
+  e_ssl = SSL_write(ssl, buf, size);
+  if (e_ssl != size) {
+    int scode = SSL_get_error(ssl, e_ssl);
+    if (scode == SSL_ERROR_WANT_WRITE) {
+      goto tryagain;
+    }
+    return APR_ECONNABORTED;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Get ssl config from worker
+ *
+ * @param worker IN worker
+ * @return ssl config
+ */
+static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    /* we could not set it here, we have to before register, but want this only
+     * alloc one time per worker
+     */
+    config->transport = transport_new(NULL, worker->pbody, 
+				      ssl_transport_os_desc_get, 
+				      ssl_transport_read, 
+				      ssl_transport_write);
+    module_set_config(worker->config, ssl_module, config);
+  }
+  return config;
+}
+
 /************************************************************************
  * Commands
  ***********************************************************************/
@@ -248,6 +346,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
   int is_ssl;
   BIO *bio;
   apr_os_sock_t fd;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   sslstr = apr_table_get(worker->params, "1");
   if (!sslstr) {
@@ -295,6 +394,8 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
 				return status;
       }
+      transport_set_data(config->transport, worker->socket->ssl);
+      transport_register(worker->socket, config->transport);
     }
   }
   else {
@@ -315,6 +416,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
   const char *sslstr;
   int is_ssl;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   sslstr = apr_table_get(worker->params, "1");
   if (!sslstr) {
@@ -352,6 +454,8 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
       if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
 	return status;
       }
+      transport_set_data(config->transport, worker->socket->ssl);
+      transport_register(worker->socket, config->transport);
     }
   }
   else {
@@ -510,11 +614,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   int rc;
   const char *copy = apr_table_get(worker->params, "1");
 
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
-  if (config == NULL) {
-    config = apr_pcalloc(worker->pbody, sizeof(*config));
-    module_set_config(worker->config, ssl_module, config);
-  }
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (config->cert) {
     X509_free(config->cert);
@@ -602,7 +702,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
   const char *cmd = apr_table_get(worker->params, "1");
   const char *var = apr_table_get(worker->params, "2");
 
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (!cmd) {
     worker_log_error(worker, "SSL variable name is missing");
@@ -688,11 +788,7 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
-  if (config == NULL) {
-    config = apr_pcalloc(worker->pbody, sizeof(*config));
-    module_set_config(worker->config, ssl_module, config);
-  }
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (config->cert) {
     X509_free(config->cert);
@@ -722,11 +818,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
-  if (config == NULL) {
-    config = apr_pcalloc(worker->pbody, sizeof(*config));
-    module_set_config(worker->config, ssl_module, config);
-  }
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (config->pkey) {
     EVP_PKEY_free(config->pkey);
@@ -752,7 +844,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
  * @return APR_SUCCESS
  */
 static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (!worker->ssl_ctx) {
     worker_log_error(worker, "You are not in a ssl context");
@@ -906,6 +998,8 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
  */
 static apr_status_t ssl_hook_connect(worker_t *worker) {
   apr_status_t status;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+
   if (worker->socket->is_ssl) {
     BIO *bio;
     apr_os_sock_t fd;
@@ -928,6 +1022,8 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
       return status;
     }
+    transport_set_data(config->transport, worker->socket->ssl);
+    transport_register(worker->socket, config->transport);
   }
 
   return APR_SUCCESS;
@@ -942,10 +1038,14 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
  */
 static apr_status_t ssl_hook_accept(worker_t *worker) {
   apr_status_t status;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
     return status;
   }
+  transport_set_data(config->transport, worker->socket->ssl);
+  transport_register(worker->socket, config->transport);
+
   return APR_SUCCESS;
 }
 
@@ -980,55 +1080,6 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
     /* work is done break hook chain here! */
     return APR_EINTR;
   }
-  return APR_SUCCESS;
-}
-
-/**
- * Get os socket descriptor
- *
- * @param data IN void pointer to socket
- * @param desc OUT os socket descriptor
- * @return APR_ENOENT
- */
-apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
-  return APR_ENOENT;
-}
-
-/**
- * read from socket
- *
- * @param data IN void pointer to socket
- * @param buf IN buffer
- * @param size INOUT buffer len
- * @return apr status
- */
-apr_status_t ssl_transport_read(void *data, char *buf, apr_size_t *size) {
-  return APR_ENOTIMPL;
-}
-
-/**
- * write to socket
- *
- * @param data IN void pointer to socket
- * @param buf IN buffer
- * @param size INOUT buffer len
- * @return apr status
- */
-apr_status_t ssl_transport_write(void *data, char *buf, apr_size_t size) {
-  SSL *ssl = data;
-  apr_size_t e_ssl;
-
-tryagain:
-  apr_sleep(1);
-  e_ssl = SSL_write(ssl, buf, size);
-  if (e_ssl != size) {
-    int scode = SSL_get_error(ssl, e_ssl);
-    if (scode == SSL_ERROR_WANT_WRITE) {
-      goto tryagain;
-    }
-    return APR_ECONNABORTED;
-  }
-
   return APR_SUCCESS;
 }
 
