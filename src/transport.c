@@ -96,7 +96,7 @@ apr_status_t transport_set_data(transport_t *hook, void *data) {
     return APR_SUCCESS;
   }
   else {
-    return APR_ENOSOCKET;
+    return APR_EGENERAL;
   }
 
 }
@@ -112,7 +112,7 @@ apr_status_t transport_os_desc_get(transport_t *hook, int *desc) {
     return hook->os_desc_get(hook->data, desc);
   }
   else {
-    return APR_ENOSOCKET;
+    return APR_EGENERAL;
   }
 
 }
@@ -129,7 +129,7 @@ apr_status_t transport_read(transport_t *hook, char *buf, apr_size_t *size) {
     return hook->read(hook->data, buf, size);
   }
   else {
-    return APR_ENOSOCKET;
+    return APR_EGENERAL;
   }
 }
 
@@ -145,7 +145,7 @@ apr_status_t transport_write(transport_t *hook, char *buf, apr_size_t size) {
     return hook->write(hook->data, buf, size);
   }
   else {
-    return APR_ENOSOCKET;
+    return APR_EGENERAL;
   }
 }
 

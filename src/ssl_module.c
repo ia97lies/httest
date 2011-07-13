@@ -42,7 +42,7 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-void * ssl_module;
+const char * ssl_module = "ssl_module";
 
 typedef struct ssl_config_s {
   X509 *cert;
@@ -325,7 +325,7 @@ static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
 				      ssl_transport_os_desc_get, 
 				      ssl_transport_read, 
 				      ssl_transport_write);
-    module_set_config(worker->config, ssl_module, config);
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, ssl_module), config);
   }
   return config;
 }
@@ -1040,11 +1040,13 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
   apr_status_t status;
   ssl_config_t *config = ssl_get_worker_config(worker);
 
-  if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
-    return status;
+  if (worker->socket->is_ssl) {
+    if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
+      return status;
+    }
+    transport_set_data(config->transport, worker->socket->ssl);
+    transport_register(worker->socket, config->transport);
   }
-  transport_set_data(config->transport, worker->socket->ssl);
-  transport_register(worker->socket, config->transport);
 
   return APR_SUCCESS;
 }
@@ -1088,7 +1090,6 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
  ***********************************************************************/
 apr_status_t ssl_module_init(global_t *global) {
   apr_status_t status;
-  ssl_module = apr_pcalloc(global->pool, sizeof(*ssl_module));
 
   /* setup ssl library */
 #ifndef OPENSSL_NO_ENGINE

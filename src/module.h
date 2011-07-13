@@ -66,7 +66,7 @@ apr_status_t module_command_new(global_t *global, const char *module,
 				const char *short_desc, const char *desc, 
 				interpret_f function); 
 
-void * module_get_config(apr_hash_t *config, void *module);
-void module_set_config(apr_hash_t *config, void *module, void *data); 
+void * module_get_config(apr_hash_t *config, const char *module);
+void module_set_config(apr_hash_t *config, const char *module, void *data); 
 
 #endif

@@ -29,7 +29,7 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-void * tcp_module;
+const char * tcp_module = "tcp_module";
 
 typedef struct tcp_config_s {
   transport_t *transport;
@@ -107,7 +107,7 @@ static tcp_config_t *tcp_get_worker_config(worker_t *worker) {
 				      tcp_transport_os_desc_get, 
 				      tcp_transport_read, 
 				      tcp_transport_write);
-    module_set_config(worker->config, tcp_module, config);
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, tcp_module), config);
   }
   return config;
 }
@@ -154,7 +154,6 @@ static apr_status_t tcp_hook_accept(worker_t *worker) {
  ***********************************************************************/
 apr_status_t tcp_module_init(global_t *global) {
   apr_status_t status;
-  tcp_module = apr_pcalloc(global->pool, sizeof(*tcp_module));
 
   htt_hook_connect(tcp_hook_connect, NULL, NULL, 0);
   htt_hook_accept(tcp_hook_accept, NULL, NULL, 0);

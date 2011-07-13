@@ -112,8 +112,6 @@ url_escape_seq_t url_escape_seq[] = {
  * Implementation
  ***********************************************************************/
 
-static apr_status_t socket_send(socket_t *socket, char *buf, apr_size_t len);
-
 /**
  * set a variable either as local or global
  * make a copy and replace existing
@@ -314,7 +312,7 @@ static void * APR_THREAD_FUNC streamer(apr_thread_t * thread, void *selfv) {
       status = APR_SUCCESS;
     }
     if (status == APR_SUCCESS) {
-      status = socket_send(tunnel->sendto, buf, len);
+      status = transport_write(tunnel->sendto->transport, buf, len);
     }
   } while (status == APR_SUCCESS);
 
@@ -4108,49 +4106,6 @@ apr_status_t worker_add_line(worker_t * self, const char *file_and_line,
 }
 
 /**
- * local socket send
- *
- * @param sockett IN socket 
- * @param buf IN buffer to send
- * @param len IN no bytes of buffer to send
- *
- * @return apr status
- */
-static apr_status_t socket_send(socket_t *socket, char *buf,
-                                apr_size_t len) {
-  apr_status_t status = APR_SUCCESS;
-  apr_size_t total = len;
-  apr_size_t count = 0;
-
-#ifdef USE_SSL
-  if (socket->is_ssl) {
-    if ((status = transport_write(socket->transport, &buf[count], len)) != APR_SUCCESS) {
-      return status;
-    }
-  }
-  else
-#endif
-  {
-    while (total != count) {
-      len = total - count;
-      if ((status = apr_socket_send(socket->socket, &buf[count], &len)) 
-          != APR_SUCCESS) {
-        goto error;
-      }
-      count += len;
-    }
-/*
-    if ((status = transport_write(socket->transport, &buf[count], len)) != APR_SUCCESS) {
-      return status;
-    }
-*/
-  }
-
-error:
-  return status;
-}
-
-/**
  * Send buf with len
  * 
  * @param self IN thread data object
@@ -4160,8 +4115,8 @@ error:
  * @return apr status
  */
 apr_status_t worker_socket_send(worker_t *self, char *buf, 
-                                apr_size_t len) {
-  return socket_send(self->socket, buf, len);
+                      apr_size_t len) {
+  return transport_write(self->socket->transport, buf, len);
 }
 
 /**

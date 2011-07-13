@@ -114,8 +114,8 @@ apr_status_t module_command_new(global_t *global, const char *module,
  *
  * @return stored pointer
  */
-void * module_get_config(apr_hash_t *config, void *module) {
-  apr_hash_get(config, module, sizeof(*module));
+void * module_get_config(apr_hash_t *config, const char *module) {
+  apr_hash_get(config, module, APR_HASH_KEY_STRING);
 }
 
 /**
@@ -125,8 +125,8 @@ void * module_get_config(apr_hash_t *config, void *module) {
  * @param module IN unique module pointer
  * @param data IN data to store for this module
  */
-void module_set_config(apr_hash_t *config, void *module, void *data) {
-  apr_hash_set(config, module, sizeof(*module), data);
+void module_set_config(apr_hash_t *config, const char *module, void *data) {
+  apr_hash_set(config, module, APR_HASH_KEY_STRING, data);
 }
 
 
