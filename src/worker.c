@@ -4116,6 +4116,8 @@ apr_status_t worker_add_line(worker_t * self, const char *file_and_line,
  */
 apr_status_t worker_socket_send(worker_t *self, char *buf, 
                       apr_size_t len) {
+
+  worker_log(self, LOG_DEBUG, "send socket: %p transport: %p", self->socket, self->socket->transport);
   return transport_write(self->socket->transport, buf, len);
 }
 

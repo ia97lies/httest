@@ -32,7 +32,7 @@
 const char * tcp_module = "tcp_module";
 
 typedef struct tcp_config_s {
-  transport_t *transport;
+  int port;
 } tcp_config_t;
 
 /************************************************************************
@@ -103,10 +103,6 @@ static tcp_config_t *tcp_get_worker_config(worker_t *worker) {
     /* we could not set it here, we have to before register, but want this only
      * alloc one time per worker
      */
-    config->transport = transport_new(NULL, worker->pbody, 
-				      tcp_transport_os_desc_get, 
-				      tcp_transport_read, 
-				      tcp_transport_write);
     module_set_config(worker->config, apr_pstrdup(worker->pbody, tcp_module), config);
   }
   return config;
@@ -123,11 +119,19 @@ static tcp_config_t *tcp_get_worker_config(worker_t *worker) {
  * @return APR_SUCCESS or apr error
  */
 static apr_status_t tcp_hook_connect(worker_t *worker) {
+  transport_t *transport;
   apr_status_t status;
+
   tcp_config_t *config = tcp_get_worker_config(worker);
 
-  transport_set_data(config->transport, worker->socket->socket);
-  transport_register(worker->socket, config->transport);
+  transport = transport_new(worker->socket->socket, worker->pbody, 
+			    tcp_transport_os_desc_get, 
+			    tcp_transport_read, 
+			    tcp_transport_write);
+
+  transport_register(worker->socket, transport);
+
+  worker_log(worker, LOG_DEBUG, "tcp connect socket: %p transport: %p", worker->socket, transport);
 
   return APR_SUCCESS;
 }
@@ -140,11 +144,17 @@ static apr_status_t tcp_hook_connect(worker_t *worker) {
  * @return APR_SUCCESS or apr error
  */
 static apr_status_t tcp_hook_accept(worker_t *worker) {
+  transport_t *transport;
   apr_status_t status;
   tcp_config_t *config = tcp_get_worker_config(worker);
 
-  transport_set_data(config->transport, worker->socket->socket);
-  transport_register(worker->socket, config->transport);
+  transport = transport_new(worker->socket->socket, worker->pbody, 
+			    tcp_transport_os_desc_get, 
+			    tcp_transport_read, 
+			    tcp_transport_write);
+  transport_register(worker->socket, transport);
+
+  worker_log(worker, LOG_DEBUG, "tcp accept socket: %p transport: %p", worker->socket, transport);
 
   return APR_SUCCESS;
 }

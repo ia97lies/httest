@@ -52,6 +52,7 @@
 #include "worker.h"
 #include "conf.h"
 #include "util.h"
+#include "module.h"
 
 /************************************************************************
  * Defines 
@@ -110,6 +111,7 @@ typedef struct response_s {
   char *body;
 } response_t;
 
+apr_status_t tcp_module_init(global_t *global);
 /************************************************************************
  * Implementation 
  ***********************************************************************/
@@ -1165,11 +1167,18 @@ int proxy(self_t *self) {
   }
 
   memset(&global, 0, sizeof(global));
+  global.pool = self->pool;
   global.log_mode = self->log_mode;
   global.socktmo = 1000 * 300000;
   global.modules = apr_hash_make(self->pool);
   global.blocks = apr_hash_make(self->pool);
-  
+
+  /**
+   * Initialize tcp module
+   */
+
+  tcp_module_init(&global);
+
   if ((status = worker_new(&listener, "", "", &global, NULL)) != APR_SUCCESS) {
     return status;
   } 
@@ -1423,7 +1432,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "Start proxy on port %d\n", port);
   
   print_file(self, self->pre);
-  
+    
   proxy(self);
 
   fprintf(stdout, "\n--normal end\n");

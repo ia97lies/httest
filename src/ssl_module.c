@@ -47,7 +47,6 @@ const char * ssl_module = "ssl_module";
 typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
-  transport_t *transport;
 } ssl_config_t;
 
 /************************************************************************
@@ -318,13 +317,6 @@ static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
   ssl_config_t *config = module_get_config(worker->config, ssl_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
-    /* we could not set it here, we have to before register, but want this only
-     * alloc one time per worker
-     */
-    config->transport = transport_new(NULL, worker->pbody, 
-				      ssl_transport_os_desc_get, 
-				      ssl_transport_read, 
-				      ssl_transport_write);
     module_set_config(worker->config, apr_pstrdup(worker->pbody, ssl_module), config);
   }
   return config;
@@ -363,6 +355,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 
   if (worker->socket->socket_state == SOCKET_CONNECTED) {
     if (worker->socket->is_ssl) {
+      transport_t *transport;
       const char *cert;
       const char *key;
       const char *ca;
@@ -394,8 +387,12 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
 				return status;
       }
-      transport_set_data(config->transport, worker->socket->ssl);
-      transport_register(worker->socket, config->transport);
+
+      transport = transport_new(worker->socket->ssl, worker->pbody, 
+				ssl_transport_os_desc_get, 
+				ssl_transport_read, 
+				ssl_transport_write);
+      transport_register(worker->socket, transport);
     }
   }
   else {
@@ -433,6 +430,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
 
   if (worker->socket->socket_state == SOCKET_CONNECTED) {
     if (worker->socket->is_ssl) {
+      transport_t *transport;
       const char *cert;
       const char *key;
       const char *ca;
@@ -454,8 +452,11 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
       if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
 	return status;
       }
-      transport_set_data(config->transport, worker->socket->ssl);
-      transport_register(worker->socket, config->transport);
+      transport = transport_new(worker->socket->ssl, worker->pbody, 
+				ssl_transport_os_desc_get, 
+				ssl_transport_read, 
+				ssl_transport_write);
+      transport_register(worker->socket, transport);
     }
   }
   else {
@@ -1001,6 +1002,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
   ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (worker->socket->is_ssl) {
+    transport_t *transport;
     BIO *bio;
     apr_os_sock_t fd;
 
@@ -1022,8 +1024,11 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
       return status;
     }
-    transport_set_data(config->transport, worker->socket->ssl);
-    transport_register(worker->socket, config->transport);
+    transport = transport_new(worker->socket->ssl, worker->pbody, 
+			      ssl_transport_os_desc_get, 
+			      ssl_transport_read, 
+			      ssl_transport_write);
+    transport_register(worker->socket, transport);
   }
 
   return APR_SUCCESS;
@@ -1041,11 +1046,15 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
   ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (worker->socket->is_ssl) {
+    transport_t *transport;
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
     }
-    transport_set_data(config->transport, worker->socket->ssl);
-    transport_register(worker->socket, config->transport);
+    transport = transport_new(worker->socket->ssl, worker->pbody, 
+			      ssl_transport_os_desc_get, 
+			      ssl_transport_read, 
+			      ssl_transport_write);
+    transport_register(worker->socket, transport);
   }
 
   return APR_SUCCESS;
