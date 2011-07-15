@@ -60,7 +60,15 @@ apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
  */
 apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) {
   apr_socket_t *socket = data;
-  return apr_socket_recv(socket, buf, size);
+  apr_status_t  status;
+ 
+  status = apr_socket_recv(socket, buf, size);
+  if (APR_STATUS_IS_EOF(status) && *size > 0) {
+    return APR_SUCCESS;
+  }
+  else {
+    return status;
+  }
 }
 
 /**

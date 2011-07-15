@@ -38,6 +38,7 @@
 #include <apr_buckets.h>
 
 #include "defines.h"
+#include "transport.h"
 #include "socket.h"
 
 
@@ -47,10 +48,7 @@
 
 struct sockreader_s {
   apr_pool_t *pool;
-  apr_socket_t *socket;
-#ifdef USE_SSL
-  SSL *ssl;
-#endif
+  transport_t *transport;
   apr_size_t i;
   apr_size_t len;
   char *buf;
@@ -82,10 +80,7 @@ static char *my_strcasestr(const char *s1, const char *s2);
  *
  * @return APR_SUCCESS else an APR error
  */
-apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
-#ifdef USE_SSL
-                            SSL * ssl,
-#endif
+apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
                             char *rest, apr_size_t len, apr_pool_t * p) {
   apr_status_t status;
   apr_allocator_t *allocator;
@@ -95,10 +90,7 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
   (*sockreader)->alloc = apr_bucket_alloc_create(p);
   (*sockreader)->line = apr_brigade_create(p, (*sockreader)->alloc);
 
-  (*sockreader)->socket = socket;
-#ifdef USE_SSL
-  (*sockreader)->ssl = ssl;
-#endif
+  (*sockreader)->transport = transport;
   allocator = apr_pool_allocator_get(p);
   apr_allocator_max_free_set(allocator, 1024*1024);
   (*sockreader)->pool = p;
@@ -130,20 +122,6 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
  */
 void sockreader_set_options(sockreader_t *self, int options) {
   self->options = options;
-}
-
-/** 
- * Get corresponding socket from sockreader
- *
- * @param self IN sockreader object
- *
- * @return socket
- */
-apr_socket_t * sockreader_get_socket(sockreader_t *self) {
-  if (!self) {
-    return NULL;
-  }
-  return self->socket;
 }
 
 /**
@@ -209,7 +187,6 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
       c = self->buf[self->i];
       apr_brigade_putc(self->line, NULL, NULL, c);
       self->i++;
-      i++;
     }
   }
 
@@ -626,47 +603,11 @@ static apr_status_t sockreader_fill(sockreader_t * self) {
     self->swap = NULL;
   }
 
-  if (!self->socket) {
-    return APR_ENOSOCKET;
-  }
-
   self->len = BLOCK_MAX;
 
-#ifdef USE_SSL
-  if (self->ssl) {
-  tryagain:
-    apr_sleep(1);
-    status = SSL_read(self->ssl, self->buf, self->len);
-    if (status <= 0) {
-      int scode = SSL_get_error(self->ssl, status);
-
-      if (scode == SSL_ERROR_ZERO_RETURN) {
-	self->len = 0;
-        return APR_EOF;
-      }
-      else if (scode != SSL_ERROR_WANT_WRITE && scode != SSL_ERROR_WANT_READ) {
-	self->len = 0;
-        return APR_ECONNABORTED;
-      }
-      else {
-        goto tryagain;
-      }
-    }
-    else {
-      self->len = status;
-      return APR_SUCCESS;
-    }
-  }
-  else
-#endif
-  {
-    status = apr_socket_recv(self->socket, self->buf, &self->len);
-    if (APR_STATUS_IS_EOF(status) && self->len > 0) {
-      return APR_SUCCESS;
-    }
-    else {
-      return status;
-    }
+  if ((status = transport_read(self->transport, self->buf, &self->len))
+      != APR_SUCCESS) {
+    return status;
   }
 }
 

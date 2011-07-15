@@ -266,10 +266,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
 
   peeklen = worker->socket->peeklen;
   worker->socket->peeklen = 0;
-  if ((status = sockreader_new(&sockreader, worker->socket->socket,
-#ifdef USE_SSL
-                               worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+  if ((status = sockreader_new(&sockreader, worker->socket->transport,
                                worker->socket->peek, peeklen, r->pool)) != APR_SUCCESS) {
     goto out_err;
   }
@@ -374,10 +371,7 @@ static apr_status_t wait_response(worker_t * worker, response_t *r) {
 
   peeklen = worker->socket->peeklen;
   worker->socket->peeklen = 0;
-  if ((status = sockreader_new(&sockreader, worker->socket->socket,
-#ifdef USE_SSL
-                               worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+  if ((status = sockreader_new(&sockreader, worker->socket->transport,
                                worker->socket->peek, peeklen, r->pool)) != APR_SUCCESS) {
     goto out_err;
   }

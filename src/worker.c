@@ -52,6 +52,7 @@
 #include "util.h"
 #include "regex.h"
 #include "file.h"
+#include "transport.h"
 #include "socket.h"
 #include "ssl.h"
 #include "worker.h"
@@ -1083,10 +1084,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   if (worker->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->socket,
-#ifdef USE_SSL
-				 worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+    if ((status = sockreader_new(&sockreader, worker->socket->transport,
 				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
       goto out_err;
     }
@@ -1139,6 +1137,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     worker_expect(worker, worker->expect.headers, line, strlen(line));
 
     if (!strstr(line, "HTTP/") && !strstr(line, "ICAP/")) {
+      worker_log(worker, LOG_DEBUG, "Not HTTP or ICAP request line \"%s\", must be HTTP/0.9", line); 
       apr_table_add(worker->headers, "Connection", "close");
       status = sockreader_push_line(sockreader, line);
       goto http_0_9;
@@ -2676,10 +2675,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data) {
   if (worker->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->socket,
-#ifdef USE_SSL
-				 worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+    if ((status = sockreader_new(&sockreader, worker->socket->transport,
 				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
       goto out_err;
     }
@@ -2748,10 +2744,7 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data) {
   if (worker->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->socket,
-#ifdef USE_SSL
-				 worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+    if ((status = sockreader_new(&sockreader, worker->socket->transport,
 				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
       goto out_err;
     }
@@ -3414,10 +3407,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
   if (worker->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    sockreader_new(&client.sockreader, worker->socket->socket,
-#ifdef USE_SSL
-		   worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+    sockreader_new(&client.sockreader, worker->socket->transport,
 		   worker->socket->peek, peeklen, client.pool);
     if (status != APR_SUCCESS && !APR_STATUS_IS_TIMEUP(status)) {
       goto error1;
@@ -3436,10 +3426,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
       != APR_SUCCESS) {
     goto error2;
   }
-  sockreader_new(&backend.sockreader, worker->socket->socket,
-#ifdef USE_SSL
-		 worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+  sockreader_new(&backend.sockreader, worker->socket->transport,
 		 NULL, 0, backend.pool);
   if (status != APR_SUCCESS && !APR_STATUS_IS_TIMEUP(status)) {
     goto error2;
@@ -3709,7 +3696,7 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data) {
   apr_pool_create(&worker->recorder->pool, worker->pbody);
 
   /* setup a sockreader for recording */
-  sockreader_new(&worker->recorder->sockreader, NULL, NULL, NULL, 0, 
+  sockreader_new(&worker->recorder->sockreader, NULL, NULL, 0, 
                  worker->recorder->pool);
 
   worker->recorder->on = RECORDER_RECORD;

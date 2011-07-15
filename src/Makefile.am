@@ -13,7 +13,7 @@ htproxy_SOURCES= \
 	transport.c tcp_module.c 
 
 htremote_SOURCES= \
-	htremote.c file.c socket.c util.c
+	htremote.c util.c
 
 htntlm_SOURCES= \
 	htntlm.c util.c

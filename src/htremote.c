@@ -29,34 +29,31 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#include <openssl/ssl.h>
+#include "defines.h"
 
 #include <apr.h>
-#include <apr_lib.h>
-#include <apr_signal.h>
 #include <apr_strings.h>
 #include <apr_getopt.h>
-#include <apr_portable.h>
 #include <apr_errno.h>
 #include <apr_thread_proc.h>
-#include <apr_thread_cond.h>
-#include <apr_thread_mutex.h>
-#include <apr_hash.h>
 #include <apr_network_io.h>
 
-#include "defines.h"
-#include "ssl.h"
-#include "regex.h"
-#include "file.h"
-#include "socket.h"
-#include "worker.h"
+#if APR_HAVE_STDLIB_H
+#include <stdlib.h> /* for getpid() */
+#endif
+
 #include "util.h"
 
 /************************************************************************
  * Defines 
  ***********************************************************************/
 #define BLOCK_MAX 8192
+
+#ifndef DEFAULT_THREAD_STACKSIZE
+#define DEFAULT_THREAD_STACKSIZE 262144 
+#endif
+
+#define LISTENBACKLOG_DEFAULT 511
 
 /************************************************************************
  * Typedefs 

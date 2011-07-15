@@ -24,15 +24,14 @@
 #ifndef HTTEST_SOCKET_H
 #define HTTEST_SOCKET_H
 
+#include "transport.h"
+
 #define SOCKREADER_OPTIONS_NONE 0
 #define SOCKREADER_OPTIONS_IGNORE_BODY 1
 
 typedef struct sockreader_s sockreader_t;
 
-apr_status_t sockreader_new(sockreader_t ** sockreader, apr_socket_t * socket,
-#ifdef USE_SSL
-                            SSL * ssl,
-#endif
+apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t * transport,
                             char *rest, apr_size_t len, apr_pool_t * p);
 apr_status_t sockreader_peek(sockreader_t *self
 #ifdef USE_SSL

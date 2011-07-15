@@ -104,10 +104,7 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent) {
   if (worker->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->socket,
-#ifdef USE_SSL
-				 worker->socket->is_ssl ? worker->socket->ssl : NULL,
-#endif
+    if ((status = sockreader_new(&sockreader, worker->socket->transport,
 				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
       goto out_err;
     }

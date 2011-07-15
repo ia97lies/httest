@@ -60,6 +60,7 @@
 #endif
 
 #include "file.h"
+#include "transport.h"
 #include "socket.h"
 #include "regex.h"
 #include "util.h"
@@ -1113,10 +1114,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
   peeklen = body->socket->peeklen;
   body->socket->peeklen = 0;
 
-  if ((status = sockreader_new(&body->sockreader, body->socket->socket,
-#ifdef USE_SSL
-                               body->socket->is_ssl ? body->socket->ssl : NULL,
-#endif
+  if ((status = sockreader_new(&body->sockreader, body->socket->transport,
                                body->socket->peek, peeklen, pool)) != APR_SUCCESS) {
     goto error;
   }
