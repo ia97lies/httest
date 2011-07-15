@@ -38,6 +38,15 @@ typedef apr_status_t (*transport_os_desc_get_f)(void *data, int *desc);
 /**
  * read method
  * @param data IN custom data
+ * @param buf OUT buffer which contains read bytes
+ * @param size INOUT size of buffer and on return actually read bytes
+ * @return APR_SUCCESS or any apr status
+ */
+typedef apr_status_t (*transport_set_timeout_f)(void *data, apr_interval_time_t t);
+
+/**
+ * read method
+ * @param data IN custom data
  * @param buf IN buffer which contains read bytes
  * @param size INOUT size of buffer and on return actually read bytes
  * @return APR_SUCCESS or any apr status
@@ -65,6 +74,7 @@ typedef apr_status_t (*transport_write_f)(void *data, char *buf,
 transport_t *transport_new(void *data, 
                            apr_pool_t *pool, 
                            transport_os_desc_get_f os_desc_get, 
+                           transport_set_timeout_f set_timeout, 
                            transport_read_f read, 
 			   transport_write_f write);
 
@@ -83,6 +93,14 @@ apr_status_t transport_set_data(transport_t *hook, void *data);
  * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
  */
 apr_status_t transport_os_desc_get(transport_t *hook, int *desc);
+
+/**
+ * Set transport timeout 
+ * @param hook IN transport hook
+ * @param desc OUT os descriptor of this transport
+ * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
+ */
+apr_status_t transport_set_timeout(transport_t *hook, apr_interval_time_t t);
 
 /** 
  * call registered transport method

@@ -377,69 +377,42 @@ apr_status_t worker_sockstate(worker_t * worker) {
   apr_status_t status = APR_SUCCESS;
   apr_size_t len = 1;
 
-  if (!worker->socket || !worker->socket->socket) {
+  if (!worker->socket) {
     return APR_ENOSOCKET;
   }
   
   /* give the other side a little time to finish closing 10 ms */
   apr_sleep(10000);
   
-  if ((status = apr_socket_timeout_set(worker->socket->socket, 1000)) 
+  if ((status = transport_set_timeout(worker->socket->transport, 1000)) 
       != APR_SUCCESS) {
     return status;
   }
 
-#ifdef USE_SSL
-  if (worker->socket->ssl) {
-    status = SSL_read(worker->socket->ssl, &worker->socket->peek[worker->socket->peeklen], len);
-    if (status <= 0) {
-      int scode = SSL_get_error(worker->socket->ssl, status);
-
-      if (scode == SSL_ERROR_ZERO_RETURN) {
-        status = APR_ECONNABORTED; 
-	goto go_out;
-      }
-      else if (scode != SSL_ERROR_WANT_WRITE && scode != SSL_ERROR_WANT_READ) {
-        status = APR_ECONNABORTED; 
-	goto go_out;
-      }
-      else {
-	status = APR_SUCCESS;
-	goto go_out;
-      }
-    }
-    else {
-      worker->socket->peeklen += len;
-      status = APR_SUCCESS;
-      goto go_out;
-    }
+  status = transport_read(worker->socket->transport, 
+			  &worker->socket->peek[worker->socket->peeklen], &len);
+  fprintf(stderr, "\nXXX: status: %s(%d)", my_status_str(worker->pbody, status), status);
+  fflush(stderr);
+  if (APR_STATUS_IS_TIMEUP(status)) {
+    status = APR_SUCCESS;
   }
-  else
-#endif
-  {
-    status = apr_socket_recv(worker->socket->socket, 
-	                     &worker->socket->peek[worker->socket->peeklen], &len);
-    if (APR_STATUS_IS_TIMEUP(status)) {
-      status = APR_SUCCESS;
-    }
 
-    if (APR_STATUS_IS_EOF(status)) {
-      status = APR_ECONNABORTED; 
-      goto go_out;
-    }
-    else if (status != APR_SUCCESS) {
-      status = APR_ECONNABORTED; 
-      goto go_out;
-    }
-    else {
-      worker->socket->peeklen += len;
-      status = APR_SUCCESS;
-      goto go_out;
-    }
+  if (APR_STATUS_IS_EOF(status)) {
+    status = APR_ECONNABORTED; 
+    goto go_out;
+  }
+  else if (status != APR_SUCCESS) {
+    status = APR_ECONNABORTED; 
+    goto go_out;
+  }
+  else {
+    worker->socket->peeklen += len;
+    status = APR_SUCCESS;
+    goto go_out;
   }
 
 go_out:
-  apr_socket_timeout_set(worker->socket->socket, worker->socktmo);
+  transport_set_timeout(worker->socket->transport, worker->socktmo);
 
   return status;
 }

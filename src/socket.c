@@ -606,8 +606,11 @@ static apr_status_t sockreader_fill(sockreader_t * self) {
 
   self->len = BLOCK_MAX;
 
-  if ((status = transport_read(self->transport, self->buf, &self->len))
-      != APR_SUCCESS) {
+  status = transport_read(self->transport, self->buf, &self->len);
+  if (APR_STATUS_IS_EOF(status) && self->len > 0) {
+    return APR_SUCCESS;
+  }
+  else {
     return status;
   }
 }

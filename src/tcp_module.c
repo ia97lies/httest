@@ -51,6 +51,18 @@ apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
 }
 
 /**
+ * Set timeout
+ *
+ * @param data IN void pointer to socket
+ * @param desc OUT os socket descriptor
+ * @return apr status
+ */
+apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t) {
+  apr_socket_t *socket = data;
+  return apr_socket_timeout_set(socket, t);
+}
+
+/**
  * read from socket
  *
  * @param data IN void pointer to socket
@@ -60,15 +72,7 @@ apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
  */
 apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) {
   apr_socket_t *socket = data;
-  apr_status_t  status;
- 
-  status = apr_socket_recv(socket, buf, size);
-  if (APR_STATUS_IS_EOF(status) && *size > 0) {
-    return APR_SUCCESS;
-  }
-  else {
-    return status;
-  }
+  return apr_socket_recv(socket, buf, size);
 }
 
 /**
@@ -134,6 +138,7 @@ static apr_status_t tcp_hook_connect(worker_t *worker) {
 
   transport = transport_new(worker->socket->socket, worker->pbody, 
 			    tcp_transport_os_desc_get, 
+			    tcp_transport_set_timeout,
 			    tcp_transport_read, 
 			    tcp_transport_write);
 
@@ -158,6 +163,7 @@ static apr_status_t tcp_hook_accept(worker_t *worker) {
 
   transport = transport_new(worker->socket->socket, worker->pbody, 
 			    tcp_transport_os_desc_get, 
+			    tcp_transport_set_timeout,
 			    tcp_transport_read, 
 			    tcp_transport_write);
   transport_register(worker->socket, transport);

@@ -244,6 +244,17 @@ apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
 }
 
 /**
+ * Get os socket descriptor
+ *
+ * @param data IN void pointer to socket
+ * @param desc OUT os socket descriptor
+ * @return APR_ENOENT
+ */
+apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
+  return APR_ENOENT;
+}
+
+/**
  * read from socket
  *
  * @param data IN void pointer to socket
@@ -390,6 +401,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 
       transport = transport_new(worker->socket->ssl, worker->pbody, 
 				ssl_transport_os_desc_get, 
+				ssl_transport_set_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
       transport_register(worker->socket, transport);
@@ -454,6 +466,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
       }
       transport = transport_new(worker->socket->ssl, worker->pbody, 
 				ssl_transport_os_desc_get, 
+				ssl_transport_set_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
       transport_register(worker->socket, transport);
@@ -1026,6 +1039,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     }
     transport = transport_new(worker->socket->ssl, worker->pbody, 
 			      ssl_transport_os_desc_get, 
+			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
     transport_register(worker->socket, transport);
@@ -1052,6 +1066,7 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
     }
     transport = transport_new(worker->socket->ssl, worker->pbody, 
 			      ssl_transport_os_desc_get, 
+			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
     transport_register(worker->socket, transport);

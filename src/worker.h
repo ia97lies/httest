@@ -409,7 +409,6 @@ apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile,
 apr_status_t worker_listener_up(worker_t *worker, apr_int32_t backlog); 
 void worker_get_socket(worker_t *self, const char *hostname, 
                        const char *portname);
-apr_status_t worker_ssl_accept(worker_t * worker); 
 apr_status_t worker_add_line(worker_t * self, const char *file_and_line,
                              char *line); 
 apr_status_t worker_socket_send(worker_t *self, char *buf, 
