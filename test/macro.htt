@@ -64,7 +64,7 @@ __REDIRECT 3
 _CLOSE
 
 _RES
-_EXPECT body "hallo=velo&hallo2=velo2\+velo\+blubi&hallo3=velo3
+_EXPECT body "hallo=velo&hallo2=velo2\+velo\+blubi&hallo3=velo3"
 _WAIT
 __HTTP/1.1 200 OK
 __Content-Length: AUTO
