@@ -112,6 +112,7 @@ apr_status_t transport_os_desc_get(transport_t *hook, int *desc) {
     return hook->os_desc_get(hook->data, desc);
   }
   else {
+    *desc = -1;
     return APR_EGENERAL;
   }
 
@@ -129,6 +130,7 @@ apr_status_t transport_read(transport_t *hook, char *buf, apr_size_t *size) {
     return hook->read(hook->data, buf, size);
   }
   else {
+    *size = 0;
     return APR_EGENERAL;
   }
 }

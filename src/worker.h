@@ -303,6 +303,12 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
                           (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
                           (worker_t *worker, char *info, char **new_info));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_status_line,
+                          (worker_t *worker, char *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_header,
+                          (worker_t *worker, char *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_buf,
+                          (worker_t *worker, char *buf, apr_size_t len));
 
 apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);

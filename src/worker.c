@@ -1124,6 +1124,9 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
       line[0] == 0);
   if (line[0] != 0) { 
+    if ((status = htt_run_read_status_line(worker, line)) != APR_SUCCESS) {
+      return status;
+    }
     if (worker->recorder->on == RECORDER_RECORD &&
 	worker->recorder->flags & RECORDER_RECORD_STATUS) {
       sockreader_push_line(worker->recorder->sockreader, line);
@@ -1137,7 +1140,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     worker_expect(worker, worker->expect.headers, line, strlen(line));
 
     if (!strstr(line, "HTTP/") && !strstr(line, "ICAP/")) {
-      worker_log(worker, LOG_DEBUG, "Not HTTP or ICAP request line \"%s\", must be HTTP/0.9", line); 
+      worker_log(worker, LOG_DEBUG, "Not HTTP or ICAP version in \"%s\", must be HTTP/0.9", line); 
       apr_table_add(worker->headers, "Connection", "close");
       status = sockreader_push_line(sockreader, line);
       goto http_0_9;
@@ -1160,6 +1163,9 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   /** get headers */
   while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
          line[0] != 0) {
+    if ((status = htt_run_read_header(worker, line)) != APR_SUCCESS) {
+      return status;
+    }
     if (worker->recorder->on == RECORDER_RECORD &&
 	worker->recorder->flags & RECORDER_RECORD_HEADERS) {
       sockreader_push_line(worker->recorder->sockreader, line);
@@ -1239,6 +1245,9 @@ http_0_9:
 	   eof_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
 	goto out_err;
       }
+    }
+    if ((status = htt_run_read_buf(worker, buf, len)) != APR_SUCCESS) {
+      return status;
     }
     if ((status = worker_handle_buf(worker, pool, buf, len)) != APR_SUCCESS) {
       goto out_err;
@@ -4512,6 +4521,9 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(connect)
   APR_HOOK_LINK(accept)
   APR_HOOK_LINK(close)
+  APR_HOOK_LINK(read_status_line)
+  APR_HOOK_LINK(read_header)
+  APR_HOOK_LINK(read_buf)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
@@ -4534,4 +4546,16 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
                                       (worker_t *worker, char *info, char **new_info), 
 				      (worker, info, new_info), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_status_line, 
+                                      (worker_t *worker, char *line), 
+				      (worker, line), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_header, 
+                                      (worker_t *worker, char *line), 
+				      (worker, line), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_buf, 
+                                      (worker_t *worker, char *buf, apr_size_t len), 
+				      (worker, buf, len), APR_SUCCESS);
 

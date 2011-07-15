@@ -176,6 +176,7 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
 
   i = 0;
   c = 0;
+  apr_brigade_cleanup(self->line);
   while (c != '\n') {
     if (self->i >= self->len) {
       if ((status = sockreader_fill(self)) != APR_SUCCESS) {
