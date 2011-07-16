@@ -47,11 +47,41 @@ const char * ssl_module = "ssl_module";
 typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
+  SSL_CTX *ssl_ctx;
+  SSL_METHOD *meth;
+  BIO *bio_out;
+  BIO *bio_err;
+  char *ssl_info;
 } ssl_config_t;
+
+/* TODO use this for transport hook */
+typedef struct ssl_transport_s {
+  int is_ssl;
+  SSL *ssl;
+  SSL_SESSION *sess;
+  /* need this for timeout settings */
+  transport_t *tcp_transport;
+} ssl_transport_t;
 
 /************************************************************************
  * Local 
  ***********************************************************************/
+
+/**
+ * Get ssl config from worker
+ *
+ * @param worker IN worker
+ * @return ssl config
+ */
+static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
+  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, ssl_module), config);
+  }
+  return config;
+}
+
 /**
  * worker ssl handshake client site
  *
@@ -90,44 +120,45 @@ apr_status_t worker_ssl_handshake(worker_t * worker) {
  */
 apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
                             const char *keyfile, const char *ca, int check) {
+  ssl_config_t *config = ssl_get_worker_config(self);
   worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
              keyfile?keyfile:"(null)",
              ca?ca:"(null)");
-  if (!self->ssl_ctx) {
-    if (!(self->ssl_ctx = SSL_CTX_new(self->meth))) {
+  if (!config->ssl_ctx) {
+    if (!(config->ssl_ctx = SSL_CTX_new(self->meth))) {
       worker_log(self, LOG_ERR, "Could not initialize SSL Context.");
       return APR_EINVAL;
     }
   }
-  if (self->ssl_ctx) {
-    if (certfile && SSL_CTX_use_certificate_file(self->ssl_ctx, certfile, 
+  if (config->ssl_ctx) {
+    if (certfile && SSL_CTX_use_certificate_file(config->ssl_ctx, certfile, 
 	                                         SSL_FILETYPE_PEM) <= 0 && 
 	check) { 
       worker_log(self, LOG_ERR, "Could not load RSA server certifacte \"%s\"",
 	         certfile);
       return APR_EINVAL;
     }
-    if (keyfile && SSL_CTX_use_PrivateKey_file(self->ssl_ctx, keyfile, 
+    if (keyfile && SSL_CTX_use_PrivateKey_file(config->ssl_ctx, keyfile, 
 	                                       SSL_FILETYPE_PEM) <= 0 && 
 	check) {
       worker_log(self, LOG_ERR, "Could not load RSA server private key \"%s\"",
 	         keyfile);
       return APR_EINVAL;
     }
-    if (ca && !SSL_CTX_load_verify_locations(self->ssl_ctx, ca,
+    if (ca && !SSL_CTX_load_verify_locations(config->ssl_ctx, ca,
 					     NULL) && check) {
       worker_log(self, LOG_ERR, "Could not load CA file \"%s\"", ca);
       return APR_EINVAL;
     }
 
     if (certfile && keyfile&& check && 
-	!SSL_CTX_check_private_key(self->ssl_ctx)) {
+	!SSL_CTX_check_private_key(config->ssl_ctx)) {
       worker_log(self, LOG_ERR, "Private key does not match the certificate public key");
       return APR_EINVAL;
     }
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(worker->ssl_ctx,1);
+    SSL_CTX_set_verify_depth(config->ssl_ctx,1);
 #endif
  }
   return APR_SUCCESS;
@@ -201,13 +232,14 @@ int worker_set_server_method(worker_t * worker, const char *sslstr) {
 apr_status_t worker_ssl_accept(worker_t * worker) {
   apr_status_t status;
   char *error;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (worker->socket->is_ssl) {
     if (!worker->socket->ssl) {
       BIO *bio;
       apr_os_sock_t fd;
 
-      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+      if ((worker->socket->ssl = SSL_new(config->ssl_ctx)) == NULL) {
 	worker_log(worker, LOG_ERR, "SSL_new failed.");
 	status = APR_ECONNREFUSED;
       }
@@ -318,21 +350,6 @@ tryagain:
   return APR_SUCCESS;
 }
 
-/**
- * Get ssl config from worker
- *
- * @param worker IN worker
- * @return ssl config
- */
-static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
-  if (config == NULL) {
-    config = apr_pcalloc(worker->pbody, sizeof(*config));
-    module_set_config(worker->config, apr_pstrdup(worker->pbody, ssl_module), config);
-  }
-  return config;
-}
-
 /************************************************************************
  * Commands
  ***********************************************************************/
@@ -379,7 +396,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 	return status;
       }
 
-      if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+      if ((worker->socket->ssl = SSL_new(config->ssl_ctx)) == NULL) {
 				worker_log(worker, LOG_ERR, "SSL_new failed.");
 				return APR_ECONNREFUSED;
       }
@@ -860,7 +877,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
 static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
   ssl_config_t *config = ssl_get_worker_config(worker);
 
-  if (!worker->ssl_ctx) {
+  if (!config->ssl_ctx) {
     worker_log_error(worker, "You are not in a ssl context");
     return APR_EINVAL;
   }
@@ -883,7 +900,7 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
     return APR_EINVAL;
   }
 
-  if (SSL_CTX_use_certificate(worker->ssl_ctx, config->cert) <=0) {
+  if (SSL_CTX_use_certificate(config->ssl_ctx, config->cert) <=0) {
     worker_log_error(worker, "Can not use this cert");
     return APR_EINVAL;
   }
@@ -914,6 +931,23 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
 }
 
 /**
+ * clone worker
+ *
+ * @param worker IN
+ * @param clone IN 
+ * @return APR_SUCCESS
+ */
+static apr_status_t ssl_clone_worker(worker_t *worker, worker_t *clone) {
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_config_t *clone_config = ssl_get_worker_config(clone);
+
+  /* TODO: copy all config entries, cause they will be used concurrent */
+  memcpy(clone_config, config, sizeof(*clone_config)); 
+
+  return APR_SUCCESS;
+}
+
+/**
  * parse line and extract the SSL relevant stuff
  *
  * @param worker IN
@@ -932,6 +966,7 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
   char *cert = NULL;
   char *key = NULL;
   char *ca = NULL;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (!worker->socket) {
     worker_log_error(worker, "No socket available");
@@ -961,10 +996,10 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
 	!= APR_SUCCESS) {
       return status;
     }
-    SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_ALL);
-    SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_SINGLE_DH_USE);
+    SSL_CTX_set_options(config->ssl_ctx, SSL_OP_ALL);
+    SSL_CTX_set_options(config->ssl_ctx, SSL_OP_SINGLE_DH_USE);
 #if (OPENSSL_VERSION_NUMBER >= 0x0090806f)
-    SSL_CTX_set_options(worker->ssl_ctx, SSL_OP_NO_TICKET);
+    SSL_CTX_set_options(config->ssl_ctx, SSL_OP_NO_TICKET);
 #endif
   }
   return APR_SUCCESS;
@@ -1019,7 +1054,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     BIO *bio;
     apr_os_sock_t fd;
 
-    if ((worker->socket->ssl = SSL_new(worker->ssl_ctx)) == NULL) {
+    if ((worker->socket->ssl = SSL_new(config->ssl_ctx)) == NULL) {
       worker_log(worker, LOG_ERR, "SSL_new failed.");
       return APR_EGENERAL;
     }
@@ -1219,6 +1254,7 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
 
+  htt_hook_clone_worker(ssl_clone_worker, NULL, NULL, 0);
   htt_hook_client_port_args(ssl_client_port_args, NULL, NULL, 0);
   htt_hook_server_port_args(ssl_server_port_args, NULL, NULL, 0);
   htt_hook_connect(ssl_hook_connect, NULL, NULL, 0);

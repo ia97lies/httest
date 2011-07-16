@@ -151,7 +151,6 @@ struct worker_s {
 #define LOG_DEBUG 6
   int log_mode;
 #ifdef USE_SSL
-  SSL_CTX *ssl_ctx;
   SSL_METHOD *meth;
   BIO *bio_out;
   BIO *bio_err;
@@ -309,6 +308,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_header,
                           (worker_t *worker, char *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_buf,
                           (worker_t *worker, char *buf, apr_size_t len));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, clone_worker,
+                          (worker_t *worker, worker_t *clone));
 
 apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);

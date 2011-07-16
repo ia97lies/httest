@@ -1732,6 +1732,9 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 	worker_log(self, LOG_ERR, "Could not clone server thread data");
 	goto error;
       }
+      if ((status = htt_run_clone_worker(self, clone)) != APR_SUCCESS) {
+	goto error;
+      }
       clone->listener = self->listener;
       worker_log(self, LOG_DEBUG, "--- accept");
       if (!self->listener) {
@@ -3134,6 +3137,7 @@ int main(int argc, const char *const argv[]) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(server_port_args)
+  APR_HOOK_LINK(clone_worker)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args, 
@@ -3141,3 +3145,6 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args,
 				       char **new_portinfo, char *rest_of_line), 
 				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, clone_worker, 
+                                      (worker_t *worker, worker_t *clone), 
+				      (worker, clone), APR_SUCCESS);
