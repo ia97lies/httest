@@ -53,13 +53,13 @@ typedef struct ssl_config_s {
 } ssl_config_t;
 
 /* TODO use this for transport hook */
-typedef struct ssl_transport_s {
+typedef struct ssl_socket_config_s {
   int is_ssl;
   SSL *ssl;
   SSL_SESSION *sess;
   /* need this for timeout settings */
   transport_t *tcp_transport;
-} ssl_transport_t;
+} ssl_socket_config_t;
 
 /************************************************************************
  * Local 
@@ -81,17 +81,37 @@ static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
 }
 
 /**
+ * GET ssl socket config from socket
+ *
+ * @param worker IN worker
+ * @return socket config
+ */
+static ssl_socket_config_t *ssl_get_socket_config(worker_t *worker) {
+  if (!worker || !worker->socket) {
+    return NULL;
+  }
+
+  ssl_socket_config_t *config = module_get_config(worker->socket->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->socket->config, apr_pstrdup(worker->pbody, ssl_module), config);
+  }
+  return config;
+}
+
+/**
  * worker ssl handshake client site
  *
  * @param worker IN thread data object
  *
  * @return apr status
  */
-apr_status_t worker_ssl_handshake(worker_t * worker) {
+static apr_status_t worker_ssl_handshake(worker_t * worker) {
   apr_status_t status;
   char *error;
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
   
-  if ((status = ssl_handshake(worker->socket->ssl, &error, worker->pbody)) 
+  if ((status = ssl_handshake(sconfig->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "%s", error);
   }
@@ -99,9 +119,9 @@ apr_status_t worker_ssl_handshake(worker_t * worker) {
   if (worker->flags & FLAGS_SSL_LEGACY) {
 #if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
 #ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
-    worker->socket->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION; 
+    sconfig->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION; 
 #else 	 
-    SSL_set_options(worker->socket->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
+    SSL_set_options(sconfig->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
 #endif
 #endif
   }
@@ -119,6 +139,7 @@ apr_status_t worker_ssl_handshake(worker_t * worker) {
 apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
                             const char *keyfile, const char *ca, int check) {
   ssl_config_t *config = ssl_get_worker_config(self);
+
   worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
              keyfile?keyfile:"(null)",
@@ -235,21 +256,22 @@ apr_status_t worker_ssl_accept(worker_t * worker) {
   apr_status_t status;
   char *error;
   ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
-    if (!worker->socket->ssl) {
+    if (!sconfig->ssl) {
       BIO *bio;
       apr_os_sock_t fd;
 
-      if ((worker->socket->ssl = SSL_new(config->ssl_ctx)) == NULL) {
+      if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {
 	worker_log(worker, LOG_ERR, "SSL_new failed.");
 	status = APR_ECONNREFUSED;
       }
-      SSL_set_ssl_method(worker->socket->ssl, config->meth);
+      SSL_set_ssl_method(sconfig->ssl, config->meth);
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
-      SSL_set_bio(worker->socket->ssl, bio, bio);
+      SSL_set_bio(sconfig->ssl, bio, bio);
     }
     else {
       return APR_SUCCESS;
@@ -259,7 +281,7 @@ apr_status_t worker_ssl_accept(worker_t * worker) {
     return APR_SUCCESS;
   }
 
-  if ((status = ssl_accept(worker->socket->ssl, &error, worker->pbody)) 
+  if ((status = ssl_accept(sconfig->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "%s", error);
   }
@@ -369,6 +391,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
   BIO *bio;
   apr_os_sock_t fd;
   ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   sslstr = apr_table_get(worker->params, "1");
   if (!sslstr) {
@@ -398,27 +421,27 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 	return status;
       }
 
-      if ((worker->socket->ssl = SSL_new(config->ssl_ctx)) == NULL) {
+      if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {
 				worker_log(worker, LOG_ERR, "SSL_new failed.");
 				return APR_ECONNREFUSED;
       }
-      SSL_set_ssl_method(worker->socket->ssl, config->meth);
+      SSL_set_ssl_method(sconfig->ssl, config->meth);
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
-      SSL_set_bio(worker->socket->ssl, bio, bio);
+      SSL_set_bio(sconfig->ssl, bio, bio);
       if (worker->socket->sess) {
-				SSL_set_session(worker->socket->ssl, worker->socket->sess);
-				SSL_SESSION_free(worker->socket->sess);
-				worker->socket->sess = NULL;
+	SSL_set_session(sconfig->ssl, worker->socket->sess);
+	SSL_SESSION_free(worker->socket->sess);
+	worker->socket->sess = NULL;
       }
-      SSL_set_connect_state(worker->socket->ssl);
+      SSL_set_connect_state(sconfig->ssl);
 
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
 				return status;
       }
 
-      transport = transport_new(worker->socket->ssl, worker->pbody, 
+      transport = transport_new(sconfig->ssl, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
 				ssl_transport_read, 
@@ -445,6 +468,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
   const char *sslstr;
   int is_ssl;
   ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   sslstr = apr_table_get(worker->params, "1");
   if (!sslstr) {
@@ -483,7 +507,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
       if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
 	return status;
       }
-      transport = transport_new(worker->socket->ssl, worker->pbody, 
+      transport = transport_new(sconfig->ssl, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
 				ssl_transport_read, 
@@ -521,6 +545,7 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
  */
 static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
   const char *copy = apr_table_get(worker->params, "1");
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
     worker_log_error(worker, "Missing varibale name to store session in");
@@ -533,13 +558,13 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
   }
 
   if (worker->socket->is_ssl) {
-    if (worker->socket->ssl) {
+    if (sconfig->ssl) {
       apr_size_t b64_len;
       char *b64_str;
       apr_size_t enc_len;
       unsigned char *enc;
       unsigned char *tmp;
-      SSL_SESSION *sess = SSL_get_session(worker->socket->ssl);
+      SSL_SESSION *sess = SSL_get_session(sconfig->ssl);
       /* serialize to a variable an store it */
       enc_len = i2d_SSL_SESSION(sess, NULL);
       enc = apr_pcalloc(worker->pbody, enc_len);
@@ -609,18 +634,19 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
   const char *copy = apr_table_get(worker->params, "1");
   SSL_SESSION *sess;
   char *val;
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
     worker_log_error(worker, "Missing varibale name to store session in");
     return APR_EGENERAL;
   }
 
-  if (!worker->socket || !worker->socket->ssl) {
+  if (!worker->socket || !sconfig->ssl) {
     worker_log_error(worker, "Need an ssl connection");
     return APR_ENOSOCKET;
   }
 
-  sess = SSL_get_session(worker->socket->ssl);
+  sess = SSL_get_session(sconfig->ssl);
 
   if (sess) {
     val = apr_pcalloc(worker->pbody, apr_base64_encode_len(sess->session_id_length));
@@ -648,6 +674,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   const char *copy = apr_table_get(worker->params, "1");
 
   ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (config->cert) {
     X509_free(config->cert);
@@ -655,7 +682,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   
   config->cert = NULL;
 
-  if (!worker->socket->is_ssl || !worker->socket->ssl) {
+  if (!worker->socket->is_ssl || !sconfig->ssl) {
     worker_log(worker, LOG_ERR, 
 	       "No ssl connection established can not verify peer");
     return APR_ENOSOCKET;
@@ -665,12 +692,12 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
     if (strcasecmp(copy, "verify") == 0) {
       /* if we are server request the peer cert */
       if (worker->log_mode >= LOG_DEBUG) {
-	SSL_set_verify(worker->socket->ssl,
+	SSL_set_verify(sconfig->ssl,
 		       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
 		       debug_verify_callback);
       }
       else {
-	SSL_set_verify(worker->socket->ssl,
+	SSL_set_verify(sconfig->ssl,
 		       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
 		       NULL);
       }
@@ -679,23 +706,23 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
     if (worker->flags & FLAGS_SSL_LEGACY) {
 #if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
 #ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
-      worker->socket->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+      sconfig->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 #else
-      SSL_set_options(worker->socket->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
+      SSL_set_options(sconfig->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
 #endif
 #endif
     }
 
-    if((rc = SSL_renegotiate(worker->socket->ssl) <= 0)) {
+    if((rc = SSL_renegotiate(sconfig->ssl) <= 0)) {
       worker_log(worker, LOG_ERR, "SSL renegotiation a error: %d", rc);
       return APR_EACCES;
     }
     worker_ssl_handshake(worker);
-    worker->socket->ssl->state=SSL_ST_ACCEPT;
+    sconfig->ssl->state=SSL_ST_ACCEPT;
     worker_ssl_handshake(worker);
 
     if (strcasecmp(copy, "verify") == 0) {
-      config->cert = SSL_get_peer_certificate(worker->socket->ssl);
+      config->cert = SSL_get_peer_certificate(sconfig->ssl);
       if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");
 	return APR_EACCES;
@@ -704,13 +731,13 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   }
   else {
     if (strcasecmp(copy, "verify") == 0) {
-      config->cert = SSL_get_peer_certificate(worker->socket->ssl);
+      config->cert = SSL_get_peer_certificate(sconfig->ssl);
       if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");
 	return APR_EACCES;
       }
 
-      if((rc = SSL_get_verify_result(worker->socket->ssl)) != X509_V_OK) {
+      if((rc = SSL_get_verify_result(sconfig->ssl)) != X509_V_OK) {
 	worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
 	X509_verify_cert_error_string(rc), rc);
 	return APR_EACCES;
@@ -921,7 +948,8 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
 static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, 
                                                      worker_t *parent) {
 #if (define USE_SSL && OPENSSL_VERSION_NUMBER >= 0x009080ff)
-  if (SSL_get_secure_renegotiation_support(worker->socket->ssl)) {
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  if (SSL_get_secure_renegotiation_support(sconfig->ssl)) {
     return APR_SUCCESS;
   }
   else {
@@ -1050,31 +1078,32 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
 static apr_status_t ssl_hook_connect(worker_t *worker) {
   apr_status_t status;
   ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
     transport_t *transport;
     BIO *bio;
     apr_os_sock_t fd;
 
-    if ((worker->socket->ssl = SSL_new(config->ssl_ctx)) == NULL) {
+    if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {
       worker_log(worker, LOG_ERR, "SSL_new failed.");
       return APR_EGENERAL;
     }
-    SSL_set_ssl_method(worker->socket->ssl, config->meth);
+    SSL_set_ssl_method(sconfig->ssl, config->meth);
     ssl_rand_seed();
     apr_os_sock_get(&fd, worker->socket->socket);
     bio = BIO_new_socket(fd, BIO_NOCLOSE);
-    SSL_set_bio(worker->socket->ssl, bio, bio);
+    SSL_set_bio(sconfig->ssl, bio, bio);
     if (worker->socket->sess) {
-      SSL_set_session(worker->socket->ssl, worker->socket->sess);
+      SSL_set_session(sconfig->ssl, worker->socket->sess);
       SSL_SESSION_free(worker->socket->sess);
       worker->socket->sess = NULL;
     }
-    SSL_set_connect_state(worker->socket->ssl);
+    SSL_set_connect_state(sconfig->ssl);
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
       return status;
     }
-    transport = transport_new(worker->socket->ssl, worker->pbody, 
+    transport = transport_new(sconfig->ssl, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
@@ -1095,13 +1124,14 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
 static apr_status_t ssl_hook_accept(worker_t *worker) {
   apr_status_t status;
   ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
     transport_t *transport;
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
     }
-    transport = transport_new(worker->socket->ssl, worker->pbody, 
+    transport = transport_new(sconfig->ssl, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
@@ -1122,16 +1152,18 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
 static apr_status_t ssl_hook_close(worker_t *worker, char *info, 
                                    char **new_info) {
   int i;
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+
   *new_info = info;
   if (!info || !info[0]) {
-    if (worker->socket->ssl) {
+    if (sconfig->ssl) {
       for (i = 0; i < 4; i++) {
-	if (SSL_shutdown(worker->socket->ssl) != 0) {
+	if (SSL_shutdown(sconfig->ssl) != 0) {
 	  break;
 	}
       }
-      SSL_free(worker->socket->ssl);
-      worker->socket->ssl = NULL;
+      SSL_free(sconfig->ssl);
+      sconfig->ssl = NULL;
     }
   }
   else if (strcmp(info, "SSL") == 0) {

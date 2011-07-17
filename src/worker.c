@@ -1307,6 +1307,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
 
   if (!socket) {
     socket = apr_pcalloc(self->pbody, sizeof(*socket));
+    socket->config = apr_hash_make(self->pbody);
     socket->socket_state = SOCKET_CLOSED;
     tag = apr_pstrdup(self->pbody, portname);
     apr_hash_set(self->sockets, apr_pstrcat(self->pbody, hostname, tag,

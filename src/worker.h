@@ -33,10 +33,11 @@ typedef struct socket_s {
 #define SOCKET_CLOSED 0
 #define SOCKET_CONNECTED 1
   int socket_state;
+  /* worker config */
+  apr_hash_t *config;
   /* XXX: move this to ssl module */
 #ifdef USE_SSL
   int is_ssl;
-  SSL *ssl;
   SSL_SESSION *sess;
 #endif
   apr_size_t peeklen;
@@ -72,7 +73,7 @@ typedef struct worker_s worker_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
 struct worker_s {
   interpret_f interpret;
-  /* module config */
+  /* worker config */
   apr_hash_t *config;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
