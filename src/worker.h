@@ -28,6 +28,7 @@
 #include "transport.h" 
 
 typedef struct socket_s {
+  int is_ssl;
   transport_t *transport;
   apr_socket_t *socket;
 #define SOCKET_CLOSED 0
@@ -35,11 +36,6 @@ typedef struct socket_s {
   int socket_state;
   /* worker config */
   apr_hash_t *config;
-  /* XXX: move this to ssl module */
-#ifdef USE_SSL
-  int is_ssl;
-  SSL_SESSION *sess;
-#endif
   apr_size_t peeklen;
   char peek[32];
   apr_table_t *cookies;

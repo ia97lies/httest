@@ -391,8 +391,6 @@ apr_status_t worker_sockstate(worker_t * worker) {
 
   status = transport_read(worker->socket->transport, 
 			  &worker->socket->peek[worker->socket->peeklen], &len);
-  fprintf(stderr, "\nXXX: status: %s(%d)", my_status_str(worker->pbody, status), status);
-  fflush(stderr);
   if (APR_STATUS_IS_TIMEUP(status)) {
     status = APR_SUCCESS;
   }

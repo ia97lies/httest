@@ -52,14 +52,17 @@ typedef struct ssl_config_s {
   char *ssl_info;
 } ssl_config_t;
 
-/* TODO use this for transport hook */
 typedef struct ssl_socket_config_s {
   int is_ssl;
   SSL *ssl;
   SSL_SESSION *sess;
+} ssl_socket_config_t;
+
+typedef struct ssl_transport_s {
+  SSL *ssl;
   /* need this for timeout settings */
   transport_t *tcp_transport;
-} ssl_socket_config_t;
+} ssl_transport_t;
 
 /************************************************************************
  * Local 
@@ -307,7 +310,9 @@ apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
  * @return APR_ENOENT
  */
 apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
-  return APR_ENOENT;
+  ssl_transport_t *ssl_transport = data;
+
+  return transport_set_timeout(ssl_transport->tcp_transport, t);
 }
 
 /**
@@ -319,14 +324,14 @@ apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
  * @return apr status
  */
 apr_status_t ssl_transport_read(void *data, char *buf, apr_size_t *size) {
-  SSL *ssl = data;
+  ssl_transport_t *ssl_transport = data;
   apr_status_t status;
 
 tryagain:
   apr_sleep(1);
-  status = SSL_read(ssl, buf, *size);
+  status = SSL_read(ssl_transport->ssl, buf, *size);
   if (status <= 0) {
-    int scode = SSL_get_error(ssl, status);
+    int scode = SSL_get_error(ssl_transport->ssl, status);
 
     if (scode == SSL_ERROR_ZERO_RETURN) {
       *size = 0;
@@ -357,14 +362,14 @@ tryagain:
  * @return apr status
  */
 apr_status_t ssl_transport_write(void *data, char *buf, apr_size_t size) {
-  SSL *ssl = data;
+  ssl_transport_t *ssl_transport = data;
   apr_size_t e_ssl;
 
 tryagain:
   apr_sleep(1);
-  e_ssl = SSL_write(ssl, buf, size);
+  e_ssl = SSL_write(ssl_transport->ssl, buf, size);
   if (e_ssl != size) {
-    int scode = SSL_get_error(ssl, e_ssl);
+    int scode = SSL_get_error(ssl_transport->ssl, e_ssl);
     if (scode == SSL_ERROR_WANT_WRITE) {
       goto tryagain;
     }
@@ -409,6 +414,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
   if (worker->socket->socket_state == SOCKET_CONNECTED) {
     if (worker->socket->is_ssl) {
       transport_t *transport;
+      ssl_transport_t *ssl_transport;
       const char *cert;
       const char *key;
       const char *ca;
@@ -430,10 +436,10 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(sconfig->ssl, bio, bio);
-      if (worker->socket->sess) {
-	SSL_set_session(sconfig->ssl, worker->socket->sess);
-	SSL_SESSION_free(worker->socket->sess);
-	worker->socket->sess = NULL;
+      if (sconfig->sess) {
+	SSL_set_session(sconfig->ssl, sconfig->sess);
+	SSL_SESSION_free(sconfig->sess);
+	sconfig->sess = NULL;
       }
       SSL_set_connect_state(sconfig->ssl);
 
@@ -441,11 +447,14 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 				return status;
       }
 
-      transport = transport_new(sconfig->ssl, worker->pbody, 
+      ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+      transport = transport_new(ssl_transport, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
+      ssl_transport->ssl = sconfig->ssl;
+      ssl_transport->tcp_transport = worker->socket->transport;
       transport_register(worker->socket, transport);
     }
   }
@@ -486,6 +495,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
   if (worker->socket->socket_state == SOCKET_CONNECTED) {
     if (worker->socket->is_ssl) {
       transport_t *transport;
+      ssl_transport_t *ssl_transport;
       const char *cert;
       const char *key;
       const char *ca;
@@ -507,11 +517,14 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
       if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
 	return status;
       }
-      transport = transport_new(sconfig->ssl, worker->pbody, 
+      ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+      transport = transport_new(ssl_transport, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
+      ssl_transport->ssl = sconfig->ssl;
+      ssl_transport->tcp_transport = worker->socket->transport;
       transport_register(worker->socket, transport);
     }
   }
@@ -590,6 +603,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
  */
 static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
   const char *copy = apr_table_get(worker->params, "1");
+  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
     worker_log_error(worker, "Missing session to set on SSL");
@@ -611,7 +625,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
       enc = apr_pcalloc(worker->pbody, enc_len);
       apr_base64_decode_binary(enc, b64_str);
       tmp = enc;
-      worker->socket->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
+      sconfig->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
     }
     else {
       worker_log_error(worker, "Variable \"%s\" do not exist", copy);
@@ -1082,6 +1096,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
 
   if (worker->socket->is_ssl) {
     transport_t *transport;
+    ssl_transport_t *ssl_transport;
     BIO *bio;
     apr_os_sock_t fd;
 
@@ -1094,20 +1109,23 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     apr_os_sock_get(&fd, worker->socket->socket);
     bio = BIO_new_socket(fd, BIO_NOCLOSE);
     SSL_set_bio(sconfig->ssl, bio, bio);
-    if (worker->socket->sess) {
-      SSL_set_session(sconfig->ssl, worker->socket->sess);
-      SSL_SESSION_free(worker->socket->sess);
-      worker->socket->sess = NULL;
+    if (sconfig->sess) {
+      SSL_set_session(sconfig->ssl, sconfig->sess);
+      SSL_SESSION_free(sconfig->sess);
+      sconfig->sess = NULL;
     }
     SSL_set_connect_state(sconfig->ssl);
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
       return status;
     }
-    transport = transport_new(sconfig->ssl, worker->pbody, 
+    ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+    transport = transport_new(ssl_transport, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
+    ssl_transport->ssl = sconfig->ssl;
+    ssl_transport->tcp_transport = worker->socket->transport;
     transport_register(worker->socket, transport);
   }
 
@@ -1128,14 +1146,18 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
 
   if (worker->socket->is_ssl) {
     transport_t *transport;
+    ssl_transport_t *ssl_transport;
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
     }
-    transport = transport_new(sconfig->ssl, worker->pbody, 
+    ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+    transport = transport_new(ssl_transport, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
+    ssl_transport->ssl = sconfig->ssl;
+    ssl_transport->tcp_transport = worker->socket->transport;
     transport_register(worker->socket, transport);
   }
 
