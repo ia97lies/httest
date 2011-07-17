@@ -49,8 +49,6 @@ typedef struct ssl_config_s {
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
   SSL_METHOD *meth;
-  BIO *bio_out;
-  BIO *bio_err;
   char *ssl_info;
 } ssl_config_t;
 
@@ -126,7 +124,7 @@ apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile,
              keyfile?keyfile:"(null)",
              ca?ca:"(null)");
   if (!config->ssl_ctx) {
-    if (!(config->ssl_ctx = SSL_CTX_new(self->meth))) {
+    if (!(config->ssl_ctx = SSL_CTX_new(config->meth))) {
       worker_log(self, LOG_ERR, "Could not initialize SSL Context.");
       return APR_EINVAL;
     }
@@ -174,21 +172,23 @@ apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile,
  */
 int worker_set_client_method(worker_t * worker, const char *sslstr) {
   int is_ssl = 0;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
-    worker->meth = SSLv23_client_method();
+    config->meth = SSLv23_client_method();
   }
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
-    worker->meth = SSLv2_client_method();
+    config->meth = SSLv2_client_method();
   }
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
-    worker->meth = SSLv3_client_method();
+    config->meth = SSLv3_client_method();
   }
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
-    worker->meth = TLSv1_client_method();
+    config->meth = TLSv1_client_method();
   }
   return is_ssl;
 }
@@ -203,21 +203,23 @@ int worker_set_client_method(worker_t * worker, const char *sslstr) {
  */
 int worker_set_server_method(worker_t * worker, const char *sslstr) {
   int is_ssl = 0;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
-    worker->meth = SSLv23_server_method();
+    config->meth = SSLv23_server_method();
   }
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
-    worker->meth = SSLv2_server_method();
+    config->meth = SSLv2_server_method();
   }
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
-    worker->meth = SSLv3_server_method();
+    config->meth = SSLv3_server_method();
   }
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
-    worker->meth = TLSv1_server_method();
+    config->meth = TLSv1_server_method();
   }
   return is_ssl;
 }
@@ -243,7 +245,7 @@ apr_status_t worker_ssl_accept(worker_t * worker) {
 	worker_log(worker, LOG_ERR, "SSL_new failed.");
 	status = APR_ECONNREFUSED;
       }
-      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+      SSL_set_ssl_method(worker->socket->ssl, config->meth);
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -400,7 +402,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
 				worker_log(worker, LOG_ERR, "SSL_new failed.");
 				return APR_ECONNREFUSED;
       }
-      SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+      SSL_set_ssl_method(worker->socket->ssl, config->meth);
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -1058,7 +1060,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
       worker_log(worker, LOG_ERR, "SSL_new failed.");
       return APR_EGENERAL;
     }
-    SSL_set_ssl_method(worker->socket->ssl, worker->meth);
+    SSL_set_ssl_method(worker->socket->ssl, config->meth);
     ssl_rand_seed();
     apr_os_sock_get(&fd, worker->socket->socket);
     bio = BIO_new_socket(fd, BIO_NOCLOSE);

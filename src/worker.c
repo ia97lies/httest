@@ -3888,10 +3888,6 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->start_time = apr_time_now();
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;
-#ifdef USE_SSL
-  (*self)->bio_out = BIO_new_fp(stdout, BIO_NOCLOSE);
-  (*self)->bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-#endif
   (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
 
   apr_table_add((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
@@ -3961,10 +3957,6 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->retvars = apr_table_make(p, 4);
   (*self)->locals = apr_table_make(p, 4);
   (*self)->vars = my_table_deep_copy(p, orig->vars);
-#ifdef USE_SSL
-  (*self)->bio_out = BIO_new_fp(stdout, BIO_NOCLOSE);
-  (*self)->bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-#endif
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
 
   worker_log(*self, LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);

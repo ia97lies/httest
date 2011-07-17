@@ -28,7 +28,6 @@
 #include "transport.h" 
 
 typedef struct socket_s {
-  /* XXX: replace socket with transport here */
   transport_t *transport;
   apr_socket_t *socket;
 #define SOCKET_CLOSED 0
@@ -150,12 +149,6 @@ struct worker_s {
 #define LOG_ALL_CMD 5
 #define LOG_DEBUG 6
   int log_mode;
-#ifdef USE_SSL
-  SSL_METHOD *meth;
-  BIO *bio_out;
-  BIO *bio_err;
-  char *ssl_info;
-#endif
 #if APR_HAS_FORK
   apr_hash_t *procs;
 #endif
