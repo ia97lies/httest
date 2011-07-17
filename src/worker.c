@@ -987,6 +987,10 @@ apr_status_t worker_conn_close(worker_t * self, int ssl, int tcp) {
       self->socket->ssl = NULL;
     }
     self->socket->is_ssl = 0;
+    if (self->flags & FLAGS_CLIENT) {
+      /* clear ssl ctx on close */
+      self->ssl_ctx = NULL;
+    }
   }
 #endif
   if (tcp) {
