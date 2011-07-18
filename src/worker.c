@@ -989,6 +989,7 @@ apr_status_t worker_conn_close(worker_t * self, int ssl, int tcp) {
     self->socket->is_ssl = 0;
     if (self->flags & FLAGS_CLIENT) {
       /* clear ssl ctx on close */
+      SSL_CTX_free(self->ssl_ctx);
       self->ssl_ctx = NULL;
     }
   }
@@ -4942,6 +4943,8 @@ void worker_body_end(worker_t *body, worker_t *worker) {
   /* write back sockets and state */
   worker->socket = body->socket;
   worker->listener = body->listener;
+  /* write back ssl ctx */
+  worker->ssl_ctx = body->ssl_ctx;
 
   /* destroy body */
   worker_destroy(body);
