@@ -1,0 +1,39 @@
+MODULES
+-------
+
+
+Workflow hooks
+--------------
+
+CLIENT
+
+  htt_hook_client_port_args 
+
+  htt_hook_connect
+
+  htt_hook_close
+
+
+SERVER
+
+  htt_hook_server_port_args
+
+  htt_hook_accept
+
+  htt_hook_close
+
+
+THREADED SERVER
+
+  htt_hook_server_port_args
+
+  htt_hook_accept
+
+  htt_hook_clone_worker
+
+  htt_hook_close
+
+
+Workflow commands
+
+
