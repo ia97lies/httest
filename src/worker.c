@@ -1488,7 +1488,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
       return status;
     }
     worker->socket->socket_state = SOCKET_CONNECTED;
-    if ((status = htt_run_accept(worker)) != APR_SUCCESS) {
+    if ((status = htt_run_accept(worker, data)) != APR_SUCCESS) {
       return status;
     }
   }
@@ -4504,8 +4504,8 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, connect,
 				      (worker), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept, 
-                                      (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+                                      (worker_t *worker, char *rest_of_line), 
+				      (worker, rest_of_line), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
                                       (worker_t *worker, char *info, char **new_info), 

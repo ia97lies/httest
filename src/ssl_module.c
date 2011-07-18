@@ -1139,12 +1139,32 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
  *
  * @return APR_SUCCESS or apr error
  */
-static apr_status_t ssl_hook_accept(worker_t *worker) {
+static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
   apr_status_t status;
   ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
+    char *last;
+    char *cert = NULL;
+    char *key = NULL;
+    char *ca = NULL;
+
+    if (data && data[0]) {
+      cert = apr_strtok(data, " ", &last);
+      key = apr_strtok(NULL, " ", &last);
+      ca = apr_strtok(NULL, " ", &last);
+    }
+    if (!cert) {
+      cert = RSA_SERVER_CERT;
+    }
+    if (!key) {
+      key = RSA_SERVER_KEY;
+    }
+    if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
+      return status;
+    }
+
     transport_t *transport;
     ssl_transport_t *ssl_transport;
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
@@ -1174,6 +1194,7 @@ static apr_status_t ssl_hook_accept(worker_t *worker) {
 static apr_status_t ssl_hook_close(worker_t *worker, char *info, 
                                    char **new_info) {
   int i;
+  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   *new_info = info;
@@ -1186,6 +1207,9 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
       }
       SSL_free(sconfig->ssl);
       sconfig->ssl = NULL;
+      /* restart ssl ctx by setting it to NULL */
+      SSL_CTX_free(config->ssl_ctx);
+      config->ssl_ctx = NULL;
     }
   }
   else if (strcmp(info, "SSL") == 0) {

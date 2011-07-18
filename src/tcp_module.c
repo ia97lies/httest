@@ -156,7 +156,7 @@ static apr_status_t tcp_hook_connect(worker_t *worker) {
  *
  * @return APR_SUCCESS or apr error
  */
-static apr_status_t tcp_hook_accept(worker_t *worker) {
+static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
   transport_t *transport;
   apr_status_t status;
   tcp_config_t *config = tcp_get_worker_config(worker);

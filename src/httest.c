@@ -1757,7 +1757,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 	  != APR_SUCCESS) {
         goto error;
       }
-      if ((status = htt_run_accept(clone)) != APR_SUCCESS) {
+      if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {
 	goto error;
       }
       worker_log(self, LOG_DEBUG, "--- create thread");
