@@ -1,19 +1,29 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.1.0
-  *) httest: Support for capsulating new features into modules.
+  *) httest: New minor release is based on httest 2.0.8. New minor release do
+             have a completly refactored httest. The goal is to strip down the
+	     core engine to the minimum and implement every fancy
+	     functionality in modules. This do also have the benefit to make
+	     httest more stable.
+
+  *) httest: Module support for clearer code capsulation.
+
+  *) httest: Link old commands to new commands which were moved to
+             corresponding modules. This makes it possible to run old scripts
+	     without rewriting them.
 
   *) httest: Send/receive hex digits as binary data, usefull for binary
-             protocol testing. Implemented as a httest module.
+             protocol testing. 
 
-  *) httest: SSL operations capsulated in a httest module. Mark old SSL
-             related calls opsolete.
+  *) httest: Mirgrate SSL related stuff into a new ssl module.
+
+  *) httest: SSL certs, key and ca handling is overwritten. New you can change
+             or remove certs, keys and ca for a SSL connection.
+
+  *) httest: Mirgrate date related stuff into a new date module.
 
   *) httest: Add AUTO variable support. Base for various features around
              data length calculation.
-
-  *) httest: Add a migration script for old httest scripts. Obsolet calls will
-             vanish in the httest 2.2.0.
-
 
 Changes with httest 2.0.8
   *) htntlm: Removed compile warnings
