@@ -50,6 +50,10 @@ typedef struct ssl_config_s {
   SSL_CTX *ssl_ctx;
   SSL_METHOD *meth;
   char *ssl_info;
+  int refcount;
+  const char *certfile;
+  const char *keyfile;
+  const char *cafile;
 } ssl_config_t;
 
 typedef struct ssl_socket_config_s {
@@ -139,9 +143,28 @@ static apr_status_t worker_ssl_handshake(worker_t * worker) {
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
+static apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
                             const char *keyfile, const char *ca, int check) {
   ssl_config_t *config = ssl_get_worker_config(self);
+
+  /* test if there are the same cert, key ca files */
+  if (!(
+      (!config->certfile && !certfile) || 
+      (config->certfile && certfile && strcmp(config->certfile, certfile) == 0) &&
+      (!config->keyfile && !keyfile) ||
+      (config->keyfile && keyfile && strcmp(config->keyfile, keyfile) == 0) &&
+      (!config->cafile && !ca) ||
+      (config->cafile && ca && strcmp(config->cafile, ca) == 0))) {
+    /* if there are not the same cert, key, ca files reinitialize ssl_ctx */
+    if (config->ssl_ctx) {
+      SSL_CTX_free(config->ssl_ctx);
+      config->ssl_ctx = NULL;
+    }
+  }
+
+  config->certfile = certfile;
+  config->keyfile = keyfile;
+  config->cafile = ca;
 
   worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
@@ -194,7 +217,7 @@ apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile,
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-int worker_set_client_method(worker_t * worker, const char *sslstr) {
+static int worker_set_client_method(worker_t * worker, const char *sslstr) {
   int is_ssl = 0;
   ssl_config_t *config = ssl_get_worker_config(worker);
 
@@ -225,7 +248,7 @@ int worker_set_client_method(worker_t * worker, const char *sslstr) {
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-int worker_set_server_method(worker_t * worker, const char *sslstr) {
+static int worker_set_server_method(worker_t * worker, const char *sslstr) {
   int is_ssl = 0;
   ssl_config_t *config = ssl_get_worker_config(worker);
 
@@ -255,7 +278,7 @@ int worker_set_server_method(worker_t * worker, const char *sslstr) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t worker_ssl_accept(worker_t * worker) {
+static apr_status_t worker_ssl_accept(worker_t * worker) {
   apr_status_t status;
   char *error;
   ssl_config_t *config = ssl_get_worker_config(worker);
@@ -586,7 +609,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
       b64_len = apr_base64_encode_len(enc_len);
       b64_str = apr_pcalloc(worker->pbody, b64_len);
       apr_base64_encode_binary(b64_str, enc, enc_len);
-      varset(worker, copy, b64_str);
+      worker_var_set(worker, copy, b64_str);
     }
   }
 
@@ -666,7 +689,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
     val = apr_pcalloc(worker->pbody, apr_base64_encode_len(sess->session_id_length));
     apr_base64_encode_binary(val, sess->session_id, sess->session_id_length);
 
-    varset(worker, copy, val);
+    worker_var_set(worker, copy, val);
   }
   else {
     return APR_ENOENT;
@@ -800,7 +823,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
     return APR_ENOENT;
   }
 
-  varset(worker, var, val);
+  worker_var_set(worker, var, val);
 
   return APR_SUCCESS;
 }
@@ -983,11 +1006,14 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
  */
 static apr_status_t ssl_clone_worker(worker_t *worker, worker_t *clone) {
   ssl_config_t *config = ssl_get_worker_config(worker);
-  ssl_config_t *clone_config = ssl_get_worker_config(clone);
 
-  /* TODO: copy all config entries, cause they will be used concurrent */
-  memcpy(clone_config, config, sizeof(*clone_config)); 
-
+  if (config->meth) {
+    ssl_config_t *clone_config = ssl_get_worker_config(clone);
+    /* copy workers content to clone */
+    memcpy(clone_config, config, sizeof(*clone_config)); 
+    clone_config->ssl_ctx = NULL;
+    return worker_ssl_ctx(clone, config->certfile, config->keyfile, config->cafile, 0);
+  }
   return APR_SUCCESS;
 }
 
@@ -1207,9 +1233,6 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
       }
       SSL_free(sconfig->ssl);
       sconfig->ssl = NULL;
-      /* restart ssl ctx by setting it to NULL */
-      SSL_CTX_free(config->ssl_ctx);
-      config->ssl_ctx = NULL;
     }
   }
   else if (strcmp(info, "SSL") == 0) {

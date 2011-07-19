@@ -17,7 +17,7 @@ _SSL:GET_SESSION_ID ID1
 _CLOSE
 
 _SSL:SET_SESSION $SESSION
-_REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
+_REQ $YOUR_HOST SSL:$YOUR_PORT server.cert.pem server.key.pem
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
@@ -32,9 +32,7 @@ _END IF
 END
 
 SERVER SSL:$YOUR_PORT
-_CERT server.cert.pem server.key.pem
-
-_RES
+_RES server.cert.pem server.key.pem
 _WAIT
 __HTTP/1.1 200 OK
 __Content-Length: AUTO 
@@ -45,7 +43,7 @@ __
 
 _CLOSE
 
-_RES
+_RES server.cert.pem server.key.pem
 _WAIT
 __HTTP/1.1 200 OK
 __Connection: close
