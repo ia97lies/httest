@@ -3,6 +3,9 @@ Changes with httest 2.0.9
   *) httest: Send hex digits as binary data, usefull for binary protocol
              testing.
 
+  *) httest: The client SSL context is cleared on _CLOSE, the next _REQ can
+             set new cert, key and/or ca.
+
 
 Changes with httest 2.0.8
   *) htntlm: Removed compile warnings
