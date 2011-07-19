@@ -121,7 +121,7 @@ url_escape_seq_t url_escape_seq[] = {
  * @param var IN variable name
  * @param val IN value
  */
-void varset(worker_t * worker, const char *var, const char *val) {
+void worker_var_set(worker_t * worker, const char *var, const char *val) {
   const char *ret;
   if ((ret = apr_table_get(worker->retvars, var))) {
     /* if retvar exist do mapping and store it in vars */
@@ -501,7 +501,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
 	val =
 	  apr_pstrndup(worker->pbody, &data[regmatch[j + 1].rm_so],
 		       regmatch[j + 1].rm_eo - regmatch[j + 1].rm_so);
-	varset(worker, v[j].key, val);
+	worker_var_set(worker, v[j].key, val);
 	if (worker->match_seq) {
 	  /* if there is a defined match sequence do more checks */
 	  if (strstr(worker->match_seq, v[j].key)) {
@@ -1919,7 +1919,7 @@ apr_status_t command_SET(command_t * self, worker_t * worker,
     return APR_EGENERAL;
   }
   
-  varset(worker, vars_key, vars_val);
+  worker_var_set(worker, vars_key, vars_val);
 
   return APR_SUCCESS;
 }
@@ -2333,10 +2333,10 @@ apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
   COMMAND_NEED_ARG("Need a variable name");
 
   if (worker_sockstate(worker) == APR_SUCCESS) {
-    varset(worker, copy, "CONNECTED");
+    worker_var_set(worker, copy, "CONNECTED");
   }
   else {
-    varset(worker, copy, "CLOSED");
+    worker_var_set(worker, copy, "CLOSED");
   }
 
   return APR_SUCCESS;
@@ -2413,7 +2413,7 @@ apr_status_t command_RAND(command_t *self, worker_t *worker, char *data) {
   
   result = start + (rand() % (end - start)); 
 
-  varset(worker, val, apr_itoa(worker->pbody, result));
+  worker_var_set(worker, val, apr_itoa(worker->pbody, result));
 
   return APR_SUCCESS;
 }
@@ -2537,25 +2537,6 @@ apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data) {
   }
   worker->listener = NULL;
   return status;
-}
-
-/**
- * TIME command stores time in a variable [ms]
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN variable name 
- *
- * @return APR_SUCCESS
- */
-apr_status_t command_TIME(command_t *self, worker_t *worker, char *data) {
-  char *copy;
-
-  COMMAND_NEED_ARG("Need a variable name to store time");
-  
-  varset(worker, copy, apr_off_t_toa(worker->pbody, apr_time_as_msec(apr_time_now())));
-
-  return APR_SUCCESS;
 }
 
 /**
@@ -2830,7 +2811,7 @@ apr_status_t command_OP(command_t *self, worker_t *worker, char *data) {
   }
 
   /* store it do var */
-  varset(worker, var, apr_off_t_toa(worker->pbody, result));
+  worker_var_set(worker, var, apr_off_t_toa(worker->pbody, result));
   
   return APR_SUCCESS;
 }
@@ -2851,7 +2832,7 @@ apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data) {
   COMMAND_NEED_ARG("<variable> expected");
  
   result  = apr_psprintf(worker->pbody, "%d", worker->which);
-  varset(worker, copy, result);
+  worker_var_set(worker, copy, result);
   
   return APR_SUCCESS;
 }
@@ -3026,7 +3007,7 @@ apr_status_t command_PID(command_t *self, worker_t *worker, char *data) {
 
   COMMAND_NEED_ARG("<variable>");
 
-  varset(worker, copy, apr_psprintf(worker->pbody, "%u", getpid()));
+  worker_var_set(worker, copy, apr_psprintf(worker->pbody, "%u", getpid()));
   
   return APR_SUCCESS;
 }
@@ -3094,7 +3075,7 @@ apr_status_t command_URLENC(command_t *self, worker_t *worker, char *data) {
     }
   }
 
-  varset(worker, var, result);
+  worker_var_set(worker, var, result);
 
   return APR_SUCCESS;
 }
@@ -3152,7 +3133,7 @@ apr_status_t command_URLDEC(command_t *self, worker_t *worker, char *data) {
   }
   inplace[j] = 0;
 
-  varset(worker, var, inplace);
+  worker_var_set(worker, var, inplace);
 
   return APR_SUCCESS;
 }
@@ -3202,7 +3183,7 @@ apr_status_t command_HTMLDEC(command_t *self, worker_t *worker, char *data) {
     }
   inplace[j] = 0;
 
-  varset(worker, var, inplace);
+  worker_var_set(worker, var, inplace);
 
   return APR_SUCCESS;
 }
@@ -3238,7 +3219,7 @@ apr_status_t command_B64ENC(command_t *self, worker_t *worker, char *data) {
   base64 = apr_pcalloc(worker->pbody, len + 1);
   apr_base64_encode(base64, string, strlen(string));
   
-  varset(worker, var, base64);
+  worker_var_set(worker, var, base64);
 
   return APR_SUCCESS;
 }
@@ -3274,75 +3255,8 @@ apr_status_t command_B64DEC(command_t *self, worker_t *worker, char *data) {
   plain = apr_pcalloc(worker->pbody, len + 1);
   apr_base64_decode(plain, string);
   
-  varset(worker, var, plain);
+  worker_var_set(worker, var, plain);
 
-  return APR_SUCCESS;
-}
-
-/**
- * STRFTIME command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN time [ms] "format" variable
- *
- * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
- */
-apr_status_t command_STRFTIME(command_t *self, worker_t *worker, char *data) {
-  apr_status_t status;
-  char *copy;
-  char *time;
-  char *fmt;
-  char *var;
-  char *type;
-  char *last;
-  char *timefmt;
-  apr_size_t len;
-  apr_time_exp_t  tm;
-  apr_time_t timems;
-
-  COMMAND_NEED_ARG("<time> \"<format>\" <variable> [Local|GMT]");
-
-  time = apr_strtok(copy, " ", &last);
-  fmt = my_unescape(last, &last);
-  var = apr_strtok(NULL, " ", &last);
-  type = apr_strtok(NULL, " ", &last);
-
-  if (!time) {
-    worker_log(worker, LOG_ERR, "Time not specified");
-    return APR_EGENERAL;
-  }
-  if (!fmt) {
-    worker_log(worker, LOG_ERR, "Format not specified");
-    return APR_EGENERAL;
-  }
-  if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
-    return APR_EGENERAL;
-  }
-  apr_collapse_spaces(var, var);
-
-  timems = apr_atoi64(time);
-  
-  timefmt = apr_pcalloc(worker->pbody, 255);
-  
-  if (type && strncasecmp(type, "Local", 5) == 0) {
-    if ((status = apr_time_exp_lt(&tm, timems * 1000)) != APR_SUCCESS) { 
-      return status;
-    }
-  }
-  else {
-    if ((status = apr_time_exp_gmt(&tm, timems * 1000)) != APR_SUCCESS) { 
-      return status;
-    }
-  }
-  
-  if ((status = apr_strftime(timefmt, &len, 254, fmt, &tm)) != APR_SUCCESS) {
-    return status;
-  }
-
-  varset(worker, var, timefmt);
-  
   return APR_SUCCESS;
 }
 
@@ -3504,8 +3418,9 @@ apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data) {
   }
 
   if (var && var[0] != 0) {
-    varset(worker, var, 
-		  apr_off_t_toa(worker->pbody, apr_time_as_msec(cur - worker->start_time)));
+    worker_var_set(worker, var, 
+	           apr_off_t_toa(worker->pbody, 
+		                 apr_time_as_msec(cur - worker->start_time)));
   }
   return APR_SUCCESS;
 }

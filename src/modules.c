@@ -17,11 +17,13 @@
 
 extern module_t modules[];
 
+apr_status_t date_module_init(global_t *global);
 apr_status_t binary_module_init(global_t *global);
 apr_status_t tcp_module_init(global_t *global);
 apr_status_t ssl_module_init(global_t *global);
 
 module_t modules[] = {
+  { date_module_init },
   { binary_module_init },
   { tcp_module_init },
   { ssl_module_init },

@@ -379,6 +379,7 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...);
 void worker_log_error(worker_t * self, char *fmt, ...); 
 void worker_log_buf(worker_t * self, int log_mode, char *buf, char *prefix, 
                     int len); 
+void worker_var_set(worker_t * worker, const char *var, const char *val); 
 apr_status_t worker_test_unused(worker_t * self); 
 apr_status_t worker_test_unused_errors(worker_t * self); 
 apr_status_t worker_expect(worker_t * self, apr_table_t * regexs, 
@@ -394,9 +395,6 @@ void worker_destroy(worker_t * self);
 apr_status_t worker_match(worker_t * worker, apr_table_t * regexs, 
                           const char *data, apr_size_t len); 
 void worker_conn_close_all(worker_t *self); 
-apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
-                            const char *keyfile, const char *cafile, 
-			    int check); 
 apr_status_t worker_listener_up(worker_t *worker, apr_int32_t backlog); 
 void worker_get_socket(worker_t *self, const char *hostname, 
                        const char *portname);
