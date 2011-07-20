@@ -41,6 +41,7 @@
 #endif
 
 #include "module.h"
+#include "ssl.h"
 
 /************************************************************************
  * Definitions 
@@ -149,35 +150,54 @@ static apr_status_t worker_ssl_handshake(worker_t * worker) {
  * @return APR_SUCCESS or APR_EINVAL if invalid cert
  */
 static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile, 
-                                       const char *pass) {
-  PKCS12 *p12;
-  EVP_PKEY *pkey;
-  X509 *cert;
-  STACK_OF(X509) *ca;
+                                       const char *pass, int check) {
   BIO *in;
+  PKCS12 *p12;
+  EVP_PKEY *pkey = NULL;
+  X509 *cert = NULL;
+  STACK_OF(X509) *ca = NULL;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (!(in = BIO_new_file(infile, "rb"))) {
     worker_log_error(worker, "Could not open p12 \"%s\"", infile);
     return APR_EINVAL;
   }
+  worker_log(worker, LOG_DEBUG, "p12 pass \"%s\"", pass);
   p12 = d2i_PKCS12_bio (in, NULL);
   if (PKCS12_parse(p12, pass, &pkey, &cert, &ca) != 0) {
     worker_log(worker, LOG_ERR, "Could not load p12 \"%s\"", infile);
     return APR_EINVAL;
   }
+
+  if (pkey && SSL_CTX_use_PrivateKey(config->ssl_ctx, pkey) <= 0 && check) {
+    worker_log(worker, LOG_ERR, "Could not load private key of \"%s\"",
+	       infile);
+    return APR_EINVAL;
+  }
+
+  if (cert && SSL_CTX_use_certificate(config->ssl_ctx, cert) <= 0 && check) {
+    worker_log(worker, LOG_ERR, "Could not load certificate of \"%s\"",
+	       infile);
+    return APR_EINVAL;
+  }
+
+  if (ca) {
+  }
+
   APR_SUCCESS;
 }
 
 /**
  * Get server ctx with loaded cert and key file
  *
- * @param self IN thread object data
+ * @param worker IN thread object data
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
-static apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile, 
+static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile, 
                             const char *keyfile, const char *ca, int check) {
-  ssl_config_t *config = ssl_get_worker_config(self);
+  int len = 0;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   /* test if there are the same cert, key ca files */
   if (!(
@@ -198,53 +218,70 @@ static apr_status_t worker_ssl_ctx(worker_t * self, const char *certfile,
   config->keyfile = keyfile;
   config->cafile = ca;
 
-  worker_log(self, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
+  worker_log(worker, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
              keyfile?keyfile:"(null)",
              ca?ca:"(null)");
   if (!config->ssl_ctx) {
     if (!(config->ssl_ctx = SSL_CTX_new(config->meth))) {
-      worker_log(self, LOG_ERR, "Could not initialize SSL Context.");
+      worker_log(worker, LOG_ERR, "Could not initialize SSL Context.");
       return APR_EINVAL;
     }
   }
-  if (config->ssl_ctx) {
+
+  /* test if it is a p12 cert */
+  if (certfile) {
+    len = strlen(certfile);
+    if (len > 4) {
+      worker_log(worker, LOG_DEBUG, "certifcate suffix \"%s\"", &certfile[len-4]);
+    }  
+  }
+  if (len > 4 && strcmp(&certfile[len - 4], ".p12") == 0) {
+    apr_status_t status;
+    worker_log(worker, LOG_DEBUG, "pkcs12 certifcate");
+    if ((status = worker_ssl_ctx_p12(worker, certfile, keyfile, check))
+	!= APR_SUCCESS) {
+      return status;
+    }
+  }
+  else {
+    worker_log(worker, LOG_DEBUG, "pem formated cert and key");
     if (certfile && SSL_CTX_use_certificate_file(config->ssl_ctx, certfile, 
-	                                         SSL_FILETYPE_PEM) <= 0 && 
+						 SSL_FILETYPE_PEM) <= 0 && 
 	check) { 
-      worker_log(self, LOG_ERR, "Could not load RSA server certifacte \"%s\"",
-	         certfile);
+      worker_log(worker, LOG_ERR, "Could not load certifacte \"%s\"",
+		 certfile);
       return APR_EINVAL;
     }
     if (keyfile && SSL_CTX_use_PrivateKey_file(config->ssl_ctx, keyfile, 
-	                                       SSL_FILETYPE_PEM) <= 0 && 
+					       SSL_FILETYPE_PEM) <= 0 && 
 	check) {
-      worker_log(self, LOG_ERR, "Could not load RSA server private key \"%s\"",
-	         keyfile);
+      worker_log(worker, LOG_ERR, "Could not load private key \"%s\"",
+		 keyfile);
       return APR_EINVAL;
     }
     if (ca && !SSL_CTX_load_verify_locations(config->ssl_ctx, ca,
 					     NULL) && check) {
-      worker_log(self, LOG_ERR, "Could not load CA file \"%s\"", ca);
+      worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", ca);
       return APR_EINVAL;
     }
 
     if (certfile && keyfile&& check && 
 	!SSL_CTX_check_private_key(config->ssl_ctx)) {
-      worker_log(self, LOG_ERR, "Private key does not match the certificate public key");
+      worker_log(worker, LOG_ERR, "Private key does not match the certificate public key");
       return APR_EINVAL;
     }
+  }
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(config->ssl_ctx,1);
+  SSL_CTX_set_verify_depth(config->ssl_ctx,1);
 #endif
- }
   return APR_SUCCESS;
 }
 
 /**
  * Get client method 
  *
- * @param self IN thread object data
+ * @param worker IN thread object data
  * @param sslstr IN SSL|SSL2|SSL3|TLS1
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
@@ -275,7 +312,7 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
 /**
  * Get server method 
  *
- * @param self IN thread object data
+ * @param worker IN thread object data
  * @param sslstr IN SSL|SSL2|SSL3|TLS1
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
@@ -820,7 +857,6 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
 /**
  * SSL_CERT_VAL command
  
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN ssl variable and a variable name 
  *
@@ -863,7 +899,6 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
 /**
  * SSL_SECURE_RENEG_SUPPORTED command
  *
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN 
  *
@@ -885,7 +920,6 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent) {
 /**
  * SSL_LEGACY command
  *
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN 
  *
@@ -906,7 +940,6 @@ static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent) {
 /**
  * SSL_LOAD_CERT command
  *
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN ssl variable and a variable name 
  *
@@ -936,7 +969,6 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
 /**
  * SSL_LOAD_KEY command
  *
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN ssl variable and a variable name 
  *
@@ -966,7 +998,6 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
 /**
  * SSL_SET_CERT command
  *
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN ssl variable and a variable name 
  *
@@ -1008,7 +1039,6 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
 /**
  * SSL_SECURE_RENEG_SUPPORTED command
  *
- * @param self IN command
  * @param worker IN thread data object
  * @param data IN 
  *

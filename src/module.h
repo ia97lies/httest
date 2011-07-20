@@ -50,7 +50,6 @@
 #include "regex.h"
 #include "file.h"
 #include "socket.h"
-#include "ssl.h"
 #include "worker.h"
 #include "module.h"
 
