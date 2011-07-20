@@ -18,7 +18,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool skeleton module 
+ * Implementation of the HTTP Test Tool math module 
  */
 
 /************************************************************************
@@ -41,21 +41,15 @@
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_SKELETON_DUMMY(worker_t *worker, worker_t *parent) {
+static apr_status_t block_MATH_DUMMY(worker_t *worker, worker_t *parent) {
   return APR_SUCCESS;
 }
 
 /************************************************************************
  * Module
  ***********************************************************************/
-apr_status_t skeleton_module_init(global_t *global) {
+apr_status_t math_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "SKELETON", "_DUMMY",
-	                           "<foo>",
-	                           "Bla bla bla.",
-	                           block_SKELETON_DUMMY)) != APR_SUCCESS) {
-    return status;
-  }
   return APR_SUCCESS;
 }
 

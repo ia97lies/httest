@@ -24,7 +24,8 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
-#include "module.h"
+#include <openssl/ssl.h>
+#include <openssl/pkcs12.h>
 
 /* on windows the inclusion of windows.h/wincrypt.h causes
  * X509_NAME and a few more to be defined; found no other
@@ -38,6 +39,8 @@
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
+
+#include "module.h"
 
 /************************************************************************
  * Definitions 
@@ -134,6 +137,35 @@ static apr_status_t worker_ssl_handshake(worker_t * worker) {
   }
 
   return status;
+}
+
+/**
+ * Handle p12 client certs
+ *
+ * @param worker IN worker object
+ * @param infile IN p12 file name
+ * @param pass IN optional password
+ * 
+ * @return APR_SUCCESS or APR_EINVAL if invalid cert
+ */
+static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile, 
+                                       const char *pass) {
+  PKCS12 *p12;
+  EVP_PKEY *pkey;
+  X509 *cert;
+  STACK_OF(X509) *ca;
+  BIO *in;
+
+  if (!(in = BIO_new_file(infile, "rb"))) {
+    worker_log_error(worker, "Could not open p12 \"%s\"", infile);
+    return APR_EINVAL;
+  }
+  p12 = d2i_PKCS12_bio (in, NULL);
+  if (PKCS12_parse(p12, pass, &pkey, &cert, &ca) != 0) {
+    worker_log(worker, LOG_ERR, "Could not load p12 \"%s\"", infile);
+    return APR_EINVAL;
+  }
+  APR_SUCCESS;
 }
 
 /**
