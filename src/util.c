@@ -49,6 +49,103 @@
  ***********************************************************************/
 
 /**
+ * This function is taken from apr. The apr_tokenize_to_argv do remove
+ * all leftover "\", but this breaks up my httest completly.
+ *
+ * @param token_context IN Context from which pool allocations will occur.
+ * @arg_str IN Input argument string for conversion to argv[].
+ * @argv_out IN Output location. This is a pointer to an array
+ *              of pointers to strings (ie. &(char *argv[]).
+ *              This value will be allocated from the contexts
+ *              pool and filled in with copies of the tokens
+ *              found during parsing of the arg_str. 
+ *
+ * @return SUCCESS
+ */
+static apr_status_t my_tokenize_to_argv(const char *arg_str, 
+                                        char ***argv_out,
+                                        apr_pool_t *token_context)
+{
+    const char *cp;
+    const char *ct;
+    char *cleaned, *dirty;
+    int escaped;
+    int isquoted, numargs = 0, argnum;
+
+#define SKIP_WHITESPACE(cp) \
+    for ( ; *cp == ' ' || *cp == '\t'; ) { \
+        cp++; \
+    };
+
+#define CHECK_QUOTATION(cp,isquoted) \
+    isquoted = 0; \
+    if (*cp == '"') { \
+        isquoted = 1; \
+        cp++; \
+    } \
+    else if (*cp == '\'') { \
+        isquoted = 2; \
+        cp++; \
+    }
+
+/* DETERMINE_NEXTSTRING:
+ * At exit, cp will point to one of the following:  NULL, SPACE, TAB or QUOTE.
+ * NULL implies the argument string has been fully traversed.
+ */
+#define DETERMINE_NEXTSTRING(cp,isquoted) \
+    for ( ; *cp != '\0'; cp++) { \
+        if (   (*cp == '\\' && (*(cp+1) == ' ' || *(cp+1) == '\t' || \
+                                *(cp+1) == '"' || *(cp+1) == '\''))) { \
+            cp++; \
+            continue; \
+        } \
+        if (   (!isquoted && (*cp == ' ' || *cp == '\t')) \
+            || (isquoted == 1 && *cp == '"') \
+            || (isquoted == 2 && *cp == '\'')                 ) { \
+            break; \
+        } \
+    }
+ 
+    cp = arg_str;
+    SKIP_WHITESPACE(cp);
+    ct = cp;
+
+    /* This is ugly and expensive, but if anyone wants to figure a
+     * way to support any number of args without counting and 
+     * allocating, please go ahead and change the code.
+     *
+     * Must account for the trailing NULL arg.
+     */
+    numargs = 1;
+    while (*ct != '\0') {
+        CHECK_QUOTATION(ct, isquoted);
+        DETERMINE_NEXTSTRING(ct, isquoted);
+        if (*ct != '\0') {
+            ct++;
+        }
+        numargs++;
+        SKIP_WHITESPACE(ct);
+    }
+    *argv_out = apr_palloc(token_context, numargs * sizeof(char*));
+
+    /*  determine first argument */
+    for (argnum = 0; argnum < (numargs-1); argnum++) {
+        SKIP_WHITESPACE(cp);
+        CHECK_QUOTATION(cp, isquoted);
+        ct = cp;
+        DETERMINE_NEXTSTRING(cp, isquoted);
+        cp++;
+        (*argv_out)[argnum] = apr_palloc(token_context, cp - ct);
+        apr_cpystrn((*argv_out)[argnum], ct, cp - ct);
+        cleaned = dirty = (*argv_out)[argnum];
+    }
+    (*argv_out)[argnum] = NULL;
+
+    return APR_SUCCESS;
+}
+
+/**
+ * @deprecitated: should do everything with new my_get_args
  * get a string starting/ending with a char, unescape this char if found as an 
  * escape sequence.
  *
@@ -255,7 +352,7 @@ void my_get_args(char *line, apr_table_t *params, apr_pool_t *pool) {
   int i; 
   char **argv;
 
-  if (apr_tokenize_to_argv(line, &argv, pool) == APR_SUCCESS) {
+  if (my_tokenize_to_argv(line, &argv, pool) == APR_SUCCESS) {
     for (i = 0; argv[i] != NULL; i++) {
       /* store value by his index */
       apr_table_set(params, apr_itoa(pool, i), argv[i]);
