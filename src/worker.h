@@ -243,7 +243,7 @@ typedef struct line_s {
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
   } \
   else { \
-    worker_log(worker, LOG_CMD, "%s", copy); \
+    worker_log(worker, LOG_CMD, "<NONE> %s", copy); \
   } \
 }
 

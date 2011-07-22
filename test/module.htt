@@ -1,0 +1,5 @@
+INCLUDE $TOP/test/module.htb
+
+CLIENT
+_TEST:FOO foo
+END

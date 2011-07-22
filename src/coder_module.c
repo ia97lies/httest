@@ -86,13 +86,14 @@ static apr_status_t block_CODER_DUMMY(worker_t *worker, worker_t *parent) {
 /**
  * URLENC command
  *
- * @param self IN command
+ * @param worker IN command
  * @param worker IN thread data object
  * @param data IN string and variable name
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
 apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent) {
+  /* do this the old way, becaus argv tokenizer removes all "\" */
   const char *string;
   const char *var;
   char *result;
@@ -103,8 +104,9 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent) {
 
   string = apr_table_get(worker->params, "1");
   var = apr_table_get(worker->params, "2");
+
   if (!string) {
-    worker_log(worker, LOG_ERR, "Nothing to encode");
+    worker_log(worker, LOG_ERR, "Nothing to decode");
     return APR_EGENERAL;
   }
   if (!var) {
@@ -131,18 +133,20 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent) {
   worker_var_set(worker, var, result);
 
   return APR_SUCCESS;
+
 }
 
 /**
  * URLDEC command
  *
- * @param self IN command
+ * @param worker IN command
  * @param worker IN thread data object
  * @param data IN string and variable name
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
 apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent) {
+  /* do this the old way, becaus argv tokenizer removes all "\" */
   const char *string;
   const char *var;
   char c;
@@ -194,7 +198,7 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent) {
 /**
  * HTMLDEC command
  *
- * @param self IN command
+ * @param worker IN command
  * @param worker IN thread data object
  * @param data IN string and variable name
  *
@@ -244,7 +248,7 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent) {
 /**
  * B64ENC command
  *
- * @param self IN command
+ * @param worker IN command
  * @param worker IN thread data object
  * @param data IN string and variable name
  *
@@ -280,7 +284,7 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent) {
 /**
  * BASE64DEC command
  *
- * @param self IN command
+ * @param worker IN command
  * @param worker IN thread data object
  * @param data IN string and variable name
  *

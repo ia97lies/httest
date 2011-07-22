@@ -1128,12 +1128,18 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
   apr_pool_t *call_pool;
   char *module;
   apr_hash_t *blocks;
+  apr_table_t *params;
+  apr_table_t *retvars;
+  apr_table_t *locals;
 
   COMMAND_NEED_ARG("Need a block name: <block> <input-vars>* : <output-vars>*");
 
   apr_pool_create(&call_pool, worker->pbody);
-  my_get_args(copy, worker->params, call_pool);
-  block_name = apr_table_get(worker->params, "0");
+  params = apr_table_make(call_pool, 5);
+  retvars = apr_table_make(call_pool, 5);
+  locals = apr_table_make(call_pool, 5);
+  my_get_args(copy, params, call_pool);
+  block_name = apr_table_get(params, "0");
   module = apr_pstrdup(worker->pbody, block_name);
 
   /* determine module if any */
@@ -1177,15 +1183,14 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 	status = APR_EGENERAL;
 	goto error;
       }
-      if (!(val = apr_table_get(worker->params, index))) {
+      if (!(val = apr_table_get(params, index))) {
 	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
 	sync_unlock(worker->mutex);
 	status = APR_EGENERAL;
 	goto error;
       }
       if (arg && val) {
-	apr_table_set(worker->params, arg, val);
-	apr_table_unset(worker->params, index);
+	apr_table_set(params, arg, val);
       }
     }
 
@@ -1199,23 +1204,25 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 	status = APR_EGENERAL;
 	goto error;
       }
-      if (!(val = apr_table_get(worker->params, index))) {
+      if (!(val = apr_table_get(params, index))) {
 	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
 	sync_unlock(worker->mutex);
 	status = APR_EGENERAL;
 	goto error;
       }
       if (arg && val) {
-	apr_table_set(worker->retvars, arg, val);
-	apr_table_unset(worker->retvars, index);
+	apr_table_set(retvars, arg, val);
       }
     }
 
     lines = my_table_deep_copy(call_pool, block->lines);
     sync_unlock(worker->mutex);
     /* CR END */
-    call = apr_pcalloc(call_pool, sizeof(worker_t));
-    memcpy(call, worker, sizeof(worker_t));
+    call = apr_pcalloc(call_pool, sizeof(*call));
+    memcpy(call, worker, sizeof(*call));
+    call->params = params;
+    call->retvars = retvars;
+    call->locals = locals;
     /* lines in block */
     call->lines = lines;
     log_mode = call->log_mode;
@@ -1226,7 +1233,14 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     call->log_mode = log_mode;
     cmd = worker->cmd;
     lines = worker->lines;
-    memcpy(worker, call, sizeof(worker_t));
+    params = worker->params;
+    retvars = worker->retvars;
+    locals = worker->locals;
+    memcpy(worker, call, sizeof(*worker));
+    apr_table_overlap(worker->vars, call->retvars, APR_OVERLAP_TABLES_SET); 
+    worker->params = params;
+    worker->retvars = retvars;
+    worker->locals = locals;
     worker->lines = lines;
     worker->cmd = cmd;
 
@@ -1235,8 +1249,9 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
 error:
   apr_pool_destroy(call_pool);
-  apr_table_clear(worker->locals);
-  apr_table_clear(worker->params);
+  //apr_table_clear(locals);
+  //apr_table_clear(params);
+  //apr_table_clear(retvars);
   return status;
 }
 

@@ -12,9 +12,9 @@ _WAIT
 
 _POST http://$YOUR_HOST:$YOUR_PORT/bla/bla HTTP/1.1
 _FORM_URLENC MY 
-_FORM_URLENC_ARG $MY hallo velo
-_FORM_URLENC_ARG $MY hallo2 "velo2 velo blubi"
-_FORM_URLENC_ARG $MY hallo3 velo3
+_FORM_URLENC_ARG $MY hallo velo MY
+_FORM_URLENC_ARG $MY hallo2 "velo2 velo blubi" MY
+_FORM_URLENC_ARG $MY hallo3 velo3 MY
 _FORM_URLENC_END $MY
 _EXPECT . "AS1"
 _WAIT
