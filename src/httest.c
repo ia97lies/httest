@@ -1134,20 +1134,25 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("Need a block name: <block> <input-vars>* : <output-vars>*");
 
+  /** a pool for this call */
   apr_pool_create(&call_pool, worker->pbody);
+
+  /** temporary tables for param, local vars and return vars */
   params = apr_table_make(call_pool, 5);
   retvars = apr_table_make(call_pool, 5);
   locals = apr_table_make(call_pool, 5);
+
+  /** get args from copy */
   my_get_args(copy, params, call_pool);
   block_name = apr_table_get(params, "0");
-  module = apr_pstrdup(worker->pbody, block_name);
+  module = apr_pstrdup(call_pool, block_name);
 
-  /* determine module if any */
+  /** get module worker */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
     /* always jump over prefixing "_" */
     module++;
-    block_name = apr_pstrcat(worker->pbody, "_", last, NULL);
+    block_name = apr_pstrcat(call_pool, "_", last, NULL);
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1157,6 +1162,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     blocks = worker->blocks;
   }
 
+  /** get block from module */
   /* CR BEGIN */
   sync_lock(worker->mutex);
   if (!(block = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
@@ -1174,6 +1180,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     const char *arg;
     const char *val;
 
+    /** prepare call */
     /* handle parameters first */
     for (i = 1; i < apr_table_elts(block->params)->nelts; i++) {
       index = apr_itoa(call_pool, i);
@@ -1218,6 +1225,8 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     lines = my_table_deep_copy(call_pool, block->lines);
     sync_unlock(worker->mutex);
     /* CR END */
+
+    /** call block */
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
     call->params = params;
@@ -1230,6 +1239,8 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
       call->log_mode = LOG_INFO;
     }
     status = block->interpret(call, worker);
+
+    /** get infos from call back to worker */
     call->log_mode = log_mode;
     cmd = worker->cmd;
     lines = worker->lines;
@@ -1248,10 +1259,8 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
   }
 
 error:
+  /** all ends here */
   apr_pool_destroy(call_pool);
-  //apr_table_clear(locals);
-  //apr_table_clear(params);
-  //apr_table_clear(retvars);
   return status;
 }
 
