@@ -181,9 +181,6 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
     return APR_EINVAL;
   }
 
-  if (ca) {
-  }
-
   APR_SUCCESS;
 }
 
@@ -795,7 +792,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
   }
 
   if (worker->flags & FLAGS_SERVER) {
-    if (strcasecmp(copy, "verify") == 0) {
+    if (copy && strcasecmp(copy, "verify") == 0) {
       /* if we are server request the peer cert */
       if (worker->log_mode >= LOG_DEBUG) {
 	SSL_set_verify(sconfig->ssl,
@@ -827,7 +824,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
     sconfig->ssl->state=SSL_ST_ACCEPT;
     worker_ssl_handshake(worker);
 
-    if (strcasecmp(copy, "verify") == 0) {
+    if (copy && strcasecmp(copy, "verify") == 0) {
       config->cert = SSL_get_peer_certificate(sconfig->ssl);
       if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");
@@ -836,7 +833,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
     }
   }
   else {
-    if (strcasecmp(copy, "verify") == 0) {
+    if (copy && strcasecmp(copy, "verify") == 0) {
       config->cert = SSL_get_peer_certificate(sconfig->ssl);
       if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");

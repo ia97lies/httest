@@ -6,10 +6,11 @@ Do restructure the code base to make it readable and extentable. This is a
 preparation for httest3 test microkernel.
 
 
-GOAL
+GOALS
 ----
-Capsulate topics into modules. Use ANY transport for testing i.e. socket, 
-ssl, file, pipe and io.
+- Capsulate topics into modules. 
+- Use ANY transport for testing i.e. socket, ssl, file, pipe and io.
+- Low Memory Usage
 
 MODULE
 ------
@@ -72,4 +73,18 @@ status read(buf, len)
 status peek(buf, len)
 status write(buf, len)
 
+VARIABLES
+---------
+Variables should be stored in a variable store. Array and hash variables would also
+be cool.
+
+If a value is stored on a value, release the old value. We could solve this by construct
+a variable struct and give every variable its own pool. After a couple of value changes
+the variable pool could be resetet and reused. Perhaps reset on every change is overkill?
+
+POOLS
+-----
+For the moment we have only one pool which last for a hole body. Better would be to give
+the temporary call_pool to interperter, where a block could use this pool for temporary
+allocations to save memory.
 
