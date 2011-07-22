@@ -162,12 +162,13 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
     worker_log_error(worker, "Could not open p12 \"%s\"", infile);
     return APR_EINVAL;
   }
-  worker_log(worker, LOG_DEBUG, "p12 pass \"%s\"", pass);
   p12 = d2i_PKCS12_bio (in, NULL);
   if (PKCS12_parse(p12, pass, &pkey, &cert, &ca) != 0) {
     worker_log(worker, LOG_ERR, "Could not load p12 \"%s\"", infile);
     return APR_EINVAL;
   }
+
+  worker_log(worker, LOG_DEBUG, "p12 cert: %p; key: %p; ca: %p\n", cert, pkey, ca);
 
   if (pkey && SSL_CTX_use_PrivateKey(config->ssl_ctx, pkey) <= 0 && check) {
     worker_log(worker, LOG_ERR, "Could not load private key of \"%s\"",
@@ -1237,8 +1238,12 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
 
     if (data && data[0]) {
       cert = apr_strtok(data, " ", &last);
-      key = apr_strtok(NULL, " ", &last);
-      ca = apr_strtok(NULL, " ", &last);
+      if (cert) {
+	key = apr_strtok(NULL, " ", &last);
+      }
+      if (key) {
+	ca = apr_strtok(NULL, " ", &last);
+      }
     }
     if (!cert) {
       cert = RSA_SERVER_CERT;
