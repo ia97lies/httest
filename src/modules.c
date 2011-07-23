@@ -17,6 +17,7 @@
 
 extern module_t modules[];
 
+//apr_status_t lua_module_init(global_t *global);
 apr_status_t sys_module_init(global_t *global);
 apr_status_t math_module_init(global_t *global);
 apr_status_t coder_module_init(global_t *global);
@@ -26,6 +27,7 @@ apr_status_t tcp_module_init(global_t *global);
 apr_status_t ssl_module_init(global_t *global);
 
 module_t modules[] = {
+  //{ lua_module_init },
   { sys_module_init },
   { math_module_init },
   { coder_module_init },

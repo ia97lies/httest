@@ -79,7 +79,11 @@ fi
 INCLUDES="`$APR_CONFIG --includes` `$APU_CONFIG --includes` $OPENSSL_INCLUDES $APR_ICONV_CONFIG"
 CFLAGS="`$APR_CONFIG --cflags` `$PCRE_CONFIG --cflags` $CFLAGS $INCLUDES"
 CPPFLAGS="`$APR_CONFIG --cppflags` $CPPFLAGS"
-LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz -lm"
+LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz"
+# math_module
+LIBS+=" -lm"
+# lua_module
+#LIBS+=" -llua5.1"
 
 if test "$enable_ssl_legacy_reneg" = "yes"; then
   CFLAGS="$CFLAGS -DSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION"
