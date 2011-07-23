@@ -50,7 +50,7 @@
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_THREAD_GET_NUMBER(worker_t *worker, worker_t *parent) {
+static apr_status_t block_THREAD_GET_NUMBER(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy;
   char *result;
  
@@ -71,7 +71,7 @@ static apr_status_t block_THREAD_GET_NUMBER(worker_t *worker, worker_t *parent) 
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_PROC_LOCK(worker_t *worker, worker_t *parent) {
+static apr_status_t block_PROC_LOCK(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
 
   if ((status = apr_thread_mutex_lock(worker->sync_mutex)) != APR_SUCCESS) {
@@ -90,7 +90,7 @@ static apr_status_t block_PROC_LOCK(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_PROC_UNLOCK(worker_t *worker, worker_t *parent) {
+static apr_status_t block_PROC_UNLOCK(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
 
   if ((status = apr_thread_mutex_unlock(worker->sync_mutex)) != APR_SUCCESS) {
@@ -109,7 +109,7 @@ static apr_status_t block_PROC_UNLOCK(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_PROC_GET_PID(worker_t *worker, worker_t *parent) {
+static apr_status_t block_PROC_GET_PID(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = apr_table_get(worker->params, "1");
 
   worker_var_set(worker, copy, apr_psprintf(worker->pbody, "%u", getpid()));
@@ -126,7 +126,7 @@ static apr_status_t block_PROC_GET_PID(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_PROC_DETACH(worker_t *worker, worker_t *parent) {
+static apr_status_t block_PROC_DETACH(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   return apr_proc_detach(1);
 }
 

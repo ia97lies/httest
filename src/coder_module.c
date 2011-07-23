@@ -79,7 +79,7 @@ static int get_url_escape_index(char c) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_CODER_DUMMY(worker_t *worker, worker_t *parent) {
+static apr_status_t block_CODER_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   return APR_SUCCESS;
 }
 
@@ -92,7 +92,7 @@ static apr_status_t block_CODER_DUMMY(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent) {
+apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   /* do this the old way, becaus argv tokenizer removes all "\" */
   const char *string;
   const char *var;
@@ -145,7 +145,7 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent) {
+apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   /* do this the old way, becaus argv tokenizer removes all "\" */
   const char *string;
   const char *var;
@@ -204,7 +204,7 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent) {
+apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *string;
   const char *var;
   char c;
@@ -254,7 +254,7 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent) {
+apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *string;
   const char *var;
   apr_size_t len;
@@ -290,7 +290,7 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent) {
+apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *string;
   const char *var;
   apr_size_t len;

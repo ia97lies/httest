@@ -443,7 +443,8 @@ int running_threads = 0;
  ***********************************************************************/
 
 static void worker_set_global_error(worker_t *self); 
-static apr_status_t worker_interpret(worker_t * self, worker_t *parent); 
+static apr_status_t worker_interpret(worker_t * self, worker_t *parent, 
+                                     apr_pool_t *ptmp); 
 
 /**
  * checked lock function, will exit FAILED if status not ok
@@ -713,14 +714,14 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     if (doit) {
       body->cmd_from = 0;
       body->cmd_to = else_pos;
-      status = worker_interpret(body, worker);
+      status = worker_interpret(body, worker, NULL);
       worker_log(worker, LOG_CMD, "_ELSE");
     }
     else {
       worker_log(worker, LOG_CMD, "_ELSE");
       body->cmd_from = else_pos + 1;
       body->cmd_to = 0;
-      status = worker_interpret(body, worker);
+      status = worker_interpret(body, worker, NULL);
     }
   }
   else {
@@ -728,7 +729,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     if (doit) {
       body->cmd_from = 0;
       body->cmd_to = 0;
-      status = worker_interpret(body, worker);
+      status = worker_interpret(body, worker, NULL);
     }
   }
 
@@ -773,7 +774,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   /* loop */
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
-    if ((status = worker_interpret(body, worker)) != APR_SUCCESS) {
+    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
   }
@@ -828,7 +829,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   while (cur) {
     /* interpret */
     apr_table_setn(body->vars, var, cur);
-    if ((status = worker_interpret(body, worker)) != APR_SUCCESS) {
+    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_strtok(NULL, " ", &last);
@@ -884,7 +885,7 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data) {
   for (;;) {
     /* interpret */
     start = apr_time_now();
-    if ((status = worker_interpret(body, worker)) != APR_SUCCESS) {
+    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_time_now();
@@ -958,7 +959,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data) {
   for (;;) {
     /* interpret */
     start = apr_time_now();
-    if ((status = worker_interpret(body, worker)) != APR_SUCCESS) {
+    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_time_now();
@@ -1039,7 +1040,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   }
   
   /* interpret */
-  status = worker_interpret(body, worker);
+  status = worker_interpret(body, worker, NULL);
   
   status_str = my_status_str(worker->pbody, status);
   if (regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
@@ -1097,7 +1098,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
     goto error;
   }
  
-  status = worker_interpret(body, worker);
+  status = worker_interpret(body, worker, NULL);
   
   worker_log(worker, LOG_CMD, "_END SOCKET");
   
@@ -1238,7 +1239,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     if (call->log_mode == LOG_CMD) {
       call->log_mode = LOG_INFO;
     }
-    status = block->interpret(call, worker);
+    status = block->interpret(call, worker, call_pool);
 
     /** get infos from call back to worker */
     call->log_mode = log_mode;
@@ -1293,7 +1294,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
 
   if (APR_STATUS_IS_INCHILD(status)) {
     /* interpret */
-    status = worker_interpret(body, worker);
+    status = worker_interpret(body, worker, NULL);
   
     /* terminate */
     worker_log(worker, LOG_CMD, "_END PROCESS");
@@ -1359,7 +1360,8 @@ static int lookup_func_index(command_t *commands, const char *line) {
  *
  * @return an apr status
  */
-static apr_status_t worker_interpret(worker_t * self, worker_t *parent) {
+static apr_status_t worker_interpret(worker_t * self, worker_t *parent, 
+                                     apr_pool_t *ptmp) {
   apr_status_t status;
   char *line;
   int j;
@@ -1515,7 +1517,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
   
   worker_log(self, LOG_INFO, "%s start ...", self->name);
 
-  if ((status = worker_interpret(self, self)) != APR_SUCCESS) {
+  if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1555,7 +1557,7 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
 
   worker_log(self, LOG_DEBUG, "unlock %s", self->name);
 
-  if ((status = worker_interpret(self, self)) != APR_SUCCESS) {
+  if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1597,7 +1599,7 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
   ++running_threads;
   sync_unlock(self->mutex);
 
-  if ((status = worker_interpret(self, self)) != APR_SUCCESS) {
+  if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1783,7 +1785,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     }
   }
   else {
-    if ((status = worker_interpret(self, self)) != APR_SUCCESS) {
+    if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
       goto error;
     }
 
@@ -2186,7 +2188,7 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data) {
   worker_add_line(worker, apr_psprintf(global->pool, "%s:%d", global->filename,
 	                               global->line_nr), 
 		  apr_pstrcat(worker->pbody, "_EXEC ", &data[i], NULL));
-  status = worker_interpret(worker, worker);
+  status = worker_interpret(worker, worker, NULL);
   if (status != APR_SUCCESS) {
     worker_set_global_error(worker);
   }

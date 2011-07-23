@@ -66,7 +66,8 @@ typedef struct recorder_s {
 } recorder_t;
 
 typedef struct worker_s worker_t;
-typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent);
+typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent, 
+                                   apr_pool_t *ptmp);
 struct worker_s {
   interpret_f interpret;
   /* worker config */

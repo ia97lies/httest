@@ -306,7 +306,7 @@ static void math_eval_pack(math_eval_t * hook, char *str) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_MATH_EVAL(worker_t * worker, worker_t * parent) {
+static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   long val;
   const char *value = apr_table_get(worker->params, "1");
   const char *var = apr_table_get(worker->params, "2");

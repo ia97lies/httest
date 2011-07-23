@@ -33,7 +33,7 @@
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_DATE_DUMMY(worker_t *worker, worker_t *parent) {
+static apr_status_t block_DATE_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   return APR_SUCCESS;
 }
 
@@ -46,7 +46,7 @@ static apr_status_t block_DATE_DUMMY(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t block_DATE_GET_TIME(worker_t *worker, worker_t *parent) {
+apr_status_t block_DATE_GET_TIME(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *var = apr_table_get(worker->params, "1");
 
   if (!var) {
@@ -67,7 +67,7 @@ apr_status_t block_DATE_GET_TIME(worker_t *worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent) {
+apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   const char *time;
   const char *fmt;

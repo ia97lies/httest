@@ -480,7 +480,7 @@ tryagain:
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *sslstr;
   int is_ssl;
   BIO *bio;
@@ -563,7 +563,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *sslstr;
   int is_ssl;
   ssl_config_t *config = ssl_get_worker_config(worker);
@@ -633,7 +633,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   return command_CLOSE(NULL, worker, "SSL");
 }
 
@@ -646,7 +646,7 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = apr_table_get(worker->params, "1");
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
@@ -691,7 +691,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = apr_table_get(worker->params, "1");
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
@@ -734,7 +734,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = apr_table_get(worker->params, "1");
   SSL_SESSION *sess;
   char *val;
@@ -773,7 +773,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   int rc;
   const char *copy = apr_table_get(worker->params, "1");
 
@@ -860,7 +860,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   char *val = NULL;
   const char *cmd = apr_table_get(worker->params, "1");
   const char *var = apr_table_get(worker->params, "2");
@@ -902,7 +902,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
 #ifndef OPENSSL_NO_ENGINE
   const char *copy = apr_table_get(worker->params, "1");
   BIO *bio_err = BIO_new_fp(stderr,BIO_NOCLOSE);
@@ -923,7 +923,7 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = apr_table_get(worker->params, "1");
 
   if (strcasecmp(copy,  "on") == 0) {
@@ -943,7 +943,7 @@ static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *val = apr_table_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
@@ -972,7 +972,7 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *val = apr_table_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
@@ -1001,7 +1001,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
+static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (!config->ssl_ctx) {
@@ -1043,7 +1043,7 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent) {
  * @return APR_SUCCESS or apr error code
  */
 static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, 
-                                                     worker_t *parent) {
+                                                     worker_t *parent, apr_pool_t *ptmp) {
 #if (define USE_SSL && OPENSSL_VERSION_NUMBER >= 0x009080ff)
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
   if (SSL_get_secure_renegotiation_support(sconfig->ssl)) {

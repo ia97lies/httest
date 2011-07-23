@@ -41,7 +41,7 @@
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent) {
+static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status = APR_SUCCESS;
   const char *data;
   char *copy;
@@ -82,7 +82,7 @@ error:
  *
  * @return APR_SUCCESS or an APR error
  */
-static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent) {
+static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   char *copy;
   apr_pool_t *pool;
   apr_status_t status;

@@ -41,7 +41,7 @@
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_SKELETON_DUMMY(worker_t *worker, worker_t *parent) {
+static apr_status_t block_SKELETON_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   return APR_SUCCESS;
 }
 

@@ -114,26 +114,6 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
 }
 
 /**
- * set a variable either as local or global
- * make no copy but replace existing
- *
- * @param worker IN thread object
- * @param var IN variable name
- * @param val IN value
- */
-void varsetn(worker_t * worker, const char *var, const char *val) {
-  if (apr_table_get(worker->locals, var)) {
-    apr_table_setn(worker->locals, var, val);
-  }
-  else if (apr_table_get(worker->params, var)) {
-    apr_table_setn(worker->params, var, val);
-  }
-  else {
-    apr_table_setn(worker->vars, var, val);
-  }
-}
-
-/**
  * get a variable either as local or global
  *
  * @param worker IN thread object
@@ -152,6 +132,36 @@ const char *varget(worker_t* worker, const char *var) {
   else {
     return apr_table_get(worker->vars, var);
   }
+}
+
+/**
+ * replace variables in a line
+ *
+ * @param worker IN thread data object
+ * @param line IN line to replace in
+ *
+ * @return new line 
+ */
+char * worker_replace_vars(worker_t * worker, char *line, int *unresolved) {
+  char *new_line;
+  int trak_unresolved = 0;
+
+  /* replace all locals first */
+  new_line = my_replace_vars(worker->pbody, line, worker->locals, 0, 
+                             unresolved); 
+  if (unresolved) { trak_unresolved |= *unresolved; }
+  /* replace all parameters first */
+  new_line = my_replace_vars(worker->pbody, line, worker->params, 0, 
+                             unresolved); 
+  if (unresolved) { trak_unresolved |= *unresolved; }
+  /* replace all vars */
+  new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1, 
+                             unresolved); 
+  if (unresolved) { trak_unresolved |= *unresolved; }
+
+  if (unresolved) { *unresolved = trak_unresolved; }
+
+  return new_line;
 }
 
 /**
@@ -388,36 +398,6 @@ go_out:
   transport_set_timeout(worker->socket->transport, worker->socktmo);
 
   return status;
-}
-
-/**
- * replace variables in a line
- *
- * @param worker IN thread data object
- * @param line IN line to replace in
- *
- * @return new line 
- */
-char * worker_replace_vars(worker_t * worker, char *line, int *unresolved) {
-  char *new_line;
-  int trak_unresolved = 0;
-
-  /* replace all locals first */
-  new_line = my_replace_vars(worker->pbody, line, worker->locals, 0, 
-                             unresolved); 
-  if (unresolved) { trak_unresolved |= *unresolved; }
-  /* replace all parameters first */
-  new_line = my_replace_vars(worker->pbody, line, worker->params, 0, 
-                             unresolved); 
-  if (unresolved) { trak_unresolved |= *unresolved; }
-  /* replace all vars */
-  new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1, 
-                             unresolved); 
-  if (unresolved) { trak_unresolved |= *unresolved; }
-
-  if (unresolved) { *unresolved = trak_unresolved; }
-
-  return new_line;
 }
 
 /**
@@ -3687,12 +3667,12 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
     line.buf = e[i].val;
     /* use in this case the copied key */
     if (strstr(line.info, "resolve")) {
+      int unresolved;
       /* do only local var resolve the only var pool which could have new vars
        * with values
        */
       /* replace all vars */
-      line.buf = my_replace_vars(self->pbody, line.buf, self->vars, 1, 
-	                         NULL); 
+      line.buf = worker_replace_vars(self, line.buf, &unresolved); 
     }
     htt_run_flush_resolved_line(self, &line);
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
