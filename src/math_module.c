@@ -11,6 +11,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * REMARK
+ * Original Copyright 1991 by Bob Stout as part of
+ * the MicroFirm Function Library (MFL)
+ * 
+ * This subset* version is hereby donated to the public domain.
  */
 
 /**
@@ -35,6 +41,35 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+#define NUL '\0'
+
+typedef enum
+{ R_ERROR = -2 /* range */ , ERROR /* syntax */ , SUCCESS } STATUS;
+
+typedef struct math_eval_s
+{
+  char *delims;                 /* Tokens               */
+  char op_stack[256];           /* Operator stack       */
+  long arg_stack[256];          /* Argument stack       */
+  char token[256];              /* Token buffer         */
+  int op_sptr;                  /* op_stack pointer     */
+  int arg_sptr;                 /* arg_stack pointer    */
+  int parens;                   /* Nesting level        */
+  int state;                    /* 0 = Awaiting expression
+                                   1 = Awaiting operator
+                                 */
+} math_eval_t;
+
+static int math_eval_op(math_eval_t * hook);
+static int math_eval_paren(math_eval_t * hook);
+static void math_eval_push_op(math_eval_t * hook, char op);
+static void math_eval_push_arg(math_eval_t * hook, long arg);
+static STATUS math_eval_pop_arg(math_eval_t * hook, long *arg);
+static STATUS math_eval_pop_op(math_eval_t * hook, int *arg);
+static char *math_eval_getexp(math_eval_t * hook, char *exp);
+static char *math_eval_getop(math_eval_t * hook, char *op);
+static void math_eval_pack(math_eval_t * hook, char *);
+
 
 /************************************************************************
  * Globals 
@@ -43,316 +78,271 @@
 /************************************************************************
  * Local 
  ***********************************************************************/
+static math_eval_t *math_eval_make(apr_pool_t * pool) {
+  math_eval_t *hook = apr_pcalloc(pool, sizeof(*hook));
 
-#define NUL '\0'
+  hook->delims = apr_pstrdup(pool, "+-*/^)(");
+  hook->state = 0;
 
-typedef enum {R_ERROR = -2 /* range */, ERROR /* syntax */, SUCCESS} STATUS;
-
-static char   delims[]   = "+-*/^)(";           /* Tokens               */
-static char   op_stack[256];                    /* Operator stack       */
-static double arg_stack[256];                   /* Argument stack       */
-static char   token[256];                       /* Token buffer         */
-static int    op_sptr,                          /* op_stack pointer     */
-              arg_sptr,                         /* arg_stack pointer    */
-              parens,                           /* Nesting level        */
-              state = 0;                        /* 0 = Awaiting expression
-                                                   1 = Awaiting operator
-                                                */
-
-int evaluate(char *, double *);
-
-static int        do_op(void);
-static int        do_paren(void);
-static void       push_op(char);
-static void       push_arg(double);
-static STATUS     pop_arg(double *);
-static STATUS     pop_op(int *);
-static char      *getexp(char *);
-static char      *getop(char *);
-static void       pack(char *);
-
-#ifdef TEST
-
-void main(int argc, char *argv[])
-{
-      double val;
-
-      printf("evaluate(%s) ", argv[1]);
-      printf("returned %d\n", evaluate(argv[1], &val));
-      printf("val = %f\n", val);
+  return hook;
 }
-
-#endif
 
 /*
 **  Evaluate a mathematical expression
 */
+int evaluate(math_eval_t * hook, char *line, long *val) {
+  long arg;
+  char *ptr = line, *str, *endptr;
+  int ercode;
 
-int evaluate(char *line, double *val)
-{
-      double arg;
-      char *ptr = line, *str, *endptr;
-      int ercode;
+  math_eval_pack(hook, line);
 
-      pack(line);
+  while (*ptr) {
+    switch (hook->state) {
+    case 0:
+      if (NULL != (str = math_eval_getexp(hook, ptr))) {
+        if ('(' == *str) {
+          math_eval_push_op(hook, *str);
+          ptr += strlen(str);
+          break;
+        }
 
-      while (*ptr)
-      {
-            switch (state)
-            {
-            case 0:
-                  if (NULL != (str = getexp(ptr)))
-                  {
-                        if ('(' == *str)
-                        {
-                              push_op(*str);
-                              ptr += strlen(str);
-                              break;
-                        }
-
-                        if (0.0 == (arg = strtod(str, &endptr)) &&
-                              NULL == strchr(str, '0'))
-                        {
-                              return ERROR;
-                        }
-                        push_arg(arg);
-                        ptr += strlen(str);
-                  }
-                  else  return ERROR;
-
-                  state = 1;
-                  break;
-
-            case 1:
-                  if (NULL == (str = getop(ptr)))
-                        return ERROR;
-
-                  if (strchr(delims, *str))
-                  {
-                        if (')' == *str)
-                        {
-                              if (SUCCESS > (ercode = do_paren()))
-                                    return ercode;
-                        }
-                        else
-                        {
-                              push_op(*str);
-                              state = 0;
-                        }
-
-                        ptr += strlen(str);
-                  }
-                  else  return ERROR;
-
-                  break;
-            }
+        if (0.0 == (arg = strtod(str, &endptr)) && NULL == strchr(str, '0')) {
+          return ERROR;
+        }
+        math_eval_push_arg(hook, arg);
+        ptr += strlen(str);
       }
+      else
+        return ERROR;
 
-      while (1 < arg_sptr)
-      {
-            if (SUCCESS > (ercode = do_op()))
-                  return ercode;
+      hook->state = 1;
+      break;
+
+    case 1:
+      if (NULL == (str = math_eval_getop(hook, ptr)))
+        return ERROR;
+
+      if (strchr(hook->delims, *str)) {
+        if (')' == *str) {
+          if (SUCCESS > (ercode = math_eval_paren(hook)))
+            return ercode;
+        }
+        else {
+          math_eval_push_op(hook, *str);
+          hook->state = 0;
+        }
+
+        ptr += strlen(str);
       }
-      if (!op_sptr)
-            return pop_arg(val);
-      else  return ERROR;
+      else
+        return ERROR;
+
+      break;
+    }
+  }
+
+  while (1 < hook->arg_sptr) {
+    if (SUCCESS > (ercode = math_eval_op(hook)))
+      return ercode;
+  }
+  if (!hook->op_sptr)
+    return math_eval_pop_arg(hook, val);
+  else
+    return ERROR;
 }
 
 /*
 **  Evaluate stacked arguments and operands
 */
+static int math_eval_op(math_eval_t * hook) {
+  long arg1, arg2;
+  int op;
 
-static int do_op(void)
-{
-      double arg1, arg2;
-      int op;
+  if (ERROR == math_eval_pop_op(hook, &op))
+    return ERROR;
 
-      if (ERROR == pop_op(&op))
-            return ERROR;
+  math_eval_pop_arg(hook, &arg1);
+  math_eval_pop_arg(hook, &arg2);
 
-      pop_arg(&arg1);
-      pop_arg(&arg2);
+  switch (op) {
+  case '+':
+    math_eval_push_arg(hook, arg2 + arg1);
+    break;
 
-      switch (op)
-      {
-      case '+':
-            push_arg(arg2 + arg1);
-            break;
+  case '-':
+    math_eval_push_arg(hook, arg2 - arg1);
+    break;
 
-      case '-':
-            push_arg(arg2 - arg1);
-            break;
+  case '*':
+    math_eval_push_arg(hook, arg2 * arg1);
+    break;
 
-      case '*':
-            push_arg(arg2 * arg1);
-            break;
+  case '/':
+    if (0.0 == arg1)
+      return R_ERROR;
+    math_eval_push_arg(hook, arg2 / arg1);
+    break;
 
-      case '/':
-            if (0.0 == arg1)
-                  return R_ERROR;
-            push_arg(arg2 / arg1);
-            break;
+  case '^':
+    if (0.0 > arg2)
+      return R_ERROR;
+    math_eval_push_arg(hook, pow(arg2, arg1));
+    break;
 
-      case '^':
-            if (0.0 > arg2)
-                  return R_ERROR;
-            push_arg(pow(arg2, arg1));
-            break;
+  case '(':
+    hook->arg_sptr += 2;
+    break;
 
-      case '(':
-            arg_sptr += 2;
-            break;
-
-      default:
-            return ERROR;
-      }
-      if (1 > arg_sptr)
-            return ERROR;
-      else  return op;
+  default:
+    return ERROR;
+  }
+  if (1 > hook->arg_sptr)
+    return ERROR;
+  else
+    return op;
 }
 
 /*
 **  Evaluate one level
 */
+static int math_eval_paren(math_eval_t * hook) {
+  int op;
 
-static int do_paren(void)
-{
-      int op;
-
-      if (1 > parens--)
-            return ERROR;
-      do
-      {
-            if (SUCCESS > (op = do_op()))
-                  break;
-      } while ('('!= op);
-      return op;
+  if (1 > hook->parens--)
+    return ERROR;
+  do {
+    if (SUCCESS > (op = math_eval_op(hook)))
+      break;
+  } while ('(' != op);
+  return op;
 }
 
 /*
 **  Stack operations
 */
-
-static void push_op(char op)
-{
-      if ('(' == op)
-            ++parens;
-      op_stack[op_sptr++] = op;
+static void math_eval_push_op(math_eval_t * hook, char op) {
+  if ('(' == op)
+    ++hook->parens;
+  hook->op_stack[hook->op_sptr++] = op;
 }
 
-static void push_arg(double arg)
-{
-      arg_stack[arg_sptr++] = arg;
+static void math_eval_push_arg(math_eval_t * hook, long arg) {
+  hook->arg_stack[hook->arg_sptr++] = arg;
 }
 
-static STATUS pop_arg(double *arg)
-{
-      *arg = arg_stack[--arg_sptr];
-      if (0 > arg_sptr)
-            return ERROR;
-      else  return SUCCESS;
+static STATUS math_eval_pop_arg(math_eval_t * hook, long *arg) {
+  *arg = hook->arg_stack[--hook->arg_sptr];
+  if (0 > hook->arg_sptr)
+    return ERROR;
+  else
+    return SUCCESS;
 }
 
-static STATUS pop_op(int *op)
-{
-      if (!op_sptr)
-            return ERROR;
-      *op = op_stack[--op_sptr];
-      return SUCCESS;
+static STATUS math_eval_pop_op(math_eval_t * hook, int *op) {
+  if (!hook->op_sptr)
+    return ERROR;
+  *op = hook->op_stack[--hook->op_sptr];
+  return SUCCESS;
 }
 
 /*
 **  Get an expression
 */
+static char *math_eval_getexp(math_eval_t * hook, char *str) {
+  char *ptr = str, *tptr = hook->token;
 
-static char *getexp(char *str)
-{
-      char *ptr = str, *tptr = token;
-
-      while (*ptr)
-      {
-            if (strchr(delims, *ptr))
-            {
-                  if ('-' == *ptr)
-                  {
-                        if (str != ptr && 'E' != ptr[-1])
-                              break;
-                  }
-
-                  else if (str == ptr)
-                        return getop(str);
-
-                  else if ('E' == *ptr)
-                  {
-                        if (!isdigit(ptr[1]) && '-' != ptr[1])
-                              return NULL;
-                  }
-                  else break;
-            }
-
-            *tptr++ = *ptr++;
+  while (*ptr) {
+    if (strchr(hook->delims, *ptr)) {
+      if ('-' == *ptr) {
+        if (str != ptr && 'E' != ptr[-1])
+          break;
       }
-      *tptr = NUL;
 
-      return token;
+      else if (str == ptr)
+        return math_eval_getop(hook, str);
+
+      else if ('E' == *ptr) {
+        if (!isdigit(ptr[1]) && '-' != ptr[1])
+          return NULL;
+      }
+      else
+        break;
+    }
+
+    *tptr++ = *ptr++;
+  }
+  *tptr = NUL;
+
+  return hook->token;
 }
 
 /*
 **  Get an operator
 */
-
-static char *getop(char *str)
-{
-      *token = *str;
-      token[1] = NUL;
-      return token;
+static char *math_eval_getop(math_eval_t * hook, char *str) {
+  *hook->token = *str;
+  hook->token[1] = NUL;
+  return hook->token;
 }
 
 /*
 **  Remove whitespace & capitalize
 */
+static void math_eval_pack(math_eval_t * hook, char *str) {
+  char *ptr = str, *p;
 
-static void pack(char *str)
-{
-      char *ptr = str, *p;
+  //toupper(str);
 
-      //toupper(str);
-
-      for ( ; *ptr; ++ptr)
-      {
-            p = ptr;
-            while (*p && isspace(*p))
-                  ++p;
-            if (ptr != p)
-                  strcpy(ptr, p);
-      }
+  for (; *ptr; ++ptr) {
+    p = ptr;
+    while (*p && isspace(*p))
+      ++p;
+    if (ptr != p)
+      strcpy(ptr, p);
+  }
 }
 
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent) {
-  double val;
+static apr_status_t block_MATH_EVAL(worker_t * worker, worker_t * parent) {
+  long val;
   const char *value = apr_table_get(worker->params, "1");
+  const char *var = apr_table_get(worker->params, "2");
   char *expr = apr_pstrdup(worker->pbody, value);
+  math_eval_t *eval_hook = math_eval_make(worker->pbody);
 
-  evaluate(expr, &val);
-  printf("XXX: returned %lf\n", val);
+  if (!value) {
+    worker_log_error(worker, "Missing expression");
+    return APR_EINVAL;
+  }
 
+  if (!var) {
+    worker_log_error(worker, "Missing variable");
+    return APR_EINVAL;
+  }
+
+  if (evaluate(eval_hook, expr, &val)) {
+    worker_log_error(worker, "Expression \"%s\" not valid", expr);
+    return APR_EINVAL;
+  }
+
+  worker_var_set(worker, var, apr_ltoa(worker->pbody, val));
   return APR_SUCCESS;
 }
 
 /************************************************************************
  * Module
  ***********************************************************************/
-apr_status_t math_module_init(global_t *global) {
+apr_status_t math_module_init(global_t * global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "MATH", "_EVAL", "<expression> <var>",
-				   "callculates <expression> and stores it in <var>",
-	                           block_MATH_EVAL)) != APR_SUCCESS) {
+  if ((status =
+       module_command_new(global, "MATH", "_EVAL", "<expression> <var>",
+                          "callculates <expression> and stores it in <var>",
+                          block_MATH_EVAL)) != APR_SUCCESS) {
     return status;
   }
 
   return APR_SUCCESS;
 }
-
