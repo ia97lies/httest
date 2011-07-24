@@ -58,6 +58,9 @@ typedef struct ssl_config_s {
   const char *certfile;
   const char *keyfile;
   const char *cafile;
+#define SSL_CONFIG_FLAGS_NONE 0
+#define SSL_CONFIG_FLAGS_CERT_SET 1
+  int flags;
 } ssl_config_t;
 
 typedef struct ssl_socket_config_s {
@@ -197,8 +200,9 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   int len = 0;
   ssl_config_t *config = ssl_get_worker_config(worker);
 
-  /* test if there are the same cert, key ca files */
+  /* test if there are the same cert, key ca files or no certs at all */
   if (!(
+      (config->flags & SSL_CONFIG_FLAGS_CERT_SET) ||
       (!config->certfile && !certfile) || 
       (config->certfile && certfile && strcmp(config->certfile, certfile) == 0) &&
       (!config->keyfile && !keyfile) ||
@@ -210,6 +214,8 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
       SSL_CTX_free(config->ssl_ctx);
       config->ssl_ctx = NULL;
     }
+    /* reset flag */
+    config->flags &= ~SSL_CONFIG_FLAGS_CERT_SET;
   }
 
   config->certfile = certfile;
@@ -1005,7 +1011,8 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
   ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (!config->ssl_ctx) {
-    worker_log_error(worker, "You are not in a ssl context");
+    worker_log_error(worker, "Can not set cert, ssl not enabled in %s",
+	             (worker->flags & FLAGS_SERVER) ? "SERVER" : "CLIENT");
     return APR_EINVAL;
   }
 
@@ -1018,6 +1025,7 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
     key = apr_table_get(worker->params, "2");
     ca = apr_table_get(worker->params, "3");
     worker_ssl_ctx(worker, cert, key, ca, 1);
+    config->flags |= SSL_CONFIG_FLAGS_CERT_SET;
     return  APR_SUCCESS;
   }
 
