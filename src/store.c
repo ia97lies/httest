@@ -29,16 +29,24 @@
 #endif
 
 #include <apr.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
+#include <apr_strings.h>
 #include "store.h"
 
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-typedef struct store_s {
+struct store_s {
   apr_pool_t *pool;
   apr_hash_t *hash;
-} store_t;
+};
+
+typedef struct store_element_s {
+  apr_pool_t *pool;
+  const char *value;
+} store_element_t;
 
 /************************************************************************
  * Globals 
@@ -47,20 +55,72 @@ typedef struct store_s {
 /************************************************************************
  * Implementation
  ***********************************************************************/
+/**
+ * Create store for reusable entries without memory loss
+ * @param pool IN pool to alloc this store
+ * @return store
+ */
 APR_DECLARE(store_t *)store_make(apr_pool_t *pool) {
-  return NULL;
+  store_t *store = apr_pcalloc(pool, sizeof(*store));
+  store->pool = pool;
+  store->hash = apr_hash_make(pool);
+  return store;
 }
 
+/**
+ * Get value from store
+ * @param store IN store hook
+ * @param name IN key
+ * @return value
+ */
 APR_DECLARE(const char *)store_get(store_t *store, const char *name) {
-  return NULL;
+  store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
+  if (element) {
+    return element->value;
+  }
+  else {
+    return NULL;
+  }
 }
 
+/**
+ * Gets a copy of value from store
+ * @param store IN store hook
+ * @param pool IN pool for value allocation
+ * @param name IN key
+ * @return value copy from your pool
+ */
 APR_DECLARE(char *)store_get_copy(store_t *store, apr_pool_t *pool, 
                                   const char *name) {
-  return NULL;
+  const char *value = store_get(store, name);
+  if (value) {
+    return apr_pstrdup(pool, value);
+  }
+  else {
+    return NULL;
+  }
 }
 
+/**
+ * Set name value, if allready exist delete old name value and reset them.
+ * @param store IN store hook
+ * @param name IN key
+ * @param value IN
+ */
 APR_DECLARE(void )store_set(store_t *store, const char *name, 
                             const char *value) {
+  apr_pool_t *pool;
+  store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
+  if (element) {
+    apr_pool_clear(element->pool);
+  }
+  else {
+    apr_pool_create(&pool, store->pool);
+    element = apr_pcalloc(store->pool, sizeof(*element));
+    element->pool = pool;
+  }
+  element->value = apr_pstrdup(element->pool, value);
+  apr_hash_set(store->hash, apr_pstrdup(element->pool, name), 
+	       APR_HASH_KEY_STRING, value);
 }
 

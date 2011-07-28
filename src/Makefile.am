@@ -4,7 +4,7 @@ bin_PROGRAMS=httest htproxy htremote htntlm
 
 httest_SOURCES= \
 	httest.c file.c socket.c regex.c util.c ssl.c worker.c module.c \
-	transport.c \
+	transport.c store.c\
 	modules.c binary_module.c ssl_module.c tcp_module.c skeleton_module.c \
 	date_module.c coder_module.c math_module.c sys_module.c \
 	# lua_module.c
@@ -21,4 +21,4 @@ htntlm_SOURCES= \
 
 noinst_HEADERS= \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
-	module.h transport.h
+	module.h transport.h store.h
