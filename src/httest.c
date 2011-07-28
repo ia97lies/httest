@@ -32,6 +32,7 @@
 #endif
 #include "defines.h"
 
+/* Use STACK from openssl to sort commands */
 #include <openssl/ssl.h>
 
 #include <apr.h>

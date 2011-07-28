@@ -28,8 +28,6 @@
 #include <config.h>
 #endif
 
-#include <openssl/ssl.h>
-
 #include <apr.h>
 #include <apr_lib.h>
 #include <apr_errno.h>
@@ -52,7 +50,6 @@
 #include "regex.h"
 #include "file.h"
 #include "socket.h"
-#include "ssl.h"
 #include "worker.h"
 #include "module.h"
 

@@ -29,8 +29,6 @@
 #include <config.h>
 #endif
 
-#include <openssl/ssl.h>
-
 #include <apr.h>
 #include <apr_lib.h>
 #include <apr_strings.h>
