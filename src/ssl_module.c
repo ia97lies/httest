@@ -676,11 +676,11 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, a
       SSL_SESSION *sess = SSL_get_session(sconfig->ssl);
       /* serialize to a variable an store it */
       enc_len = i2d_SSL_SESSION(sess, NULL);
-      enc = apr_pcalloc(worker->pbody, enc_len);
+      enc = apr_pcalloc(ptmp, enc_len);
       tmp = enc;
       enc_len = i2d_SSL_SESSION(sess, &tmp);
       b64_len = apr_base64_encode_len(enc_len);
-      b64_str = apr_pcalloc(worker->pbody, b64_len);
+      b64_str = apr_pcalloc(ptmp, b64_len);
       apr_base64_encode_binary(b64_str, enc, enc_len);
       worker_var_set(worker, copy, b64_str);
     }
@@ -718,7 +718,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, a
     const char *b64_str = copy;
     if (b64_str) {
       enc_len = apr_base64_decode_len(b64_str);
-      enc = apr_pcalloc(worker->pbody, enc_len);
+      enc = apr_pcalloc(ptmp, enc_len);
       apr_base64_decode_binary(enc, b64_str);
       tmp = enc;
       sconfig->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
@@ -759,7 +759,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
   sess = SSL_get_session(sconfig->ssl);
 
   if (sess) {
-    val = apr_pcalloc(worker->pbody, apr_base64_encode_len(sess->session_id_length));
+    val = apr_pcalloc(ptmp, apr_base64_encode_len(sess->session_id_length));
     apr_base64_encode_binary(val, sess->session_id, sess->session_id_length);
 
     worker_var_set(worker, copy, val);
@@ -888,7 +888,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
     return APR_EINVAL;
   }
   
-  val = ssl_var_lookup_ssl_cert(worker->pbody, config->cert, cmd);
+  val = ssl_var_lookup_ssl_cert(ptmp, config->cert, cmd);
 
   if (!val) {
     worker_log_error(worker, "SSL value for \"%s\" not found", cmd);
