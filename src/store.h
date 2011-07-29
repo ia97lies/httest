@@ -30,5 +30,7 @@ APR_DECLARE(store_t *)store_make(apr_pool_t *pool);
 APR_DECLARE(const char *)store_get(store_t *store, const char *name);
 APR_DECLARE(char *)store_get_copy(store_t *store, apr_pool_t *pool, const char *name);
 APR_DECLARE(void )store_set(store_t *store, const char *name, const char *value);
+APR_DECLARE(void )store_merge(store_t *store, store_t *other); 
+APR_DECLARE(apr_size_t )store_get_size(store_t *store); 
 
 #endif

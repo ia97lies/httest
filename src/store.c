@@ -124,3 +124,30 @@ APR_DECLARE(void )store_set(store_t *store, const char *name,
 	       APR_HASH_KEY_STRING, value);
 }
 
+/**
+ * Merge a foregin store into my store.
+ * @param store IN store hook
+ * @param other IN foreign store hook
+ */
+APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
+  apr_hash_index_t *i;
+  const void *key;
+  void *val;
+  store_element_t *element;
+  int sum = 0;
+
+  for (i = apr_hash_first(other->pool, other->hash); i; i = apr_hash_next(i)) {
+    apr_hash_this(i, &key, NULL, &val);
+    element = val;
+    store_set(store, key, element->value);
+  }
+}
+
+/**
+ * Get number of key/values.
+ * @param store IN store hook
+ * @return count
+ */
+APR_DECLARE(apr_size_t )store_get_size(store_t *store) {
+  apr_hash_count(store->hash);
+}

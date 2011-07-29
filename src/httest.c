@@ -829,7 +829,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   cur = apr_strtok(list, " ", &last);
   while (cur) {
     /* interpret */
-    apr_table_setn(body->vars, var, cur);
+    worker_var_set(body, var, cur);
     if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
@@ -1457,9 +1457,9 @@ void worker_finally(worker_t *self, apr_status_t status) {
   --running_threads;
   sync_unlock(self->mutex);
 
-  apr_table_set(self->vars, "__ERROR", my_status_str(self->pbody, status));
-  apr_table_set(self->vars, "__STATUS", apr_ltoa(self->pbody, status));
-  apr_table_set(self->vars, "__THREAD", self->name);
+  worker_var_set(self, "__ERROR", my_status_str(self->pbody, status));
+  worker_var_set(self, "__STATUS", apr_ltoa(self->pbody, status));
+  worker_var_set(self, "__THREAD", self->name);
 
   if (!running_threads) { 
     k = lookup_func_index(local_commands, "_CALL");
