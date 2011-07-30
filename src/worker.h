@@ -194,7 +194,8 @@ typedef struct global_s {
 } global_t;
 
 typedef struct command_s command_t;
-typedef apr_status_t(*command_f) (command_t * self, void * type, char *data);
+typedef apr_status_t(*command_f) (command_t * self, void * type, char *data, 
+                                  apr_pool_t *ptmp);
 
 struct command_s {
   char *name;
@@ -243,8 +244,8 @@ typedef struct line_s {
     worker_log(worker, LOG_ERR, err_text); \
     return APR_EGENERAL; \
   } \
-  copy = apr_pstrdup(worker->pbody, data); \
-  copy = worker_replace_vars(worker, copy, NULL); \
+  copy = apr_pstrdup(ptmp, data); \
+  copy = worker_replace_vars(worker, copy, NULL, ptmp); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
   } \
@@ -262,8 +263,8 @@ typedef struct line_s {
   while (*data == ' ') { \
     ++data; \
   } \
-  copy = apr_pstrdup(worker->pbody, data); \
-  copy = worker_replace_vars(worker, copy, NULL); \
+  copy = apr_pstrdup(ptmp, data); \
+  copy = worker_replace_vars(worker, copy, NULL, ptmp); \
   if (self) { \
     worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
   } \
@@ -318,67 +319,67 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
                                apr_size_t len); 
 
 /** commands */
-apr_status_t command_REQ(command_t * self, worker_t * worker, char *data);
-apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char *data);
-apr_status_t command_RES(command_t * self, worker_t * worker, char *data);
-apr_status_t command_WAIT(command_t * self, worker_t * worker, char *data);
-apr_status_t command_SLEEP(command_t * self, worker_t * worker, char *data);
-apr_status_t command_EXPECT(command_t * self, worker_t * worker, char *data);
-apr_status_t command_CLOSE(command_t * self, worker_t * worker, char *data);
-apr_status_t command_TIMEOUT(command_t * self, worker_t * worker, char *data);
-apr_status_t command_MATCH(command_t * self, worker_t * worker, char *data);
-apr_status_t command_GREP(command_t * self, worker_t * worker, char *data);
-apr_status_t command_SET(command_t * self, worker_t * worker, char *data);
-apr_status_t command_DATA(command_t * self, worker_t * worker, char *data);
-apr_status_t command_BIN_DATA(command_t * self, worker_t * worker, char *data);
-apr_status_t command_FLUSH(command_t * self, worker_t * worker, char *data);
-apr_status_t command_CHUNK(command_t * self, worker_t * worker, char *data);
-apr_status_t command_EXEC(command_t * self, worker_t * worker, char *data);
-apr_status_t command_SENDFILE(command_t * self, worker_t * worker, char *data);
-apr_status_t command_PIPE(command_t * self, worker_t * worker, char *data);
-apr_status_t command_NOCRLF(command_t * self, worker_t * worker, char *data);
-apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker, char *data);
-apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data);
-apr_status_t command_RAND(command_t *self, worker_t *worker, char *data);
-apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data);
-apr_status_t command_UP(command_t *self, worker_t *worker, char *data);
-apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data);
-apr_status_t command_TIME(command_t *self, worker_t *worker, char *data);
-apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data);
-apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data);
-apr_status_t command_RECV(command_t * self, worker_t * worker, char *data);
-apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data);
-apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data);
-apr_status_t command_OP(command_t * self, worker_t * worker, char *data);
-apr_status_t command_WHICH(command_t * self, worker_t * worker, char *data);
+apr_status_t command_REQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_RES(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_WAIT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_SLEEP(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_EXPECT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_CLOSE(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_TIMEOUT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_MATCH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_GREP(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_SET(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_DATA(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_BIN_DATA(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_FLUSH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_CHUNK(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_EXEC(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_SENDFILE(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_PIPE(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_NOCRLF(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_RAND(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_UP(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_TIME(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_RECV(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_OP(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_WHICH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_ONLY_PRINTABLE(command_t *self, worker_t *worker, 
-                                    char *data); 
-apr_status_t command_SH(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data);
-apr_status_t command_DETACH(command_t *self, worker_t *worker, char *data);
-apr_status_t command_PID(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_URLENC(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_URLDEC(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_B64ENC(command_t *self, worker_t *worker, char *data);
-apr_status_t command_B64DEC(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_STRFTIME(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data); 
+                                    char *data, apr_pool_t *ptmp); 
+apr_status_t command_SH(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_DETACH(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_PID(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_URLENC(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_URLDEC(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_B64ENC(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_B64DEC(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_STRFTIME(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 #if APR_HAS_FORK
-apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data); 
+apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 #endif
-apr_status_t command_MATCH_SEQ(command_t * self, worker_t * worker, char *data);
-apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_USE(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_LOCK(command_t *self, worker_t *worker, char *data); 
-apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data); 
+apr_status_t command_MATCH_SEQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_USE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_LOCK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 
 /** helper */
 void worker_log(worker_t * self, int log_mode, char *fmt, ...); 
@@ -392,8 +393,9 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
                            const char *data, apr_size_t len); 
 apr_status_t worker_check_expect(worker_t * self, apr_status_t status); 
 apr_status_t worker_check_error(worker_t *self, apr_status_t status); 
-char * worker_replace_vars(worker_t * worker, char *line, int *unresolved); 
-apr_status_t worker_flush(worker_t * self);
+char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
+                           apr_pool_t *ptmp); 
+apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
 apr_status_t worker_body(worker_t **body, worker_t *worker, char *end); 
 void worker_body_end(worker_t *body, worker_t *worker); 

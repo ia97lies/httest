@@ -640,7 +640,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
  * @return APR_SUCCESS or an APR error
  */
 static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  return command_CLOSE(NULL, worker, "SSL");
+  return command_CLOSE(NULL, worker, "SSL", ptmp);
 }
 
 

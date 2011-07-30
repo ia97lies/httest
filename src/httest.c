@@ -86,54 +86,54 @@ static void show_command_help(apr_pool_t *p, global_t *global,
                               const char *command); 
 
 static apr_status_t command_EXIT(command_t * self, worker_t * worker, 
-                                 char *data);
+                                 char *data, apr_pool_t *ptmp);
 static apr_status_t command_IF(command_t * self, worker_t * worker,
-                               char *data); 
+                               char *data, apr_pool_t *ptmp); 
 static apr_status_t command_LOOP(command_t *self, worker_t *worker, 
-                                 char *data); 
+                                 char *data, apr_pool_t *ptmp); 
 static apr_status_t command_FOR(command_t *self, worker_t *worker, 
-                                 char *data); 
+                                 char *data, apr_pool_t *ptmp); 
 static apr_status_t command_BPS(command_t *self, worker_t *worker, 
-                                char *data); 
+                                char *data, apr_pool_t *ptmp); 
 static apr_status_t command_RPS(command_t *self, worker_t *worker, 
-                                 char *data); 
+                                 char *data, apr_pool_t *ptmp); 
 static apr_status_t command_SOCKET(command_t *self, worker_t *worker, 
-                                   char *data); 
+                                   char *data, apr_pool_t *ptmp); 
 static apr_status_t command_PROCESS(command_t *self, worker_t *worker, 
-                                   char *data); 
+                                   char *data, apr_pool_t *ptmp); 
 static apr_status_t command_CALL(command_t *self, worker_t *worker, 
-                                 char *data); 
+                                 char *data, apr_pool_t *ptmp); 
 static apr_status_t command_ERROR(command_t *self, worker_t *worker, 
-                                  char *data); 
+                                  char *data, apr_pool_t *ptmp); 
 
 static apr_status_t global_GO(command_t *self, global_t *global, 
-			     char *data); 
+			     char *data, apr_pool_t *ptmp); 
 static apr_status_t global_END(command_t *self, global_t *global, 
-			      char *data); 
+			      char *data, apr_pool_t *ptmp); 
 static apr_status_t global_DAEMON(command_t *self, global_t *global, 
-				 char *data); 
+				 char *data, apr_pool_t *ptmp); 
 static apr_status_t global_BLOCK(command_t *self, global_t *global,
-				char *data);
+				char *data, apr_pool_t *ptmp);
 static apr_status_t global_FILE(command_t *self, global_t *global,
-				char *data);
+				char *data, apr_pool_t *ptmp);
 static apr_status_t global_CLIENT(command_t *self, global_t *global, 
-				 char *data); 
+				 char *data, apr_pool_t *ptmp); 
 static apr_status_t global_SERVER(command_t *self, global_t *global, 
-				 char *data); 
+				 char *data, apr_pool_t *ptmp); 
 static apr_status_t global_EXEC(command_t *self, global_t *global, 
-			       char *data); 
+			       char *data, apr_pool_t *ptmp); 
 static apr_status_t global_SET(command_t *self, global_t *global, 
-			      char *data); 
+			      char *data, apr_pool_t *ptmp); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, 
-				  char *data); 
+				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_TIMEOUT(command_t *self, global_t *global, 
-				  char *data); 
+				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, 
-				      char *data); 
+				      char *data, apr_pool_t *ptmp); 
 static apr_status_t global_PROCESS(command_t *self, global_t *global, 
-				   char *data); 
+				   char *data, apr_pool_t *ptmp); 
 static apr_status_t global_MODULE(command_t *self, global_t *global, 
-				  char *data); 
+				  char *data, apr_pool_t *ptmp); 
 
 command_t global_commands[] = {
   {"END", (command_f )global_END, "", 
@@ -518,7 +518,7 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *data) {
  * @return never reached
  */
 static apr_status_t command_EXIT(command_t * self, worker_t * worker, 
-                                 char *data) {
+                                 char *data, apr_pool_t *ptmp) {
   char *copy;
 
   COMMAND_OPTIONAL_ARG;
@@ -602,7 +602,7 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
  * @return an apr status
  */
 static apr_status_t command_IF(command_t * self, worker_t * worker,
-                               char *data) {
+                               char *data, apr_pool_t *ptmp) {
   char *copy;
   char *left;
   char *right;
@@ -751,7 +751,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
  * @return APR_SUCCESS
  */
 static apr_status_t command_LOOP(command_t *self, worker_t *worker, 
-                                 char *data) {
+                                 char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   char *copy;
@@ -805,7 +805,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
  * @return APR_SUCCESS
  */
 static apr_status_t command_FOR(command_t *self, worker_t *worker, 
-                                 char *data) {
+                                char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   char *copy;
@@ -857,7 +857,8 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
  *
  * @return APR_SUCCESS
  */
-static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data) {
+static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data, 
+                                apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   char *last;
@@ -931,7 +932,8 @@ end:
  *
  * @return APR_SUCCESS
  */
-static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data) {
+static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data, 
+                                apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   char *last;
@@ -1006,7 +1008,7 @@ end:
  * @return APR_SUCCESS
  */
 static apr_status_t command_ERROR(command_t *self, worker_t *worker, 
-                                  char *data) {
+                                  char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   char *copy;
@@ -1069,7 +1071,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
  * @return APR_SUCCESS
  */
 static apr_status_t command_SOCKET(command_t *self, worker_t *worker, 
-                                   char *data) {
+                                   char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   apr_size_t peeklen;
@@ -1082,7 +1084,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
     return APR_ENOSOCKET;
   }
 
-  worker_flush(worker);
+  worker_flush(worker, ptmp);
 
   /* create a new worker body */
   if ((status = worker_body(&body, worker, "SOCKET")) != APR_SUCCESS) {
@@ -1119,7 +1121,7 @@ error:
  * @return block status or APR_EINVAL 
  */
 static apr_status_t command_CALL(command_t *self, worker_t *worker, 
-                                 char *data) {
+                                 char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   char *copy;
   const char *block_name;
@@ -1144,7 +1146,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
   while (*data == ' ') ++data; 
   copy = apr_pstrdup(call_pool, data);
-  copy = worker_replace_vars(worker, copy, NULL); 
+  copy = worker_replace_vars(worker, copy, NULL, call_pool); 
   worker_log(worker, LOG_CMD, "%s", copy); 
 
   /** get args from copy */
@@ -1279,7 +1281,8 @@ error:
  * @return APR_SUCCESS
  */
 #if APR_HAS_FORK
-static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *data) {
+static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *data, 
+                                    apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
   apr_proc_t *proc;
@@ -1315,7 +1318,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
     worker->procs = apr_hash_make(worker->pbody);
   }
 
-  apr_hash_set(worker->procs, copy, APR_HASH_KEY_STRING, proc);
+  apr_hash_set(worker->procs, apr_pstrdup(worker->pbody, copy), APR_HASH_KEY_STRING, proc);
 
   return APR_SUCCESS; 
 }
@@ -1365,12 +1368,13 @@ static int lookup_func_index(command_t *commands, const char *line) {
  * @return an apr status
  */
 static apr_status_t worker_interpret(worker_t * self, worker_t *parent, 
-                                     apr_pool_t *ptmp) {
+                                     apr_pool_t *dummy) {
   apr_status_t status;
   char *line;
   int j;
   int k;
   int to;
+  apr_pool_t *ptmp = NULL;
 
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(self->lines)->elts;
@@ -1391,11 +1395,12 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
 
   /* iterate through all script line for this thread */
   for (; self->cmd < to; self->cmd++) {
+    apr_pool_create(&ptmp, self->pbody);
     self->file_and_line = e[self->cmd].key;
     line = e[self->cmd].val;
     /* lookup blocks */
     if (worker_lookup_block(self, line)) {
-      status = command_CALL(NULL, self, line);
+      status = command_CALL(NULL, self, line, ptmp);
     }
     else {
       /* lookup function index */
@@ -1406,15 +1411,17 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
 	j += strlen(local_commands[k].name);
 	status = command_CALL(NULL, self, apr_pstrcat(self->pbody, 
 	                                              local_commands[k].syntax,
-						      " ", &line[j], NULL));
+						      " ", &line[j], NULL), 
+	                      ptmp);
       }
       else if (local_commands[k].func) {
 	j += strlen(local_commands[k].name);
-	status = local_commands[k].func(&local_commands[k], self, &line[j]);
+	status = local_commands[k].func(&local_commands[k], self, &line[j], 
+	                                ptmp);
 	status = worker_check_error(parent, status);
       }
       else {
-	status = command_CALL(NULL, self, line);
+	status = command_CALL(NULL, self, line, ptmp);
 	/* ignore not found error else the error message is not understandable */
 	if (!APR_STATUS_IS_ENOENT(status)) {
 	  status = worker_check_error(parent, status);
@@ -1429,6 +1436,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
     if (status != APR_SUCCESS) {
       return status;
     }
+    apr_pool_destroy(ptmp);
   }
   return APR_SUCCESS;
 }
@@ -1471,7 +1479,7 @@ void worker_finally(worker_t *self, apr_status_t status) {
       self->log_mode = 0;
       self->blocks = apr_hash_get(self->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(self->blocks, "FINALLY", APR_HASH_KEY_STRING)) {
-	local_commands[k].func(&local_commands[k], self, "FINALLY");
+	local_commands[k].func(&local_commands[k], self, "FINALLY", NULL);
       }
       self->log_mode = mode;
     }
@@ -1482,7 +1490,7 @@ void worker_finally(worker_t *self, apr_status_t status) {
     if (local_commands[k].func) {
       self->blocks = apr_hash_get(self->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(self->blocks, "ON_ERROR", APR_HASH_KEY_STRING)) {
-	local_commands[k].func(&local_commands[k], self, "ON_ERROR");
+	local_commands[k].func(&local_commands[k], self, "ON_ERROR", NULL);
 	goto exodus;
       }
     }
@@ -1525,7 +1533,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
     goto error;
   }
 
-  worker_flush(self);
+  worker_flush(self, self->pbody);
 
   if ((status = worker_test_unused(self)) != APR_SUCCESS) {
     goto error;
@@ -1565,7 +1573,7 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
     goto error;
   }
 
-  worker_flush(self);
+  worker_flush(self, self->pbody);
 
   if ((status = worker_test_unused(self)) != APR_SUCCESS) {
     goto error;
@@ -1607,7 +1615,7 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
     goto error;
   }
 
-  worker_flush(self);
+  worker_flush(self, self->pbody);
 
   if ((status = worker_test_unused(self)) != APR_SUCCESS) {
     goto error;
@@ -1793,7 +1801,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       goto error;
     }
 
-    worker_flush(self);
+    worker_flush(self, self->pbody);
 
     if ((status = worker_test_unused(self)) != APR_SUCCESS) {
       goto error;
@@ -1893,7 +1901,8 @@ static apr_status_t global_new(global_t **self, store_t *vars,
  *
  * @return apr status 
  */
-static apr_status_t global_END(command_t *self, global_t *global, char *data) {
+static apr_status_t global_END(command_t *self, global_t *global, char *data, 
+                               apr_pool_t *ptmp) {
   int concurrent;
   char *last;
   char *val;
@@ -2037,7 +2046,8 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
  *
  * @return apr status 
  */
-static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data) {
+static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data, 
+                                  apr_pool_t *ptmp) {
   return global_worker(self, global, data, GLOBAL_STATE_CLIENT);
 }
 
@@ -2050,7 +2060,8 @@ static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data)
  *
  * @return apr status 
  */
-static apr_status_t global_SERVER(command_t *self, global_t *global, char *data) {
+static apr_status_t global_SERVER(command_t *self, global_t *global, char *data, 
+                                  apr_pool_t *ptmp) {
   return global_worker(self, global, data, GLOBAL_STATE_SERVER);
 }
 
@@ -2064,7 +2075,7 @@ static apr_status_t global_SERVER(command_t *self, global_t *global, char *data)
  * @return an apr status
  */
 static apr_status_t global_BLOCK(command_t * self, global_t * global,
-                                 char *data) {
+                                 char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   char *token;
   char *last;
@@ -2128,7 +2139,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
  * @return an apr status
  */
 static apr_status_t global_FILE(command_t * self, global_t * global,
-                                char *data) {
+                                char *data, apr_pool_t *ptmp) {
   apr_status_t status;
 
   while (*data == ' ') ++data;
@@ -2161,7 +2172,8 @@ static apr_status_t global_FILE(command_t * self, global_t * global,
  *
  * @return apr status 
  */
-static apr_status_t global_DAEMON(command_t *self, global_t *global, char *data) {
+static apr_status_t global_DAEMON(command_t *self, global_t *global, char *data, 
+                                  apr_pool_t *ptmp) {
   return global_worker(self, global, data, GLOBAL_STATE_DAEMON);
 }
 
@@ -2174,7 +2186,8 @@ static apr_status_t global_DAEMON(command_t *self, global_t *global, char *data)
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_EXEC(command_t *self, global_t *global, char *data) {
+static apr_status_t global_EXEC(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *worker;
 
@@ -2211,7 +2224,8 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_SET(command_t *self, global_t *global, char *data) {
+static apr_status_t global_SET(command_t *self, global_t *global, char *data, 
+                               apr_pool_t *ptmp) {
   char *last;
   char *key;
   char *val;
@@ -2250,7 +2264,7 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data) {
  * @return APR_SUCCESS
  */
 static apr_status_t global_MODULE(command_t * self, global_t * global,
-                                  char *data) {
+                                  char *data, apr_pool_t *ptmp) {
   apr_hash_t *blocks;
 
   while (*data == ' ') ++data;
@@ -2281,7 +2295,8 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
  * @return APR_SUCCESS
  */
 static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global); 
-static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data) {
+static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data, 
+                                   apr_pool_t *ptmp) {
   apr_status_t status;
   apr_file_t *fp;
   const char *prev_filename;
@@ -2330,7 +2345,8 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_TIMEOUT(command_t *self, global_t *global, char *data) {
+static apr_status_t global_TIMEOUT(command_t *self, global_t *global, char *data, 
+                                   apr_pool_t *ptmp) {
   int i = 0;
   
   while (data[i] == ' ') {
@@ -2351,7 +2367,8 @@ static apr_status_t global_TIMEOUT(command_t *self, global_t *global, char *data
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, char *data) {
+static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, char *data, 
+                                      apr_pool_t *ptmp) {
   int i = 0;
   
   while (data[i] == ' ') {
@@ -2378,7 +2395,8 @@ static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, char *d
  * @return APR_SUCCESS
  */
 #if APR_HAS_FORK
-static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data) {
+static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data, 
+                                   apr_pool_t *ptmp) {
   apr_proc_t proc;
   apr_status_t status;
   int n;
@@ -2445,7 +2463,8 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_GO(command_t *self, global_t *global, char *data) {
+static apr_status_t global_GO(command_t *self, global_t *global, char *data, 
+                              apr_pool_t *ptmp) {
   apr_status_t status;
   apr_table_entry_t *e;
   int i;
@@ -2543,7 +2562,8 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
 	  i += 3;
-	  if ((status = global_END(&global_commands[0], global, &line[i])) != APR_SUCCESS) {
+	  if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
+	      != APR_SUCCESS) {
 	    fprintf(stderr, "\nError on global END");
 	    return status;
 	  }
@@ -2574,7 +2594,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	  i += strlen(global_commands[k].name);
 	  if ((status =
 	       global_commands[k].func(&global_commands[k], global,
-				       &line[i])) != APR_SUCCESS) {
+				       &line[i], NULL)) != APR_SUCCESS) {
 	    return status;
 	  }
 	}
@@ -2650,7 +2670,7 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars,
     return status;
   }
 
-  global_GO(&global_commands[1], global, NULL);
+  global_GO(&global_commands[1], global, NULL, NULL);
   
   /* wait on thermination of all started threads */
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;

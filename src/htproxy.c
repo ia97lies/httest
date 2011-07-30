@@ -239,7 +239,7 @@ static apr_status_t call_command(worker_t *worker, void *func, char *name, char 
   command_t cmd;
   cmd.name = name;
   cmd.func = (command_f)func;
-  return cmd.func(&cmd, worker, params);
+  return cmd.func(&cmd, worker, params, worker->pbody);
 } 
 
 /**
@@ -365,7 +365,7 @@ static apr_status_t wait_response(worker_t * worker, response_t *r) {
   r->body = NULL;
   r->len = 0;
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, worker->pbody)) != APR_SUCCESS) {
     return status;
   }
 

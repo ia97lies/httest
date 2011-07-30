@@ -139,20 +139,21 @@ const char *varget(worker_t* worker, const char *var) {
  *
  * @return new line 
  */
-char * worker_replace_vars(worker_t * worker, char *line, int *unresolved) {
+char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
+                           apr_pool_t *ptmp) {
   char *new_line;
   int trak_unresolved = 0;
 
   /* replace all locals first */
-  new_line = my_replace_vars(worker->pbody, line, worker->locals, 0, 
+  new_line = my_replace_vars(ptmp, line, worker->locals, 0, 
                              unresolved); 
   if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all parameters first */
-  new_line = my_replace_vars(worker->pbody, line, worker->params, 0, 
+  new_line = my_replace_vars(ptmp, line, worker->params, 0, 
                              unresolved); 
   if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all vars */
-  new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1, 
+  new_line = my_replace_vars(ptmp, new_line, worker->vars, 1, 
                              unresolved); 
   if (unresolved) { trak_unresolved |= *unresolved; }
 
@@ -964,7 +965,7 @@ static void worker_set_cookie(worker_t *worker) {
  * @return an apr status
  */
 apr_status_t command_WAIT(command_t * self, worker_t * worker,
-                          char *data) {
+                          char *data, apr_pool_t *ptmp) {
   char *copy;
   int matches;
   int expects;
@@ -987,7 +988,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 
   COMMAND_OPTIONAL_ARG;
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1183,7 +1184,7 @@ http_0_9:
     if (worker->flags & FLAGS_AUTO_CLOSE) {
       val = apr_table_get(worker->headers, "Connection");
       if (val && strcasecmp(val, "close") == 0) {
-	command_CLOSE(self, worker, "do not test expects");
+	command_CLOSE(self, worker, "do not test expects", ptmp);
       }
     }
     if (worker->flags & FLAGS_AUTO_COOKIE) {
@@ -1217,17 +1218,18 @@ out_err:
  *
  * @return an apr status
  */
-apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char * data) {
+apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char * data,
+                             apr_pool_t *ptmp) {
   apr_status_t status;
   do {
-    status = command_RES(self, worker, "");
+    status = command_RES(self, worker, "", ptmp);
     if(status != APR_SUCCESS) {
       return status;
     }
-    status = command_WAIT(self, worker, "");
+    status = command_WAIT(self, worker, "", ptmp);
     if(status == APR_EOF) {
       /* EOF = client failed to send data */
-      command_CLOSE(self, worker, "do not test expects");
+      command_CLOSE(self, worker, "do not test expects", ptmp);
     }
   } while(status == APR_EOF);
   return status;
@@ -1278,7 +1280,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
  * @return an apr status
  */
 apr_status_t command_REQ(command_t * self, worker_t * worker,
-                                char *data) {
+                         char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   apr_sockaddr_t *remote_addr;
   char *portname;
@@ -1292,7 +1294,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 
   COMMAND_NEED_ARG("Need hostname and port");
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1406,12 +1408,12 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_RES(command_t * self, worker_t * worker,
-                         char *data) {
+                         char *data, apr_pool_t *ptmp) {
   apr_status_t status;
 
   COMMAND_NO_ARG;
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1467,11 +1469,11 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_SLEEP(command_t * self, worker_t * worker,
-                                  char *data) {
+                                  char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   char *copy;
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1491,7 +1493,7 @@ apr_status_t command_SLEEP(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_EXPECT(command_t * self, worker_t * worker,
-                                   char *data) {
+                            char *data, apr_pool_t *ptmp) {
   char *last;
   char *type;
   char *match;
@@ -1582,13 +1584,13 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_CLOSE(command_t * self, worker_t * worker,
-                           char *data) {
+                           char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   char *copy;
 
   COMMAND_OPTIONAL_ARG;
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     worker_conn_close(worker, NULL);
     return status;
   }
@@ -1621,7 +1623,7 @@ apr_status_t command_CLOSE(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_TIMEOUT(command_t * self, worker_t * worker,
-                                    char *data) {
+                             char *data, apr_pool_t *ptmp) {
   apr_time_t tmo;
   char *copy;
 
@@ -1643,7 +1645,7 @@ apr_status_t command_TIMEOUT(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_MATCH(command_t * self, worker_t * worker,
-                                  char *data) {
+                           char *data, apr_pool_t *ptmp) {
   char *tmp;
   char *last;
   char *type;
@@ -1744,7 +1746,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_GREP(command_t * self, worker_t * worker,
-                          char *data) {
+                          char *data, apr_pool_t *ptmp) {
   char *tmp;
   char *last;
   char *type;
@@ -1843,7 +1845,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_SET(command_t * self, worker_t * worker,
-                                char *data) {
+                         char *data, apr_pool_t *ptmp) {
   char *vars_last;
   const char *vars_key;
   const char *vars_val;
@@ -1886,7 +1888,7 @@ apr_status_t command_SET(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_DATA(command_t * self, worker_t * worker,
-                                 char *data) {
+                          char *data, apr_pool_t *ptmp) {
   char *copy;
   int unresolved;
 
@@ -1895,7 +1897,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   }
     
   copy = apr_pstrdup(worker->pbody, data); 
-  copy = worker_replace_vars(worker, copy, &unresolved);
+  copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
 
@@ -1933,12 +1935,12 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_FLUSH(command_t * self, worker_t * worker,
-                                  char *data) {
+                           char *data, apr_pool_t *ptmp) {
   apr_status_t status;
 
   COMMAND_NO_ARG;
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1955,14 +1957,14 @@ apr_status_t command_FLUSH(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_CHUNK(command_t * self, worker_t * worker,
-                                  char *data) {
+                           char *data, apr_pool_t *ptmp) {
   apr_status_t status;
 
   COMMAND_NO_ARG;
 
   apr_table_add(worker->cache, "CHUNKED", "CHUNKED");
 
-  if ((status = worker_flush(worker)) != APR_SUCCESS) {
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1978,7 +1980,7 @@ apr_status_t command_CHUNK(command_t * self, worker_t * worker,
  *
  * @return APR_SUCCESS or an apr error status
  */
-apr_status_t worker_file_to_http(worker_t *self, apr_file_t *file, int flags) {
+apr_status_t worker_file_to_http(worker_t *self, apr_file_t *file, int flags, apr_pool_t *ptmp) {
   apr_status_t status;
   apr_size_t len;
   char *buf;
@@ -2000,7 +2002,7 @@ apr_status_t worker_file_to_http(worker_t *self, apr_file_t *file, int flags) {
     if (flags & FLAGS_CHUNKED) {
       worker_log(self, LOG_DEBUG, "--- chunk size: %d", len);
       apr_table_add(self->cache, "CHUNKED", "CHUNKED");
-      if ((status = worker_flush(self)) != APR_SUCCESS) {
+      if ((status = worker_flush(self, ptmp)) != APR_SUCCESS) {
 	return status;
       }
     }
@@ -2037,7 +2039,7 @@ static void child_errfn(apr_pool_t *pool, apr_status_t err,
  * @return an apr status
  */
 apr_status_t command_EXEC(command_t * self, worker_t * worker,
-                                 char *data) {
+                          char *data, apr_pool_t *ptmp) {
   char *copy;
   apr_status_t status;
   apr_procattr_t *attr;
@@ -2112,7 +2114,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 
   if (flags & FLAGS_PIPE) {
     worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
-    if ((status = worker_file_to_http(worker, worker->proc.out, flags)) != APR_SUCCESS) {
+    if ((status = worker_file_to_http(worker, worker->proc.out, flags, ptmp)) 
+	!= APR_SUCCESS) {
       return status;
     }
   }
@@ -2169,7 +2172,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
-                                     char *data) {
+                              char *data, apr_pool_t *ptmp) {
   char *copy;
   char *last;
   char *filename;
@@ -2193,7 +2196,8 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
   }
   
   if (flags & FLAGS_PIPE) {
-    if ((status = worker_file_to_http(worker, fp, flags)) != APR_SUCCESS) {
+    if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
+	!= APR_SUCCESS) {
       return status;
     }
   }
@@ -2213,7 +2217,7 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_PIPE(command_t * self, worker_t * worker,
-                                 char *data) {
+                          char *data, apr_pool_t *ptmp) {
   char *copy;
   char *last;
   char *add;
@@ -2251,12 +2255,12 @@ apr_status_t command_PIPE(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
-                                   char *data) {
+                            char *data, apr_pool_t *ptmp) {
   char *copy;
   int unresolved; 
 
   copy = apr_pstrdup(worker->pbody, data); 
-  copy = worker_replace_vars(worker, copy, &unresolved);
+  copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
   if (unresolved) {
@@ -2279,7 +2283,7 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
  * @return an apr status
  */
 apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
-                                      char *data) {
+                               char *data, apr_pool_t *ptmp) {
   char *copy;
 
   COMMAND_NEED_ARG("Need a variable name");
@@ -2303,7 +2307,8 @@ apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data, 
+                            apr_pool_t *ptmp) {
   char *copy;
   char *method;
   char *header;
@@ -2342,7 +2347,8 @@ apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_RAND(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_RAND(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
   char *copy;
   char *val;
   char *last;
@@ -2379,7 +2385,8 @@ apr_status_t command_RAND(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   char *copy;
   
   COMMAND_OPTIONAL_ARG;
@@ -2451,7 +2458,8 @@ error:
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_UP(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_UP(command_t *self, worker_t *worker, char *data, 
+                        apr_pool_t *ptmp) {
   char *copy;
   
   apr_int32_t backlog = LISTENBACKLOG_DEFAULT;
@@ -2474,7 +2482,8 @@ apr_status_t command_UP(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
   apr_status_t status;
 
   COMMAND_NO_ARG;
@@ -2500,7 +2509,8 @@ apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data, 
+                               apr_pool_t *ptmp) {
   char *copy;
 
   COMMAND_NEED_ARG("Need a number between 0 and 4");
@@ -2519,7 +2529,8 @@ apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
   apr_time_t sec;
   apr_time_t nxt_sec;
   apr_time_t now;
@@ -2545,7 +2556,8 @@ apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_RECV(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_RECV(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
   char *copy;
   apr_pool_t *pool;
   apr_status_t status;
@@ -2642,7 +2654,8 @@ out_err:
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data, 
+                              apr_pool_t *ptmp) {
   apr_pool_t *pool;
   apr_status_t status;
   apr_size_t peeklen;
@@ -2697,7 +2710,8 @@ out_err:
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   apr_status_t status = worker_check_expect(worker, APR_SUCCESS);
   return status;
 }
@@ -2711,7 +2725,8 @@ apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_OP(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_OP(command_t *self, worker_t *worker, char *data, 
+                        apr_pool_t *ptmp) {
   char *copy;
   char *last;
   char *left;
@@ -2777,7 +2792,8 @@ apr_status_t command_OP(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   char *copy;
   char *result;
 
@@ -2798,7 +2814,8 @@ apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_ONLY_PRINTABLE(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_ONLY_PRINTABLE(command_t *self, worker_t *worker, char *data, 
+                                    apr_pool_t *ptmp) {
   char *copy;
 
   COMMAND_NEED_ARG("Need on|off");
@@ -2820,7 +2837,8 @@ apr_status_t command_ONLY_PRINTABLE(command_t *self, worker_t *worker, char *dat
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data, 
+                               apr_pool_t *ptmp) {
   char *copy;
 
   COMMAND_NEED_ARG("Need on|off");
@@ -2843,7 +2861,8 @@ apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_SH(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_SH(command_t *self, worker_t *worker, char *data, 
+                        apr_pool_t *ptmp) {
   char *copy;
   apr_size_t len;
   char *name;
@@ -2871,7 +2890,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data) {
       /* exec file */
       old = self->name;
       self->name = apr_pstrdup(worker->pbody, "_EXEC"); 
-      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, "./", name, NULL));
+      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, "./", name, NULL), ptmp);
       self->name = old;
       
       apr_file_remove(name, worker->pbody);
@@ -2915,7 +2934,8 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data, 
+                                apr_pool_t *ptmp) {
   char *copy;
   char *header;
   char *value;
@@ -2941,7 +2961,8 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data, 
+                            apr_pool_t *ptmp) {
   apr_status_t status;
   apr_status_t rc;
   apr_threadattr_t *tattr;
@@ -2986,7 +3007,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
   backend.sendto = worker->socket;
 
   /* backend side */
-  if ((status = command_REQ(self, worker, data)) != APR_SUCCESS) {
+  if ((status = command_REQ(self, worker, data, ptmp)) != APR_SUCCESS) {
     goto error1;
   }
   if ((status = apr_socket_timeout_set(worker->socket->socket, 100000)) 
@@ -3034,7 +3055,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data) {
   }
 
 error2:
-  command_CLOSE(self, worker, "do not test expects");
+  command_CLOSE(self, worker, "do not test expects", ptmp);
 error1:
   worker_get_socket(worker, "Default", "0");
   apr_pool_destroy(client.pool);
@@ -3052,7 +3073,8 @@ error1:
  *
  * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
  */
-apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   /* singal break for loop */
   COMMAND_NO_ARG;
   return -1;
@@ -3067,7 +3089,8 @@ apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   char *copy;
   char *last;
   char *cmd;
@@ -3106,7 +3129,8 @@ apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data, 
+                                apr_pool_t *ptmp) {
   char *copy;
   COMMAND_NEED_ARG("on|off, default off");
 
@@ -3128,7 +3152,8 @@ apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data, 
+                                 apr_pool_t *ptmp) {
   char *copy;
   COMMAND_NEED_ARG("on|off, default off");
 
@@ -3156,7 +3181,8 @@ apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data) 
  * @note: only for unix systems
  */
 #if APR_HAS_FORK
-apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, 
+                               apr_pool_t *ptmp) {
   char *copy;
   char *var;
   char *last;
@@ -3199,7 +3225,8 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_MARK(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_MARK(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
   /* lookup if Mark is allread set */
   return APR_SUCCESS;
 }
@@ -3213,7 +3240,8 @@ apr_status_t command_MARK(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data, 
+                               apr_pool_t *ptmp) {
   char *copy;
   COMMAND_NEED_ARG("<var-sequence>*");
   worker->match_seq = copy;
@@ -3229,7 +3257,8 @@ apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data, 
+                            apr_pool_t *ptmp) {
   char *copy;
   COMMAND_NEED_ARG("RES [ALL] {STATUS|HEADERS|BODY}*");
 
@@ -3281,7 +3310,8 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
   COMMAND_NO_ARG;
   /* if recorded data available do play back */
   if (worker->recorder->on == RECORDER_RECORD) {
@@ -3303,7 +3333,8 @@ apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   char *copy;
   char *last;
   char *var;
@@ -3327,7 +3358,8 @@ apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_USE(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_USE(command_t *self, worker_t *worker, char *data, 
+                         apr_pool_t *ptmp) {
   char *copy;
   COMMAND_NEED_ARG("<module>");
 
@@ -3348,7 +3380,8 @@ apr_status_t command_USE(command_t *self, worker_t *worker, char *data) {
  *
  * @return APR_SUCCESS or apr error code
  */
-apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data) {
+apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, 
+                                 apr_pool_t *ptmp) {
   char *copy;
   COMMAND_NEED_ARG("on|off, default off");
 
@@ -3636,7 +3669,8 @@ apr_status_t worker_socket_send(worker_t *self, char *buf,
  * @return an apr status
  */
 
-apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) {
+apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to, 
+                               apr_pool_t *ptmp) {
   int i;
   int len;
   int nocrlf = 0;
@@ -3669,7 +3703,7 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to) 
        * with values
        */
       /* replace all vars */
-      line.buf = worker_replace_vars(self, line.buf, &unresolved); 
+      line.buf = worker_replace_vars(self, line.buf, &unresolved, ptmp); 
     }
     htt_run_flush_resolved_line(self, &line);
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
@@ -3723,7 +3757,7 @@ error:
  *
  * @return an apr status
  */
-apr_status_t worker_flush(worker_t * self) {
+apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
   apr_size_t len;
   const char *hdr;
 
@@ -3872,25 +3906,25 @@ apr_status_t worker_flush(worker_t * self) {
            apr_table_get(self->cache, "100-Continue")) {
     /* do this only if Content-Length and 100-Continue is set */
     /* flush headers and empty line but not body */
-    if ((status = worker_flush_part(self, NULL, 0, body_start)) 
+    if ((status = worker_flush_part(self, NULL, 0, body_start, ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
     /* wait for a 100 continue response */
-    if ((status = command_EXPECT(NULL, self, "headers \"HTTP/1.1 100 Continue\"")) 
+    if ((status = command_EXPECT(NULL, self, "headers \"HTTP/1.1 100 Continue\"", ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
     /* do skip call flush in command _WAIT */
     self->flags |= FLAGS_SKIP_FLUSH;
-    if ((status = command_WAIT(NULL, self, "")) != APR_SUCCESS) {
+    if ((status = command_WAIT(NULL, self, "", ptmp)) != APR_SUCCESS) {
       goto error;
     }
     /* do not skip flush */
     self->flags &= ~FLAGS_SKIP_FLUSH;
     /* send body then */
     if ((status = worker_flush_part(self, NULL, body_start, 
-	                            apr_table_elts(self->cache)->nelts)) 
+	                            apr_table_elts(self->cache)->nelts, ptmp))
 	!= APR_SUCCESS) { 
       goto error;
     }
@@ -3926,22 +3960,23 @@ apr_status_t worker_flush(worker_t * self) {
   }
   if (icap_body) {
     /* send all except the req/res body */
-    if ((status = worker_flush_part(self, NULL, 0, icap_body_start)) 
+    if ((status = worker_flush_part(self, NULL, 0, icap_body_start, ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
     if ((status = worker_flush_part(self, chunked, icap_body_start, 
-	                            apr_table_elts(self->cache)->nelts)) 
+	                            apr_table_elts(self->cache)->nelts, ptmp))
 	!= APR_SUCCESS) {
       goto error;
     }
     if (chunked) {
       chunked = apr_psprintf(self->pbody, "\r\n0\r\n\r\n");
-      status = worker_flush_part(self, chunked, 0, 0); 
+      status = worker_flush_part(self, chunked, 0, 0, ptmp); 
     }
   }
   else {
-    status = worker_flush_part(self, chunked, 0, apr_table_elts(self->cache)->nelts); 
+    status = worker_flush_part(self, chunked, 0, 
+	                       apr_table_elts(self->cache)->nelts, ptmp);
   }
 
 error:
