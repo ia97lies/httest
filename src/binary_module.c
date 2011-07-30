@@ -46,18 +46,15 @@ static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent, apr_p
   const char *data;
   char *copy;
   apr_size_t i;
-  apr_table_entry_t *e;
 
   if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
     
-  e = (apr_table_entry_t *) apr_table_elts(worker->params)->elts;
-  for (i = 1; i < apr_table_elts(worker->params)->nelts; i++) {
+  for (i = 1; i < store_get_size(worker->params); i++) {
     int unresolved; 
 
-    data = e[i].val;
-    copy = apr_pstrdup(worker->pbody, data);
+    copy = store_get_copy(worker->params, worker->pcache, apr_itoa(ptmp, i));
     copy = worker_replace_vars(worker, copy, &unresolved);
 
     if (unresolved) {
@@ -95,7 +92,7 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
 
   int poll = 0;
 
-  val = apr_table_get(worker->params, "1");
+  val = store_get(worker->params, "1");
   /* must be a number */
   recv_len = apr_atoi64(val);
 

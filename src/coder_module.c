@@ -102,8 +102,8 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
   int k;
   apr_size_t len;
 
-  string = apr_table_get(worker->params, "1");
-  var = apr_table_get(worker->params, "2");
+  string = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
 
   if (!string) {
     worker_log(worker, LOG_ERR, "Nothing to decode");
@@ -155,8 +155,8 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
   apr_size_t len;
   char *inplace;
 
-  string = apr_table_get(worker->params, "1");
-  var = apr_table_get(worker->params, "2");
+  string = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
 
   if (!string) {
     worker_log(worker, LOG_ERR, "Nothing to decode");
@@ -213,8 +213,8 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t 
   apr_size_t len;
   char *inplace;
 
-  string = apr_table_get(worker->params, "1");
-  var = apr_table_get(worker->params, "2");
+  string = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
 
   if (!string) {
     worker_log(worker, LOG_ERR, "Nothing to decode");
@@ -260,8 +260,8 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *
   apr_size_t len;
   char *base64;
 
-  string = apr_table_get(worker->params, "1");
-  var = apr_table_get(worker->params, "2");
+  string = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
 
   if (!string) {
     worker_log(worker, LOG_ERR, "Nothing to decode");
@@ -296,8 +296,8 @@ apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent, apr_pool_t *
   apr_size_t len;
   char *plain;
 
-  string = apr_table_get(worker->params, "1");
-  var = apr_table_get(worker->params, "2");
+  string = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
 
   if (!string) {
     worker_log(worker, LOG_ERR, "Nothing to decode");

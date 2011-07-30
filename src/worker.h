@@ -26,6 +26,7 @@
 
 #include <apr_hooks.h>
 #include "transport.h" 
+#include "store.h" 
 
 typedef struct socket_s {
   int is_ssl;
@@ -78,6 +79,14 @@ struct worker_s {
   apr_pool_t *pbody;
   /* dies on every flush */
   apr_pool_t *pcache;
+  /* body variables */
+  store_t *vars;
+  /* block parameters */
+  store_t *params;
+  /* block return variables */
+  store_t *retvars;
+  /* block local variables */
+  store_t *locals;
   const char *filename;
   apr_file_t *tmpf;
 #define FLAGS_NONE           0x00000000
@@ -124,10 +133,6 @@ struct worker_s {
   apr_table_t *headers_filter;
   apr_table_t *headers_add;
   apr_table_t *headers;
-  apr_table_t *vars;
-  apr_table_t *params;
-  apr_table_t *retvars;
-  apr_table_t *locals;
   apr_table_t *tmp_table;
   apr_hash_t *modules;
   apr_hash_t *blocks;
@@ -156,7 +161,7 @@ typedef struct global_s {
   apr_pool_t *pool;
   int flags;
   const char *filename;
-  apr_table_t *vars;
+  store_t *vars;
   apr_hash_t *modules;
   apr_hash_t *blocks;
   apr_table_t *files;

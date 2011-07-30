@@ -54,7 +54,7 @@ static apr_status_t block_THREAD_GET_NUMBER(worker_t *worker, worker_t *parent, 
   const char *copy;
   char *result;
  
-  copy = apr_table_get(worker->params, "1");
+  copy = store_get(worker->params, "1");
  
   result  = apr_psprintf(worker->pbody, "%d", worker->which);
   worker_var_set(worker, copy, result);
@@ -110,7 +110,7 @@ static apr_status_t block_PROC_UNLOCK(worker_t *worker, worker_t *parent, apr_po
  * @return APR_SUCCESS or apr error code
  */
 static apr_status_t block_PROC_GET_PID(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
 
   worker_var_set(worker, copy, apr_psprintf(worker->pbody, "%u", getpid()));
   

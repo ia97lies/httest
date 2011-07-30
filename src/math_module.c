@@ -308,10 +308,10 @@ static void math_eval_pack(math_eval_t * hook, char *str) {
  ***********************************************************************/
 static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   long val;
-  const char *value = apr_table_get(worker->params, "1");
-  const char *var = apr_table_get(worker->params, "2");
-  char *expr = apr_pstrdup(worker->pbody, value);
-  math_eval_t *eval_hook = math_eval_make(worker->pbody);
+  const char *value = store_get(worker->params, "1");
+  const char *var = store_get(worker->params, "2");
+  char *expr = apr_pstrdup(ptmp, value);
+  math_eval_t *eval_hook = math_eval_make(ptmp);
 
   if (!value) {
     worker_log_error(worker, "Missing expression");
@@ -328,7 +328,7 @@ static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent, apr_pool
     return APR_EINVAL;
   }
 
-  worker_var_set(worker, var, apr_ltoa(worker->pbody, val));
+  worker_var_set(worker, var, apr_ltoa(ptmp, val));
   return APR_SUCCESS;
 }
 

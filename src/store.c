@@ -112,7 +112,8 @@ APR_DECLARE(void )store_set(store_t *store, const char *name,
   apr_pool_t *pool;
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
-    apr_pool_clear(element->pool);
+    apr_pool_destroy(element->pool);
+    apr_pool_create(&element->pool, store->pool);
   }
   else {
     apr_pool_create(&pool, store->pool);
@@ -121,7 +122,7 @@ APR_DECLARE(void )store_set(store_t *store, const char *name,
   }
   element->value = apr_pstrdup(element->pool, value);
   apr_hash_set(store->hash, apr_pstrdup(element->pool, name), 
-	       APR_HASH_KEY_STRING, value);
+	       APR_HASH_KEY_STRING, element);
 }
 
 /**
@@ -151,3 +152,16 @@ APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
 APR_DECLARE(apr_size_t )store_get_size(store_t *store) {
   apr_hash_count(store->hash);
 }
+
+/**
+ * Copy store
+ * @param store IN store hook
+ * @param pool IN pool for new store 
+ * @return new store
+ */
+APR_DECLARE(store_t *)store_copy(store_t *store, apr_pool_t *pool) {
+  store_t *copy = store_make(pool);
+  store_merge(copy, store);
+  return copy;
+}
+

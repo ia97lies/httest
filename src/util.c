@@ -285,7 +285,7 @@ char *my_status_str(apr_pool_t * p, apr_status_t rc) {
  *
  * @return new line
  */
-char *my_replace_vars(apr_pool_t * p, char *line, apr_table_t * vars, 
+char *my_replace_vars(apr_pool_t * p, char *line, store_t * vars, 
                       int lookup_env, int *unresolved) {
   int i;
   int start;
@@ -315,7 +315,7 @@ once_again:
         ++i;
       }
       var_name = apr_pstrndup(p, &line[start], i - start);
-      val = apr_table_get(vars, var_name);
+      val = store_get(vars, var_name);
       if (!val && lookup_env) {
         if (apr_env_get(&env, var_name, p) == APR_SUCCESS) {
 	  val = env;
@@ -348,14 +348,14 @@ once_again:
  * @param line IN string of params
  * @param params INOUT table to store params
  */
-void my_get_args(char *line, apr_table_t *params, apr_pool_t *pool) {
+void my_get_args(char *line, store_t *params, apr_pool_t *pool) {
   int i; 
   char **argv;
 
   if (my_tokenize_to_argv(line, &argv, pool) == APR_SUCCESS) {
     for (i = 0; argv[i] != NULL; i++) {
       /* store value by his index */
-      apr_table_set(params, apr_itoa(pool, i), argv[i]);
+      store_set(params, apr_itoa(pool, i), argv[i]);
     }
   }
 }

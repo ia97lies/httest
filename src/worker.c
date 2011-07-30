@@ -95,18 +95,18 @@ typedef struct flush_s {
  */
 void worker_var_set(worker_t * worker, const char *var, const char *val) {
   const char *ret;
-  if ((ret = apr_table_get(worker->retvars, var))) {
+  if ((ret = store_get(worker->retvars, var))) {
     /* if retvar exist do mapping and store it in vars */
-    apr_table_set(worker->vars, ret, val);  
+    store_set(worker->vars, ret, val);  
   }
-  else if (apr_table_get(worker->locals, var)) {
-    apr_table_set(worker->locals, var, val);
+  else if (store_get(worker->locals, var)) {
+    store_set(worker->locals, var, val);
   }
-  else if (apr_table_get(worker->params, var)) {
-    apr_table_set(worker->params, var, val);
+  else if (store_get(worker->params, var)) {
+    store_set(worker->params, var, val);
   }
   else {
-    apr_table_set(worker->vars, var, val);
+    store_set(worker->vars, var, val);
   }
 }
 
@@ -120,14 +120,14 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
  */
 const char *varget(worker_t* worker, const char *var) {
   const char *val;
-  if ((val = apr_table_get(worker->locals, var))) {
+  if ((val = store_get(worker->locals, var))) {
     return val;
   }
-  else if ((val = apr_table_get(worker->params, var))) {
+  else if ((val = store_get(worker->params, var))) {
     return val;
   }
   else {
-    return apr_table_get(worker->vars, var);
+    return store_get(worker->vars, var);
   }
 }
 
@@ -3311,7 +3311,7 @@ apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data) {
 
   var = apr_strtok(copy, " ", &last);
   while (var) {
-    apr_table_set(worker->locals, var, "");
+    store_set(worker->locals, var, "");
     var = apr_strtok(NULL, " ", &last);
   }
 
@@ -3425,10 +3425,10 @@ apr_status_t worker_new(worker_t ** self, char *additional,
 #endif
   (*self)->headers_allow = NULL;
   (*self)->headers_filter = NULL;
-  (*self)->params = apr_table_make(p, 4);
-  (*self)->retvars = apr_table_make(p, 4);
-  (*self)->locals = apr_table_make(p, 4);
-  (*self)->vars = my_table_deep_copy(p, global->vars);
+  (*self)->params = store_make(p);
+  (*self)->retvars = store_make(p);
+  (*self)->locals = store_make(p);
+  (*self)->vars = store_copy(global->vars, p);
   (*self)->modules = apr_hash_copy(p, global->modules);
   (*self)->blocks = apr_hash_copy(p, global->blocks);
   (*self)->start_time = apr_time_now();
@@ -3436,8 +3436,8 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->flags = global->flags;
   (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
 
-  apr_table_add((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
-	        global->log_mode));
+  store_set((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
+	    global->log_mode));
   
   worker_log(*self, LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
   return APR_SUCCESS;
@@ -3499,10 +3499,10 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   if (orig->headers_filter) {
     (*self)->headers_filter = my_table_deep_copy(p, orig->headers_filter);
   }
-  (*self)->params = apr_table_make(p, 4);
-  (*self)->retvars = apr_table_make(p, 4);
-  (*self)->locals = apr_table_make(p, 4);
-  (*self)->vars = my_table_deep_copy(p, orig->vars);
+  (*self)->params = store_make(p);
+  (*self)->retvars = store_make(p);
+  (*self)->locals = store_make(p);
+  (*self)->vars = store_copy(orig->vars, p);
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
 
   worker_log(*self, LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);

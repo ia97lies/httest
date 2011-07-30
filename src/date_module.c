@@ -47,7 +47,7 @@ static apr_status_t block_DATE_DUMMY(worker_t *worker, worker_t *parent, apr_poo
  * @return APR_SUCCESS
  */
 apr_status_t block_DATE_GET_TIME(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *var = apr_table_get(worker->params, "1");
+  const char *var = store_get(worker->params, "1");
 
   if (!var) {
     worker_log_error(worker, "Need a variable name to store time");
@@ -78,10 +78,10 @@ apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent, apr_pool_t *p
   apr_time_exp_t  tm;
   apr_time_t timems;
 
-  time = apr_table_get(worker->params, "1"); 
-  fmt = apr_table_get(worker->params, "2");
-  var = apr_table_get(worker->params, "3");
-  type = apr_table_get(worker->params, "4");
+  time = store_get(worker->params, "1"); 
+  fmt = store_get(worker->params, "2");
+  var = store_get(worker->params, "3");
+  type = store_get(worker->params, "4");
 
   if (!time) {
     worker_log(worker, LOG_ERR, "Time not specified");

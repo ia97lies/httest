@@ -11,13 +11,13 @@ httest_SOURCES= \
 
 htproxy_SOURCES= \
 	htproxy.c file.c socket.c regex.c util.c ssl.c worker.c module.c conf.c \
-	transport.c tcp_module.c 
+	transport.c store.c tcp_module.c 
 
 htremote_SOURCES= \
-	htremote.c util.c
+	htremote.c util.c store.c
 
 htntlm_SOURCES= \
-	htntlm.c util.c
+	htntlm.c util.c store.c
 
 noinst_HEADERS= \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \

@@ -494,7 +494,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
   ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
-  sslstr = apr_table_get(worker->params, "1");
+  sslstr = store_get(worker->params, "1");
   if (!sslstr) {
     worker_log_error(worker, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
     return APR_EGENERAL;
@@ -516,9 +516,9 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       const char *ca;
       apr_status_t status;
 
-      cert = apr_table_get(worker->params, "2");
-      key = apr_table_get(worker->params, "3");
-      ca = apr_table_get(worker->params, "4");
+      cert = store_get(worker->params, "2");
+      key = store_get(worker->params, "3");
+      ca = store_get(worker->params, "4");
       if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
 	return status;
       }
@@ -575,7 +575,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
   ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
-  sslstr = apr_table_get(worker->params, "1");
+  sslstr = store_get(worker->params, "1");
   if (!sslstr) {
     worker_log_error(worker, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
     return APR_EGENERAL;
@@ -597,9 +597,9 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
       const char *ca;
       apr_status_t status;
 
-      cert = apr_table_get(worker->params, "2");
-      key = apr_table_get(worker->params, "3");
-      ca = apr_table_get(worker->params, "4");
+      cert = store_get(worker->params, "2");
+      key = store_get(worker->params, "3");
+      ca = store_get(worker->params, "4");
       if (!cert) {
 	cert = RSA_SERVER_CERT;
       }
@@ -653,7 +653,7 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent, apr_poo
  * @return APR_SUCCESS or an APR error
  */
 static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
@@ -698,7 +698,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, a
  * @return APR_SUCCESS or an APR error
  */
 static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
@@ -741,7 +741,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, a
  * @return APR_SUCCESS or an APR error
  */
 static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
   SSL_SESSION *sess;
   char *val;
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
@@ -781,7 +781,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
  */
 static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   int rc;
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
 
   ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
@@ -868,8 +868,8 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
  */
 static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   char *val = NULL;
-  const char *cmd = apr_table_get(worker->params, "1");
-  const char *var = apr_table_get(worker->params, "2");
+  const char *cmd = store_get(worker->params, "1");
+  const char *var = store_get(worker->params, "2");
 
   ssl_config_t *config = ssl_get_worker_config(worker);
 
@@ -910,7 +910,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
  */
 static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
 #ifndef OPENSSL_NO_ENGINE
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
   BIO *bio_err = BIO_new_fp(stderr,BIO_NOCLOSE);
 
   if (!setup_engine(bio_err, copy, worker->log_mode == LOG_DEBUG ? 1 : 0)) {
@@ -930,7 +930,7 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
  * @return APR_SUCCESS or apr error code
  */
 static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *copy = apr_table_get(worker->params, "1");
+  const char *copy = store_get(worker->params, "1");
 
   if (strcasecmp(copy,  "on") == 0) {
     worker->flags |= FLAGS_SSL_LEGACY;
@@ -950,7 +950,7 @@ static apr_status_t block_SSL_SET_LEGACY(worker_t * worker, worker_t *parent, ap
  * @return APR_SUCCESS
  */
 static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *val = apr_table_get(worker->params, "1");
+  const char *val = store_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
@@ -979,7 +979,7 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent, apr
  * @return APR_SUCCESS
  */
 static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *val = apr_table_get(worker->params, "1");
+  const char *val = store_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
@@ -1017,13 +1017,13 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
   }
 
   /* check if we have parameters */
-  if (apr_table_elts(worker->params)->nelts) {
+  if (store_get_size(worker->params)) {
     const char *cert;
     const char *key;
     const char *ca;
-    cert = apr_table_get(worker->params, "1");
-    key = apr_table_get(worker->params, "2");
-    ca = apr_table_get(worker->params, "3");
+    cert = store_get(worker->params, "1");
+    key = store_get(worker->params, "2");
+    ca = store_get(worker->params, "3");
     worker_ssl_ctx(worker, cert, key, ca, 1);
     config->flags |= SSL_CONFIG_FLAGS_CERT_SET;
     return  APR_SUCCESS;

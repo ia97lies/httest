@@ -1130,23 +1130,26 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
   apr_pool_t *call_pool;
   char *module;
   apr_hash_t *blocks;
-  apr_table_t *params;
-  apr_table_t *retvars;
-  apr_table_t *locals;
-
-  COMMAND_NEED_ARG("Need a block name: <block> <input-vars>* : <output-vars>*");
+  store_t *params;
+  store_t *retvars;
+  store_t *locals;
 
   /** a pool for this call */
   apr_pool_create(&call_pool, worker->pbody);
 
   /** temporary tables for param, local vars and return vars */
-  params = apr_table_make(call_pool, 5);
-  retvars = apr_table_make(call_pool, 5);
-  locals = apr_table_make(call_pool, 5);
+  params = store_make(call_pool);
+  retvars = store_make(call_pool);
+  locals = store_make(call_pool);
+
+  while (*data == ' ') ++data; 
+  copy = apr_pstrdup(call_pool, data);
+  copy = worker_replace_vars(worker, copy, NULL); 
+  worker_log(worker, LOG_CMD, "%s", copy); 
 
   /** get args from copy */
   my_get_args(copy, params, call_pool);
-  block_name = apr_table_get(params, "0");
+  block_name = store_get(params, "0");
   module = apr_pstrdup(call_pool, block_name);
 
   /** get module worker */
@@ -1184,43 +1187,43 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
 
     /** prepare call */
     /* handle parameters first */
-    for (i = 1; i < apr_table_elts(block->params)->nelts; i++) {
+    for (i = 1; i < store_get_size(block->params); i++) {
       index = apr_itoa(call_pool, i);
-      if (!(arg = apr_table_get(block->params, index))) {
+      if (!(arg = store_get(block->params, index))) {
 	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
 	sync_unlock(worker->mutex);
 	status = APR_EGENERAL;
 	goto error;
       }
-      if (!(val = apr_table_get(params, index))) {
+      if (!(val = store_get(params, index))) {
 	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
 	sync_unlock(worker->mutex);
 	status = APR_EGENERAL;
 	goto error;
       }
       if (arg && val) {
-	apr_table_set(params, arg, val);
+	store_set(params, arg, val);
       }
     }
 
     /* handle return variables second */
     j = i;
-    for (i = 0; i < apr_table_elts(block->retvars)->nelts; i++, j++) {
+    for (i = 0; i < store_get_size(block->retvars); i++, j++) {
       index = apr_itoa(call_pool, j);
-      if (!(arg = apr_table_get(block->retvars, index))) {
+      if (!(arg = store_get(block->retvars, index))) {
 	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
 	sync_unlock(worker->mutex);
 	status = APR_EGENERAL;
 	goto error;
       }
-      if (!(val = apr_table_get(params, index))) {
+      if (!(val = store_get(params, index))) {
 	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
 	sync_unlock(worker->mutex);
 	status = APR_EGENERAL;
 	goto error;
       }
       if (arg && val) {
-	apr_table_set(retvars, arg, val);
+	store_set(retvars, arg, val);
       }
     }
 
@@ -1250,7 +1253,7 @@ static apr_status_t command_CALL(command_t *self, worker_t *worker,
     retvars = worker->retvars;
     locals = worker->locals;
     memcpy(worker, call, sizeof(*worker));
-    apr_table_overlap(worker->vars, call->retvars, APR_OVERLAP_TABLES_SET); 
+    store_merge(worker->vars, call->retvars); 
     worker->params = params;
     worker->retvars = retvars;
     worker->locals = locals;
@@ -1820,7 +1823,7 @@ error:
  *
  * @return apr status
  */
-static apr_status_t global_new(global_t **self, apr_table_t *vars, 
+static apr_status_t global_new(global_t **self, store_t *vars, 
                                int log_mode, apr_pool_t *p) {
   apr_status_t status;
   *self = apr_pcalloc(p, sizeof(global_t));
@@ -2100,11 +2103,11 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     }
     else {
       if (input) {
-	apr_table_set(global->worker->params, 
-	              apr_itoa(global->worker->pbody, i), token);
+	store_set(global->worker->params, 
+	          apr_itoa(global->worker->pbody, i), token);
       }
       else {
-	apr_table_set(global->worker->retvars, 
+	store_set(global->worker->retvars, 
 	              apr_itoa(global->worker->pbody, i), token);
       }
       i++;
@@ -2228,10 +2231,10 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data) {
 
   val = apr_strtok(NULL, "", &last);
   if (val) {
-    apr_table_set(global->vars, key, val);
+    store_set(global->vars, key, val);
   }
   else {
-    apr_table_set(global->vars, key, "");
+    store_set(global->vars, key, "");
   }
 
   return APR_SUCCESS;
@@ -2409,7 +2412,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     status = apr_proc_fork(&proc, global->pool);
     if (APR_STATUS_IS_INCHILD(status)) {
       if (var && strlen(var)) {
-        apr_table_set(global->vars, var, apr_itoa(global->pool, i));
+        store_set(global->vars, var, apr_itoa(global->pool, i));
       }
       return APR_SUCCESS;
     }
@@ -2602,7 +2605,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
  *
  * @return an apr status
  */
-static apr_status_t interpret(apr_file_t * fp, apr_table_t * vars,
+static apr_status_t interpret(apr_file_t * fp, store_t * vars,
                               int log_mode, apr_pool_t * p, char *additional) {
   apr_status_t status;
   apr_status_t retstat = APR_SUCCESS;
@@ -2976,7 +2979,7 @@ int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   char *cur_file;
   apr_file_t *fp;
-  apr_table_t *vars_table;
+  store_t *vars;
   int log_mode;
 #define MAIN_FLAGS_NONE 0
 #define MAIN_FLAGS_PRINT_TSTAMP 1
@@ -3120,10 +3123,10 @@ int main(int argc, const char *const argv[]) {
     }
 
     /* create a global vars table */
-    vars_table = apr_table_make(pool, 20);
+    vars = store_make(pool);
 
     /* interpret current file */
-    if ((status = interpret(fp, vars_table, log_mode, pool, NULL)) != APR_SUCCESS) {
+    if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {
       success = 0;
       exit(1);
     }
