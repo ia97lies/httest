@@ -33,10 +33,6 @@
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_DATE_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  return APR_SUCCESS;
-}
-
 /**
  * TIME command stores time in a variable [ms]
  *

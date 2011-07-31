@@ -723,9 +723,6 @@ apr_status_t worker_test_unused_errors(worker_t * self) {
  */
 apr_status_t worker_conn_close(worker_t * self, char *info) {
   apr_status_t status;
-#ifdef USE_SSL
-  int i;
-#endif
 
   if (!self->socket || !self->socket->socket) {
     return APR_ENOSOCKET;
@@ -1298,7 +1295,6 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   char *last;
   int port;
   char *copy;
-  int is_ssl;
   int family = APR_INET;
 
   COMMAND_NEED_ARG("Need hostname and port");

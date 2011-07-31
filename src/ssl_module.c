@@ -185,7 +185,7 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
     return APR_EINVAL;
   }
 
-  APR_SUCCESS;
+  return APR_SUCCESS;
 }
 
 /**
@@ -203,12 +203,12 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   /* test if there are the same cert, key ca files or no certs at all */
   if (!(
       (config->flags & SSL_CONFIG_FLAGS_CERT_SET) ||
-      (!config->certfile && !certfile) || 
-      (config->certfile && certfile && strcmp(config->certfile, certfile) == 0) &&
-      (!config->keyfile && !keyfile) ||
-      (config->keyfile && keyfile && strcmp(config->keyfile, keyfile) == 0) &&
-      (!config->cafile && !ca) ||
-      (config->cafile && ca && strcmp(config->cafile, ca) == 0))) {
+      (((!config->certfile && !certfile) || 
+      (config->certfile && certfile && strcmp(config->certfile, certfile) == 0)) &&
+      ((!config->keyfile && !keyfile) ||
+      (config->keyfile && keyfile && strcmp(config->keyfile, keyfile) == 0)) &&
+      ((!config->cafile && !ca) ||
+      (config->cafile && ca && strcmp(config->cafile, ca) == 0))))) {
     /* if there are not the same cert, key, ca files reinitialize ssl_ctx */
     if (config->ssl_ctx) {
       SSL_CTX_free(config->ssl_ctx);
@@ -572,7 +572,6 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
 static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *sslstr;
   int is_ssl;
-  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   sslstr = store_get(worker->params, "1");
@@ -1235,7 +1234,6 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
  */
 static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
   apr_status_t status;
-  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
@@ -1292,7 +1290,6 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
 static apr_status_t ssl_hook_close(worker_t *worker, char *info, 
                                    char **new_info) {
   int i;
-  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   *new_info = info;
@@ -1393,6 +1390,13 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_SET_CERT)) != APR_SUCCESS) {
     return status;
   }
+  if ((status = module_command_new(global, "SSL", "_LOAD_KEY", "<pem-key>",
+				   "Read the given pem formated <pem-key>. Stores it for later use "
+				   "with commands like _SSL:SET_KEY",
+	                           block_SSL_LOAD_KEY)) != APR_SUCCESS) {
+    return status;
+  }
+
   if ((status = module_command_new(global, "SSL", "_GET_CERT_VALUE", "<cert entry> <variable>",
 	                           "Get <cert entry> and store it into <variable>\n"
   				   "Get cert with _SSL:RENEG_CERT or _SSL:LOAD_CERT\n"

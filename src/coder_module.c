@@ -79,10 +79,6 @@ static int get_url_escape_index(char c) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_CODER_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  return APR_SUCCESS;
-}
-
 /**
  * URLENC command
  *

@@ -135,7 +135,6 @@ APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
   const void *key;
   void *val;
   store_element_t *element;
-  int sum = 0;
 
   if (!store || !other) {
     return;
@@ -154,7 +153,7 @@ APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
  * @return count
  */
 APR_DECLARE(apr_size_t )store_get_size(store_t *store) {
-  apr_hash_count(store->hash);
+  return apr_hash_count(store->hash);
 }
 
 /**

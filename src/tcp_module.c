@@ -102,24 +102,6 @@ apr_status_t tcp_transport_write(void *data, char *buf, apr_size_t size) {
   return APR_SUCCESS;
 }
 
-/**
- * Get ssl config from worker
- *
- * @param worker IN worker
- * @return ssl config
- */
-static tcp_config_t *tcp_get_worker_config(worker_t *worker) {
-  tcp_config_t *config = module_get_config(worker->config, tcp_module);
-  if (config == NULL) {
-    config = apr_pcalloc(worker->pbody, sizeof(*config));
-    /* we could not set it here, we have to before register, but want this only
-     * alloc one time per worker
-     */
-    module_set_config(worker->config, apr_pstrdup(worker->pbody, tcp_module), config);
-  }
-  return config;
-}
-
 /************************************************************************
  * Commands
  ***********************************************************************/
@@ -132,9 +114,6 @@ static tcp_config_t *tcp_get_worker_config(worker_t *worker) {
  */
 static apr_status_t tcp_hook_connect(worker_t *worker) {
   transport_t *transport;
-  apr_status_t status;
-
-  tcp_config_t *config = tcp_get_worker_config(worker);
 
   transport = transport_new(worker->socket->socket, worker->pbody, 
 			    tcp_transport_os_desc_get, 
@@ -158,8 +137,6 @@ static apr_status_t tcp_hook_connect(worker_t *worker) {
  */
 static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
   transport_t *transport;
-  apr_status_t status;
-  tcp_config_t *config = tcp_get_worker_config(worker);
 
   transport = transport_new(worker->socket->socket, worker->pbody, 
 			    tcp_transport_os_desc_get, 
@@ -177,8 +154,6 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
  * Module 
  ***********************************************************************/
 apr_status_t tcp_module_init(global_t *global) {
-  apr_status_t status;
-
   htt_hook_connect(tcp_hook_connect, NULL, NULL, 0);
   htt_hook_accept(tcp_hook_accept, NULL, NULL, 0);
   return APR_SUCCESS;

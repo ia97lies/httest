@@ -43,7 +43,6 @@
  */
 static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status = APR_SUCCESS;
-  const char *data;
   char *copy;
   apr_size_t i;
 
@@ -67,7 +66,6 @@ static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent, apr_p
     }
   }
 
-error:
   return status;
 }
 
@@ -80,7 +78,6 @@ error:
  * @return APR_SUCCESS or an APR error
  */
 static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  char *copy;
   apr_pool_t *pool;
   apr_status_t status;
   apr_size_t recv_len;
@@ -88,7 +85,6 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
   sockreader_t *sockreader;
   char *buf;
   const char *val;
-  int j;
 
   int poll = 0;
 

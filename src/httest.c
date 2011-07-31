@@ -486,7 +486,6 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *data,
   apr_size_t len = 0;
   char *block_name;
   apr_hash_t *block = NULL;
-  apr_pool_t *pool;
 
   if (strncmp(data, "__", 2) == 0 || strncmp(data, "_-", 2) == 0) {
     /* very special commands, not possible to overwrite this one */

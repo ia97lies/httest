@@ -112,7 +112,7 @@ apr_status_t module_command_new(global_t *global, const char *module,
  * @return stored pointer
  */
 void * module_get_config(apr_hash_t *config, const char *module) {
-  apr_hash_get(config, module, APR_HASH_KEY_STRING);
+  return apr_hash_get(config, module, APR_HASH_KEY_STRING);
 }
 
 /**

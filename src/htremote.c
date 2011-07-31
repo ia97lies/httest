@@ -37,6 +37,7 @@
 #include <apr_errno.h>
 #include <apr_thread_proc.h>
 #include <apr_network_io.h>
+#include <apr_signal.h>
 
 #if APR_HAVE_STDLIB_H
 #include <stdlib.h> /* for getpid() */

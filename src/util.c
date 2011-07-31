@@ -69,7 +69,6 @@ static apr_status_t my_tokenize_to_argv(const char *arg_str,
     const char *cp;
     const char *ct;
     char *cleaned, *dirty;
-    int escaped;
     int isquoted, numargs = 0, argnum;
 
 #define SKIP_WHITESPACE(cp) \
