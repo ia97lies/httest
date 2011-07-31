@@ -1198,6 +1198,7 @@ int proxy(self_t *self) {
     worker_get_socket(client, "Default", "0");
     client->socket->socket_state = listener->socket->socket_state;
     client->socket->socket = listener->socket->socket;
+    client->socket->transport = listener->socket->transport;
 
     /* new thread */
     this = apr_pcalloc(client->pbody, sizeof(*this));
