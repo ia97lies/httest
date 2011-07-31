@@ -83,5 +83,8 @@ mv *.ebuild ../../.
 cd ../..
 
 echo
-echo Release build SUCCESS 
+echo Checkout master
+git checkout master
 
+echo
+echo Release build SUCCESS 
