@@ -1,5 +1,5 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest 2.1.0
+Changes with httest 2.1.0-beta
   *) httest: New minor release is based on httest 2.0.8. New minor release do
              have a completly refactored httest. The goal is to strip down the
 	     core engine to the minimum and implement every fancy
