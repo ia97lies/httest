@@ -481,10 +481,12 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
   }
 }
 
-static apr_hash_t *worker_lookup_block(worker_t * worker, char *data) {
+static apr_hash_t *worker_lookup_block(worker_t * worker, char *data,
+                                       apr_pool_t *ptmp) {
   apr_size_t len = 0;
   char *block_name;
   apr_hash_t *block = NULL;
+  apr_pool_t *pool;
 
   if (strncmp(data, "__", 2) == 0 || strncmp(data, "_-", 2) == 0) {
     /* very special commands, not possible to overwrite this one */
@@ -492,7 +494,7 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *data) {
   }
 
   while (data[len] != ' ' && data[len] != '\0') ++len;
-  block_name = apr_pstrndup(worker->pbody, data, len);
+  block_name = apr_pstrndup(ptmp, data, len);
 
   /* if name space do handle otherwise */
   if (strchr(block_name, ':')) {
@@ -643,7 +645,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
   }
  
   if (strcmp(middle, "MATCH") == 0) {
-    if (!(compiled = pregcomp(worker->pbody, right, &err, &off))) {
+    if (!(compiled = pregcomp(ptmp, right, &err, &off))) {
       worker_log(worker, LOG_ERR, "IF MATCH regcomp failed: %s", right);
       return APR_EINVAL;
     }
@@ -1020,7 +1022,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("<error>"); 
  
- if ((status = apr_tokenize_to_argv(copy, &argv, worker->pbody)) == APR_SUCCESS) {
+ if ((status = apr_tokenize_to_argv(copy, &argv, ptmp)) == APR_SUCCESS) {
     if (!argv[0]) {
       worker_log_error(worker, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
@@ -1032,7 +1034,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   }
 
   /* store value by his index */
-  if (!(compiled = pregcomp(worker->pbody, argv[0], &err, &off))) {
+  if (!(compiled = pregcomp(ptmp, argv[0], &err, &off))) {
     worker_log(worker, LOG_ERR, "ERROR condition compile failed: \"%s\"", argv[0]);
     return APR_EINVAL;
   }
@@ -1045,7 +1047,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   /* interpret */
   status = worker_interpret(body, worker, NULL);
   
-  status_str = my_status_str(worker->pbody, status);
+  status_str = my_status_str(ptmp, status);
   if (regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
     worker_log_error(worker, "Did expect error \"%s\" but got \"%s\"", argv[0], 
 	             status_str);
@@ -1399,7 +1401,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
     self->file_and_line = e[self->cmd].key;
     line = e[self->cmd].val;
     /* lookup blocks */
-    if (worker_lookup_block(self, line)) {
+    if (worker_lookup_block(self, line, ptmp)) {
       status = command_CALL(NULL, self, line, ptmp);
     }
     else {
