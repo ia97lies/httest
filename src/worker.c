@@ -176,11 +176,13 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
 void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
   char *tmp;
   va_list va;
+  apr_pool_t *pool;
 
+  apr_pool_create(&pool, self->pbody);
   va_start(va, fmt);
   if (self->log_mode >= log_mode) {
     if (log_mode == LOG_ERR) {
-      tmp = apr_pvsprintf(self->pbody, fmt, va);
+      tmp = apr_pvsprintf(pool, fmt, va);
       fprintf(stderr, "\n%-88s", tmp);
       fflush(stderr);
     }
@@ -191,6 +193,7 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
     }
   }
   va_end(va);
+  apr_pool_destroy(pool);
 }
 
 /**
@@ -203,15 +206,18 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
 void worker_log_error(worker_t * self, char *fmt, ...) {
   char *tmp;
   va_list va;
+  apr_pool_t *pool;
 
+  apr_pool_create(&pool, self->pbody);
   va_start(va, fmt);
   if (self->log_mode >= LOG_ERR) {
-    tmp = apr_pvsprintf(self->pbody, fmt, va);
-    tmp = apr_psprintf(self->pbody, "%s: error: %s", self->file_and_line,
+    tmp = apr_pvsprintf(pool, fmt, va);
+    tmp = apr_psprintf(pool, "%s: error: %s", self->file_and_line,
 	               tmp);
     fprintf(stderr, "\n%-88s", tmp);
     fflush(stderr);
   }
+  apr_pool_destroy(pool);
 }
 
 /**
@@ -1251,7 +1257,9 @@ void worker_get_socket(worker_t *self, const char *hostname,
                        const char *portname) {
   socket_t *socket;
   char *tag;
+  apr_pool_t *pool;
 
+  apr_pool_create(&pool, self->pbody);
   socket = 
     apr_hash_get(self->sockets, apr_pstrcat(self->pbody, hostname, portname, 
 	                                    NULL),
@@ -1268,6 +1276,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
   }
 
   self->socket = socket;
+  apr_pool_destroy(pool);
 }
 
 /**
@@ -1896,7 +1905,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
     return APR_ENOSOCKET;
   }
     
-  copy = apr_pstrdup(worker->pbody, data); 
+  copy = apr_pstrdup(ptmp, data); 
   copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
@@ -2190,7 +2199,7 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
   
   if ((status =
        apr_file_open(&fp, filename, APR_READ, APR_OS_DEFAULT,
-		     worker->pbody)) != APR_SUCCESS) {
+		     ptmp)) != APR_SUCCESS) {
     fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
     return APR_ENOENT;
   }
@@ -2259,7 +2268,7 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
   char *copy;
   int unresolved; 
 
-  copy = apr_pstrdup(worker->pbody, data); 
+  copy = apr_pstrdup(ptmp, data); 
   copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
   worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
@@ -2371,7 +2380,7 @@ apr_status_t command_RAND(command_t *self, worker_t *worker, char *data,
   
   result = start + (rand() % (end - start)); 
 
-  worker_var_set(worker, val, apr_itoa(worker->pbody, result));
+  worker_var_set(worker, val, apr_itoa(ptmp, result));
 
   return APR_SUCCESS;
 }
@@ -2778,7 +2787,7 @@ apr_status_t command_OP(command_t *self, worker_t *worker, char *data,
   }
 
   /* store it do var */
-  worker_var_set(worker, var, apr_off_t_toa(worker->pbody, result));
+  worker_var_set(worker, var, apr_off_t_toa(ptmp, result));
   
   return APR_SUCCESS;
 }
@@ -2799,7 +2808,7 @@ apr_status_t command_WHICH(command_t *self, worker_t *worker, char *data,
 
   COMMAND_NEED_ARG("<variable> expected");
  
-  result  = apr_psprintf(worker->pbody, "%d", worker->which);
+  result  = apr_psprintf(ptmp, "%d", worker->which);
   worker_var_set(worker, copy, result);
   
   return APR_SUCCESS;
@@ -2889,11 +2898,11 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 
       /* exec file */
       old = self->name;
-      self->name = apr_pstrdup(worker->pbody, "_EXEC"); 
+      self->name = apr_pstrdup(ptmp, "_EXEC"); 
       status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, "./", name, NULL), ptmp);
       self->name = old;
       
-      apr_file_remove(name, worker->pbody);
+      apr_file_remove(name, ptmp);
     }
   }
   else {
@@ -2901,11 +2910,10 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       name = apr_pstrdup(worker->pbody, "httXXXXXX");
       if ((status = apr_file_mktemp(&worker->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
-				    APR_EXCL, 
-				    worker->pbody))
+				    APR_EXCL, worker->pbody))
 	  != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Could not mk temp file %s(%d)", 
-	           my_status_str(worker->pbody, status), status);
+	           my_status_str(ptmp, status), status);
 	return status;
       }
     }
@@ -3114,7 +3122,7 @@ apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data,
 
   if (var && var[0] != 0) {
     worker_var_set(worker, var, 
-	           apr_off_t_toa(worker->pbody, 
+	           apr_off_t_toa(ptmp, 
 		                 apr_time_as_msec(cur - worker->start_time)));
   }
   return APR_SUCCESS;
