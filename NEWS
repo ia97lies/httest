@@ -1,7 +1,6 @@
 Version 2.1.0
  - New      httest: Modules support for better capsulating commands and give
                     them namespaces.
- - New      httest: Migration script to remove and replace obsolet calls.
 
 Version 2.0.0
  - New      httest: Improved BLOCK statement for better DSL support

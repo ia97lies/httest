@@ -22,8 +22,8 @@ Changes with httest 2.1.0
 
   *) httest: Mirgrate date related stuff into a new date module.
 
-  *) httest: Add AUTO variable support. Base for various features around
-             data length calculation.
+  *) httest: Improved memory handling and reduced memory leakage.
+
 
 Changes with httest 2.0.8
   *) htntlm: Removed compile warnings
