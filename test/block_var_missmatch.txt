@@ -1,2 +1,3 @@
 
-block_var_missmatch.hte:7: error: Param missmatch for block "_FOO"                       FAILED
+block_var_missmatch.hte:7: error: Param missmatch for block "_FOO"                      
+block_var_missmatch.hte:7: error: CLT0-0 Internal error(20014)                           FAILED

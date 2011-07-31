@@ -1403,6 +1403,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
     /* lookup blocks */
     if (worker_lookup_block(self, line, ptmp)) {
       status = command_CALL(NULL, self, line, ptmp);
+      status = worker_check_error(parent, status);
     }
     else {
       /* lookup function index */
@@ -1415,6 +1416,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
 	                                              local_commands[k].syntax,
 						      " ", &line[j], NULL), 
 	                      ptmp);
+	status = worker_check_error(parent, status);
       }
       else if (local_commands[k].func) {
 	j += strlen(local_commands[k].name);
