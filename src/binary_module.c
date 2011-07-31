@@ -122,7 +122,7 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
   }
 
 out_err:
-  status = worker_check_expect(worker, status);
+  status = worker_assertion_check(worker, status);
   apr_pool_destroy(pool);
 
   return status;

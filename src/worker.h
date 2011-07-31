@@ -391,7 +391,7 @@ apr_status_t worker_test_unused(worker_t * self);
 apr_status_t worker_test_unused_errors(worker_t * self); 
 apr_status_t worker_expect(worker_t * self, apr_table_t * regexs, 
                            const char *data, apr_size_t len); 
-apr_status_t worker_check_expect(worker_t * self, apr_status_t status); 
+apr_status_t worker_assertion_check(worker_t * self, apr_status_t status); 
 apr_status_t worker_check_error(worker_t *self, apr_status_t status); 
 char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                            apr_pool_t *ptmp); 

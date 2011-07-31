@@ -562,7 +562,7 @@ apr_status_t worker_validate_expect(worker_t * self, apr_table_t *expect,
  *
  * @return current status or APR_EINVAL if there are unhandled expects
  */
-apr_status_t worker_check_expect(worker_t * self, apr_status_t status) {
+apr_status_t worker_assertion_check(worker_t * self, apr_status_t status) {
   status = worker_validate_match(self, self->match.dot, "MATCH .", 
                                  status);
   status = worker_validate_match(self, self->match.headers, "MATCH headers", 
@@ -1205,7 +1205,7 @@ out_err:
   else {
     ++worker->req_cnt;
   }
-  status = worker_check_expect(worker, status);
+  status = worker_assertion_check(worker, status);
 
   apr_pool_destroy(pool);
   return status;
@@ -2643,7 +2643,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
 
 out_err:
   if (strcasecmp(last, "DO_NOT_CHECK") != 0) {
-    status = worker_check_expect(worker, status);
+    status = worker_assertion_check(worker, status);
   }
   apr_pool_destroy(pool);
 
@@ -2699,7 +2699,7 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
 
 out_err:
   if (strcasecmp(copy, "DO_NOT_CHECK") != 0) {
-    status = worker_check_expect(worker, status);
+    status = worker_assertion_check(worker, status);
   }
   apr_pool_destroy(pool);
 
@@ -2717,7 +2717,7 @@ out_err:
  */
 apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data, 
                            apr_pool_t *ptmp) {
-  apr_status_t status = worker_check_expect(worker, APR_SUCCESS);
+  apr_status_t status = worker_assertion_check(worker, APR_SUCCESS);
   return status;
 }
 
