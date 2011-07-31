@@ -116,7 +116,7 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
 
   len = strlen(string);
   /* allocate worste case -> every char enc with pattern %XX */
-  result = apr_pcalloc(worker->pbody, 3 * len + 1);
+  result = apr_pcalloc(ptmp, 3 * len + 1);
 
   /** do the simple stuff */
   for (j = 0, i = 0; string[i]; i++) {
@@ -167,7 +167,7 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
     return APR_EGENERAL;
   }
 
-  inplace = apr_pstrdup(worker->pbody, string);
+  inplace = apr_pstrdup(ptmp, string);
   len = strlen(string);
   for (i = 0, j = 0; i < len; i++, j++) {
     c = string[i];
@@ -225,7 +225,7 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t 
     return APR_EGENERAL;
   }
 
-  inplace = apr_pstrdup(worker->pbody, string);
+  inplace = apr_pstrdup(ptmp, string);
   len = strlen(string);
   for (i = 0, j = 0; i < len; i++, j++) {
       c = string[i];
@@ -273,7 +273,7 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *
   }
 
   len = apr_base64_encode_len(strlen(string));
-  base64 = apr_pcalloc(worker->pbody, len + 1);
+  base64 = apr_pcalloc(ptmp, len + 1);
   apr_base64_encode(base64, string, strlen(string));
   
   worker_var_set(worker, var, base64);
@@ -309,7 +309,7 @@ apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent, apr_pool_t *
   }
 
   len = apr_base64_decode_len(string);
-  plain = apr_pcalloc(worker->pbody, len + 1);
+  plain = apr_pcalloc(ptmp, len + 1);
   apr_base64_decode(plain, string);
   
   worker_var_set(worker, var, plain);
