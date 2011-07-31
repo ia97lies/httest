@@ -11,6 +11,9 @@ EXTRA_DIST= \
 	bad_headers.htt \
 	base64.htt \
 	big_data.htt \
+	binary_protocol.hte \
+	binary_protocol.htt \
+	binary_protocol.txt \
 	block.htb \
 	block.hte \
 	block.htt \
@@ -93,6 +96,7 @@ EXTRA_DIST= \
 	ignore_body.htt \
 	ignore_body_space.htt \
 	incomplete.htt \
+	late_var_replace.htt \
 	leftovertmpf.htt \
 	lock.htt \
 	loop_auto.htt \
@@ -111,11 +115,14 @@ EXTRA_DIST= \
 	match_var.htt \
 	math.htt \
 	mixed_socket.htt \
+	module.htb \
+	module.htt \
 	multi_line_match.htt \
 	multi_match.htt \
 	multi_socket.htt \
 	multi_var_match.htt \
 	neg_content_length.htt \
+	nocrlf.htt \
 	nosocket.hte \
 	nosocket.txt \
 	no_ssl_port_set.hte \
@@ -155,6 +162,7 @@ EXTRA_DIST= \
 	run_ntlm_test.sh \
 	run.sh \
 	run_test_error_output.sh \
+	run_wild.sh \
 	sendfile.htt \
 	server.cert.pem \
 	server_connection_close.htt \
@@ -175,6 +183,7 @@ EXTRA_DIST= \
 	ssl_mutual.hte \
 	ssl_mutual.htt \
 	ssl_mutual.txt \
+	ssl_mutual_verify.htt \
 	ssl_plain_first.htt \
 	ssl_session_reuse.htt \
 	sslsimple2.htt \
@@ -182,6 +191,7 @@ EXTRA_DIST= \
 	ssl_sockstate.htt \
 	ssl_stream_myself.htt \
 	ssl_threaded_server.htt \
+	store.htt \
 	stream_myself.htt \
 	sync.htt \
 	syntax_global_in_body.hte \
