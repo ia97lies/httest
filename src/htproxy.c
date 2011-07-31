@@ -1407,7 +1407,9 @@ int main(int argc, const char *const argv[]) {
   else if (conf_file) {
     return -1;
   }
-  
+
+  apr_hook_global_pool = pool; 
+
   /* overwrites config */
   self->pool = pool;
   self->port = port;

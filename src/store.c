@@ -137,6 +137,10 @@ APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
   store_element_t *element;
   int sum = 0;
 
+  if (!store || !other) {
+    return;
+  }
+
   for (i = apr_hash_first(other->pool, other->hash); i; i = apr_hash_next(i)) {
     apr_hash_this(i, &key, NULL, &val);
     element = val;
