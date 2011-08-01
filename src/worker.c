@@ -1638,7 +1638,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     val = varget(worker, var);
     if (val) {
       if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(ptmp, 1);
+	worker->tmp_table = apr_table_make(worker->pbody, 1);
       }
       apr_table_clear(worker->tmp_table);
       apr_table_addn(worker->tmp_table, match, (char *) compiled);
@@ -1750,7 +1750,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     val = varget(worker, var);
     if (val) {
       if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(ptmp, 1);
+	worker->tmp_table = apr_table_make(worker->pbody, 1);
       }
       apr_table_clear(worker->tmp_table);
       apr_table_addn(worker->tmp_table, vars, (char *) compiled);
