@@ -53,6 +53,7 @@
 #include "transport.h"
 #include "socket.h"
 #include "worker.h"
+#include "module.h"
 
 
 /************************************************************************
@@ -84,7 +85,6 @@ typedef struct flush_s {
 /************************************************************************
  * Implementation
  ***********************************************************************/
-
 /**
  * set a variable either as local or global
  * make a copy and replace existing
@@ -510,40 +510,47 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
   return APR_SUCCESS;
 }
 
-apr_status_t worker_validate_match(worker_t * self, apr_table_t *match, 
-                                   char *error_prefix, apr_status_t status) {
+static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match, 
+                                        char *error_prefix, apr_status_t status) {
   apr_table_entry_t *e;
   int i;
+  apr_pool_t *pool;
 
   e = (apr_table_entry_t *) apr_table_elts(match)->elts;
   for (i = 0; i < apr_table_elts(match)->nelts; ++i) {
     if (!regdidmatch((regex_t *) e[i].val)) {
-      worker_log(self, LOG_ERR, "%s: Did expect %s", error_prefix, e[i].key);
+      worker_log(worker, LOG_ERR, "%s: Did expect %s", error_prefix, e[i].key);
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
       }
     }
   }
   apr_table_clear(match);
+  pool = module_get_config(worker->config, error_prefix);
+  module_set_config(worker->config, error_prefix, NULL);
+  if (pool) {
+    apr_pool_destroy(pool);
+  }
   return status;
 }
 
-apr_status_t worker_validate_expect(worker_t * self, apr_table_t *expect, 
-                                    char *error_prefix, apr_status_t status) {
+static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect, 
+                                         char *error_prefix, apr_status_t status) {
   apr_table_entry_t *e;
   int i;
+  apr_pool_t *pool;
 
   e = (apr_table_entry_t *) apr_table_elts(expect)->elts;
   for (i = 0; i < apr_table_elts(expect)->nelts; ++i) {
     if (e[i].key[0] != '!' && !regdidmatch((regex_t *) e[i].val)) {
-      worker_log(self, LOG_ERR, "%s: Did expect \"%s\"", error_prefix, 
+      worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", error_prefix, 
 	         e[i].key);
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
       }
     }
     if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
-      worker_log(self, LOG_ERR, "%s: Did not expect \"%s\"", error_prefix, 
+      worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", error_prefix, 
 	         &e[i].key[1]);
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
@@ -551,6 +558,11 @@ apr_status_t worker_validate_expect(worker_t * self, apr_table_t *expect,
     }
   }
   apr_table_clear(expect);
+  pool = module_get_config(worker->config, error_prefix);
+  module_set_config(worker->config, error_prefix, NULL);
+  if (pool) {
+    apr_pool_destroy(pool);
+  }
   return status;
 }
 
@@ -562,19 +574,19 @@ apr_status_t worker_validate_expect(worker_t * self, apr_table_t *expect,
  *
  * @return current status or APR_EINVAL if there are unhandled expects
  */
-apr_status_t worker_assertion_check(worker_t * self, apr_status_t status) {
-  status = worker_validate_match(self, self->match.dot, "MATCH .", 
-                                 status);
-  status = worker_validate_match(self, self->match.headers, "MATCH headers", 
-                                 status);
-  status = worker_validate_match(self, self->match.body, "MATCH body", 
-                                 status);
-  status = worker_validate_expect(self, self->expect.dot, "EXPECT .", 
-                                 status);
-  status = worker_validate_expect(self, self->expect.headers, "EXPECT headers", 
-                                 status);
-  status = worker_validate_expect(self, self->expect.body, "EXPECT body", 
-                                 status);
+apr_status_t worker_assert(worker_t * self, apr_status_t status) {
+  status = worker_assert_match(self, self->match.dot, "MATCH .", 
+                               status);
+  status = worker_assert_match(self, self->match.headers, "MATCH headers", 
+                               status);
+  status = worker_assert_match(self, self->match.body, "MATCH body", 
+                               status);
+  status = worker_assert_expect(self, self->expect.dot, "EXPECT .", 
+                               status);
+  status = worker_assert_expect(self, self->expect.headers, "EXPECT headers", 
+                               status);
+  status = worker_assert_expect(self, self->expect.body, "EXPECT body", 
+                                status);
   /* check if match sequence is empty */
   if (self->match_seq && self->match_seq[0] != 0) {
     worker_log(self, LOG_ERR, "The following match sequence \"%s\" was not in correct order", self->match_seq);
@@ -1205,7 +1217,7 @@ out_err:
   else {
     ++worker->req_cnt;
   }
-  status = worker_assertion_check(worker, status);
+  status = worker_assert(worker, status);
 
   apr_pool_destroy(pool);
   return status;
@@ -1489,97 +1501,6 @@ apr_status_t command_SLEEP(command_t * self, worker_t * worker,
 }
 
 /**
- * Define an expect
- *
- * @param self IN command object
- * @param worker IN thread data object
- * @param data IN "%s %s" type match 
- *
- * @return an apr status
- */
-apr_status_t command_EXPECT(command_t * self, worker_t * worker,
-                            char *data, apr_pool_t *ptmp) {
-  char *last;
-  char *type;
-  char *match;
-  regex_t *compiled;
-  const char *err;
-  int off;
-  char *copy;
-  char *interm;
-
-  COMMAND_NEED_ARG("Type and regex not specified");
-
-  type = apr_strtok(copy, " ", &last);
-  
-  interm = my_unescape(last, &last);
-  match = apr_pstrdup(worker->pbody, interm);
-
-  if (!type) {
-    worker_log(worker, LOG_ERR, "Type not specified");
-    return APR_EGENERAL;
-  }
-  
-  if (!match) {
-    worker_log(worker, LOG_ERR, "Regex not specified");
-    return APR_EGENERAL;
-  }
-
-  if (interm[0] == '!') {
-    ++interm;
-  }
-
-  if (!(compiled = pregcomp(worker->pbody, interm, &err, &off))) {
-    worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
-    return APR_EINVAL;
-  }
-
-  if (strcmp(type, ".") == 0) {
-    apr_table_addn(worker->expect.dot, match, (char *) compiled);
-  }
-  else if (strcasecmp(type, "Headers") == 0) {
-    apr_table_addn(worker->expect.headers, match, (char *) compiled);
-  }
-  else if (strcasecmp(type, "Body") == 0) {
-    apr_table_addn(worker->expect.body, match, (char *) compiled);
-  }
-  else if (strcasecmp(type, "Exec") == 0) {
-    apr_table_addn(worker->expect.exec, match, (char *) compiled);
-  }
-  else if (strcasecmp(type, "Error") == 0) {
-    apr_table_addn(worker->expect.error, match, (char *) compiled);
-  }
-  else if (strncasecmp(type, "Var(", 4) == 0) {
-    const char *val;
-    char *var;
-    
-    var= apr_strtok(type, "(", &last);
-    var = apr_strtok(NULL, ")", &last);
-    val = varget(worker, var);
-    if (val) {
-      if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pbody, 1);
-      }
-      apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, match, (char *) compiled);
-      worker_expect(worker, worker->tmp_table, val, strlen(val));
-      return worker_validate_expect(worker, worker->tmp_table, "EXPECT var", 
-	                            APR_SUCCESS);
-    }
-    else {
-      worker_log(worker, LOG_ERR, "Variable \"%s\" do not exist", var);
-      return APR_EINVAL;
-    }
-  }
-  else {
-    worker_log(worker, LOG_ERR, "EXPECT type \"%s\" unknown", type);
-    return APR_EINVAL;
-  }
-
-  return APR_SUCCESS;
-}
-
-/**
  * Close socket
  *
  * @param self IN command object
@@ -1645,6 +1566,107 @@ apr_status_t command_TIMEOUT(command_t * self, worker_t * worker,
  *
  * @param self IN command object
  * @param worker IN thread data object
+ * @param data IN "%s %s" type match 
+ *
+ * @return an apr status
+ */
+apr_status_t command_EXPECT(command_t * self, worker_t * worker,
+                            char *data, apr_pool_t *ptmp) {
+  char *last;
+  char *type;
+  char *match;
+  regex_t *compiled;
+  const char *err;
+  int off;
+  char *copy;
+  char *interm;
+  apr_pool_t *pool;
+
+  COMMAND_NEED_ARG("Type and regex not specified");
+
+  type = apr_strtok(copy, " ", &last);
+  
+  interm = my_unescape(last, &last);
+
+  if (!type) {
+    worker_log(worker, LOG_ERR, "Type not specified");
+    return APR_EGENERAL;
+  }
+  
+  pool = module_get_config(worker->config, apr_pstrcat(ptmp, "EXPECT ", type, NULL));
+  if (!pool) {
+    /* create a pool for match */
+    apr_pool_create(&pool, worker->pbody);
+  }
+  match = apr_pstrdup(pool, interm);
+
+  if (!match) {
+    worker_log(worker, LOG_ERR, "Regex not specified");
+    return APR_EGENERAL;
+  }
+
+  if (interm[0] == '!') {
+    ++interm;
+  }
+  
+  if (!(compiled = pregcomp(pool, interm, &err, &off))) {
+    worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
+    return APR_EINVAL;
+  }
+
+  if (strcmp(type, ".") == 0) {
+    apr_table_addn(worker->expect.dot, match, (char *) compiled);
+  }
+  else if (strcasecmp(type, "Headers") == 0) {
+    apr_table_addn(worker->expect.headers, match, (char *) compiled);
+  }
+  else if (strcasecmp(type, "Body") == 0) {
+    apr_table_addn(worker->expect.body, match, (char *) compiled);
+  }
+  else if (strcasecmp(type, "Exec") == 0) {
+    apr_table_addn(worker->expect.exec, match, (char *) compiled);
+  }
+  else if (strcasecmp(type, "Error") == 0) {
+    apr_table_addn(worker->expect.error, match, (char *) compiled);
+  }
+  else if (strncasecmp(type, "Var(", 4) == 0) {
+    const char *val;
+    char *var;
+    
+    var= apr_strtok(type, "(", &last);
+    var = apr_strtok(NULL, ")", &last);
+    val = varget(worker, var);
+    if (val) {
+      if (!worker->tmp_table) {
+	worker->tmp_table = apr_table_make(ptmp, 1);
+      }
+      apr_table_clear(worker->tmp_table);
+      apr_table_addn(worker->tmp_table, match, (char *) compiled);
+      worker_expect(worker, worker->tmp_table, val, strlen(val));
+      return worker_assert_expect(worker, worker->tmp_table, "EXPECT var", 
+	                          APR_SUCCESS);
+    }
+    else {
+      worker_log(worker, LOG_ERR, "Variable \"%s\" do not exist", var);
+      return APR_EINVAL;
+    }
+  }
+  else {
+    worker_log(worker, LOG_ERR, "EXPECT type \"%s\" unknown", type);
+    return APR_EINVAL;
+  }
+
+  /* set created pool for this match type */
+  module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Define an expect
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
  * @param data IN "%s %s %s" type match variable
  *
  * @return an apr status
@@ -1660,6 +1682,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   const char *err;
   int off;
   char *copy;
+  apr_pool_t *pool;
 
   COMMAND_NEED_ARG("Type, regex and variable not specified");
 
@@ -1668,12 +1691,18 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   match = my_unescape(last, &last);
   
   tmp = apr_strtok(NULL, "", &last);
-  vars = apr_pstrdup(worker->pbody, tmp);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
   }
+  
+  pool = module_get_config(worker->config, apr_pstrcat(ptmp, "MATCH ", type, NULL));
+  if (!pool) {
+    /* create a pool for match */
+    apr_pool_create(&pool, worker->pbody);
+  }
+  vars = apr_pstrdup(pool, tmp);
 
   if (!match) {
     worker_log(worker, LOG_ERR, "Regex not specified");
@@ -1693,7 +1722,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if (!(compiled = pregcomp(worker->pbody, match, &err, &off))) {
+  if (!(compiled = pregcomp(pool, match, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
@@ -1721,13 +1750,13 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     val = varget(worker, var);
     if (val) {
       if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pbody, 1);
+	worker->tmp_table = apr_table_make(ptmp, 1);
       }
       apr_table_clear(worker->tmp_table);
       apr_table_addn(worker->tmp_table, vars, (char *) compiled);
       worker_match(worker, worker->tmp_table, val, strlen(val));
-      return worker_validate_match(worker, worker->tmp_table, "MATCH var", 
-	                           APR_SUCCESS);
+      return worker_assert_match(worker, worker->tmp_table, "MATCH var", 
+	                         APR_SUCCESS);
     }
     else {
       /* this should cause an error? */
@@ -1737,6 +1766,9 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     worker_log(worker, LOG_ERR, "Match type %s do not exist", type);
     return APR_ENOENT;
   }
+
+  /* set created pool for this match type */
+  module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
 
   return APR_SUCCESS;
 }
@@ -2147,10 +2179,10 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     }
     
     status = APR_SUCCESS;
-    status = worker_validate_match(worker, worker->match.exec, "MATCH exec", 
-	                           status);
-    status = worker_validate_expect(worker, worker->expect.exec, "EXPECT exec", 
-	                            status);
+    status = worker_assert_match(worker, worker->match.exec, "MATCH exec", 
+	                         status);
+    status = worker_assert_expect(worker, worker->expect.exec, "EXPECT exec", 
+	                          status);
   }
 
   if (!(worker->flags & FLAGS_PIPE_IN) && !(worker->flags & FLAGS_FILTER)) {
@@ -2643,7 +2675,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
 
 out_err:
   if (strcasecmp(last, "DO_NOT_CHECK") != 0) {
-    status = worker_assertion_check(worker, status);
+    status = worker_assert(worker, status);
   }
   apr_pool_destroy(pool);
 
@@ -2699,7 +2731,7 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
 
 out_err:
   if (strcasecmp(copy, "DO_NOT_CHECK") != 0) {
-    status = worker_assertion_check(worker, status);
+    status = worker_assert(worker, status);
   }
   apr_pool_destroy(pool);
 
@@ -2717,7 +2749,7 @@ out_err:
  */
 apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data, 
                            apr_pool_t *ptmp) {
-  apr_status_t status = worker_assertion_check(worker, APR_SUCCESS);
+  apr_status_t status = worker_assert(worker, APR_SUCCESS);
   return status;
 }
 
