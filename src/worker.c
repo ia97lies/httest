@@ -566,6 +566,19 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
   return status;
 }
 
+static apr_status_t worker_assert_grep(worker_t * worker, apr_table_t *grep, 
+                                       char *error_prefix, apr_status_t status) {
+  apr_pool_t *pool;
+
+  apr_table_clear(grep);
+  pool = module_get_config(worker->config, error_prefix);
+  module_set_config(worker->config, error_prefix, NULL);
+  if (pool) {
+    apr_pool_destroy(pool);
+  }
+  return status;
+}
+
 /**
  * Do check for if all defined expects are handled 
  *
@@ -587,6 +600,12 @@ apr_status_t worker_assert(worker_t * self, apr_status_t status) {
                                status);
   status = worker_assert_expect(self, self->expect.body, "EXPECT body", 
                                 status);
+  status = worker_assert_grep(self, self->grep.dot, "GREP .", 
+                              status);
+  status = worker_assert_grep(self, self->grep.headers, "GREP headers", 
+                              status);
+  status = worker_assert_grep(self, self->grep.body, "GREP body", 
+                              status);
   /* check if match sequence is empty */
   if (self->match_seq && self->match_seq[0] != 0) {
     worker_log(self, LOG_ERR, "The following match sequence \"%s\" was not in correct order", self->match_seq);
@@ -1793,6 +1812,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   const char *err;
   int off;
   char *copy;
+  apr_pool_t *pool;
 
   COMMAND_NEED_ARG("Type, regex and variable not specified");
 
@@ -1801,12 +1821,18 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   grep = my_unescape(last, &last);
   
   tmp = apr_strtok(NULL, "", &last);
-  vars = apr_pstrdup(worker->pbody, tmp);
 
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
   }
+
+  pool = module_get_config(worker->config, apr_pstrcat(ptmp, "GREP ", type, NULL));
+  if (!pool) {
+    /* create a pool for match */
+    apr_pool_create(&pool, worker->pbody);
+  }
+  vars = apr_pstrdup(pool, tmp);
 
   if (!grep) {
     worker_log(worker, LOG_ERR, "Regex not specified");
@@ -1826,7 +1852,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if (!(compiled = pregcomp(worker->pbody, grep, &err, &off))) {
+  if (!(compiled = pregcomp(pool, grep, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
@@ -1868,6 +1894,9 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     worker_log(worker, LOG_ERR, "Grep type %s do not exist", type);
     return APR_ENOENT;
   }
+
+  /* set created pool for this match type */
+  module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
 
   return APR_SUCCESS;
 }
@@ -2183,6 +2212,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 	                         status);
     status = worker_assert_expect(worker, worker->expect.exec, "EXPECT exec", 
 	                          status);
+    status = worker_assert_grep(worker, worker->grep.exec, "GREP exec", 
+	                        status);
   }
 
   if (!(worker->flags & FLAGS_PIPE_IN) && !(worker->flags & FLAGS_FILTER)) {

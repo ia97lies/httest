@@ -19,6 +19,20 @@ _GREP headers "Foo: (.*)" VAR
 _EXPECT headers "HTTP/1.1 200 OK"
 _WAIT
 
+_SET I=0
+_LOOP 1000
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: AUTO
+__
+__Result: ${VAR}${I}
+_GREP headers "Foo: (.*)" VAR
+_EXPECT headers "HTTP/1.1 200 OK"
+_WAIT
+_MATH:EVAL "$I + 1" I
+_END LOOP
+
 END
 
 
@@ -40,5 +54,18 @@ __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __
 __== OK ==
+
+_SET I=0
+_LOOP 1000
+_RES
+_EXPECT headers "!Bar"
+_EXPECT body "Bar$I"
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+_MATH:EVAL "$I + 1" I
+_END LOOP
 END
 
