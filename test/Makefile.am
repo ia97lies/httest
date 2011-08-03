@@ -211,4 +211,9 @@ EXTRA_DIST= \
 	wait0.htt \
 	wait.htt 
 
-TESTS = run_htt_test.sh run_htt_shell_test.sh run_hte_test.sh run_ntlm_test.sh run_coredump_test.sh
+test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
+AM_CFLAGS=-I$(top_srcdir)/src
+check_PROGRAMS=test_store
+
+TESTS = test_store run_htt_test.sh run_htt_shell_test.sh run_hte_test.sh run_ntlm_test.sh run_coredump_test.sh
+
