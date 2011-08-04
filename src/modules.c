@@ -23,6 +23,7 @@ apr_status_t math_module_init(global_t *global);
 apr_status_t coder_module_init(global_t *global);
 apr_status_t date_module_init(global_t *global);
 apr_status_t binary_module_init(global_t *global);
+apr_status_t udp_module_init(global_t *global);
 apr_status_t tcp_module_init(global_t *global);
 apr_status_t ssl_module_init(global_t *global);
 
