@@ -178,8 +178,51 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
  * @param parent IN callee
  * @param ptmp IN temp pool for this function
  */
-static apr_status_t block_UDP_ACCEPT(worker_t *worker, worker_t *parent, 
-                                     apr_pool_t *ptmp) {
+static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent, 
+                                   apr_pool_t *ptmp) {
+  apr_status_t status;
+  int port;
+  apr_sockaddr_t *dest;
+
+  int family = APR_INET;
+  const char *portname = store_get(worker->params, "1");
+
+  if (!portname) {
+    worker_log_error(worker, "No port specified");
+    return APR_EINVAL;
+  }
+
+  /** create udp socket first */
+  worker_get_socket(worker, "ANY", 
+                    apr_pstrcat(ptmp, portname, ":", "udp", NULL));
+
+  if ((status = apr_socket_create(&worker->socket->socket, family,
+				  SOCK_STREAM, APR_PROTO_UDP,
+				  worker->pbody)) != APR_SUCCESS) {
+    worker->socket->socket = NULL;
+    worker_log_error(worker, "Could not create socket");
+    return status;
+  }
+
+  port = apr_atoi64(portname);
+
+  if ((status = apr_sockaddr_info_get(&dest, NULL, AF_UNSPEC, port,
+                                      APR_IPV4_ADDR_OK, worker->pbody))
+     != APR_SUCCESS) {
+    worker_log_error(worker, "Could not resolve host port \"%d\"", port);
+    return status;
+  }
+
+  /** bind to port */
+  if ((status = apr_socket_bind(worker->socket->socket, dest)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not bind to host port \"%d\"", port);
+    return status;
+  }
+
+  /** receive first portion and connect then 
+  if ((status = apr_socket_recvfrom()) != APR_SUCCESS) {
+  }
+  */
   return APR_SUCCESS;
 }
 
@@ -194,10 +237,10 @@ apr_status_t udp_module_init(global_t *global) {
 	                           block_UDP_CONNECT)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "UDP", "_ACCEPT",
-	                           "[<ip>:]<port>",
-	                           "Do accept udp incomming connections.",
-	                           block_UDP_ACCEPT)) != APR_SUCCESS) {
+  if ((status = module_command_new(global, "UDP", "_BIND",
+	                           "<port>",
+	                           "Do bind thread to <port>.",
+	                           block_UDP_BIND)) != APR_SUCCESS) {
     return status;
   }
   return APR_SUCCESS;
