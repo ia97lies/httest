@@ -29,6 +29,10 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+typedef struct udp_socket_config_s {
+  apr_sockaddr_t *sendto;
+  apr_sockaddr_t *recvfrom;
+} udp_socket_config_t;
 
 /************************************************************************
  * Globals 
@@ -39,6 +43,25 @@ const char * udp_module = "udp_module";
  * Local 
  ***********************************************************************/
 /**
+ * GET ssl socket config from socket
+ *
+ * @param worker IN worker
+ * @return socket config
+ */
+static udp_socket_config_t *udp_get_socket_config(worker_t *worker) {
+  if (!worker || !worker->socket) {
+    return NULL;
+  }
+
+  udp_socket_config_t *config = module_get_config(worker->socket->config, udp_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->socket->config, apr_pstrdup(worker->pbody, udp_module), config);
+  }
+  return config;
+}
+
+/**
  * Get os socket descriptor
  *
  * @param data IN void pointer to socket
@@ -46,8 +69,8 @@ const char * udp_module = "udp_module";
  * @return apr status
  */
 apr_status_t udp_transport_os_desc_get(void *data, int *desc) {
-  apr_socket_t *socket = data;
-  return apr_os_sock_get(desc, socket);
+  worker_t *worker = data;
+  return apr_os_sock_get(desc, worker->socket->socket);
 }
 
 /**
@@ -58,8 +81,8 @@ apr_status_t udp_transport_os_desc_get(void *data, int *desc) {
  * @return apr status
  */
 apr_status_t udp_transport_set_timeout(void *data, apr_interval_time_t t) {
-  apr_socket_t *socket = data;
-  return apr_socket_timeout_set(socket, t);
+  worker_t *worker = data;
+  return apr_socket_timeout_set(worker->socket->socket, t);
 }
 
 /**
@@ -71,8 +94,8 @@ apr_status_t udp_transport_set_timeout(void *data, apr_interval_time_t t) {
  * @return apr status
  */
 apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
-  apr_socket_t *socket = data;
-  return apr_socket_recv(socket, buf, size);
+  worker_t *worker = data;
+  return APR_ENOTIMPL; 
 }
 
 /**
@@ -84,22 +107,8 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
  * @return apr status
  */
 apr_status_t udp_transport_write(void *data, char *buf, apr_size_t size) {
-  apr_socket_t *socket = data;
-  apr_status_t status = APR_SUCCESS;
-  apr_size_t total = size;
-  apr_size_t count = 0;
-  apr_size_t len;
-
-  while (total != count) {
-    len = total - count;
-    if ((status = apr_socket_send(socket, &buf[count], &len)) 
-	!= APR_SUCCESS) {
-      return status;
-    }
-    count += len;
-  }
-
-  return APR_SUCCESS;
+  worker_t *worker = data;
+  return APR_ENOTIMPL; 
 }
 
 /************************************************************************
@@ -118,6 +127,7 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   int port;
   apr_sockaddr_t *dest;
 
+  udp_socket_config_t *config = udp_get_socket_config(worker);
   int family = APR_INET;
   char *hostname = store_get_copy(worker->params, ptmp, "1");
   const char *portname = store_get(worker->params, "2");
@@ -145,7 +155,7 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   }
 #endif
   if ((status = apr_socket_create(&worker->socket->socket, family,
-				  SOCK_STREAM, APR_PROTO_UDP,
+				  SOCK_DGRAM, APR_PROTO_UDP,
 				  worker->pbody)) != APR_SUCCESS) {
     worker->socket->socket = NULL;
     worker_log_error(worker, "Could not create socket");
@@ -159,12 +169,6 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
      != APR_SUCCESS) {
     worker_log_error(worker, "Could not resolve host \"%s\" and port \"%d\"", 
 	             hostname, port);
-    return status;
-  }
-
-  if ((status =
-       apr_socket_connect(worker->socket->socket, dest)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not connect to udp destination");
     return status;
   }
 
@@ -184,6 +188,7 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   int port;
   apr_sockaddr_t *dest;
 
+  udp_socket_config_t *config = udp_get_socket_config(worker);
   int family = APR_INET;
   const char *portname = store_get(worker->params, "1");
 
@@ -193,11 +198,11 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   }
 
   /** create udp socket first */
-  worker_get_socket(worker, "ANY", 
+  worker_get_socket(worker, "0.0.0.0", 
                     apr_pstrcat(ptmp, portname, ":", "udp", NULL));
 
   if ((status = apr_socket_create(&worker->socket->socket, family,
-				  SOCK_STREAM, APR_PROTO_UDP,
+				  SOCK_DGRAM, APR_PROTO_UDP,
 				  worker->pbody)) != APR_SUCCESS) {
     worker->socket->socket = NULL;
     worker_log_error(worker, "Could not create socket");
@@ -206,7 +211,7 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
 
   port = apr_atoi64(portname);
 
-  if ((status = apr_sockaddr_info_get(&dest, NULL, AF_UNSPEC, port,
+  if ((status = apr_sockaddr_info_get(&dest, "0.0.0.0", AF_UNSPEC, port,
                                       APR_IPV4_ADDR_OK, worker->pbody))
      != APR_SUCCESS) {
     worker_log_error(worker, "Could not resolve host port \"%d\"", port);
@@ -219,10 +224,6 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
     return status;
   }
 
-  /** receive first portion and connect then 
-  if ((status = apr_socket_recvfrom()) != APR_SUCCESS) {
-  }
-  */
   return APR_SUCCESS;
 }
 

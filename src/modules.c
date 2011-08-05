@@ -34,6 +34,7 @@ module_t modules[] = {
   { coder_module_init },
   { date_module_init },
   { binary_module_init },
+  { udp_module_init },
   { tcp_module_init },
   { ssl_module_init },
   { NULL }
