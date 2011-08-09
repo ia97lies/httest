@@ -94,7 +94,16 @@ apr_status_t udp_transport_set_timeout(void *data, apr_interval_time_t t) {
  * @return apr status
  */
 apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
+  apr_status_t status;
   worker_t *worker = data;
+  udp_socket_config_t *config = udp_get_socket_config(worker);
+  if (!config->recvfrom) {
+    return APR_ENOSOCKET;
+  }
+
+  if ((status = apr_socket_recvfrom(config->recvfrom, worker->socket->socket, 0, buf, size)) != APR_SUCCESS) {
+    return status;
+  }
   return APR_ENOTIMPL; 
 }
 
@@ -107,8 +116,27 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
  * @return apr status
  */
 apr_status_t udp_transport_write(void *data, char *buf, apr_size_t size) {
+  apr_status_t status;
   worker_t *worker = data;
-  return APR_ENOTIMPL; 
+  udp_socket_config_t *config = udp_get_socket_config(worker);
+  apr_size_t total = size;
+  apr_size_t count = 0;
+  apr_size_t len;
+
+  if (!config->sendto) {
+    return APR_ENOSOCKET;
+  }
+
+  while (total != count) {
+    len = total - count;
+    if ((status = apr_socket_sendto(worker->socket->socket, config->sendto, 0, 
+	                            &buf[count], &len)) != APR_SUCCESS) {
+      return status;
+    }
+    count += len;
+  }
+
+  return APR_SUCCESS; 
 }
 
 /************************************************************************
@@ -125,7 +153,6 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
                                       apr_pool_t *ptmp) {
   apr_status_t status;
   int port;
-  apr_sockaddr_t *dest;
 
   udp_socket_config_t *config = udp_get_socket_config(worker);
   int family = APR_INET;
@@ -164,13 +191,15 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
 
   port = apr_atoi64(portname);
 
-  if ((status = apr_sockaddr_info_get(&dest, hostname, AF_UNSPEC, port,
+  if ((status = apr_sockaddr_info_get(&config->sendto, hostname, AF_UNSPEC, port,
                                       APR_IPV4_ADDR_OK, worker->pbody))
      != APR_SUCCESS) {
     worker_log_error(worker, "Could not resolve host \"%s\" and port \"%d\"", 
 	             hostname, port);
     return status;
   }
+
+  config->recvfrom = config->sendto;
 
   return APR_SUCCESS;
 }
@@ -188,7 +217,6 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   int port;
   apr_sockaddr_t *dest;
 
-  udp_socket_config_t *config = udp_get_socket_config(worker);
   int family = APR_INET;
   const char *portname = store_get(worker->params, "1");
 
