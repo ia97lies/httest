@@ -104,7 +104,8 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
   if ((status = apr_socket_recvfrom(config->recvfrom, worker->socket->socket, 0, buf, size)) != APR_SUCCESS) {
     return status;
   }
-  return APR_ENOTIMPL; 
+  config->sendto = config->recvfrom;
+  return APR_SUCCESS; 
 }
 
 /**
@@ -153,8 +154,9 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
                                       apr_pool_t *ptmp) {
   apr_status_t status;
   int port;
+  transport_t *transport;
+  udp_socket_config_t *config;
 
-  udp_socket_config_t *config = udp_get_socket_config(worker);
   int family = APR_INET;
   char *hostname = store_get_copy(worker->params, ptmp, "1");
   const char *portname = store_get(worker->params, "2");
@@ -172,6 +174,8 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   /** create udp socket first */
   worker_get_socket(worker, hostname, 
                     apr_pstrcat(ptmp, portname, ":", "udp", NULL));
+
+  config = udp_get_socket_config(worker);
 
 #if APR_HAVE_IPV6
   /* hostname/address must be surrounded in square brackets */
@@ -201,6 +205,13 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
 
   config->recvfrom = config->sendto;
 
+  transport = transport_new(worker, worker->pbody, 
+			    udp_transport_os_desc_get, 
+			    udp_transport_set_timeout,
+			    udp_transport_read, 
+			    udp_transport_write);
+  transport_register(worker->socket, transport);
+
   return APR_SUCCESS;
 }
 
@@ -215,7 +226,8 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
                                    apr_pool_t *ptmp) {
   apr_status_t status;
   int port;
-  apr_sockaddr_t *dest;
+  transport_t *transport;
+  udp_socket_config_t *config;
 
   int family = APR_INET;
   const char *portname = store_get(worker->params, "1");
@@ -229,6 +241,7 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   worker_get_socket(worker, "0.0.0.0", 
                     apr_pstrcat(ptmp, portname, ":", "udp", NULL));
 
+  config = udp_get_socket_config(worker);
   if ((status = apr_socket_create(&worker->socket->socket, family,
 				  SOCK_DGRAM, APR_PROTO_UDP,
 				  worker->pbody)) != APR_SUCCESS) {
@@ -239,7 +252,7 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
 
   port = apr_atoi64(portname);
 
-  if ((status = apr_sockaddr_info_get(&dest, "0.0.0.0", AF_UNSPEC, port,
+  if ((status = apr_sockaddr_info_get(&config->recvfrom, "0.0.0.0", AF_UNSPEC, port,
                                       APR_IPV4_ADDR_OK, worker->pbody))
      != APR_SUCCESS) {
     worker_log_error(worker, "Could not resolve host port \"%d\"", port);
@@ -247,10 +260,17 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   }
 
   /** bind to port */
-  if ((status = apr_socket_bind(worker->socket->socket, dest)) != APR_SUCCESS) {
+  if ((status = apr_socket_bind(worker->socket->socket, config->recvfrom)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not bind to host port \"%d\"", port);
     return status;
   }
+
+  transport = transport_new(worker, worker->pbody, 
+			    udp_transport_os_desc_get, 
+			    udp_transport_set_timeout,
+			    udp_transport_read, 
+			    udp_transport_write);
+  transport_register(worker->socket, transport);
 
   return APR_SUCCESS;
 }
