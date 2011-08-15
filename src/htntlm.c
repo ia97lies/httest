@@ -19,6 +19,7 @@
  * @Author christian liesch <liesch@gmx.ch>
  *
  * Implementation of the HTTP Test NTLM.
+ * based on this documentation: http://davenport.sourceforge.net/ntlm.html
  */
 
 /* affects include files on Solaris */

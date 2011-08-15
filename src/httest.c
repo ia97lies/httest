@@ -317,10 +317,6 @@ command_t local_commands[] = {
   "default all headers are allowed and no headers are filtered.\n"
   "Filter only for receive mechanisme",
   COMMAND_FLAGS_NONE},
-  {"_RAND", (command_f )command_RAND, "<start> <end> <variable>", 
-  "Generates a number between <start> and <end> and stores result in"
-  " <variable>",
-  COMMAND_FLAGS_NONE},
   {"_SENDFILE", (command_f )command_SENDFILE, "<file>", 
   "Send file over http",
   COMMAND_FLAGS_NONE},
@@ -360,9 +356,6 @@ command_t local_commands[] = {
   COMMAND_FLAGS_NONE},
   {"_CHECK", (command_f )command_CHECK, "", 
   "Receive a line terminated with \\r\\n or \\n",
-  COMMAND_FLAGS_NONE},
-  {"_OP", (command_f )command_OP, "<left> ADD|SUB|DIV|MUL <right> <variable>", 
-  "Store evaluated expression",
   COMMAND_FLAGS_NONE},
   {"_ONLY_PRINTABLE", (command_f )command_ONLY_PRINTABLE, "on|off", 
   "Replace all chars below 32 and above 127 with a space",
@@ -405,6 +398,8 @@ command_t local_commands[] = {
   "Define BLOCK local variables.",
   COMMAND_FLAGS_NONE},
   /* Link section */
+  {"_OP", NULL, "_MATH:OP", NULL, COMMAND_FLAGS_LINK},
+  {"_RAND", NULL, "_MATH:RAND", NULL, COMMAND_FLAGS_LINK},
   {"_DETACH", NULL, "_PROC:DETACH", NULL, COMMAND_FLAGS_LINK},
   {"_PID", NULL, "_PROC:GET_PID", NULL, COMMAND_FLAGS_LINK},
   {"_LOCK", NULL, "_PROC:LOCK", NULL, COMMAND_FLAGS_LINK},

@@ -306,7 +306,15 @@ static void math_eval_pack(math_eval_t * hook, char *str) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+/**
+ * Evaluate a math expression, should be extended with >, <, >=,<=, == and !
+ * @param worker IN worker instance
+ * @param parent IN caller
+ * @param ptmp IN temporary pool for this function
+ * @return APR_SUCCESS or APR_EINVAL if expression is incorrect
+ */
+static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent, 
+                                    apr_pool_t *ptmp) {
   long val;
   const char *value = store_get(worker->params, "1");
   const char *var = store_get(worker->params, "2");
@@ -332,6 +340,115 @@ static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent, apr_pool
   return APR_SUCCESS;
 }
 
+/**
+ * Legacy simple math evaluator us block_MATH_EVAL instead 
+ * @param worker IN worker instance
+ * @param parent IN caller
+ * @param ptmp IN temporary pool for this function
+ * @return APR_SUCCESS or APR_EINVAL if expression is incorrect
+ */
+static apr_status_t block_MATH_OP(worker_t *worker, worker_t *parent, 
+                                  apr_pool_t *ptmp) {
+  const char *param;
+  const char *op;
+  apr_int64_t ileft;
+  apr_int64_t iright;
+  apr_int64_t result;
+
+  param = store_get(worker->params, "1");
+  if (param == NULL) {
+    worker_log(worker, LOG_ERR, "<left> value expected");
+    return APR_EINVAL;
+  }
+  ileft = apr_atoi64(param);
+
+  op = store_get(worker->params, "2");
+  if (op == NULL) {
+    worker_log(worker, LOG_ERR, "ADD, SUB, MUL or DIV expected");
+    return APR_EINVAL;
+  }
+
+  param = store_get(worker->params, "3");
+  if (param == NULL) {
+    worker_log(worker, LOG_ERR, "<right> value expected");
+    return APR_EINVAL;
+  }
+  iright = apr_atoi64(param);
+
+  param = store_get(worker->params, "4");
+  if (param == NULL) {
+    worker_log(worker, LOG_ERR, "<var> expected");
+    return APR_EINVAL;
+  }
+
+  /* do operation */
+  if (strcasecmp(op, "ADD") == 0) {
+    result = ileft + iright;
+  }
+  else if (strcasecmp(op, "SUB") == 0) {
+    result = ileft - iright;
+  }
+  else if (strcasecmp(op, "MUL") == 0) {
+    result = ileft * iright;
+  }
+  else if (strcasecmp(op, "DIV") == 0) {
+    if (iright == 0) {
+      worker_log(worker, LOG_ERR, "Division by zero");
+      return APR_EINVAL;
+    }
+    result = ileft / iright;
+  }
+  else {
+    worker_log(worker, LOG_ERR, "Unknown operant %s", op);
+    return APR_ENOTIMPL;
+  }
+
+  /* store it do var */
+  worker_var_set(worker, param, apr_off_t_toa(ptmp, result));
+  
+  return APR_SUCCESS;
+}
+
+/**
+ * Generate a random number.
+ * @param worker IN worker instance
+ * @param parent IN caller
+ * @param ptmp IN temporary pool for this function
+ * @return APR_SUCCESS or APR_EINVAL if expression is incorrect
+ */
+static apr_status_t block_MATH_RAND(worker_t *worker, worker_t *parent, 
+                                    apr_pool_t *ptmp) {
+  int start;
+  int end;
+  int result;
+
+  const char *val = store_get(worker->params, "1");
+  if (val == NULL) {
+    worker_log(worker, LOG_ERR, "No start defined");
+    return APR_EINVAL;
+  }
+  start = apr_atoi64(val);
+
+  val = store_get(worker->params, "2");
+  if (val == NULL) {
+    worker_log(worker, LOG_ERR, "No end defined");
+    return APR_EINVAL;
+  }
+  end = apr_atoi64(val);
+
+  val = store_get(worker->params, "3");
+  if (val == NULL) {
+    worker_log(worker, LOG_ERR, "No variable name specified");
+    return APR_EINVAL;
+  }
+  
+  result = start + (rand() % (end - start)); 
+
+  worker_var_set(worker, val, apr_itoa(ptmp, result));
+
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Module
  ***********************************************************************/
@@ -344,5 +461,19 @@ apr_status_t math_module_init(global_t * global) {
     return status;
   }
 
+  if ((status =
+       module_command_new(global, "MATH", "_OP", "<left> ADD|SUB|DIV|MUL <right> <variable>",
+                          "Legacy math evaluator use _MATH:EVAL instead",
+                          block_MATH_OP)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status =
+       module_command_new(global, "MATH", "_RAND", "<start> <end> <var>",
+                          "Generates a number between <start> and <end> and stores result in"
+			  "<var>",
+                          block_MATH_RAND)) != APR_SUCCESS) {
+    return status;
+  }
   return APR_SUCCESS;
 }

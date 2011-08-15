@@ -2407,44 +2407,6 @@ apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * RAND command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN header name (spaces are possible) 
- *
- * @return APR_SUCCESS
- */
-apr_status_t command_RAND(command_t *self, worker_t *worker, char *data, 
-                          apr_pool_t *ptmp) {
-  char *copy;
-  char *val;
-  char *last;
-  int start;
-  int end;
-  int result;
-
-  COMMAND_NEED_ARG("Need a start and end number and a variable"); 
-  
-  val = apr_strtok(copy, " ", &last);
-  start = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  end = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-
-  if (val == NULL) {
-    worker_log(worker, LOG_ERR, "No variable name specified");
-    return APR_EINVAL;
-  }
-  
-  result = start + (rand() % (end - start)); 
-
-  worker_var_set(worker, val, apr_itoa(ptmp, result));
-
-  return APR_SUCCESS;
-}
-
-/**
  * DEBUG command
  *
  * @param self IN command

@@ -104,7 +104,7 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
   if ((status = apr_socket_recvfrom(config->recvfrom, worker->socket->socket, 0, buf, size)) != APR_SUCCESS) {
     return status;
   }
-  return APR_ENOTIMPL; 
+  return APR_SUCCESS; 
 }
 
 /**
@@ -153,8 +153,8 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
                                       apr_pool_t *ptmp) {
   apr_status_t status;
   int port;
+  udp_socket_config_t *config;
 
-  udp_socket_config_t *config = udp_get_socket_config(worker);
   int family = APR_INET;
   char *hostname = store_get_copy(worker->params, ptmp, "1");
   const char *portname = store_get(worker->params, "2");
@@ -172,6 +172,8 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   /** create udp socket first */
   worker_get_socket(worker, hostname, 
                     apr_pstrcat(ptmp, portname, ":", "udp", NULL));
+
+  config = udp_get_socket_config(worker);
 
 #if APR_HAVE_IPV6
   /* hostname/address must be surrounded in square brackets */
@@ -200,6 +202,8 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   }
 
   config->recvfrom = config->sendto;
+
+  /** XXX: install transport */
 
   return APR_SUCCESS;
 }
@@ -251,6 +255,8 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
     worker_log_error(worker, "Could not bind to host port \"%d\"", port);
     return status;
   }
+
+  /** XXX: install transport */
 
   return APR_SUCCESS;
 }
