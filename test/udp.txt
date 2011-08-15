@@ -1,0 +1,3 @@
+
+EXPECT .: Did expect "foo2"                                                             
+udp.hte:9: error: CLT0-0 Invalid argument(22)                                            FAILED
