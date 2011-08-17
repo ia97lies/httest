@@ -68,7 +68,8 @@
  * Definitions 
  ***********************************************************************/
 enum {
-  MATH_ADD = 0,
+  MATH_NONE = 0,
+  MATH_ADD,
   MATH_SUB,
   MATH_MUL,
   MATH_DIV,
@@ -94,6 +95,7 @@ struct math_eval_s {
   apr_size_t i;
   apr_size_t len;
   int last_number;
+  int cur_token;
 };
 
 typedef struct math_elem_s math_elem_t;
@@ -106,6 +108,9 @@ struct math_elem_s {
   math_op_f op;
 };
 
+static apr_status_t math_parse_expression(math_eval_t *hook);
+static apr_status_t math_parse_term(math_eval_t *hook);
+static apr_status_t math_parse_factor(math_eval_t *hook);
 
 /************************************************************************
  * Globals 
@@ -141,7 +146,7 @@ static char math_next_char(math_eval_t *hook) {
  * @param hook IN eval instance
  * @return lookahead char or \0 if end of line
  */
-static char math_peek(math_eval_t *hook) {
+static char math_peek_char(math_eval_t *hook) {
   if (hook->i < hook->len) {
     return hook->line[hook->i];
   }
@@ -171,7 +176,7 @@ static char math_lookahead(math_eval_t *hook) {
 static void math_get_number(math_eval_t *hook) {
   const char *number;
   apr_size_t start = hook->i;
-  while (apr_isdigit(math_peek(hook))) math_next_char(hook);
+  while (apr_isdigit(math_peek_char(hook))) math_next_char(hook);
   number = apr_pstrndup(hook->pool, &hook->line[start], hook->i - start);
   hook->last_number = apr_atoi64(number);
 }
@@ -181,14 +186,14 @@ static void math_get_number(math_eval_t *hook) {
  * @param hook IN eval instance
  * @return token
  */
-static int math_get_token(math_eval_t *hook) {
+static int math_get_next_token(math_eval_t *hook) {
   char c;
   math_skip_space(hook);
-  while ((c = math_peek(hook))) {
+  while ((c = math_peek_char(hook))) {
     switch (c) {
     case '=':
-      math_next_char(hook);
       if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
 	math_next_char(hook);
 	return MATH_EQ;
       }
@@ -197,8 +202,8 @@ static int math_get_token(math_eval_t *hook) {
       }
       break;
     case '<': 
-      math_next_char(hook);
       if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
 	math_next_char(hook);
 	return MATH_LE;
       }
@@ -207,8 +212,8 @@ static int math_get_token(math_eval_t *hook) {
       }
       break;
     case '>': 
-      math_next_char(hook);
       if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
 	math_next_char(hook);
 	return MATH_BE;
       }
@@ -264,6 +269,21 @@ static int math_get_token(math_eval_t *hook) {
   return MATH_EOF;
 }
 
+static int math_get_token(math_eval_t *hook) {
+  hook->cur_token = math_get_next_token(hook);
+  return hook->cur_token;
+}
+
+static int math_peek_token(math_eval_t *hook) {
+  if (hook->cur_token) {
+    return hook->cur_token;
+  }
+  else {
+    math_get_token(hook);
+    return hook->cur_token;
+  }
+}
+
 /**
  * execute stack
  * @param hook IN eval instance
@@ -298,6 +318,107 @@ static apr_status_t math_execute(math_eval_t * hook, long *val) {
     return APR_EINVAL;
   }
 }
+/**
+ * factor = constant | "(" expression ")";
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t math_parse_factor(math_eval_t *hook) {
+  int token; 
+
+  token = math_peek_token(hook);
+  switch (token) {
+  case MATH_NUM:
+    fprintf(stderr, "\n%d", hook->last_number);
+    math_get_token(hook);
+    return APR_SUCCESS;
+    break;
+  case MATH_PARENT_L:
+    return math_parse_expression(hook);
+    token = math_get_token(hook);
+    if (token != MATH_PARENT_R) {
+      return APR_EINVAL;
+    }
+    math_get_token(hook);
+    return APR_SUCCESS;
+    break;
+  default:
+    return APR_EINVAL;
+    break;
+  }
+}
+ 
+/**
+ * term = factor { "*"|"/" factor }
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t math_parse_term(math_eval_t *hook) {
+  int token; 
+  apr_status_t status;
+  
+  if ((status = math_parse_factor(hook)) != APR_SUCCESS) {
+    return status;
+  }
+
+  token = math_peek_token(hook);
+  while (token != MATH_EOF) {
+    switch (token) {
+    case MATH_MUL:
+      math_get_token(hook);
+      break;
+    case MATH_DIV:
+      math_get_token(hook);
+      break;
+    default:
+      return APR_SUCCESS;
+      break;
+    }
+    
+    if ((status = math_parse_factor(hook)) != APR_SUCCESS) {
+      return status;
+    }
+    fprintf(stderr, "\nOP: %d", token);
+    token = math_peek_token(hook);
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * expression = term { "+"|"-" term }
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t math_parse_expression(math_eval_t *hook) {
+  int token; 
+  apr_status_t status;
+  
+  if ((status = math_parse_term(hook)) != APR_SUCCESS) {
+    return status;
+  }
+
+  token = math_peek_token(hook);
+  while (token != MATH_EOF) {
+    switch (token) {
+    case MATH_ADD:
+      math_get_token(hook);
+      break;
+    case MATH_SUB:
+      math_get_token(hook);
+      break;
+    default:
+      return APR_EINVAL;
+      break;
+    }
+    
+    if ((status = math_parse_term(hook)) != APR_SUCCESS) {
+      return status;
+    }
+    fprintf(stderr, "\nOP: %d", token);
+    token = math_peek_token(hook);
+  }
+  return APR_SUCCESS;
+}
 
 /**
  * Parse expression line
@@ -305,21 +426,9 @@ static apr_status_t math_execute(math_eval_t * hook, long *val) {
  * @return APR_SUCCESS or APR_EINVAL
  */
 static apr_status_t math_parse(math_eval_t * hook) {
-  int token;
-  token = math_get_token(hook);
-    fprintf(stderr, "\nXXX: %d", token);
-    fflush(stderr);
-  while (token != MATH_ERR && token != MATH_EOF) {
-    token = math_get_token(hook);
-    fprintf(stderr, "\nXXX: %d", token);
-    fflush(stderr);
-  }
-  if (token == MATH_ERR) {
-    return APR_EINVAL;
-  }
-  else {
-    return APR_SUCCESS;
-  }
+  apr_status_t status = math_parse_expression(hook);
+  fflush(stderr);
+  return status;
 }
 
 /**
