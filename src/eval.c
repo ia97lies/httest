@@ -25,6 +25,25 @@
  * @Author christian liesch <liesch@gmx.ch>
  *
  * Implementation of the HTTP Test Tool math module 
+ *
+ * infix notation
+ * !(4 + 5 * 8 * (4 + 1) / 5 < 6)
+ *
+ * stack interpreter postfix notation =>
+ *
+ * => result is 1
+ *
+ * EBNF Description
+ * boolexpr   = boolterm {"||" boolterm};
+ * boolterm   = boolfactor {"&&" boolfactor};
+ * boolfactor = equalit | expression | constant
+ * equalit    = expression "==" | "!=" | ">" | ">=" | "<" | "<=" expression;
+ * expression = term  {"+" term};
+ * term       = factor {"*" factor};
+ * factor     = constant | "(" expression ")";
+ * constant   = digit {digit};
+ * digit      = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+ *
  */
 
 /************************************************************************
@@ -36,7 +55,11 @@
 #include <ctype.h>
 #include <math.h>
 
+/* Use STACK from openssl to sort commands */
+#include <openssl/ssl.h>
+
 #include <apr.h>
+#include <apr_lib.h>
 #include <apr_strings.h>
 
 #include "eval.h"
@@ -44,33 +67,44 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-#define NUL '\0'
-
-typedef enum
-{ R_ERROR = -2 /* range */ , ERROR /* syntax */ , SUCCESS } STATUS;
+enum {
+  MATH_ADD = 0,
+  MATH_SUB,
+  MATH_MUL,
+  MATH_DIV,
+  MATH_NOT,
+  MATH_EQ,
+  MATH_NE,
+  MATH_BT,
+  MATH_BE,
+  MATH_LT,
+  MATH_LE,
+  MATH_PARENT_L,
+  MATH_PARENT_R,
+  MATH_NUM,
+  MATH_EOF,
+  MATH_ERR
+} math_token_e;
 
 struct math_eval_s {
-  char *delims;                 /* Tokens               */
-  char op_stack[256];           /* Operator stack       */
-  long arg_stack[256];          /* Argument stack       */
-  char token[256];              /* Token buffer         */
-  int op_sptr;                  /* op_stack pointer     */
-  int arg_sptr;                 /* arg_stack pointer    */
-  int parens;                   /* Nesting level        */
-  int state;                    /* 0 = Awaiting expression
-                                   1 = Awaiting operator
-                                 */
+  apr_pool_t *pool;
+  const char *delimiter;
+  STACK_OF(char) *stack;
+  const char *line;
+  apr_size_t i;
+  apr_size_t len;
+  int last_number;
 };
 
-static int math_eval_op(math_eval_t * hook);
-static int math_eval_paren(math_eval_t * hook);
-static void math_eval_push_op(math_eval_t * hook, char op);
-static void math_eval_push_arg(math_eval_t * hook, long arg);
-static STATUS math_eval_pop_arg(math_eval_t * hook, long *arg);
-static STATUS math_eval_pop_op(math_eval_t * hook, int *arg);
-static char *math_eval_getexp(math_eval_t * hook, char *exp);
-static char *math_eval_getop(math_eval_t * hook, char *op);
-static void math_eval_pack(math_eval_t * hook, char *);
+typedef struct math_elem_s math_elem_t;
+
+typedef math_elem_t *(*math_op_f)(math_eval_t *hook, math_elem_t *left, 
+                                  math_elem_t *right);
+
+struct math_elem_s {
+  int number;
+  math_op_f op;
+};
 
 
 /************************************************************************
@@ -80,228 +114,243 @@ static void math_eval_pack(math_eval_t * hook, char *);
 /************************************************************************
  * Local 
  ***********************************************************************/
+/**
+ * skip spaces
+ * @param hook IN eval instance
+ */
+static void math_skip_space(math_eval_t *hook) {
+  for (; hook->i < hook->len && hook->line[hook->i] == ' '; hook->i++);
+}
+
+/**
+ * get next char and increase read pointer.
+ * @param hook IN eval instance
+ * @return char or \0 if end of line
+ */
+static char math_next_char(math_eval_t *hook) {
+  if (hook->i < hook->len) {
+    return hook->line[hook->i++];
+  }
+  else {
+    return '\0';
+  }
+}
+
+/**
+ * look a head on char but do not increase read pointer.
+ * @param hook IN eval instance
+ * @return lookahead char or \0 if end of line
+ */
+static char math_peek(math_eval_t *hook) {
+  if (hook->i < hook->len) {
+    return hook->line[hook->i];
+  }
+  else {
+    return '\0';
+  }
+}
+
+/**
+ * look a head on char but do not increase read pointer.
+ * @param hook IN eval instance
+ * @return lookahead char or \0 if end of line
+ */
+static char math_lookahead(math_eval_t *hook) {
+  if (hook->i < hook->len) {
+    return hook->line[hook->i+1];
+  }
+  else {
+    return '\0';
+  }
+}
+
+/**
+ * Get number from given possition
+ * @param hook IN eval instance
+ */
+static void math_get_number(math_eval_t *hook) {
+  const char *number;
+  apr_size_t start = hook->i;
+  while (apr_isdigit(math_peek(hook))) math_next_char(hook);
+  number = apr_pstrndup(hook->pool, &hook->line[start], hook->i - start);
+  hook->last_number = apr_atoi64(number);
+}
+
+/**
+ * get next token from line
+ * @param hook IN eval instance
+ * @return token
+ */
+static int math_get_token(math_eval_t *hook) {
+  char c;
+  math_skip_space(hook);
+  while ((c = math_peek(hook))) {
+    switch (c) {
+    case '=':
+      math_next_char(hook);
+      if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
+	return MATH_EQ;
+      }
+      else {
+	return MATH_ERR;
+      }
+      break;
+    case '<': 
+      math_next_char(hook);
+      if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
+	return MATH_LE;
+      }
+      else {
+	return MATH_LT;
+      }
+      break;
+    case '>': 
+      math_next_char(hook);
+      if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
+	return MATH_BE;
+      }
+      else {
+	return MATH_BT;
+      }
+      break;
+    case '!': 
+      math_next_char(hook);
+      if (math_lookahead(hook) == '=') {
+	math_next_char(hook);
+	return MATH_NE;
+      }
+      else {
+	return MATH_NOT;
+      }
+      break;
+    case '+': 
+      math_next_char(hook);
+      return MATH_ADD;
+      break;
+    case '-': 
+      math_next_char(hook);
+      return MATH_SUB;
+      break;
+    case '*': 
+      math_next_char(hook);
+      return MATH_MUL;
+      break;
+    case '/': 
+      math_next_char(hook);
+      return MATH_DIV;
+      break;
+    case '(': 
+      math_next_char(hook);
+      return MATH_PARENT_L;
+      break;
+    case ')': 
+      math_next_char(hook);
+      return MATH_PARENT_R;
+      break;
+    default:
+      if (apr_isdigit(c)) {
+	math_get_number(hook);
+	return MATH_NUM;
+      }
+      else {
+      	return MATH_ERR;
+      }
+      break;
+    }
+  }
+  return MATH_EOF;
+}
+
+/**
+ * execute stack
+ * @param hook IN eval instance
+ * @param val OUT result
+ * @return APR_SUCCESS or APR_EINVAL 
+ */
+static apr_status_t math_execute(math_eval_t * hook, long *val) {
+  math_elem_t *elem;
+  math_elem_t *left = NULL;
+  math_elem_t *right = NULL;
+
+  elem = SKM_sk_pop(math_elem_t, hook->stack); 
+  while (elem) {
+    if (elem->op) {
+      SKM_sk_push(math_elem_t, hook->stack, elem->op(hook, left, right));
+      left = NULL;
+      right = NULL;
+    }
+    else if (left == NULL) {
+      left = elem;
+    }
+    else if (right == NULL) {
+      right = elem;
+    }
+    elem = SKM_sk_pop(math_elem_t, hook->stack); 
+  }
+  if (left) {
+    *val = left->number;
+    return APR_SUCCESS;
+  }
+  else {
+    return APR_EINVAL;
+  }
+}
+
+/**
+ * Parse expression line
+ * @param hook IN eval instance
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t math_parse(math_eval_t * hook) {
+  int token;
+  token = math_get_token(hook);
+    fprintf(stderr, "\nXXX: %d", token);
+    fflush(stderr);
+  while (token != MATH_ERR && token != MATH_EOF) {
+    token = math_get_token(hook);
+    fprintf(stderr, "\nXXX: %d", token);
+    fflush(stderr);
+  }
+  if (token == MATH_ERR) {
+    return APR_EINVAL;
+  }
+  else {
+    return APR_SUCCESS;
+  }
+}
+
+/**
+ * Create new instance of evaluator
+ * @param pool IN pool
+ * @return eval instance
+ */
 math_eval_t *math_eval_make(apr_pool_t * pool) {
   math_eval_t *hook = apr_pcalloc(pool, sizeof(*hook));
-
-  hook->delims = apr_pstrdup(pool, "+-*/^)(");
-  hook->state = 0;
+  hook->pool = pool; 
+  hook->stack = SKM_sk_new_null(char);
+  hook->delimiter = apr_pstrdup(pool, "+-*/=<>!()");
 
   return hook;
 }
 
-/*
-**  Evaluate a mathematical expression
-*/
-int math_evaluate(math_eval_t * hook, char *line, long *val) {
-  long arg;
-  char *ptr = line, *str, *endptr;
-  int ercode;
+/**
+ * Evaluate math expression 
+ * @param hook IN eval instance
+ * @param line IN line to parse
+ * @param val OUT result
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+apr_status_t math_evaluate(math_eval_t * hook, char *line, long *val) {
+  apr_status_t status;
 
-  math_eval_pack(hook, line);
-
-  while (*ptr) {
-    switch (hook->state) {
-    case 0:
-      if (NULL != (str = math_eval_getexp(hook, ptr))) {
-        if ('(' == *str) {
-          math_eval_push_op(hook, *str);
-          ptr += strlen(str);
-          break;
-        }
-
-        if (0.0 == (arg = strtod(str, &endptr)) && NULL == strchr(str, '0')) {
-          return ERROR;
-        }
-        math_eval_push_arg(hook, arg);
-        ptr += strlen(str);
-      }
-      else
-        return ERROR;
-
-      hook->state = 1;
-      break;
-
-    case 1:
-      if (NULL == (str = math_eval_getop(hook, ptr)))
-        return ERROR;
-
-      if (strchr(hook->delims, *str)) {
-        if (')' == *str) {
-          if (SUCCESS > (ercode = math_eval_paren(hook)))
-            return ercode;
-        }
-        else {
-          math_eval_push_op(hook, *str);
-          hook->state = 0;
-        }
-
-        ptr += strlen(str);
-      }
-      else
-        return ERROR;
-
-      break;
-    }
+  hook->line = line; 
+  hook->len = strlen(line);
+  if ((status = math_parse(hook)) != APR_SUCCESS) {
+    return status;
   }
-
-  while (1 < hook->arg_sptr) {
-    if (SUCCESS > (ercode = math_eval_op(hook)))
-      return ercode;
-  }
-  if (!hook->op_sptr)
-    return math_eval_pop_arg(hook, val);
-  else
-    return ERROR;
-}
-
-/*
-**  Evaluate stacked arguments and operands
-*/
-static int math_eval_op(math_eval_t * hook) {
-  long arg1, arg2;
-  int op;
-
-  if (ERROR == math_eval_pop_op(hook, &op))
-    return ERROR;
-
-  math_eval_pop_arg(hook, &arg1);
-  math_eval_pop_arg(hook, &arg2);
-
-  switch (op) {
-  case '+':
-    math_eval_push_arg(hook, arg2 + arg1);
-    break;
-
-  case '-':
-    math_eval_push_arg(hook, arg2 - arg1);
-    break;
-
-  case '*':
-    math_eval_push_arg(hook, arg2 * arg1);
-    break;
-
-  case '/':
-    if (0.0 == arg1)
-      return R_ERROR;
-    math_eval_push_arg(hook, arg2 / arg1);
-    break;
-
-  case '^':
-    if (0.0 > arg2)
-      return R_ERROR;
-    math_eval_push_arg(hook, pow(arg2, arg1));
-    break;
-
-  case '(':
-    hook->arg_sptr += 2;
-    break;
-
-  default:
-    return ERROR;
-  }
-  if (1 > hook->arg_sptr)
-    return ERROR;
-  else
-    return op;
-}
-
-/*
-**  Evaluate one level
-*/
-static int math_eval_paren(math_eval_t * hook) {
-  int op;
-
-  if (1 > hook->parens--)
-    return ERROR;
-  do {
-    if (SUCCESS > (op = math_eval_op(hook)))
-      break;
-  } while ('(' != op);
-  return op;
-}
-
-/*
-**  Stack operations
-*/
-static void math_eval_push_op(math_eval_t * hook, char op) {
-  if ('(' == op)
-    ++hook->parens;
-  hook->op_stack[hook->op_sptr++] = op;
-}
-
-static void math_eval_push_arg(math_eval_t * hook, long arg) {
-  hook->arg_stack[hook->arg_sptr++] = arg;
-}
-
-static STATUS math_eval_pop_arg(math_eval_t * hook, long *arg) {
-  *arg = hook->arg_stack[--hook->arg_sptr];
-  if (0 > hook->arg_sptr)
-    return ERROR;
-  else
-    return SUCCESS;
-}
-
-static STATUS math_eval_pop_op(math_eval_t * hook, int *op) {
-  if (!hook->op_sptr)
-    return ERROR;
-  *op = hook->op_stack[--hook->op_sptr];
-  return SUCCESS;
-}
-
-/*
-**  Get an expression
-*/
-static char *math_eval_getexp(math_eval_t * hook, char *str) {
-  char *ptr = str, *tptr = hook->token;
-
-  while (*ptr) {
-    if (strchr(hook->delims, *ptr)) {
-      if ('-' == *ptr) {
-        if (str != ptr && 'E' != ptr[-1])
-          break;
-      }
-
-      else if (str == ptr)
-        return math_eval_getop(hook, str);
-
-      else if ('E' == *ptr) {
-        if (!isdigit(ptr[1]) && '-' != ptr[1])
-          return NULL;
-      }
-      else
-        break;
-    }
-
-    *tptr++ = *ptr++;
-  }
-  *tptr = NUL;
-
-  return hook->token;
-}
-
-/*
-**  Get an operator
-*/
-static char *math_eval_getop(math_eval_t * hook, char *str) {
-  *hook->token = *str;
-  hook->token[1] = NUL;
-  return hook->token;
-}
-
-/*
-**  Remove whitespace & capitalize
-*/
-static void math_eval_pack(math_eval_t * hook, char *str) {
-  char *ptr = str, *p;
-
-  //toupper(str);
-
-  for (; *ptr; ++ptr) {
-    p = ptr;
-    while (*p && isspace(*p))
-      ++p;
-    if (ptr != p)
-      strcpy(ptr, p);
-  }
+  return math_execute(hook, val);
 }
 
