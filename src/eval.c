@@ -73,6 +73,8 @@ enum {
   MATH_SUB,
   MATH_MUL,
   MATH_DIV,
+  MATH_MOD,
+  MATH_POWER,
   MATH_NOT,
   MATH_EQ,
   MATH_NE,
@@ -90,22 +92,12 @@ enum {
 struct math_eval_s {
   apr_pool_t *pool;
   const char *delimiter;
-  STACK_OF(char) *stack;
+  STACK_OF(int) *stack;
   const char *line;
   apr_size_t i;
   apr_size_t len;
   int last_number;
   int cur_token;
-};
-
-typedef struct math_elem_s math_elem_t;
-
-typedef math_elem_t *(*math_op_f)(math_eval_t *hook, math_elem_t *left, 
-                                  math_elem_t *right);
-
-struct math_elem_s {
-  int number;
-  math_op_f op;
 };
 
 static apr_status_t math_parse_expression(math_eval_t *hook);
@@ -247,6 +239,14 @@ static int math_get_next_token(math_eval_t *hook) {
       math_next_char(hook);
       return MATH_DIV;
       break;
+    case '%': 
+      math_next_char(hook);
+      return MATH_MOD;
+      break;
+    case '^': 
+      math_next_char(hook);
+      return MATH_POWER;
+      break;
     case '(': 
       math_next_char(hook);
       return MATH_PARENT_L;
@@ -269,11 +269,21 @@ static int math_get_next_token(math_eval_t *hook) {
   return MATH_EOF;
 }
 
+/**
+ * get next token from line and store it for peek.
+ * @param hook IN math instance
+ * @return token
+ */
 static int math_get_token(math_eval_t *hook) {
   hook->cur_token = math_get_next_token(hook);
   return hook->cur_token;
 }
 
+/**
+ * peek current token if any else get first token.
+ * @param hook IN math instance
+ * @return token
+ */
 static int math_peek_token(math_eval_t *hook) {
   if (hook->cur_token) {
     return hook->cur_token;
@@ -285,51 +295,20 @@ static int math_peek_token(math_eval_t *hook) {
 }
 
 /**
- * execute stack
- * @param hook IN eval instance
- * @param val OUT result
- * @return APR_SUCCESS or APR_EINVAL 
- */
-static apr_status_t math_execute(math_eval_t * hook, long *val) {
-  math_elem_t *elem;
-  math_elem_t *left = NULL;
-  math_elem_t *right = NULL;
-
-  elem = SKM_sk_pop(math_elem_t, hook->stack); 
-  while (elem) {
-    if (elem->op) {
-      SKM_sk_push(math_elem_t, hook->stack, elem->op(hook, left, right));
-      left = NULL;
-      right = NULL;
-    }
-    else if (left == NULL) {
-      left = elem;
-    }
-    else if (right == NULL) {
-      right = elem;
-    }
-    elem = SKM_sk_pop(math_elem_t, hook->stack); 
-  }
-  if (left) {
-    *val = left->number;
-    return APR_SUCCESS;
-  }
-  else {
-    return APR_EINVAL;
-  }
-}
-/**
  * factor = constant | "(" expression ")";
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
 static apr_status_t math_parse_factor(math_eval_t *hook) {
   int token; 
+  long *number;
 
   token = math_peek_token(hook);
   switch (token) {
   case MATH_NUM:
-    fprintf(stderr, "\n%d", hook->last_number);
+    number = apr_pcalloc(hook->pool, sizeof(*number));
+    *number = hook->last_number;
+    SKM_sk_push(long, hook->stack, number);
     math_get_token(hook);
     return APR_SUCCESS;
     break;
@@ -356,6 +335,9 @@ static apr_status_t math_parse_factor(math_eval_t *hook) {
 static apr_status_t math_parse_term(math_eval_t *hook) {
   int token; 
   apr_status_t status;
+  long *right;
+  long *left;
+  long *result;
   
   if ((status = math_parse_factor(hook)) != APR_SUCCESS) {
     return status;
@@ -363,22 +345,39 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
 
   token = math_peek_token(hook);
   while (token != MATH_EOF) {
-    switch (token) {
-    case MATH_MUL:
+    if (token == MATH_MUL || token == MATH_DIV || token == MATH_POWER ||
+	token == MATH_MOD) {
       math_get_token(hook);
-      break;
-    case MATH_DIV:
-      math_get_token(hook);
-      break;
-    default:
-      return APR_SUCCESS;
-      break;
     }
-    
+    else {
+      return APR_SUCCESS;
+    }
+   
     if ((status = math_parse_factor(hook)) != APR_SUCCESS) {
       return status;
     }
-    fprintf(stderr, "\nOP: %d", token);
+
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
+    result = apr_pcalloc(hook->pool, sizeof(*result));
+    switch (token) {
+    case MATH_MUL:
+      *result = *left * *right;
+      break;
+    case MATH_DIV:
+      *result = *left / *right;
+      break;
+    case MATH_MOD:
+      *result = *left % *right;
+      break;
+    case MATH_POWER:
+      return APR_EINVAL;
+      break;
+    default:
+      break;
+    }
+    SKM_sk_push(long, hook->stack, result);
+ 
     token = math_peek_token(hook);
   }
   return APR_SUCCESS;
@@ -392,6 +391,9 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
 static apr_status_t math_parse_expression(math_eval_t *hook) {
   int token; 
   apr_status_t status;
+  long *right;
+  long *left;
+  long *result;
   
   if ((status = math_parse_term(hook)) != APR_SUCCESS) {
     return status;
@@ -399,22 +401,32 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
 
   token = math_peek_token(hook);
   while (token != MATH_EOF) {
-    switch (token) {
-    case MATH_ADD:
+    if (token == MATH_ADD || token == MATH_SUB) {
       math_get_token(hook);
-      break;
-    case MATH_SUB:
-      math_get_token(hook);
-      break;
-    default:
+    }
+    else {
       return APR_EINVAL;
-      break;
     }
     
     if ((status = math_parse_term(hook)) != APR_SUCCESS) {
       return status;
     }
-    fprintf(stderr, "\nOP: %d", token);
+
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
+    result = apr_pcalloc(hook->pool, sizeof(*result));
+    switch (token) {
+    case MATH_ADD:
+      *result = *left + *right;
+      break;
+    case MATH_SUB:
+      *result = *left - *right;
+      break;
+    default:
+      break;
+    }
+    SKM_sk_push(long, hook->stack, result);
+
     token = math_peek_token(hook);
   }
   return APR_SUCCESS;
@@ -425,11 +437,18 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
  * @param hook IN eval instance
  * @return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t math_parse(math_eval_t * hook) {
+static apr_status_t math_parse(math_eval_t * hook, long *val) {
+  long *result;
   apr_status_t status = math_parse_expression(hook);
-  fflush(stderr);
+  result = SKM_sk_pop(long, hook->stack);
+  *val = *result;
   return status;
 }
+
+
+/************************************************************************
+ * public interface 
+ ***********************************************************************/
 
 /**
  * Create new instance of evaluator
@@ -457,9 +476,10 @@ apr_status_t math_evaluate(math_eval_t * hook, char *line, long *val) {
 
   hook->line = line; 
   hook->len = strlen(line);
-  if ((status = math_parse(hook)) != APR_SUCCESS) {
+  if ((status = math_parse(hook, val)) != APR_SUCCESS) {
     return status;
   }
-  return math_execute(hook, val);
+  /* get result from stack */
+  return APR_SUCCESS;
 }
 
