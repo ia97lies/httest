@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_IF (10 < 2)
+  _EXIT FAILED
+_END IF
+
+_IF (4*5 > 5*4)
+  _EXIT FAILED
+_END IF
+ _IF (1 + 3 + 4*(5-3) < 20) 
+  _IF (1 == 1)
+    _EXIT OK
+  _END IF
+END

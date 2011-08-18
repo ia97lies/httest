@@ -67,6 +67,7 @@
 #include "util.h"
 #include "worker.h"
 #include "module.h"
+#include "eval.h"
 
 /************************************************************************
  * Defines 
@@ -247,11 +248,10 @@ command_t local_commands[] = {
   {"_SEQUENCE", (command_f )command_MATCH_SEQ, "<var-sequence>", 
    "Define a sequence of _MATCH variables which must apear in this order",
   COMMAND_FLAGS_NONE},
-  {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"", 
-  "Test if variable do or do not match the regex, close body with _END IF,\n"
-  "negation with a leading '!' in the <regex>,\n"
-  "<expression> must not be empty",
-  COMMAND_FLAGS_NONE},
+  {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
+   "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
+   "negation with a leading '!' in the <regex>",
+   COMMAND_FLAGS_NONE},
   {"_LOOP", (command_f )command_LOOP, "<n>", 
   "Do loop the body <n> times,\n"
   "close body with _END LOOP",
@@ -617,86 +617,108 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
   int not = 0;
   int else_pos = 0;
  
-  COMMAND_NEED_ARG("Need left operant right parameters");
+  COMMAND_NEED_ARG("Need left operant right parameters or an condition");
   
-  ++copy;
-  left = apr_strtok(copy, "\"", &last);
-  middle = apr_strtok(NULL, " ", &last);
-  if (strcmp(middle, "NOT") == 0) {
-    not = 1;
-    middle = apr_strtok(NULL, " ", &last);
-  }
-  right = apr_strtok(NULL, "\"", &last);
- 
-  if (!left || !middle || !right) {
-    worker_log(worker, LOG_ERR, "%s: Syntax error '%s'", self->name, data);
-    return APR_EGENERAL;
-  }
-  
-  if (right[0] == '!') {
-    not = 1;
-    ++right;
-  }
- 
-  if (strcmp(middle, "MATCH") == 0) {
-    if (!(compiled = pregcomp(ptmp, right, &err, &off))) {
-      worker_log(worker, LOG_ERR, "IF MATCH regcomp failed: %s", right);
+  if (copy[0] == '(') {
+    /* expression evaluation */
+    apr_size_t len;
+    long val;
+    math_eval_t *math = math_eval_make(ptmp);
+    ++copy;
+    len = strlen(copy);
+    if (len < 1) {
+      worker_log_error(worker, "Empty condition");
       return APR_EINVAL;
     }
-    len = strlen(left);
-    if ((regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) == 0 && !not) ||
-	(regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) != 0 && not)) {
-      doit = 1;
+    copy[len-1] = 0;
+
+    if ((status = math_evaluate(math, copy, &val)) != APR_SUCCESS) {
+      worker_log_error(worker, "Invalid condition");
+      return status;
     }
+    doit = val;
   }
-  else if (strcmp(middle, "EQUAL") == 0) {
-    if (strcmp(left, right) == 0) {
-      if (!not) {
+  else if (copy[0] =='"') {
+    /* old behavour */
+    ++copy;
+    left = apr_strtok(copy, "\"", &last);
+    middle = apr_strtok(NULL, " ", &last);
+    if (strcmp(middle, "NOT") == 0) {
+      not = 1;
+      middle = apr_strtok(NULL, " ", &last);
+    }
+    right = apr_strtok(NULL, "\"", &last);
+   
+    if (!left || !middle || !right) {
+      worker_log(worker, LOG_ERR, "%s: Syntax error '%s'", self->name, data);
+      return APR_EGENERAL;
+    }
+    
+    if (right[0] == '!') {
+      not = 1;
+      ++right;
+    }
+   
+    if (strcmp(middle, "MATCH") == 0) {
+      if (!(compiled = pregcomp(ptmp, right, &err, &off))) {
+	worker_log(worker, LOG_ERR, "IF MATCH regcomp failed: %s", right);
+	return APR_EINVAL;
+      }
+      len = strlen(left);
+      if ((regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) == 0 && !not) ||
+	  (regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) != 0 && not)) {
 	doit = 1;
       }
+    }
+    else if (strcmp(middle, "EQUAL") == 0) {
+      if (strcmp(left, right) == 0) {
+	if (!not) {
+	  doit = 1;
+	}
+	else {
+	  if (not) {
+	    doit = 0;
+	  }
+	}
+      }
       else {
-        if (not) {
-          doit = 0;
-        }
+	if (not) {
+	  doit = 1;
+	}
       }
     }
     else {
-      if (not) {
-	doit = 1;
+      left_val = apr_atoi64(left);
+      right_val = apr_atoi64(right);
+      if (strcmp(middle, "EQ") == 0) {
+	if ((left_val == right_val && !not) ||
+	    (left_val != right_val && not)) {
+	  doit = 1;
+	}
       }
-    }
-  }
-  else {
-    left_val = apr_atoi64(left);
-    right_val = apr_atoi64(right);
-    if (strcmp(middle, "EQ") == 0) {
-      if ((left_val == right_val && !not) ||
-	  (left_val != right_val && not)) {
-	doit = 1;
+      else if (strcmp(middle, "LT") == 0) {
+	if ((left_val < right_val && !not) ||
+	    (left_val >= right_val && not)) {
+	  doit = 1;
+	}
       }
-    }
-    else if (strcmp(middle, "LT") == 0) {
-      if ((left_val < right_val && !not) ||
-	  (left_val >= right_val && not)) {
-	doit = 1;
+      else if (strcmp(middle, "GT") == 0) {
+	if ((left_val > right_val && !not) ||
+	    (left_val <= right_val && not)) {
+	  doit = 1;
+	}
       }
-    }
-    else if (strcmp(middle, "GT") == 0) {
-      if ((left_val > right_val && !not) ||
-	  (left_val <= right_val && not)) {
-	doit = 1;
+      else if (strcmp(middle, "LE") == 0) {
+	if ((left_val <= right_val && !not) ||
+	    (left_val > right_val && not)) {
+	  doit = 1;
+	}
       }
-    }
-    else if (strcmp(middle, "LE") == 0) {
-      if ((left_val <= right_val && !not) ||
-	  (left_val > right_val && not)) {
-	doit = 1;
-      }
-    }
-    else if (strcmp(middle, "GE") == 0) {
-      if ((left_val >= right_val && !not) ||
-	  (left_val < right_val && not)) {
-	doit = 1;
+      else if (strcmp(middle, "GE") == 0) {
+	if ((left_val >= right_val && !not) ||
+	    (left_val < right_val && not)) {
+	  doit = 1;
+	}
       }
     }
   }
