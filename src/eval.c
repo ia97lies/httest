@@ -34,10 +34,7 @@
  * => result is 1
  *
  * EBNF Description
- * boolexpr   = boolterm {"||" boolterm};
- * boolterm   = boolfactor {"&&" boolfactor};
- * boolfactor = equalit | expression | constant
- * equalit    = expression "==" | "!=" | ">" | ">=" | "<" | "<=" expression;
+ * equalit    = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
  * expression = term  {"+" term};
  * term       = factor {"*" factor};
  * factor     = constant | "(" expression ")";
@@ -200,6 +197,7 @@ static int math_get_next_token(math_eval_t *hook) {
 	return MATH_LE;
       }
       else {
+	math_next_char(hook);
 	return MATH_LT;
       }
       break;
@@ -210,6 +208,7 @@ static int math_get_next_token(math_eval_t *hook) {
 	return MATH_BE;
       }
       else {
+	math_next_char(hook);
 	return MATH_BT;
       }
       break;
@@ -324,6 +323,10 @@ static apr_status_t math_parse_factor(math_eval_t *hook) {
   case MATH_PARENT_L:
     token = math_get_token(hook);
     status = math_parse_expression(hook);
+    token = math_peek_token(hook);
+    if (token != MATH_PARENT_R) {
+      return APR_EINVAL;
+    }
     token = math_get_token(hook);
     return status;
     break;
@@ -439,13 +442,73 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
 }
 
 /**
+ * equalit    = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t math_parse_equalit(math_eval_t *hook) {
+  int token; 
+  apr_status_t status;
+  long *right;
+  long *left;
+  long *result;
+  
+  if ((status = math_parse_expression(hook)) != APR_SUCCESS) {
+    return status;
+  }
+
+  token = math_peek_token(hook);
+  if (token != MATH_EOF) {
+    if (token == MATH_EQ || token == MATH_NE || token == MATH_BT ||
+	token == MATH_BE || token == MATH_LT || token == MATH_LE) {
+      math_get_token(hook);
+    }
+    else {
+      return APR_SUCCESS;
+    }
+    
+    if ((status = math_parse_expression(hook)) != APR_SUCCESS) {
+      return status;
+    }
+
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
+    result = apr_pcalloc(hook->pool, sizeof(*result));
+    switch (token) {
+    case MATH_EQ:
+      *result = *left == *right;
+      break;
+    case MATH_NE:
+      *result = *left != *right;
+      break;
+    case MATH_BT:
+      *result = *left > *right;
+      break;
+    case MATH_BE:
+      *result = *left >= *right;
+      break;
+    case MATH_LT:
+      *result = *left < *right;
+      break;
+    case MATH_LE:
+      *result = *left <= *right;
+      break;
+    default:
+      break;
+    }
+    SKM_sk_push(long, hook->stack, result);
+  }
+  return APR_SUCCESS;
+}
+
+/**
  * Parse expression line
  * @param hook IN eval instance
  * @return APR_SUCCESS or APR_EINVAL
  */
 static apr_status_t math_parse(math_eval_t * hook, long *val) {
   long *result;
-  apr_status_t status = math_parse_expression(hook);
+  apr_status_t status = math_parse_equalit(hook);
   result = SKM_sk_pop(long, hook->stack);
   *val = *result;
   return status;
