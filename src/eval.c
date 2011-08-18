@@ -300,26 +300,32 @@ static int math_peek_token(math_eval_t *hook) {
  * return APR_SUCCESS or APR_EINVAL
  */
 static apr_status_t math_parse_factor(math_eval_t *hook) {
+  apr_status_t status;
   int token; 
   long *number;
+  long sign = 1;
 
   token = math_peek_token(hook);
   switch (token) {
+  case MATH_ADD:
+    /* skip this, positiv number are positve :) */
+    math_get_token(hook);
+  case MATH_SUB:
+    /* store sign */
+    sign = -1;
+    math_get_token(hook);
   case MATH_NUM:
     number = apr_pcalloc(hook->pool, sizeof(*number));
-    *number = hook->last_number;
+    *number = hook->last_number * sign;
     SKM_sk_push(long, hook->stack, number);
     math_get_token(hook);
     return APR_SUCCESS;
     break;
   case MATH_PARENT_L:
-    return math_parse_expression(hook);
     token = math_get_token(hook);
-    if (token != MATH_PARENT_R) {
-      return APR_EINVAL;
-    }
-    math_get_token(hook);
-    return APR_SUCCESS;
+    status = math_parse_expression(hook);
+    token = math_get_token(hook);
+    return status;
     break;
   default:
     return APR_EINVAL;
@@ -371,7 +377,7 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
       *result = *left % *right;
       break;
     case MATH_POWER:
-      return APR_EINVAL;
+      *result = pow(*left, *right);
       break;
     default:
       break;
@@ -405,7 +411,7 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
       math_get_token(hook);
     }
     else {
-      return APR_EINVAL;
+      return APR_SUCCESS;
     }
     
     if ((status = math_parse_term(hook)) != APR_SUCCESS) {
