@@ -91,6 +91,7 @@ EXTRA_DIST= \
 	ifcond.htt \
 	ifelse.htt \
 	ifequal.htt \
+	ifeval.htt \
 	ifnumber.htt \
 	ifvareq.htt \
 	ignore_body.htt \
@@ -208,6 +209,9 @@ EXTRA_DIST= \
 	trace_on_failure.hte \
 	trace_on_failure.txt \
 	tunnel.htt \
+	udp.hte \
+	udp.htt \
+	udp.txt \
 	unicode.ntlm \
 	urldecode.htt \
 	urlencode.htt \
