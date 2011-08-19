@@ -24,6 +24,7 @@ EXTRA_DIST= \
 	block.txt \
 	block_var_missmatch.hte \
 	block_var_missmatch.txt \
+	block_var_params.htt \
 	bps.htt \
 	breakfor.htt \
 	break.htt \
