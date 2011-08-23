@@ -29,6 +29,6 @@
 typedef struct math_eval_s math_eval_t;
 
 math_eval_t *math_eval_make(apr_pool_t * pool); 
-apr_status_t math_evaluate(math_eval_t * hook, char *line, long *val); 
+apr_status_t math_evaluate(math_eval_t * hook, const char *line, long *val); 
 
 #endif

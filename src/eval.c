@@ -540,11 +540,15 @@ math_eval_t *math_eval_make(apr_pool_t * pool) {
  * @param val OUT result
  * @return APR_SUCCESS or APR_EINVAL
  */
-apr_status_t math_evaluate(math_eval_t * hook, char *line, long *val) {
+apr_status_t math_evaluate(math_eval_t * hook, const char *line, long *val) {
   apr_status_t status;
 
   hook->line = line; 
   hook->len = strlen(line);
+  hook->i = 0;
+  hook->last_number = 0;
+  hook->cur_token = 0;
+
   if ((status = math_parse(hook, val)) != APR_SUCCESS) {
     return status;
   }
