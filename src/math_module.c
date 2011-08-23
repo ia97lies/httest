@@ -86,7 +86,7 @@ static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent,
     return status;
   }
 
-  worker_var_set(worker, var, apr_ltoa(ptmp, val));
+  worker_var_set(parent, var, apr_ltoa(ptmp, val));
   return APR_SUCCESS;
 }
 
@@ -154,7 +154,7 @@ static apr_status_t block_MATH_OP(worker_t *worker, worker_t *parent,
   }
 
   /* store it do var */
-  worker_var_set(worker, param, apr_off_t_toa(ptmp, result));
+  worker_var_set(parent, param, apr_off_t_toa(ptmp, result));
   
   return APR_SUCCESS;
 }
@@ -194,7 +194,7 @@ static apr_status_t block_MATH_RAND(worker_t *worker, worker_t *parent,
   
   result = start + (rand() % (end - start)); 
 
-  worker_var_set(worker, val, apr_itoa(ptmp, result));
+  worker_var_set(parent, val, apr_itoa(ptmp, result));
 
   return APR_SUCCESS;
 }

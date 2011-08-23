@@ -126,7 +126,7 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
     }
   }
 
-  worker_var_set(worker, var, result);
+  worker_var_set(parent, var, result);
 
   return APR_SUCCESS;
 
@@ -186,7 +186,7 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
   }
   inplace[j] = 0;
 
-  worker_var_set(worker, var, inplace);
+  worker_var_set(parent, var, inplace);
 
   return APR_SUCCESS;
 }
@@ -236,7 +236,7 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t 
     }
   inplace[j] = 0;
 
-  worker_var_set(worker, var, inplace);
+  worker_var_set(parent, var, inplace);
 
   return APR_SUCCESS;
 }
@@ -272,7 +272,7 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *
   base64 = apr_pcalloc(ptmp, len + 1);
   apr_base64_encode(base64, string, strlen(string));
   
-  worker_var_set(worker, var, base64);
+  worker_var_set(parent, var, base64);
 
   return APR_SUCCESS;
 }
@@ -308,7 +308,7 @@ apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent, apr_pool_t *
   plain = apr_pcalloc(ptmp, len + 1);
   apr_base64_decode(plain, string);
   
-  worker_var_set(worker, var, plain);
+  worker_var_set(parent, var, plain);
 
   return APR_SUCCESS;
 }

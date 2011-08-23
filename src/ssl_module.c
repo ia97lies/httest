@@ -681,7 +681,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, a
       b64_len = apr_base64_encode_len(enc_len);
       b64_str = apr_pcalloc(ptmp, b64_len);
       apr_base64_encode_binary(b64_str, enc, enc_len);
-      worker_var_set(worker, copy, b64_str);
+      worker_var_set(parent, copy, b64_str);
     }
   }
 
@@ -761,7 +761,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
     val = apr_pcalloc(ptmp, apr_base64_encode_len(sess->session_id_length));
     apr_base64_encode_binary(val, sess->session_id, sess->session_id_length);
 
-    worker_var_set(worker, copy, val);
+    worker_var_set(parent, copy, val);
   }
   else {
     return APR_ENOENT;
@@ -894,7 +894,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
     return APR_ENOENT;
   }
 
-  worker_var_set(worker, var, val);
+  worker_var_set(parent, var, val);
 
   return APR_SUCCESS;
 }

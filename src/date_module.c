@@ -49,7 +49,7 @@ apr_status_t block_DATE_GET_TIME(worker_t *worker, worker_t *parent, apr_pool_t 
     worker_log_error(worker, "Need a variable name to store time");
   }
   
-  worker_var_set(worker, var, apr_off_t_toa(worker->pbody, apr_time_as_msec(apr_time_now())));
+  worker_var_set(parent, var, apr_off_t_toa(worker->pbody, apr_time_as_msec(apr_time_now())));
 
   return APR_SUCCESS;
 }
@@ -111,7 +111,7 @@ apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent, apr_pool_t *p
     return status;
   }
 
-  worker_var_set(worker, var, timefmt);
+  worker_var_set(parent, var, timefmt);
   
   return APR_SUCCESS;
 }
