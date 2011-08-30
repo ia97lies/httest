@@ -200,9 +200,12 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   int len = 0;
   ssl_config_t *config = ssl_get_worker_config(worker);
 
+  if (config->flags & SSL_CONFIG_FLAGS_CERT_SET) {
+    return APR_SUCCESS;
+  }
+
   /* test if there are the same cert, key ca files or no certs at all */
   if (!(
-      (config->flags & SSL_CONFIG_FLAGS_CERT_SET) ||
       (((!config->certfile && !certfile) || 
       (config->certfile && certfile && strcmp(config->certfile, certfile) == 0)) &&
       ((!config->keyfile && !keyfile) ||
@@ -214,8 +217,6 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
       SSL_CTX_free(config->ssl_ctx);
       config->ssl_ctx = NULL;
     }
-    /* reset flag */
-    config->flags &= ~SSL_CONFIG_FLAGS_CERT_SET;
   }
 
   config->certfile = certfile;
