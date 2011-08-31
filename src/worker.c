@@ -371,7 +371,7 @@ apr_status_t worker_sockstate(worker_t * worker) {
   }
   
   /* give the other side a little time to finish closing 10 ms */
-  apr_sleep(10000);
+  //apr_sleep(10000);
   
   if ((status = transport_set_timeout(worker->socket->transport, 1000)) 
       != APR_SUCCESS) {
@@ -2352,9 +2352,14 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
  */
 apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
                                char *data, apr_pool_t *ptmp) {
+  apr_status_t status;
   char *copy;
 
   COMMAND_NEED_ARG("Need a variable name");
+
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
+    return status;
+  }
 
   if (worker_sockstate(worker) == APR_SUCCESS) {
     worker_var_set(worker, copy, "CONNECTED");
