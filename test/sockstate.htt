@@ -28,11 +28,11 @@ SERVER $YOUR_PORT
 
 _RES
 _WAIT
+_SOCKSTATE STATE
 __HTTP/1.1 200 OK
 __Content-Length: AUTO 
 __Content-Type: text/html
 __
-_SOCKSTATE STATE
 __$STATE
 
 _CLOSE

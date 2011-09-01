@@ -73,11 +73,28 @@ typedef struct ssl_transport_s {
   SSL *ssl;
   /* need this for timeout settings */
   transport_t *tcp_transport;
+  apr_interval_time_t tmo;
 } ssl_transport_t;
 
 /************************************************************************
  * Local 
  ***********************************************************************/
+/**
+ * Create ssl transport context
+ * @param worker IN worker
+ * @return ssl transport context
+ */
+static ssl_transport_t *ssl_get_transport(worker_t *worker, 
+                                          ssl_socket_config_t *sconfig) {
+  apr_interval_time_t tmo;
+  ssl_transport_t *ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+  ssl_transport->ssl = sconfig->ssl;
+  ssl_transport->tcp_transport = worker->socket->transport;
+  apr_socket_timeout_get(worker->socket->socket, &tmo);
+  ssl_transport->tmo = apr_time_as_msec(tmo);
+
+  return ssl_transport;
+}
 
 /**
  * Get ssl config from worker
@@ -409,6 +426,7 @@ apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
 apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
   ssl_transport_t *ssl_transport = data;
 
+  ssl_transport->tmo = t;
   return transport_set_timeout(ssl_transport->tcp_transport, t);
 }
 
@@ -423,8 +441,16 @@ apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
 apr_status_t ssl_transport_read(void *data, char *buf, apr_size_t *size) {
   ssl_transport_t *ssl_transport = data;
   apr_status_t status;
+  apr_time_t start = apr_time_now();
+  apr_time_t cur;
 
 tryagain:
+  cur = apr_time_now();
+  if (apr_time_as_msec(cur) - apr_time_as_msec(start) > ssl_transport->tmo) {
+    fprintf(stderr, "XXXX tmo: %lld, diff: %lld", ssl_transport->tmo, apr_time_as_msec(cur)-apr_time_as_msec(start));
+    return APR_TIMEUP;
+  }
+  
   apr_sleep(1);
   status = SSL_read(ssl_transport->ssl, buf, *size);
   if (status <= 0) {
@@ -544,14 +570,12 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
 				return status;
       }
 
-      ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+      ssl_transport = ssl_get_transport(worker, sconfig);
       transport = transport_new(ssl_transport, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
-      ssl_transport->ssl = sconfig->ssl;
-      ssl_transport->tcp_transport = worker->socket->transport;
       transport_register(worker->socket, transport);
     }
   }
@@ -613,14 +637,12 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
       if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
 	return status;
       }
-      ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+      ssl_transport = ssl_get_transport(worker, sconfig);
       transport = transport_new(ssl_transport, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
-      ssl_transport->ssl = sconfig->ssl;
-      ssl_transport->tcp_transport = worker->socket->transport;
       transport_register(worker->socket, transport);
     }
   }
@@ -1212,14 +1234,12 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
       return status;
     }
-    ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+    ssl_transport = ssl_get_transport(worker, sconfig);
     transport = transport_new(ssl_transport, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
-    ssl_transport->ssl = sconfig->ssl;
-    ssl_transport->tcp_transport = worker->socket->transport;
     transport_register(worker->socket, transport);
   }
 
@@ -1267,14 +1287,12 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
     }
-    ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
+    ssl_transport = ssl_get_transport(worker, sconfig);
     transport = transport_new(ssl_transport, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
-    ssl_transport->ssl = sconfig->ssl;
-    ssl_transport->tcp_transport = worker->socket->transport;
     transport_register(worker->socket, transport);
   }
 

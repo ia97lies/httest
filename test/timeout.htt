@@ -1,0 +1,19 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_ERROR "The timeout specified has expired"
+_TIMEOUT 2000
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__Content-Length: 10 
+__
+_WAIT
+_END ERROR
+
+END
+
+SERVER $YOUR_PORT
+_SLEEP 4000
+END

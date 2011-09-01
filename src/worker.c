@@ -370,9 +370,6 @@ apr_status_t worker_sockstate(worker_t * worker) {
     return APR_ENOSOCKET;
   }
   
-  /* give the other side a little time to finish closing 10 ms */
-  //apr_sleep(10000);
-  
   if ((status = transport_set_timeout(worker->socket->transport, 1000)) 
       != APR_SUCCESS) {
     return status;
@@ -2356,6 +2353,10 @@ apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
   char *copy;
 
   COMMAND_NEED_ARG("Need a variable name");
+
+  if (!worker->socket) {
+    worker_var_set(worker, copy, "UNDEF");
+  }
 
   if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
