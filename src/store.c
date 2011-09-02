@@ -114,6 +114,7 @@ APR_DECLARE(void )store_set(store_t *store, const char *name,
   if (element) {
     apr_pool_destroy(element->pool);
     apr_pool_create(&element->pool, store->pool);
+    apr_hash_set(store->hash, name, APR_HASH_KEY_STRING, NULL);
   }
   else {
     apr_pool_create(&pool, store->pool);
