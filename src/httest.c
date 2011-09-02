@@ -1739,6 +1739,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 
   if (!nolistener) {
     if ((status = worker_listener_up(self, LISTENBACKLOG_DEFAULT)) != APR_SUCCESS) {
+      worker_log_error(self, "%s(%d)", my_status_str(self->pbody, status), status);
       goto error;
     }
   }

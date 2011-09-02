@@ -212,7 +212,7 @@ void worker_log_error(worker_t * self, char *fmt, ...) {
   va_start(va, fmt);
   if (self->log_mode >= LOG_ERR) {
     tmp = apr_pvsprintf(pool, fmt, va);
-    tmp = apr_psprintf(pool, "%s: error: %s", self->file_and_line,
+    tmp = apr_psprintf(pool, "%s: error: %s", self->file_and_line?self->file_and_line:"<none>",
 	               tmp);
     fprintf(stderr, "\n%-88s", tmp);
     fflush(stderr);
@@ -2471,11 +2471,13 @@ apr_status_t worker_listener_up(worker_t *worker, apr_int32_t backlog) {
   
   worker_log(worker, LOG_DEBUG, "--- bind");
   if ((status = apr_socket_bind(worker->listener, local_addr)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not bind");
     goto error;
   }
 
   worker_log(worker, LOG_DEBUG, "--- listen");
   if ((status = apr_socket_listen(worker->listener, backlog)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not listen");
     goto error;
   }
 
