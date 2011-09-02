@@ -1,7 +1,7 @@
-*.aux
 /users-guide.synctex.gz
 *.out
 *.pdf
 *.aux
+*.toc
 title.tex
 *~
