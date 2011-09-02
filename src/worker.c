@@ -3500,7 +3500,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->locals = store_make(p);
   (*self)->vars = store_copy(global->vars, p);
   (*self)->modules = apr_hash_copy(p, global->modules);
-  (*self)->blocks = apr_hash_copy(p, global->blocks);
+  (*self)->blocks = global->blocks;
   (*self)->start_time = apr_time_now();
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;
