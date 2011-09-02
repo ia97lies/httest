@@ -190,9 +190,11 @@ EXTRA_DIST= \
 	ssl_session_reuse.htt \
 	sslsimple2.htt \
 	sslsimple.htt \
+	ssl_sockstate2.htt \
 	ssl_sockstate.htt \
 	ssl_stream_myself.htt \
 	ssl_threaded_server.htt \
+	ssl_timeout.htt \
 	store.htt \
 	stream_myself.htt \
 	sync.htt \
@@ -204,6 +206,7 @@ EXTRA_DIST= \
 	tagged_sockets.htt \
 	threaded_server.htt \
 	time.htt \
+	timeout.htt \
 	trace_on_failure_2.htb \
 	trace_on_failure_3.htb \
 	trace_on_failure.htb \
