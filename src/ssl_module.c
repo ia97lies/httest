@@ -447,7 +447,6 @@ apr_status_t ssl_transport_read(void *data, char *buf, apr_size_t *size) {
 tryagain:
   cur = apr_time_now();
   if (apr_time_as_msec(cur) - apr_time_as_msec(start) > ssl_transport->tmo) {
-    fprintf(stderr, "XXXX tmo: %lld, diff: %lld", ssl_transport->tmo, apr_time_as_msec(cur)-apr_time_as_msec(start));
     return APR_TIMEUP;
   }
   
