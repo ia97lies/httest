@@ -1,4 +1,11 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.11
+  *) httest: CLIENT, SERVER, DAEMONS, ... are parsed and called at END, if you
+               define BLOCK afterwart, a started CLIENT perhaps can not find
+	       it, because, parser did not finished read this BLOCK. Also the
+	       special BLOCK FINALLY.
+
+
 Changes with httest 2.0.10
   *) httest: Write an error if SERVER could not bind or listen.
 
