@@ -1,9 +1,6 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.1.1
-  *) httest: CLIENT, SERVER, DAEMONS, ... are parsed and called at END, if you
-             define BLOCK afterwart, a started CLIENT perhaps can not find it,
-	     because, parser did not finished read this BLOCK. Also the
-	     special BLOCK FINALLY.
+  *) httest: Can not call blocks defined after caller fixed.
 
 
 Changes with httest 2.1.0
