@@ -11,6 +11,7 @@ EXTRA_DIST= \
 	bad_headers.htt \
 	base64.htt \
 	big_data.htt \
+	binary_protocol.htt \
 	block.htb \
 	block.hte \
 	block.htt \
@@ -172,6 +173,7 @@ EXTRA_DIST= \
 	ssl_multi_socket.htt \
 	ssl_mutual2.hte \
 	ssl_mutual2.txt \
+	ssl_mutual3.htt \
 	ssl_mutual.hte \
 	ssl_mutual.htt \
 	ssl_mutual.txt \
