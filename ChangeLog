@@ -2,6 +2,8 @@
 Changes with httest 2.1.1
   *) httest: Can not call blocks defined after caller fixed.
 
+  *) httest: Removed implizit _FLUSH in _SOCKSTATE command.
+
 
 Changes with httest 2.1.0
   *) httest: New minor release is based on httest 2.0.8. New minor release do
