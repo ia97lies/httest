@@ -25,6 +25,7 @@ __Content-Type: text/plain
 __Content-Length: AUTO
 __
 __HALLO
+_FLUSH
 
 #_SLEEP 10
 _SOCKSTATE STATE
