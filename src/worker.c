@@ -2358,10 +2358,6 @@ apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
     worker_var_set(worker, copy, "UNDEF");
   }
 
-  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
-  }
-
   if (worker_sockstate(worker) == APR_SUCCESS) {
     worker_var_set(worker, copy, "CONNECTED");
   }
