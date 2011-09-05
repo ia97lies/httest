@@ -14,6 +14,7 @@ EXTRA_DIST= \
 	binary_protocol.hte \
 	binary_protocol.htt \
 	binary_protocol.txt \
+	block_declare_after.htt \
 	block.htb \
 	block.hte \
 	block.htt \
