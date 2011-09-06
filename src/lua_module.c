@@ -38,7 +38,7 @@
  * Commands 
  ***********************************************************************/
 /**
- * TIME command stores time in a variable [ms]
+ * Do run a lua script, but with no data exchange for the moment
  *
  * @param self IN command
  * @param worker IN thread data object
