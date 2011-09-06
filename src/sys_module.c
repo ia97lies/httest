@@ -121,13 +121,36 @@ static apr_status_t block_PROC_GET_PID(worker_t *worker, worker_t *parent, apr_p
  * DETACH command to run process in background
  *
  * @param self IN command
- * @param worker IN thread data object
+ * @param worker IN callee
+ * @param parent IN caller
  * @param data IN 
  *
  * @return APR_SUCCESS or apr error code
  */
 static apr_status_t block_PROC_DETACH(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   return apr_proc_detach(1);
+}
+
+/**
+ * Sleep for a given time (ms)
+ *
+ * @param self IN command
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SYS_SLEEP(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  apr_status_t status;
+  const char *copy = store_get(worker->params, "1");
+
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
+    return status;
+  }
+
+  apr_sleep(apr_atoi64(copy) * 1000);
+  return APR_SUCCESS;
 }
 
 
@@ -164,6 +187,12 @@ apr_status_t sys_module_init(global_t *global) {
 	                           "",
 	                           "Detach process to background for daemonize",
 	                           block_PROC_DETACH)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SYS", "_SLEEP",
+	                           "<miliseconds>", 
+				   "Sleep for defined amount of time",
+	                           block_SYS_SLEEP)) != APR_SUCCESS) {
     return status;
   }
 

@@ -849,6 +849,16 @@ static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, vo
   return NULL;
 }
 
+/**
+ * Convertion and/or pipe to executable and/or read from executable and check
+ * _EXPECT and MATCH.
+ *
+ * @param worker IN worker object
+ * @param buf IN buffer to handle
+ * @param len IN length of buffer
+ *
+ * @return apr status
+ */
 apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
                                apr_size_t len) {
   apr_status_t status = APR_SUCCESS;
@@ -1489,30 +1499,6 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
   apr_table_clear(worker->expect.body);
   apr_table_clear(worker->expect.error);
 
-  return APR_SUCCESS;
-}
-
-/**
- * Sleep for a given time (ms)
- *
- * @param self IN command object
- * @param worker IN thread data object
- * @param data IN time to wait in ms
- *
- * @return an apr status
- */
-apr_status_t command_SLEEP(command_t * self, worker_t * worker,
-                                  char *data, apr_pool_t *ptmp) {
-  apr_status_t status;
-  char *copy;
-
-  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
-  }
-
-  COMMAND_NEED_ARG("Time not specified");
- 
-  apr_sleep(apr_atoi64(copy) * 1000);
   return APR_SUCCESS;
 }
 
@@ -2349,7 +2335,6 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
  */
 apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker,
                                char *data, apr_pool_t *ptmp) {
-  apr_status_t status;
   char *copy;
 
   COMMAND_NEED_ARG("Need a variable name");
@@ -3248,21 +3233,6 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
   return status;
 }
 #endif
-
-/**
- * MARK command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN name of this mark
- *
- * @return APR_SUCCESS or apr error code
- */
-apr_status_t command_MARK(command_t *self, worker_t *worker, char *data, 
-                          apr_pool_t *ptmp) {
-  /* lookup if Mark is allread set */
-  return APR_SUCCESS;
-}
 
 /**
  * MATCH_SEQ command
