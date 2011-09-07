@@ -149,7 +149,7 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                              unresolved); 
   if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all parameters first */
-  new_line = my_replace_vars(ptmp, line, worker->params, 0, 
+  new_line = my_replace_vars(ptmp, new_line, worker->params, 0, 
                              unresolved); 
   if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all vars */

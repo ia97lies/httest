@@ -1,0 +1,19 @@
+
+BLOCK foo
+_LOCAL A B C
+_SET A=foo
+_SET B=bar
+_SET C=bla
+_IF "$A" EQUAL "foo"
+  _IF "$B" EQUAL "bar"
+    _IF "$C" EQUAL "bla"
+      _EXIT OK
+    _END IF
+  _END IF
+_END IF
+_EXIT FAILED
+END
+
+CLIENT
+_CALL foo
+END
