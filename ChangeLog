@@ -1,4 +1,8 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.2
+  *) httest: Serious fix: Local variable scrambles line.
+
+
 Changes with httest 2.1.1
   *) httest: Can not call blocks defined after caller fixed.
 
