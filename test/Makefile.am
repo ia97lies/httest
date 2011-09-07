@@ -94,6 +94,7 @@ EXTRA_DIST= \
 	ifelse.htt \
 	ifequal.htt \
 	ifeval.htt \
+	if_local_vars.htt \
 	ifnumber.htt \
 	ifvareq.htt \
 	ignore_body.htt \
