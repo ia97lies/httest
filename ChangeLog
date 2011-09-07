@@ -2,6 +2,9 @@
 Changes with httest 2.1.2
   *) httest: Serious fix: Local variable scrambles line.
 
+  *) httest: pop3 and smpt are brocken, they can only receive first multi line
+             message, seconde will not be recognised as a multi line answer.
+
 
 Changes with httest 2.1.1
   *) httest: Can not call blocks defined after caller fixed.

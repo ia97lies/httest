@@ -36,6 +36,7 @@ END
 
 # some kind of pop3 commands do expect multi line answers
 BLOCK _WAIT_MULTI
+_LOCAL __DO __STATUS
 _SET __DOT=UNDEF
 _SET __STATUS=UNDEF
 _SOCKET
