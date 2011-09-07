@@ -13,6 +13,11 @@ _SMTP:SEND "HELP"
 _EXPECT . "220"
 _EXPECT . "250"
 _SMTP:WAIT
+# sending smtp command with multiline return
+_SMTP:SEND "HELP"
+_EXPECT . "220"
+_EXPECT . "250"
+_SMTP:WAIT
 _SMTP:SEND "QUIT"
 _EXPECT . "220"
 _SMTP:WAIT
@@ -24,6 +29,14 @@ __220 small stupid smtp test server
 _FLUSH
 _READLINE
 __220 say HELO too
+_FLUSH
+_READLINE
+__220-Help text 1
+__220-Help text 2
+__250-Help text 3
+__220-Help text 4
+__220-Help text 5
+__220 Final
 _FLUSH
 _READLINE
 __220-Help text 1

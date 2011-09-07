@@ -36,15 +36,17 @@ END
 
 # some kind of pop3 commands do expect multi line answers
 BLOCK _WAIT_MULTI
+_SET __STATUS=UNDEF
+_SET __DOT=UNDEF
 _SOCKET
-  _GREP . "(.[^ ]+)" STATUS
+  _GREP . "(.[^ ]+)" __STATUS
   _READLINE DO_NOT_CHECK
   # on error no multi line answer will be sent
-  _IF "$STATUS" MATCH "\+OK"
+  _IF "$__STATUS" MATCH "\+OK"
     _LOOP -1
-      _GREP . "(^.$)" DOT
+      _GREP . "(^.$)" __DOT
       _READLINE DO_NOT_CHECK
-      _IF "$DOT" MATCH "^\.$"
+      _IF "$__DOT" MATCH "^\.$"
         _BREAK
       _END IF
     _END LOOP
