@@ -30,11 +30,12 @@ _FLUSH
 END
 
 BLOCK _WAIT
+_SET __LAST=UNDEF
 _SOCKET
   _LOOP -1
-    _GREP . "(...)(.)(.*)" CODE LAST TEXT
+    _GREP . "(...)(.)(.*)" __CODE __LAST __TEXT
     _READLINE DO_NOT_CHECK
-    _IF "$LAST" MATCH " "
+    _IF "$__LAST" MATCH " "
       _BREAK
     _END IF
   _END LOOP
