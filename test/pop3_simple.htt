@@ -9,6 +9,10 @@ _POP3:SEND "PASS foo"
 _POP3:WAIT
 _POP3:SEND "LIST"
 _POP3:WAIT_MULTI
+_EXPECT . "Hallo"
+_EXPECT . "Mail"
+_POP3:SEND "RETR 1"
+_POP3:WAIT_MULTI
 _POP3:SEND "QUIT"
 _EXPECT . "\+OK"
 _POP3:WAIT
@@ -32,6 +36,14 @@ __+OK
 __1 123
 __2 456
 __3 789
+__.
+_FLUSH
+_EXPECT . "RETR"
+_READLINE
+__+OK
+__Hallo
+__das ist ein
+__Mail
 __.
 _FLUSH
 _EXPECT . "QUIT"
