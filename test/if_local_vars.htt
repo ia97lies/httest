@@ -1,0 +1,21 @@
+
+BLOCK foo
+_LOCAL A B C
+_SET A=foo
+_SET B=bar
+_SET C=bla
+
+_IF "$A" MATCH "foo"
+  _IF "$B" MATCH "bar"
+    _IF "$C" MATCH "bla"
+      _EXIT OK
+    _END IF
+  _END IF
+_END IF
+
+_EXIT FAILED
+END
+
+CLIENT
+_CALL foo
+END

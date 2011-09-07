@@ -637,7 +637,7 @@ char * worker_replace_vars(worker_t * worker, char *line) {
   /* replace all locals first */
   new_line = my_replace_vars(worker->pbody, line, worker->locals, 0); 
   /* replace all parameters first */
-  new_line = my_replace_vars(worker->pbody, line, worker->params, 0); 
+  new_line = my_replace_vars(worker->pbody, new_line, worker->params, 0); 
   /* replace all vars */
   new_line = my_replace_vars(worker->pbody, new_line, worker->vars, 1); 
 
