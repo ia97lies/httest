@@ -285,6 +285,8 @@ typedef struct line_s {
 /** register */
 # define HTT_DECLARE(type)    type
 
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, void, get_line_length,
+                          (worker_t *worker, line_t *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, void, flush_resolved_line,
                           (worker_t *worker, line_t *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,

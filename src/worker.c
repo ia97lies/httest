@@ -3813,22 +3813,29 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     /* calculate body len */
     len = 0;
     for (; i < apr_table_elts(self->cache)->nelts; ++i) {
+      line_t line; 
+      line.info = e[i].key;
+      line.buf = e[i].val;
+
+      /* if there are modules which do have their own format */
+      htt_run_get_line_length(self, &line);
+
       /* easy way to jump over headers */
-      if (!start && !e[i].val[0]) {
+      if (!start && !line.buf[0]) {
         /* start body len */
         start = 1;
 	body_start = i + 1;
       }
       else if (start) {
         /* do not forget the \r\n */
-	if (strncasecmp(e[i].key, "NOCRLF", 6) != 0) {
+	if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
 	  len += 2;
 	}
-	if (strncasecmp(e[i].key, "NOCRLF:", 7) == 0) { 
-	  len += apr_atoi64(&e[i].key[7]);
+	if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
+	  len += apr_atoi64(&line.info[7]);
 	}
 	else {
-          len += strlen(e[i].val);
+          len += strlen(line.buf);
 	}
       }
     }
@@ -4065,6 +4072,7 @@ transport_t *transport_get_current(socket_t *socket) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
+  APR_HOOK_LINK(get_line_length)
   APR_HOOK_LINK(flush_resolved_line)
   APR_HOOK_LINK(client_port_args)
   APR_HOOK_LINK(connect)
@@ -4074,6 +4082,11 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(read_header)
   APR_HOOK_LINK(read_buf)
 )
+
+
+APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, get_line_length, 
+                                 (worker_t *worker, line_t *line), 
+				 (worker, line));
 
 APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
                                  (worker_t *worker, line_t *line), 

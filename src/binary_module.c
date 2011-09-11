@@ -135,6 +135,34 @@ out_err:
  * @param worker IN worker context
  * @param line IN line informations
  */
+static void binary_get_line_length(worker_t *worker, line_t *line) {
+  apr_size_t len;
+
+  /* lets see if we do have work */
+  if (strncmp(line->info, "BINARY", 6) != 0) {
+    return;
+  }
+
+  apr_collapse_spaces(line->buf, line->buf);
+  /* callculate buf len */
+  len = strlen(line->buf);
+  if (len && len%2 != 1) {
+    len /= 2;
+  }
+  else {
+    worker_log_error(worker, "Binary data must have an equal number of digits");
+    return;
+  }
+  line->info = apr_psprintf(worker->pcache, "NOCRLF:%d", len);
+}
+
+/**
+ * Do hex to bin transformation with this hook, this is called
+ * after late variable replacement.
+ *
+ * @param worker IN worker context
+ * @param line IN line informations
+ */
 static void binary_flush_resolved_line(worker_t *worker, line_t *line) {
   apr_size_t len;
   char *buf;
@@ -189,6 +217,7 @@ apr_status_t binary_module_init(global_t *global) {
     return status;
   }
   htt_hook_flush_resolved_line(binary_flush_resolved_line, NULL, NULL, 0);
+  htt_hook_get_line_length(binary_get_line_length, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
