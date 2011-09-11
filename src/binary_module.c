@@ -135,12 +135,12 @@ out_err:
  * @param worker IN worker context
  * @param line IN line informations
  */
-static void binary_get_line_length(worker_t *worker, line_t *line) {
+static apr_status_t binary_get_line_length(worker_t *worker, line_t *line) {
   apr_size_t len;
 
   /* lets see if we do have work */
   if (strncmp(line->info, "BINARY", 6) != 0) {
-    return;
+    return APR_SUCCESS;
   }
 
   apr_collapse_spaces(line->buf, line->buf);
@@ -151,9 +151,12 @@ static void binary_get_line_length(worker_t *worker, line_t *line) {
   }
   else {
     worker_log_error(worker, "Binary data must have an equal number of digits");
-    return;
+    return APR_EINVAL;
   }
   line->info = apr_psprintf(worker->pcache, "NOCRLF:%d", len);
+  line->len = len;
+
+  return APR_SUCCESS;
 }
 
 /**
@@ -163,30 +166,23 @@ static void binary_get_line_length(worker_t *worker, line_t *line) {
  * @param worker IN worker context
  * @param line IN line informations
  */
-static void binary_flush_resolved_line(worker_t *worker, line_t *line) {
-  apr_size_t len;
+static apr_status_t binary_flush_resolved_line(worker_t *worker, line_t *line) {
+  apr_status_t status;
   char *buf;
   apr_size_t i;
 
   /* lets see if we do have work */
   if (strncmp(line->info, "BINARY", 6) != 0) {
-    return;
+    return APR_SUCCESS;
   }
 
-  apr_collapse_spaces(line->buf, line->buf);
-  /* callculate buf len */
-  len = strlen(line->buf);
-  if (len && len%2 != 1) {
-    len /= 2;
-  }
-  else {
-    worker_log_error(worker, "Binary data must have an equal number of digits");
-    return;
+  if ((status = binary_get_line_length(worker, line)) != APR_SUCCESS) {
+    return status;
   }
 
-  buf = apr_pcalloc(worker->pcache, len);
+  buf = apr_pcalloc(worker->pcache, line->len);
 
-  for (i = 0; i < len; i++) {
+  for (i = 0; i < line->len; i++) {
     char hex[3];
     hex[0] = line->buf[i * 2];
     hex[1] = line->buf[i * 2 + 1];
@@ -194,9 +190,8 @@ static void binary_flush_resolved_line(worker_t *worker, line_t *line) {
     buf[i] = (char )apr_strtoi64(hex, NULL, 16);
   }
   line->buf = buf;
-  line->len = len;
 
-  line->info = apr_psprintf(worker->pcache, "NOCRLF:%d", len);
+  return APR_SUCCESS;
 }
 
 /************************************************************************

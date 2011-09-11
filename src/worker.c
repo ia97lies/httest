@@ -3708,7 +3708,9 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to,
       /* replace all vars */
       line.buf = worker_replace_vars(self, line.buf, &unresolved, ptmp); 
     }
-    htt_run_flush_resolved_line(self, &line);
+    if((status = htt_run_flush_resolved_line(self, &line)) != APR_SUCCESS) {
+      return status;
+    }
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
       line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {
@@ -3818,7 +3820,9 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
       line.buf = e[i].val;
 
       /* if there are modules which do have their own format */
-      htt_run_get_line_length(self, &line);
+      if ((status = htt_run_get_line_length(self, &line)) != APR_SUCCESS) {
+	return status;
+      }
 
       /* easy way to jump over headers */
       if (!start && !line.buf[0]) {
@@ -4084,13 +4088,13 @@ APR_HOOK_STRUCT(
 )
 
 
-APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, get_line_length, 
-                                 (worker_t *worker, line_t *line), 
-				 (worker, line));
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, get_line_length, 
+                                      (worker_t *worker, line_t *line), 
+				      (worker, line), APR_SUCCESS);
 
-APR_IMPLEMENT_EXTERNAL_HOOK_VOID(htt, HTT, flush_resolved_line, 
-                                 (worker_t *worker, line_t *line), 
-				 (worker, line));
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, flush_resolved_line, 
+                                      (worker_t *worker, line_t *line), 
+				      (worker, line), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_port_args, 
                                       (worker_t *worker, char *portinfo, 

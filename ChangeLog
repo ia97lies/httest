@@ -1,4 +1,7 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.3
+  *) httest: Fixed automatic content length calculation if used _BINARY:SEND.
+
 Changes with httest 2.1.2
   *) httest: Serious fix: Local variable scrambles line.
 
