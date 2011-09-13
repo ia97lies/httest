@@ -3708,7 +3708,7 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to,
       /* replace all vars */
       line.buf = worker_replace_vars(self, line.buf, &unresolved, ptmp); 
     }
-    if((status = htt_run_flush_resolved_line(self, &line)) != APR_SUCCESS) {
+    if((status = htt_run_line_flush(self, &line)) != APR_SUCCESS) {
       return status;
     }
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
@@ -4077,7 +4077,7 @@ transport_t *transport_get_current(socket_t *socket) {
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
   APR_HOOK_LINK(line_get_length)
-  APR_HOOK_LINK(flush_resolved_line)
+  APR_HOOK_LINK(line_flush)
   APR_HOOK_LINK(client_port_args)
   APR_HOOK_LINK(connect)
   APR_HOOK_LINK(accept)
@@ -4092,7 +4092,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_get_length,
                                       (worker_t *worker, line_t *line), 
 				      (worker, line), APR_SUCCESS);
 
-APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_flush 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_flush, 
                                       (worker_t *worker, line_t *line), 
 				      (worker, line), APR_SUCCESS);
 
