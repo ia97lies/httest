@@ -3820,7 +3820,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
       line.buf = e[i].val;
 
       /* if there are modules which do have their own format */
-      if ((status = htt_run_get_line_length(self, &line)) != APR_SUCCESS) {
+      if ((status = htt_run_line_get_length(self, &line)) != APR_SUCCESS) {
 	return status;
       }
 
@@ -4076,7 +4076,7 @@ transport_t *transport_get_current(socket_t *socket) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
-  APR_HOOK_LINK(get_line_length)
+  APR_HOOK_LINK(line_get_length)
   APR_HOOK_LINK(flush_resolved_line)
   APR_HOOK_LINK(client_port_args)
   APR_HOOK_LINK(connect)
@@ -4088,11 +4088,11 @@ APR_HOOK_STRUCT(
 )
 
 
-APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, get_line_length, 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_get_length, 
                                       (worker_t *worker, line_t *line), 
 				      (worker, line), APR_SUCCESS);
 
-APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, flush_resolved_line, 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_flush 
                                       (worker_t *worker, line_t *line), 
 				      (worker, line), APR_SUCCESS);
 
