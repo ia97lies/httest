@@ -11,6 +11,7 @@ EXTRA_DIST= \
 	bad_headers.htt \
 	base64.htt \
 	big_data.htt \
+	binary_http_body.htt \
 	binary_protocol.hte \
 	binary_protocol.htt \
 	binary_protocol.txt \
