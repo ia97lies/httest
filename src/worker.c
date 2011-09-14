@@ -4075,7 +4075,6 @@ transport_t *transport_get_current(socket_t *socket) {
 }
 
 APR_HOOK_STRUCT(
-  APR_HOOK_LINK(module_init)
   APR_HOOK_LINK(line_get_length)
   APR_HOOK_LINK(line_flush)
   APR_HOOK_LINK(client_port_args)
