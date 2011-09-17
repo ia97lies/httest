@@ -314,13 +314,40 @@ static void * APR_THREAD_FUNC streamer(apr_thread_t * thread, void *selfv) {
 }
 
 /**
+ * local file write 
+ *
+ * @param sockett IN socket 
+ * @param buf IN buffer to send
+ * @param len IN no bytes of buffer to send
+ *
+ * @return apr status
+ */
+static apr_status_t file_write(apr_file_t *file, char *buf,
+                               apr_size_t len) {
+  apr_status_t status = APR_SUCCESS;
+  apr_size_t total = len;
+  apr_size_t count = 0;
+
+  while (total != count) {
+    len = total - count;
+    if ((status = apr_file_write(file, &buf[count], &len)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    count += len;
+  }
+error:
+  return status;
+}
+
+/**
  * Buffer converter depends on the worker->flags
  *
  * @param worker IN thread data object
  * @param buf INOUT buffer to rewrite
  * @param len INOUT buffer len 
  */
-void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
+static void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
   int j;
   char *hexbuf;
   apr_pool_t *pool;
@@ -352,6 +379,108 @@ void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
     *len = strlen(*buf);
     apr_pool_destroy(pool);
   }
+}
+
+/**
+ * pipe buf to workers running process 
+ *
+ * @param worker IN thread data object
+ * @param buf IN buffer to rewrite
+ * @param len IN buffer len 
+ */
+static apr_status_t worker_buf_pipe_exec(worker_t *worker, char *buf, 
+                                         apr_size_t len) {
+  apr_status_t status = APR_SUCCESS;
+  apr_exit_why_e exitwhy;
+  int exitcode;
+
+  if ((status = file_write(worker->proc.in, buf, len))
+      != APR_SUCCESS) {
+    return status;
+  }
+  apr_file_close(worker->proc.in);
+  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  if (exitcode != 0) {
+    status = APR_EGENERAL;
+  }
+  return status;
+}
+
+/**
+ * write buf to file pointer
+ *
+ * @param thread IN thread pointer
+ * @param selfv IN void pointer of type write_buf_to_file_t
+ *
+ * @return NULL
+ */
+static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, void *selfv) {
+  write_buf_to_file_t *wbtf = selfv;
+  apr_size_t len;
+
+  len = wbtf->len;
+  file_write(wbtf->fp, wbtf->buf, len);
+  apr_file_close(wbtf->fp);
+
+  apr_thread_exit(thread, APR_SUCCESS);
+  return NULL;
+}
+
+/**
+ * do filter buf with workers process in/out 
+ *
+ * @param worker IN thread data object
+ * @param ptmp IN temporary pool to alloc thread
+ * @param buf INOUT buffer to rewrite
+ * @param len INOUT buffer len 
+ */
+static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp, 
+                                           char **buf, apr_size_t *len) {
+  apr_status_t status;
+  apr_status_t tmp_status;
+  write_buf_to_file_t write_buf_to_file;
+  apr_threadattr_t *tattr;
+  apr_thread_t *thread;
+  bufreader_t *br;
+  apr_exit_why_e exitwhy;
+  int exitcode;
+
+  worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
+  /* start write thread */
+  write_buf_to_file.buf = *buf;
+  write_buf_to_file.len = *len;
+  write_buf_to_file.fp = worker->proc.in;
+  if ((status = apr_threadattr_create(&tattr, ptmp)) != APR_SUCCESS) {
+    goto out_err;
+  }
+  if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
+      != APR_SUCCESS) {
+    goto out_err;
+  }
+  if ((status = apr_threadattr_detach_set(tattr, 1)) != APR_SUCCESS) {
+    goto out_err;
+  }
+  if ((status =
+       apr_thread_create(&thread, tattr, worker_write_buf_to_file,
+			 &write_buf_to_file, worker->pbody)) != APR_SUCCESS) {
+    goto out_err;
+  }
+  /* read from worker->proc.out to buf */
+  if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
+    bufreader_read_eof(br, buf, len);
+    worker_log_buf(worker, LOG_INFO, *buf, "<", *len);
+  }
+  if (status == APR_EOF) {
+    status = APR_SUCCESS;
+  }
+  apr_thread_join(&tmp_status, thread);
+  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  if (exitcode != 0) {
+    status = APR_EGENERAL;
+    goto out_err;
+  }
+out_err:
+  return status;
 }
 
 
@@ -803,53 +932,6 @@ void worker_conn_close_all(worker_t *self) {
 }
 
 /**
- * local file write 
- *
- * @param sockett IN socket 
- * @param buf IN buffer to send
- * @param len IN no bytes of buffer to send
- *
- * @return apr status
- */
-static apr_status_t file_write(apr_file_t *file, char *buf,
-                               apr_size_t len) {
-  apr_status_t status = APR_SUCCESS;
-  apr_size_t total = len;
-  apr_size_t count = 0;
-
-  while (total != count) {
-    len = total - count;
-    if ((status = apr_file_write(file, &buf[count], &len)) 
-	!= APR_SUCCESS) {
-      goto error;
-    }
-    count += len;
-  }
-error:
-  return status;
-}
-
-/**
- * write buf to file pointer
- *
- * @param thread IN thread pointer
- * @param selfv IN void pointer of type write_buf_to_file_t
- *
- * @return NULL
- */
-static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, void *selfv) {
-  write_buf_to_file_t *wbtf = selfv;
-  apr_size_t len;
-
-  len = wbtf->len;
-  file_write(wbtf->fp, wbtf->buf, len);
-  apr_file_close(wbtf->fp);
-
-  apr_thread_exit(thread, APR_SUCCESS);
-  return NULL;
-}
-
-/**
  * Convertion and/or pipe to executable and/or read from executable and check
  * _EXPECT and MATCH.
  *
@@ -860,94 +942,35 @@ static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, vo
  * @return apr status
  */
 apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
-                               apr_size_t len) {
+                               apr_size_t size) {
   apr_status_t status = APR_SUCCESS;
-  apr_size_t inlen;
-  apr_exit_why_e exitwhy;
-  int exitcode;
-  write_buf_to_file_t write_buf_to_file;
-  apr_threadattr_t *tattr;
-  apr_thread_t *thread;
-  bufreader_t *br;
-  char *line;
-  apr_status_t tmp_status;
+  char *tmpbuf = buf;
+  apr_size_t len = size;
 
-  if (buf) {
-    worker_buf_convert(worker, &buf, &len);
+  if (tmpbuf) {
+    worker_buf_convert(worker, &tmpbuf, &len);
     if (worker->flags & FLAGS_PIPE_IN) {
       worker->flags &= ~FLAGS_PIPE_IN;
-      inlen = len;
-      if ((status = file_write(worker->proc.in, buf, inlen))
-	  != APR_SUCCESS) {
-	goto out_err;
-      }
-      apr_file_close(worker->proc.in);
-      apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      if (exitcode != 0) {
-	status = APR_EGENERAL;
-	goto out_err;
+      if ((status = worker_buf_pipe_exec(worker, tmpbuf, len)) != APR_SUCCESS) {
+	return status;
       }
     }
     else if (worker->flags & FLAGS_FILTER) {
-      worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
       worker->flags &= ~FLAGS_FILTER;
-      /* start write thread */
-      write_buf_to_file.buf = buf;
-      write_buf_to_file.len = len;
-      write_buf_to_file.fp = worker->proc.in;
-      if ((status = apr_threadattr_create(&tattr, pool)) != APR_SUCCESS) {
-	goto out_err;
-      }
-      if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
-	  != APR_SUCCESS) {
-	goto out_err;
-      }
-      if ((status = apr_threadattr_detach_set(tattr, 1)) != APR_SUCCESS) {
-	goto out_err;
-      }
-      if ((status =
-	   apr_thread_create(&thread, tattr, worker_write_buf_to_file,
-			     &write_buf_to_file, worker->pbody)) != APR_SUCCESS) {
-	goto out_err;
-      }
-      /* read from worker->proc.out to buf */
-      if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
-	apr_size_t len;
-
-	bufreader_read_eof(br, &line, &len);
-	if (line) {
-	  worker_log_buf(worker, LOG_INFO, line, "<", len);
-	  worker_match(worker, worker->match.dot, line, len);
-	  worker_match(worker, worker->match.body, line, len);
-	  worker_match(worker, worker->grep.dot, line, len);
-	  worker_match(worker, worker->grep.body, line, len);
-	  worker_expect(worker, worker->expect.dot, line, len);
-	  worker_expect(worker, worker->expect.body, line, len);
-	}
-      }
-      if (status == APR_EOF) {
-	status = APR_SUCCESS;
-      }
-      apr_thread_join(&tmp_status, thread);
-      apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      if (exitcode != 0) {
-	status = APR_EGENERAL;
-	goto out_err;
-      }
-      /* tag it "done" */
-      buf = NULL;
+      if ((status =  worker_buf_filter_exec(worker, pool, &tmpbuf, &len)) != APR_SUCCESS) {
+        return status;
+      }	
     }
-    if (buf) {
-      worker_log_buf(worker, LOG_INFO, buf, "<", len);
-      worker_match(worker, worker->match.dot, buf, len);
-      worker_match(worker, worker->match.body, buf, len);
-      worker_match(worker, worker->grep.dot, buf, len);
-      worker_match(worker, worker->grep.body, buf, len);
-      worker_expect(worker, worker->expect.dot, buf, len);
-      worker_expect(worker, worker->expect.body, buf, len);
+    if (tmpbuf) {
+      //worker_log_buf(worker, LOG_INFO, tmpbuf, "<", len);
+      worker_match(worker, worker->match.dot, tmpbuf, len);
+      worker_match(worker, worker->match.body, tmpbuf, len);
+      worker_match(worker, worker->grep.dot, tmpbuf, len);
+      worker_match(worker, worker->grep.body, tmpbuf, len);
+      worker_expect(worker, worker->expect.dot, tmpbuf, len);
+      worker_expect(worker, worker->expect.body, tmpbuf, len);
     }
   }
-out_err:
   return status;
 }
 
