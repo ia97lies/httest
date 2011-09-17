@@ -2191,7 +2191,11 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
       return status;
     }
   }
-  else if (!(worker->flags & FLAGS_PIPE_IN) && !(worker->flags & FLAGS_FILTER)) {
+  else if (worker->flags & FLAGS_PIPE_IN || worker->flags & FLAGS_FILTER) {
+    /* do not wait for proc termination here */
+    return status;
+  }
+  else {
     apr_size_t len = 0;
     char *buf = NULL;
 
@@ -2220,15 +2224,13 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 	                        status);
   }
 
-  if (!(worker->flags & FLAGS_PIPE_IN) && !(worker->flags & FLAGS_FILTER)) {
-    worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
-    apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
+  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
 
-    apr_file_close(worker->proc.out);
+  apr_file_close(worker->proc.out);
 
-    if (exitcode != 0) {
-      status = APR_EGENERAL;
-    }
+  if (exitcode != 0) {
+    status = APR_EGENERAL;
   }
 
   return status;
