@@ -2196,24 +2196,22 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     char *buf = NULL;
 
     worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
+    status = bufreader_new(&br, worker->proc.out, worker->pbody);
+    if (status == APR_SUCCESS || APR_STATUS_IS_EOF(status)) {
+      status = APR_SUCCESS;
       bufreader_read_eof(br, &buf, &len);
-      if (buf) {
-	worker_log(worker, LOG_INFO, "<%s", buf);
-	worker_match(worker, worker->match.exec, buf, len);
-	worker_match(worker, worker->grep.exec, buf, len);
-	worker_expect(worker, worker->expect.exec, buf, len);
-      }
+    }
+    else {
+      return status;
     }
 
-    if (buf && status == APR_EOF) {
-	worker_log(worker, LOG_INFO, "<%s", buf);
-	worker_match(worker, worker->match.exec, buf, len);
-	worker_match(worker, worker->grep.exec, buf, len);
-	worker_expect(worker, worker->expect.exec, buf, len);
+    if (buf) {
+      worker_log(worker, LOG_INFO, "<%s", buf);
+      worker_match(worker, worker->match.exec, buf, len);
+      worker_match(worker, worker->grep.exec, buf, len);
+      worker_expect(worker, worker->expect.exec, buf, len);
     }
     
-    status = APR_SUCCESS;
     status = worker_assert_match(worker, worker->match.exec, "MATCH exec", 
 	                         status);
     status = worker_assert_expect(worker, worker->expect.exec, "EXPECT exec", 
