@@ -135,7 +135,7 @@ out_err:
  * @param worker IN worker context
  * @param line IN line informations
  */
-static apr_status_t binary_get_line_length(worker_t *worker, line_t *line) {
+static apr_status_t binary_line_get_length(worker_t *worker, line_t *line) {
   apr_size_t len;
 
   /* lets see if we do have work */
@@ -166,7 +166,7 @@ static apr_status_t binary_get_line_length(worker_t *worker, line_t *line) {
  * @param worker IN worker context
  * @param line IN line informations
  */
-static apr_status_t binary_flush_resolved_line(worker_t *worker, line_t *line) {
+static apr_status_t binary_line_flush(worker_t *worker, line_t *line) {
   apr_status_t status;
   char *buf;
   apr_size_t i;
@@ -176,7 +176,7 @@ static apr_status_t binary_flush_resolved_line(worker_t *worker, line_t *line) {
     return APR_SUCCESS;
   }
 
-  if ((status = binary_get_line_length(worker, line)) != APR_SUCCESS) {
+  if ((status = binary_line_get_length(worker, line)) != APR_SUCCESS) {
     return status;
   }
 
@@ -211,8 +211,8 @@ apr_status_t binary_module_init(global_t *global) {
 	                           block_BINARY_RECV)) != APR_SUCCESS) {
     return status;
   }
-  htt_hook_flush_resolved_line(binary_flush_resolved_line, NULL, NULL, 0);
-  htt_hook_get_line_length(binary_get_line_length, NULL, NULL, 0);
+  htt_hook_line_flush(binary_line_flush, NULL, NULL, 0);
+  htt_hook_line_get_length(binary_line_get_length, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

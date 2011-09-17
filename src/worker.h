@@ -285,9 +285,9 @@ typedef struct line_s {
 /** register */
 # define HTT_DECLARE(type)    type
 
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, get_line_length,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_get_length,
                           (worker_t *worker, line_t *line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, flush_resolved_line,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_flush,
                           (worker_t *worker, line_t *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
                           (worker_t *worker, char *portinfo, 
@@ -307,7 +307,7 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_header,
                           (worker_t *worker, char *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_buf,
                           (worker_t *worker, char *buf, apr_size_t len));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, clone_worker,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_clone,
                           (worker_t *worker, worker_t *clone));
 
 apr_status_t transport_register(socket_t *socket, transport_t *transport);

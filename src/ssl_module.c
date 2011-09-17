@@ -1093,7 +1093,7 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
  * @param clone IN 
  * @return APR_SUCCESS
  */
-static apr_status_t ssl_clone_worker(worker_t *worker, worker_t *clone) {
+static apr_status_t ssl_worker_clone(worker_t *worker, worker_t *clone) {
   ssl_config_t *config = ssl_get_worker_config(worker);
 
   if (config->meth) {
@@ -1451,7 +1451,7 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
 
-  htt_hook_clone_worker(ssl_clone_worker, NULL, NULL, 0);
+  htt_hook_worker_clone(ssl_worker_clone, NULL, NULL, 0);
   htt_hook_client_port_args(ssl_client_port_args, NULL, NULL, 0);
   htt_hook_server_port_args(ssl_server_port_args, NULL, NULL, 0);
   htt_hook_connect(ssl_hook_connect, NULL, NULL, 0);

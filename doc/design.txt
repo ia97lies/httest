@@ -1,0 +1,31 @@
++DESIGN
+
+++Command Array
+- Global and local commands are hold in two static arrays.
+
+++Global Object
+- A global object do hold state of openeing closing SERVER/CLIENT/DAEMON/...
+- Do hold the global variables
+
+++Worker Object
+- From the global object a worker object is created for every SERVER/CLIENT/DAEMON/...
+- A worker object holds the state of thread like socket, ssl, commands
+- A worker object do have an interpreter function. 
+- A worker object do have registered a default interpreter function.
+- Defined Blocks are represent as a worker object.
+- _IF/_LOOP/_FOR/_ERROR/... commands with a body are represent as a worker object.
+- A module do register a worker object for each of his implemented block interpreter functions. 
+- A worker object do have a config hash table for the modules.
+- Modules do hold there specific state information in a own object registered to the config hash table of the worker object. 
+- A worker object do have a description text and a short description.
+
++++Default Interpreter Function
+- The default interpreter function do read the command lines and execute them.
+- The default interperter do lookups of modules, blocks and static commands.
+- If command is not found, the default interpreter throws an error.
+- The default interperter can handle a breaked loop (command_BREAK).
+
+++Transport Object
+- A transport object do understand read and write.
+- A transport object capsulate the transport like TCP, UDP, SSL, ...
+- A transport object could be cascaded.
