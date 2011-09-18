@@ -3663,12 +3663,14 @@ apr_status_t worker_socket_send(worker_t *self, char *buf,
 /**
  * flush partial data 
  *
- * @param self IN thread data object
+ * @param worker IN worker object
+ * @param from IN start cache line
+ * @param to IN end cache line
+ * @param ptmp IN temporary pool
  *
  * @return an apr status
  */
-
-apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to, 
+apr_status_t worker_flush_part(worker_t *self, int from, int to, 
                                apr_pool_t *ptmp) {
   int i;
   int len;
@@ -3679,17 +3681,6 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to,
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(self->cache)->elts;
 
-  if (chunked) {
-    worker_log_buf(self, LOG_INFO, chunked, ">", strlen(chunked));
-  }
-
-  if (chunked) {
-    len = strlen(chunked);
-    if ((status = worker_socket_send(self, chunked, len)) != APR_SUCCESS) {
-      goto error;
-    }
-    self->sent += len;
-  }
   /* iterate through all cached lines and send them */
   for (i = from; i < to; ++i) {
     line_t line; 
@@ -3752,6 +3743,37 @@ error:
 }
 
 /**
+ * Flush a chunk part
+ * 
+ * @param worker IN worker object
+ * @param chunked IN chunk info to flush before data
+ * @param from IN start cache line
+ * @param to IN end cache line
+ * @param ptmp IN temporary pool
+ *
+ * @param apr status
+ */
+apr_status_t worker_flush_chunk(worker_t *self, char *chunked, int from, int to,
+                                apr_pool_t *ptmp) {
+  apr_status_t status;
+  int len;
+
+  if (chunked) {
+    worker_log_buf(self, LOG_INFO, chunked, ">", strlen(chunked));
+  }
+
+  if (chunked) {
+    len = strlen(chunked);
+    if ((status = worker_socket_send(self, chunked, len)) != APR_SUCCESS) {
+      return status;
+    }
+    self->sent += len;
+  }
+
+  return worker_flush_part(self, from, to, ptmp);
+}
+
+/**
  * flush data 
  *
  * @param self IN thread data object
@@ -3796,7 +3818,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     apr_strtok(copy, ":", &last);
     nv = apr_strtok(NULL, ",", &last);
     while (nv) {
-      /* hop over headers an do not count user did set a value */
+      /* hop over headers an do not count if user did set a value */
       while (i < apr_table_elts(self->cache)->nelts && e[i].val[0]) {
 	++i;
       }
@@ -3916,7 +3938,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
            apr_table_get(self->cache, "100-Continue")) {
     /* do this only if Content-Length and 100-Continue is set */
     /* flush headers and empty line but not body */
-    if ((status = worker_flush_part(self, NULL, 0, body_start, ptmp)) 
+    if ((status = worker_flush_part(self, 0, body_start, ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
@@ -3933,7 +3955,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     /* do not skip flush */
     self->flags &= ~FLAGS_SKIP_FLUSH;
     /* send body then */
-    if ((status = worker_flush_part(self, NULL, body_start, 
+    if ((status = worker_flush_part(self, body_start, 
 	                            apr_table_elts(self->cache)->nelts, ptmp))
 	!= APR_SUCCESS) { 
       goto error;
@@ -3970,33 +3992,28 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
   }
   if (icap_body) {
     /* send all except the req/res body */
-    if ((status = worker_flush_part(self, NULL, 0, icap_body_start, ptmp)) 
+    if ((status = worker_flush_part(self, 0, icap_body_start, ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
-    if ((status = worker_flush_part(self, chunked, icap_body_start, 
-	                            apr_table_elts(self->cache)->nelts, ptmp))
+    if ((status = worker_flush_chunk(self, chunked, icap_body_start, 
+	                             apr_table_elts(self->cache)->nelts, ptmp))
 	!= APR_SUCCESS) {
       goto error;
     }
     if (chunked) {
       chunked = apr_psprintf(self->pbody, "\r\n0\r\n\r\n");
-      status = worker_flush_part(self, chunked, 0, 0, ptmp); 
+      status = worker_flush_chunk(self, chunked, 0, 0, ptmp); 
     }
   }
   else {
-    status = worker_flush_part(self, chunked, 0, 
-	                       apr_table_elts(self->cache)->nelts, ptmp);
+    status = worker_flush_chunk(self, chunked, 0, 
+	                        apr_table_elts(self->cache)->nelts, ptmp);
   }
 
 error:
-  {
-    //apr_pool_t *parent = apr_pool_parent_get(self->pcache);
-    apr_pool_clear(self->pcache);
-    //apr_pool_destroy(self->pcache);
-    //apr_pool_create(&self->pcache, parent);
-    self->cache = apr_table_make(self->pcache, 20);
-  }
+  apr_pool_clear(self->pcache);
+  self->cache = apr_table_make(self->pcache, 20);
 
   return status;
 }
