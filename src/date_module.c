@@ -116,6 +116,36 @@ apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent, apr_pool_t *p
   return APR_SUCCESS;
 }
 
+/**
+ * SYNC command
+ *
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary pool 
+ *
+ * @return APR_SUCCESS
+ */
+apr_status_t block_DATE_SYNC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  apr_time_t seconds;
+  apr_time_t next_full;
+
+  const char *first = store_get(worker->params, "1"); 
+  apr_time_t now = apr_time_now();
+
+  if (!first || strcmp(first, "second") == 0) {
+    seconds = apr_time_sec(now) + 1;
+    next_full = apr_time_from_sec(seconds);
+  }
+  else if (first && strcmp(first, "minute") == 0) {
+    seconds = apr_time_sec(now) + (60 - (apr_time_sec(now) % 60));
+    next_full = apr_time_from_sec(seconds);
+  }
+
+  apr_sleep(next_full - now);
+  
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Module
  ***********************************************************************/
@@ -128,11 +158,20 @@ apr_status_t date_module_init(global_t *global) {
     return status;
   }
   if ((status = module_command_new(global, "DATE", "_FORMAT",
-	                           "<var>",
 	                           "<time> <format> <variable> [Local|GMT]",
+				   "Do format <time> with <format> and stores it in <variable>. "
+				   "Local is default.",
 	                           block_DATE_FORMAT)) != APR_SUCCESS) {
     return status;
   }
+  if ((status = module_command_new(global, "DATE", "_SYNC",
+	                           "[second|minute]",
+				   "Default wait the next full second. "
+				   "Optional wait the next full minute.", 
+	                           block_DATE_SYNC)) != APR_SUCCESS) {
+    return status;
+  }
+
 
   return APR_SUCCESS;
 }

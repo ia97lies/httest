@@ -2563,33 +2563,6 @@ apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * SYNC command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN unused
- *
- * @return APR_SUCCESS
- */
-apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data, 
-                          apr_pool_t *ptmp) {
-  apr_time_t sec;
-  apr_time_t nxt_sec;
-  apr_time_t now;
-
-  /* get current time */
-  now = apr_time_now();
-  /* get next second */
-  sec = apr_time_sec(now) + 1;
-  /* next second in us */
-  nxt_sec = apr_time_from_sec(sec);
-  /* sleep until next sec */
-  apr_sleep(nxt_sec - now);
-  
-  return APR_SUCCESS;
-}
-
-/**
  * RECV command
  *
  * @param self IN command
