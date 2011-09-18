@@ -3777,6 +3777,7 @@ apr_status_t worker_flush_chunk(worker_t *self, char *chunked, int from, int to,
  * flush data 
  *
  * @param self IN thread data object
+ * @param ptmp IN temporary pool
  *
  * @return an apr status
  */
@@ -3808,7 +3809,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
   /* hop over icap headers if there are any */
   if (apr_table_get(self->cache, "Content-Length") && 
       (hdr = apr_table_get(self->cache, "Encapsulated"))) {
-   char *nv;
+    char *nv;
     char *last;
     char *copy = apr_pstrdup(self->pbody, hdr);
 
@@ -3830,6 +3831,18 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 
   /* callculate body if Content-Length: AUTO */
   if (apr_table_get(self->cache, "Content-Length")) {
+    /* jump over headers */
+    for (; !start && i < apr_table_elts(self->cache)->nelts; ++i) {
+      line_t line; 
+      line.info = e[i].key;
+      line.buf = e[i].val;
+
+      if (!line.buf[0]) {
+        start = 1;
+	body_start = i + 1;
+      }
+    }
+
     /* calculate body len */
     len = 0;
     for (; i < apr_table_elts(self->cache)->nelts; ++i) {
@@ -3842,23 +3855,15 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 	return status;
       }
 
-      /* easy way to jump over headers */
-      if (!start && !line.buf[0]) {
-        /* start body len */
-        start = 1;
-	body_start = i + 1;
+      /* do not forget the \r\n */
+      if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
+	len += 2;
       }
-      else if (start) {
-        /* do not forget the \r\n */
-	if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
-	  len += 2;
-	}
-	if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
-	  len += apr_atoi64(&line.info[7]);
-	}
-	else {
-          len += strlen(line.buf);
-	}
+      if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
+	len += apr_atoi64(&line.info[7]);
+      }
+      else {
+	len += strlen(line.buf);
       }
     }
 
