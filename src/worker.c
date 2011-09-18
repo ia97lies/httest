@@ -314,13 +314,40 @@ static void * APR_THREAD_FUNC streamer(apr_thread_t * thread, void *selfv) {
 }
 
 /**
+ * local file write 
+ *
+ * @param sockett IN socket 
+ * @param buf IN buffer to send
+ * @param len IN no bytes of buffer to send
+ *
+ * @return apr status
+ */
+static apr_status_t file_write(apr_file_t *file, char *buf,
+                               apr_size_t len) {
+  apr_status_t status = APR_SUCCESS;
+  apr_size_t total = len;
+  apr_size_t count = 0;
+
+  while (total != count) {
+    len = total - count;
+    if ((status = apr_file_write(file, &buf[count], &len)) 
+	!= APR_SUCCESS) {
+      goto error;
+    }
+    count += len;
+  }
+error:
+  return status;
+}
+
+/**
  * Buffer converter depends on the worker->flags
  *
  * @param worker IN thread data object
  * @param buf INOUT buffer to rewrite
  * @param len INOUT buffer len 
  */
-void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
+static void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
   int j;
   char *hexbuf;
   apr_pool_t *pool;
@@ -352,6 +379,108 @@ void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
     *len = strlen(*buf);
     apr_pool_destroy(pool);
   }
+}
+
+/**
+ * pipe buf to workers running process 
+ *
+ * @param worker IN thread data object
+ * @param buf IN buffer to rewrite
+ * @param len IN buffer len 
+ */
+static apr_status_t worker_buf_pipe_exec(worker_t *worker, char *buf, 
+                                         apr_size_t len) {
+  apr_status_t status = APR_SUCCESS;
+  apr_exit_why_e exitwhy;
+  int exitcode;
+
+  if ((status = file_write(worker->proc.in, buf, len))
+      != APR_SUCCESS) {
+    return status;
+  }
+  apr_file_close(worker->proc.in);
+  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  if (exitcode != 0) {
+    status = APR_EGENERAL;
+  }
+  return status;
+}
+
+/**
+ * write buf to file pointer
+ *
+ * @param thread IN thread pointer
+ * @param selfv IN void pointer of type write_buf_to_file_t
+ *
+ * @return NULL
+ */
+static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, void *selfv) {
+  write_buf_to_file_t *wbtf = selfv;
+  apr_size_t len;
+
+  len = wbtf->len;
+  file_write(wbtf->fp, wbtf->buf, len);
+  apr_file_close(wbtf->fp);
+
+  apr_thread_exit(thread, APR_SUCCESS);
+  return NULL;
+}
+
+/**
+ * do filter buf with workers process in/out 
+ *
+ * @param worker IN thread data object
+ * @param ptmp IN temporary pool to alloc thread
+ * @param buf INOUT buffer to rewrite
+ * @param len INOUT buffer len 
+ */
+static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp, 
+                                           char **buf, apr_size_t *len) {
+  apr_status_t status;
+  apr_status_t tmp_status;
+  write_buf_to_file_t write_buf_to_file;
+  apr_threadattr_t *tattr;
+  apr_thread_t *thread;
+  bufreader_t *br;
+  apr_exit_why_e exitwhy;
+  int exitcode;
+
+  worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
+  /* start write thread */
+  write_buf_to_file.buf = *buf;
+  write_buf_to_file.len = *len;
+  write_buf_to_file.fp = worker->proc.in;
+  if ((status = apr_threadattr_create(&tattr, ptmp)) != APR_SUCCESS) {
+    goto out_err;
+  }
+  if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
+      != APR_SUCCESS) {
+    goto out_err;
+  }
+  if ((status = apr_threadattr_detach_set(tattr, 1)) != APR_SUCCESS) {
+    goto out_err;
+  }
+  if ((status =
+       apr_thread_create(&thread, tattr, worker_write_buf_to_file,
+			 &write_buf_to_file, worker->pbody)) != APR_SUCCESS) {
+    goto out_err;
+  }
+  /* read from worker->proc.out to buf */
+  if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
+    bufreader_read_eof(br, buf, len);
+    worker_log_buf(worker, LOG_INFO, *buf, "<", *len);
+  }
+  if (status == APR_EOF) {
+    status = APR_SUCCESS;
+  }
+  apr_thread_join(&tmp_status, thread);
+  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  if (exitcode != 0) {
+    status = APR_EGENERAL;
+    goto out_err;
+  }
+out_err:
+  return status;
 }
 
 
@@ -803,53 +932,6 @@ void worker_conn_close_all(worker_t *self) {
 }
 
 /**
- * local file write 
- *
- * @param sockett IN socket 
- * @param buf IN buffer to send
- * @param len IN no bytes of buffer to send
- *
- * @return apr status
- */
-static apr_status_t file_write(apr_file_t *file, char *buf,
-                               apr_size_t len) {
-  apr_status_t status = APR_SUCCESS;
-  apr_size_t total = len;
-  apr_size_t count = 0;
-
-  while (total != count) {
-    len = total - count;
-    if ((status = apr_file_write(file, &buf[count], &len)) 
-	!= APR_SUCCESS) {
-      goto error;
-    }
-    count += len;
-  }
-error:
-  return status;
-}
-
-/**
- * write buf to file pointer
- *
- * @param thread IN thread pointer
- * @param selfv IN void pointer of type write_buf_to_file_t
- *
- * @return NULL
- */
-static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, void *selfv) {
-  write_buf_to_file_t *wbtf = selfv;
-  apr_size_t len;
-
-  len = wbtf->len;
-  file_write(wbtf->fp, wbtf->buf, len);
-  apr_file_close(wbtf->fp);
-
-  apr_thread_exit(thread, APR_SUCCESS);
-  return NULL;
-}
-
-/**
  * Convertion and/or pipe to executable and/or read from executable and check
  * _EXPECT and MATCH.
  *
@@ -860,94 +942,35 @@ static void * APR_THREAD_FUNC worker_write_buf_to_file(apr_thread_t * thread, vo
  * @return apr status
  */
 apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
-                               apr_size_t len) {
+                               apr_size_t size) {
   apr_status_t status = APR_SUCCESS;
-  apr_size_t inlen;
-  apr_exit_why_e exitwhy;
-  int exitcode;
-  write_buf_to_file_t write_buf_to_file;
-  apr_threadattr_t *tattr;
-  apr_thread_t *thread;
-  bufreader_t *br;
-  char *line;
-  apr_status_t tmp_status;
+  char *tmpbuf = buf;
+  apr_size_t len = size;
 
-  if (buf) {
-    worker_buf_convert(worker, &buf, &len);
+  if (tmpbuf) {
+    worker_buf_convert(worker, &tmpbuf, &len);
     if (worker->flags & FLAGS_PIPE_IN) {
       worker->flags &= ~FLAGS_PIPE_IN;
-      inlen = len;
-      if ((status = file_write(worker->proc.in, buf, inlen))
-	  != APR_SUCCESS) {
-	goto out_err;
-      }
-      apr_file_close(worker->proc.in);
-      apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      if (exitcode != 0) {
-	status = APR_EGENERAL;
-	goto out_err;
+      if ((status = worker_buf_pipe_exec(worker, tmpbuf, len)) != APR_SUCCESS) {
+	return status;
       }
     }
     else if (worker->flags & FLAGS_FILTER) {
-      worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
       worker->flags &= ~FLAGS_FILTER;
-      /* start write thread */
-      write_buf_to_file.buf = buf;
-      write_buf_to_file.len = len;
-      write_buf_to_file.fp = worker->proc.in;
-      if ((status = apr_threadattr_create(&tattr, pool)) != APR_SUCCESS) {
-	goto out_err;
-      }
-      if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
-	  != APR_SUCCESS) {
-	goto out_err;
-      }
-      if ((status = apr_threadattr_detach_set(tattr, 1)) != APR_SUCCESS) {
-	goto out_err;
-      }
-      if ((status =
-	   apr_thread_create(&thread, tattr, worker_write_buf_to_file,
-			     &write_buf_to_file, worker->pbody)) != APR_SUCCESS) {
-	goto out_err;
-      }
-      /* read from worker->proc.out to buf */
-      if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
-	apr_size_t len;
-
-	bufreader_read_eof(br, &line, &len);
-	if (line) {
-	  worker_log_buf(worker, LOG_INFO, line, "<", len);
-	  worker_match(worker, worker->match.dot, line, len);
-	  worker_match(worker, worker->match.body, line, len);
-	  worker_match(worker, worker->grep.dot, line, len);
-	  worker_match(worker, worker->grep.body, line, len);
-	  worker_expect(worker, worker->expect.dot, line, len);
-	  worker_expect(worker, worker->expect.body, line, len);
-	}
-      }
-      if (status == APR_EOF) {
-	status = APR_SUCCESS;
-      }
-      apr_thread_join(&tmp_status, thread);
-      apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-      if (exitcode != 0) {
-	status = APR_EGENERAL;
-	goto out_err;
-      }
-      /* tag it "done" */
-      buf = NULL;
+      if ((status =  worker_buf_filter_exec(worker, pool, &tmpbuf, &len)) != APR_SUCCESS) {
+        return status;
+      }	
     }
-    if (buf) {
-      worker_log_buf(worker, LOG_INFO, buf, "<", len);
-      worker_match(worker, worker->match.dot, buf, len);
-      worker_match(worker, worker->match.body, buf, len);
-      worker_match(worker, worker->grep.dot, buf, len);
-      worker_match(worker, worker->grep.body, buf, len);
-      worker_expect(worker, worker->expect.dot, buf, len);
-      worker_expect(worker, worker->expect.body, buf, len);
+    if (tmpbuf) {
+      //worker_log_buf(worker, LOG_INFO, tmpbuf, "<", len);
+      worker_match(worker, worker->match.dot, tmpbuf, len);
+      worker_match(worker, worker->match.body, tmpbuf, len);
+      worker_match(worker, worker->grep.dot, tmpbuf, len);
+      worker_match(worker, worker->grep.body, tmpbuf, len);
+      worker_expect(worker, worker->expect.dot, tmpbuf, len);
+      worker_expect(worker, worker->expect.body, tmpbuf, len);
     }
   }
-out_err:
   return status;
 }
 
@@ -2168,29 +2191,31 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
       return status;
     }
   }
-  else if (!(worker->flags & FLAGS_PIPE_IN) && !(worker->flags & FLAGS_FILTER)) {
+  else if (worker->flags & FLAGS_PIPE_IN || worker->flags & FLAGS_FILTER) {
+    /* do not wait for proc termination here */
+    return status;
+  }
+  else {
     apr_size_t len = 0;
     char *buf = NULL;
 
     worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
+    status = bufreader_new(&br, worker->proc.out, worker->pbody);
+    if (status == APR_SUCCESS || APR_STATUS_IS_EOF(status)) {
+      status = APR_SUCCESS;
       bufreader_read_eof(br, &buf, &len);
-      if (buf) {
-	worker_log(worker, LOG_INFO, "<%s", buf);
-	worker_match(worker, worker->match.exec, buf, len);
-	worker_match(worker, worker->grep.exec, buf, len);
-	worker_expect(worker, worker->expect.exec, buf, len);
-      }
+    }
+    else {
+      return status;
     }
 
-    if (buf && status == APR_EOF) {
-	worker_log(worker, LOG_INFO, "<%s", buf);
-	worker_match(worker, worker->match.exec, buf, len);
-	worker_match(worker, worker->grep.exec, buf, len);
-	worker_expect(worker, worker->expect.exec, buf, len);
+    if (buf) {
+      worker_log(worker, LOG_INFO, "<%s", buf);
+      worker_match(worker, worker->match.exec, buf, len);
+      worker_match(worker, worker->grep.exec, buf, len);
+      worker_expect(worker, worker->expect.exec, buf, len);
     }
     
-    status = APR_SUCCESS;
     status = worker_assert_match(worker, worker->match.exec, "MATCH exec", 
 	                         status);
     status = worker_assert_expect(worker, worker->expect.exec, "EXPECT exec", 
@@ -2199,15 +2224,13 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 	                        status);
   }
 
-  if (!(worker->flags & FLAGS_PIPE_IN) && !(worker->flags & FLAGS_FILTER)) {
-    worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
-    apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
+  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
 
-    apr_file_close(worker->proc.out);
+  apr_file_close(worker->proc.out);
 
-    if (exitcode != 0) {
-      status = APR_EGENERAL;
-    }
+  if (exitcode != 0) {
+    status = APR_EGENERAL;
   }
 
   return status;
@@ -2536,33 +2559,6 @@ apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data,
 
   worker->log_mode = apr_atoi64(copy);
 
-  return APR_SUCCESS;
-}
-
-/**
- * SYNC command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN unused
- *
- * @return APR_SUCCESS
- */
-apr_status_t command_SYNC(command_t *self, worker_t *worker, char *data, 
-                          apr_pool_t *ptmp) {
-  apr_time_t sec;
-  apr_time_t nxt_sec;
-  apr_time_t now;
-
-  /* get current time */
-  now = apr_time_now();
-  /* get next second */
-  sec = apr_time_sec(now) + 1;
-  /* next second in us */
-  nxt_sec = apr_time_from_sec(sec);
-  /* sleep until next sec */
-  apr_sleep(nxt_sec - now);
-  
   return APR_SUCCESS;
 }
 
@@ -3667,12 +3663,14 @@ apr_status_t worker_socket_send(worker_t *self, char *buf,
 /**
  * flush partial data 
  *
- * @param self IN thread data object
+ * @param worker IN worker object
+ * @param from IN start cache line
+ * @param to IN end cache line
+ * @param ptmp IN temporary pool
  *
  * @return an apr status
  */
-
-apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to, 
+apr_status_t worker_flush_part(worker_t *self, int from, int to, 
                                apr_pool_t *ptmp) {
   int i;
   int len;
@@ -3683,17 +3681,6 @@ apr_status_t worker_flush_part(worker_t *self, char *chunked, int from, int to,
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(self->cache)->elts;
 
-  if (chunked) {
-    worker_log_buf(self, LOG_INFO, chunked, ">", strlen(chunked));
-  }
-
-  if (chunked) {
-    len = strlen(chunked);
-    if ((status = worker_socket_send(self, chunked, len)) != APR_SUCCESS) {
-      goto error;
-    }
-    self->sent += len;
-  }
   /* iterate through all cached lines and send them */
   for (i = from; i < to; ++i) {
     line_t line; 
@@ -3756,9 +3743,41 @@ error:
 }
 
 /**
+ * Flush a chunk part
+ * 
+ * @param worker IN worker object
+ * @param chunked IN chunk info to flush before data
+ * @param from IN start cache line
+ * @param to IN end cache line
+ * @param ptmp IN temporary pool
+ *
+ * @param apr status
+ */
+apr_status_t worker_flush_chunk(worker_t *self, char *chunked, int from, int to,
+                                apr_pool_t *ptmp) {
+  apr_status_t status;
+  int len;
+
+  if (chunked) {
+    worker_log_buf(self, LOG_INFO, chunked, ">", strlen(chunked));
+  }
+
+  if (chunked) {
+    len = strlen(chunked);
+    if ((status = worker_socket_send(self, chunked, len)) != APR_SUCCESS) {
+      return status;
+    }
+    self->sent += len;
+  }
+
+  return worker_flush_part(self, from, to, ptmp);
+}
+
+/**
  * flush data 
  *
  * @param self IN thread data object
+ * @param ptmp IN temporary pool
  *
  * @return an apr status
  */
@@ -3790,7 +3809,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
   /* hop over icap headers if there are any */
   if (apr_table_get(self->cache, "Content-Length") && 
       (hdr = apr_table_get(self->cache, "Encapsulated"))) {
-   char *nv;
+    char *nv;
     char *last;
     char *copy = apr_pstrdup(self->pbody, hdr);
 
@@ -3800,7 +3819,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     apr_strtok(copy, ":", &last);
     nv = apr_strtok(NULL, ",", &last);
     while (nv) {
-      /* hop over headers an do not count user did set a value */
+      /* hop over headers an do not count if user did set a value */
       while (i < apr_table_elts(self->cache)->nelts && e[i].val[0]) {
 	++i;
       }
@@ -3812,6 +3831,18 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 
   /* callculate body if Content-Length: AUTO */
   if (apr_table_get(self->cache, "Content-Length")) {
+    /* jump over headers */
+    for (; !start && i < apr_table_elts(self->cache)->nelts; ++i) {
+      line_t line; 
+      line.info = e[i].key;
+      line.buf = e[i].val;
+
+      if (!line.buf[0]) {
+        start = 1;
+	body_start = i + 1;
+      }
+    }
+
     /* calculate body len */
     len = 0;
     for (; i < apr_table_elts(self->cache)->nelts; ++i) {
@@ -3824,23 +3855,15 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 	return status;
       }
 
-      /* easy way to jump over headers */
-      if (!start && !line.buf[0]) {
-        /* start body len */
-        start = 1;
-	body_start = i + 1;
+      /* do not forget the \r\n */
+      if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
+	len += 2;
       }
-      else if (start) {
-        /* do not forget the \r\n */
-	if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
-	  len += 2;
-	}
-	if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
-	  len += apr_atoi64(&line.info[7]);
-	}
-	else {
-          len += strlen(line.buf);
-	}
+      if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
+	len += apr_atoi64(&line.info[7]);
+      }
+      else {
+	len += strlen(line.buf);
       }
     }
 
@@ -3920,7 +3943,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
            apr_table_get(self->cache, "100-Continue")) {
     /* do this only if Content-Length and 100-Continue is set */
     /* flush headers and empty line but not body */
-    if ((status = worker_flush_part(self, NULL, 0, body_start, ptmp)) 
+    if ((status = worker_flush_part(self, 0, body_start, ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
@@ -3937,7 +3960,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     /* do not skip flush */
     self->flags &= ~FLAGS_SKIP_FLUSH;
     /* send body then */
-    if ((status = worker_flush_part(self, NULL, body_start, 
+    if ((status = worker_flush_part(self, body_start, 
 	                            apr_table_elts(self->cache)->nelts, ptmp))
 	!= APR_SUCCESS) { 
       goto error;
@@ -3974,33 +3997,28 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
   }
   if (icap_body) {
     /* send all except the req/res body */
-    if ((status = worker_flush_part(self, NULL, 0, icap_body_start, ptmp)) 
+    if ((status = worker_flush_part(self, 0, icap_body_start, ptmp)) 
 	!= APR_SUCCESS) {
       goto error;
     }
-    if ((status = worker_flush_part(self, chunked, icap_body_start, 
-	                            apr_table_elts(self->cache)->nelts, ptmp))
+    if ((status = worker_flush_chunk(self, chunked, icap_body_start, 
+	                             apr_table_elts(self->cache)->nelts, ptmp))
 	!= APR_SUCCESS) {
       goto error;
     }
     if (chunked) {
       chunked = apr_psprintf(self->pbody, "\r\n0\r\n\r\n");
-      status = worker_flush_part(self, chunked, 0, 0, ptmp); 
+      status = worker_flush_chunk(self, chunked, 0, 0, ptmp); 
     }
   }
   else {
-    status = worker_flush_part(self, chunked, 0, 
-	                       apr_table_elts(self->cache)->nelts, ptmp);
+    status = worker_flush_chunk(self, chunked, 0, 
+	                        apr_table_elts(self->cache)->nelts, ptmp);
   }
 
 error:
-  {
-    //apr_pool_t *parent = apr_pool_parent_get(self->pcache);
-    apr_pool_clear(self->pcache);
-    //apr_pool_destroy(self->pcache);
-    //apr_pool_create(&self->pcache, parent);
-    self->cache = apr_table_make(self->pcache, 20);
-  }
+  apr_pool_clear(self->pcache);
+  self->cache = apr_table_make(self->pcache, 20);
 
   return status;
 }

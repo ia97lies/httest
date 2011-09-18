@@ -335,9 +335,6 @@ command_t local_commands[] = {
   {"_LOG_LEVEL", (command_f )command_LOG_LEVEL, "<level>", 
   "Level is a number 0-4",
   COMMAND_FLAGS_NONE},
-  {"_SYNC", (command_f )command_SYNC, "", 
-  "Synchronise to the next full second",
-  COMMAND_FLAGS_NONE},
   {"_RECV", (command_f )command_RECV, "<bytes>|POLL|CHUNKED|CLOSE [DO_NOT_CHECK]", 
   "Receive an amount of bytes, either specified by a number \n"
   "or as much until socket timeout will in POLL mode.\n"
@@ -409,6 +406,7 @@ command_t local_commands[] = {
   {"_URLDEC", NULL, "_CODER:URLDEC", NULL, COMMAND_FLAGS_LINK},
   {"_TIME", NULL, "_DATE:GET_TIME", NULL, COMMAND_FLAGS_LINK},
   {"_STRFTIME", NULL, "_DATE:FORMAT", NULL, COMMAND_FLAGS_LINK},
+  {"_SYNC", NULL, "_DATE:SYNC", NULL, COMMAND_FLAGS_LINK},
   {"_SSL_CONNECT", NULL, "_SSL:CONNECT", NULL, COMMAND_FLAGS_LINK},
   {"_SSL_ACCEPT", NULL, "_SSL:ACCEPT", NULL, COMMAND_FLAGS_LINK},
   {"_RENEG", NULL, "_SSL:RENEG_CERT", NULL, COMMAND_FLAGS_LINK},
