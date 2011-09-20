@@ -3653,11 +3653,50 @@ apr_status_t worker_add_line(worker_t * self, const char *file_and_line,
  *
  * @return apr status
  */
-apr_status_t worker_socket_send(worker_t *self, char *buf, 
+apr_status_t worker_socket_send(worker_t *worker, char *buf, 
                       apr_size_t len) {
 
-  worker_log(self, LOG_DEBUG, "send socket: %p transport: %p", self->socket, self->socket->transport);
-  return transport_write(self->socket->transport, buf, len);
+  worker_log(worker, LOG_DEBUG, "send socket: %p transport: %p", 
+             worker->socket, worker->socket->transport);
+  return transport_write(worker->socket->transport, buf, len);
+}
+
+/**
+ * get the length of the cached line
+ *
+ * @param worker IN worker object
+ * @param cached_line IN a table entry of cache
+ * @param len OUT length of cached_line
+ *
+ * @return length of this table entry
+ */
+static apr_status_t worker_get_line_length(worker_t *worker, 
+                                           apr_table_entry_t cached_line,
+					   apr_size_t *len) {
+  line_t line; 
+
+  apr_status_t status = APR_SUCCESS;
+  line.info = cached_line.key;
+  line.buf = cached_line.val;
+  *len = 0;
+
+  /* if there are modules which do have their own format */
+  if ((status = htt_run_line_get_length(worker, &line)) != APR_SUCCESS) {
+    return status;
+  }
+
+  /* do not forget the \r\n */
+  if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
+    *len += 2;
+  }
+  if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
+    *len += apr_atoi64(&line.info[7]);
+  }
+  else {
+    *len += strlen(line.buf);
+  }
+
+  return status;
 }
 
 /**
@@ -3670,7 +3709,7 @@ apr_status_t worker_socket_send(worker_t *self, char *buf,
  *
  * @return an apr status
  */
-apr_status_t worker_flush_part(worker_t *self, int from, int to, 
+apr_status_t worker_flush_part(worker_t *worker, int from, int to, 
                                apr_pool_t *ptmp) {
   int i;
   int len;
@@ -3679,7 +3718,7 @@ apr_status_t worker_flush_part(worker_t *self, int from, int to,
   apr_status_t status = APR_SUCCESS;
 
   apr_table_entry_t *e =
-    (apr_table_entry_t *) apr_table_elts(self->cache)->elts;
+    (apr_table_entry_t *) apr_table_elts(worker->cache)->elts;
 
   /* iterate through all cached lines and send them */
   for (i = from; i < to; ++i) {
@@ -3693,48 +3732,48 @@ apr_status_t worker_flush_part(worker_t *self, int from, int to,
        * with values
        */
       /* replace all vars */
-      line.buf = worker_replace_vars(self, line.buf, &unresolved, ptmp); 
+      line.buf = worker_replace_vars(worker, line.buf, &unresolved, ptmp); 
     }
-    if((status = htt_run_line_flush(self, &line)) != APR_SUCCESS) {
+    if((status = htt_run_line_flush(worker, &line)) != APR_SUCCESS) {
       return status;
     }
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
       line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {
-	worker_log_buf(self, LOG_INFO, line.buf, NULL, line.len);
+	worker_log_buf(worker, LOG_INFO, line.buf, NULL, line.len);
       }
       else {
-	worker_log_buf(self, LOG_INFO, line.buf, ">", line.len);
+	worker_log_buf(worker, LOG_INFO, line.buf, ">", line.len);
       }
       nocrlf = 1;
     }
     else if (strcasecmp(line.info, "NOCRLF") == 0) {
       line.len = strlen(line.buf);
       if (nocrlf) {
-	worker_log_buf(self, LOG_INFO, line.buf, NULL, line.len);
+	worker_log_buf(worker, LOG_INFO, line.buf, NULL, line.len);
       }
       else {
-	worker_log_buf(self, LOG_INFO, line.buf, ">", line.len);
+	worker_log_buf(worker, LOG_INFO, line.buf, ">", line.len);
       }
       nocrlf = 1;
     } 
     else {
       line.len = strlen(line.buf);
-      worker_log(self, LOG_INFO, ">%s", line.buf);
+      worker_log(worker, LOG_INFO, ">%s", line.buf);
       nocrlf = 0;
     }
 
-    if ((status = worker_socket_send(self, line.buf, line.len)) 
+    if ((status = worker_socket_send(worker, line.buf, line.len)) 
 	!= APR_SUCCESS) {
       goto error;
     }
-    self->sent += line.len;
+    worker->sent += line.len;
     if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
       len = 2;
-      if ((status = worker_socket_send(self, "\r\n", len)) != APR_SUCCESS) {
+      if ((status = worker_socket_send(worker, "\r\n", len)) != APR_SUCCESS) {
 	goto error;
       }
-      self->sent += len;
+      worker->sent += len;
     }
   }
 
@@ -3753,24 +3792,24 @@ error:
  *
  * @param apr status
  */
-apr_status_t worker_flush_chunk(worker_t *self, char *chunked, int from, int to,
+apr_status_t worker_flush_chunk(worker_t *worker, char *chunked, int from, int to,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   int len;
 
   if (chunked) {
-    worker_log_buf(self, LOG_INFO, chunked, ">", strlen(chunked));
+    worker_log_buf(worker, LOG_INFO, chunked, ">", strlen(chunked));
   }
 
   if (chunked) {
     len = strlen(chunked);
-    if ((status = worker_socket_send(self, chunked, len)) != APR_SUCCESS) {
+    if ((status = worker_socket_send(worker, chunked, len)) != APR_SUCCESS) {
       return status;
     }
-    self->sent += len;
+    worker->sent += len;
   }
 
-  return worker_flush_part(self, from, to, ptmp);
+  return worker_flush_part(worker, from, to, ptmp);
 }
 
 /**
@@ -3846,25 +3885,12 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     /* calculate body len */
     len = 0;
     for (; i < apr_table_elts(self->cache)->nelts; ++i) {
-      line_t line; 
-      line.info = e[i].key;
-      line.buf = e[i].val;
-
-      /* if there are modules which do have their own format */
-      if ((status = htt_run_line_get_length(self, &line)) != APR_SUCCESS) {
+      apr_size_t tmp_len;
+      if ((status = worker_get_line_length(self, e[i], &tmp_len)) 
+	  != APR_SUCCESS) {
 	return status;
       }
-
-      /* do not forget the \r\n */
-      if (strncasecmp(line.info, "NOCRLF", 6) != 0) {
-	len += 2;
-      }
-      if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
-	len += apr_atoi64(&line.info[7]);
-      }
-      else {
-	len += strlen(line.buf);
-      }
+      len += tmp_len;
     }
 
     apr_table_set(self->cache, "Content-Length",
@@ -3897,16 +3923,12 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
       }
       if (val && strncmp(val, "AUTO", 4) == 0) {
         while (i < apr_table_elts(self->cache)->nelts && e[i].val[0]) {
-	  /* do not forget the \r\n */
-	  if (strncasecmp(e[i].key, "NOCRLF", 6) != 0) {
-	    len += 2;
+	  apr_size_t tmp_len;
+	  if ((status = worker_get_line_length(self, e[i], &tmp_len)) 
+	      != APR_SUCCESS) {
+	    return status;
 	  }
-	  if (strncasecmp(e[i].key, "NOCRLF:", 7) == 0) { 
-	    len += apr_atoi64(&e[i].key[7]);
-	  }
-	  else {
-	    len += strlen(e[i].val);
-	  }
+	  len += tmp_len;
 	  ++i;
 	}
 	/* count also the empty line */
