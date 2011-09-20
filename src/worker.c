@@ -3662,6 +3662,25 @@ apr_status_t worker_socket_send(worker_t *worker, char *buf,
 }
 
 /**
+ * Hop over headers till empty line
+ *
+ * @param worker IN worker object
+ * @param start IN start index
+ *
+ * @return current index
+ */
+static int worker_hop_over_headers(worker_t *worker, int start) {
+  int i = start;
+  apr_table_entry_t *e =
+    (apr_table_entry_t *) apr_table_elts(worker->cache)->elts;
+  while (i < apr_table_elts(worker->cache)->nelts && e[i].val[0]) {
+    ++i;
+  }
+  ++i;
+  return i;
+}
+
+/**
  * get the length of the cached line
  *
  * @param worker IN worker object
@@ -3857,11 +3876,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     apr_strtok(copy, ":", &last);
     nv = apr_strtok(NULL, ",", &last);
     while (nv) {
-      /* hop over headers an do not count if user did set a value */
-      while (i < apr_table_elts(self->cache)->nelts && e[i].val[0]) {
-	++i;
-      }
-      ++i;
+      i = worker_hop_over_headers(self, i);
       nv = apr_strtok(NULL, ",", &last);
     }
     start = 1;
@@ -3937,11 +3952,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 	++i;
       }
       else {
-        /* hop over headers an do not count user did set a value */
-        while (i < apr_table_elts(self->cache)->nelts && e[i].val[0]) {
-	  ++i;
-	}
-	++i;
+	i = worker_hop_over_headers(self, i);
       }
 
       if (!res) {
