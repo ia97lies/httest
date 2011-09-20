@@ -3832,6 +3832,34 @@ apr_status_t worker_flush_chunk(worker_t *worker, char *chunked, int from, int t
 }
 
 /**
+ * Calculate content length
+ *
+ * @param worker IN worker object
+ * @param start IN start index
+ * @param len OUT content length
+ *
+ * @return apr status
+ */
+static apr_status_t worker_get_content_length(worker_t *worker, int start, 
+                                              apr_size_t *len) { 
+  apr_status_t status = APR_SUCCESS;
+  int i = start;
+  apr_table_entry_t *e =
+    (apr_table_entry_t *) apr_table_elts(worker->cache)->elts;
+
+  *len = 0;
+  for (; i < apr_table_elts(worker->cache)->nelts; ++i) {
+    apr_size_t tmp_len;
+    if ((status = worker_get_line_length(worker, e[i], &tmp_len)) 
+	!= APR_SUCCESS) {
+      return status;
+    }
+    *len += tmp_len;
+  }
+  return status;
+}
+
+/**
  * flush data 
  *
  * @param self IN thread data object
@@ -3884,28 +3912,13 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 
   /* callculate body if Content-Length: AUTO */
   if (apr_table_get(self->cache, "Content-Length")) {
-    /* jump over HTTP headers */
-    for (; !start && i < apr_table_elts(self->cache)->nelts; ++i) {
-      line_t line; 
-      line.info = e[i].key;
-      line.buf = e[i].val;
-
-      if (!line.buf[0]) {
-        start = 1;
-      }
+    if (!start) {
+      i = worker_hop_over_headers(self, i);
     }
-
     body_start = i;
 
-    /* calculate body len */
-    len = 0;
-    for (; i < apr_table_elts(self->cache)->nelts; ++i) {
-      apr_size_t tmp_len;
-      if ((status = worker_get_line_length(self, e[i], &tmp_len)) 
-	  != APR_SUCCESS) {
-	return status;
-      }
-      len += tmp_len;
+    if ((status = worker_get_content_length(self, i, &len)) != APR_SUCCESS) {
+      return status;
     }
 
     apr_table_set(self->cache, "Content-Length",
