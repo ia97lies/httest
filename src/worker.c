@@ -3860,6 +3860,46 @@ static apr_status_t worker_get_content_length(worker_t *worker, int start,
 }
 
 /**
+ * Do automatic 100 continue
+ *
+ * @param worker IN worker object
+ * @param body_start IN index of body start
+ * @param ptmp IN temporary pool
+ *
+ * @return apr status
+ */
+static apr_status_t worker_do_auto_100_continue(worker_t *worker, 
+                                                int body_start,
+                                                apr_pool_t *ptmp) {
+  apr_status_t status = APR_SUCCESS;
+
+  /* flush headers and empty line but not body */
+  if ((status = worker_flush_part(worker, 0, body_start, ptmp)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+  /* wait for a 100 continue response */
+  if ((status = command_EXPECT(NULL, worker, "headers \"HTTP/1.1 100 Continue\"", ptmp)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+  /* do skip call flush in command _WAIT */
+  worker->flags |= FLAGS_SKIP_FLUSH;
+  if ((status = command_WAIT(NULL, worker, "", ptmp)) != APR_SUCCESS) {
+    return status;
+  }
+  /* do not skip flush */
+  worker->flags &= ~FLAGS_SKIP_FLUSH;
+  /* send body then */
+  if ((status = worker_flush_part(worker, body_start, 
+				  apr_table_elts(worker->cache)->nelts, ptmp))
+      != APR_SUCCESS) { 
+    return status;
+  }
+  return status;
+}
+
+/**
  * flush data 
  *
  * @param self IN thread data object
@@ -3988,29 +4028,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
   else if (apr_table_get(self->cache, "Content-Length") && 
            apr_table_get(self->cache, "100-Continue")) {
     /* do this only if Content-Length and 100-Continue is set */
-    /* flush headers and empty line but not body */
-    if ((status = worker_flush_part(self, 0, body_start, ptmp)) 
-	!= APR_SUCCESS) {
-      goto error;
-    }
-    /* wait for a 100 continue response */
-    if ((status = command_EXPECT(NULL, self, "headers \"HTTP/1.1 100 Continue\"", ptmp)) 
-	!= APR_SUCCESS) {
-      goto error;
-    }
-    /* do skip call flush in command _WAIT */
-    self->flags |= FLAGS_SKIP_FLUSH;
-    if ((status = command_WAIT(NULL, self, "", ptmp)) != APR_SUCCESS) {
-      goto error;
-    }
-    /* do not skip flush */
-    self->flags &= ~FLAGS_SKIP_FLUSH;
-    /* send body then */
-    if ((status = worker_flush_part(self, body_start, 
-	                            apr_table_elts(self->cache)->nelts, ptmp))
-	!= APR_SUCCESS) { 
-      goto error;
-    }
+    status = worker_do_auto_100_continue(self, body_start, ptmp); 
     goto error;
   }
 
