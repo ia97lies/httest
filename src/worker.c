@@ -3815,7 +3815,6 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 
     /* start counting till last body of ICAP message */
     i = 0;
-    len = 0;
     apr_strtok(copy, ":", &last);
     nv = apr_strtok(NULL, ",", &last);
     while (nv) {
@@ -3831,7 +3830,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 
   /* callculate body if Content-Length: AUTO */
   if (apr_table_get(self->cache, "Content-Length")) {
-    /* jump over headers */
+    /* jump over HTTP headers */
     for (; !start && i < apr_table_elts(self->cache)->nelts; ++i) {
       line_t line; 
       line.info = e[i].key;
@@ -3839,9 +3838,10 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 
       if (!line.buf[0]) {
         start = 1;
-	body_start = i + 1;
       }
     }
+
+    body_start = i;
 
     /* calculate body len */
     len = 0;
