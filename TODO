@@ -8,6 +8,9 @@ htproxy
 
 httest
 ------
+- Hash variable, btw. the variables are hold in hash :)
+- Add/Remove elements in hash variables
+- Print hash variables as query
 - Encrpyt the ntml type 3 message and extrakt user
 - Plain on SSL connection terminate with a clear error
 - MATCH error is not realy understandable
@@ -16,10 +19,7 @@ httest
 - Include concept with env variables
 - SSL session reuse (partial)
 - _TRY ... _CATCH ... FINALLY ... END TRY
-- POP3 TLS support
-- Check if that pushback feature in sockreader realy works
 - Store recorded stuff in a variable
 - Array variable
-- Hash variable, btw. the variables are hold in hash :)
 - Need more information on ssl failure
 - global vars can not resolve allready set vars on SET

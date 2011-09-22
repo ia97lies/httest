@@ -82,6 +82,8 @@ If a value is stored on a value, release the old value. We could solve this by c
 a variable struct and give every variable its own pool. After a couple of value changes
 the variable pool could be resetet and reused. Perhaps reset on every change is overkill?
 
+New types of structured variables are needed to make GUI testing possible and readable.
+
 POOLS
 -----
 For the moment we have only one pool which last for a hole body. Better would be to give

@@ -31,6 +31,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_tables.h>
 #include <apr_strings.h>
 #include "store.h"
 
@@ -167,5 +168,26 @@ APR_DECLARE(store_t *)store_copy(store_t *store, apr_pool_t *pool) {
   store_t *copy = store_make(pool);
   store_merge(copy, store);
   return copy;
+}
+
+/**
+ * Get table of key/values for iteration
+ * @param store IN store hook
+ * @param pool IN to allocate keys table
+ * @return table of key/values
+ */
+APR_DECLARE(apr_table_t *)store_get_table(store_t *store, apr_pool_t *pool) {
+  apr_hash_index_t *i;
+  const void *key;
+  void *val;
+  store_element_t *element;
+  apr_table_t *table = apr_table_make(pool, 5);
+
+  for (i = apr_hash_first(pool, store->hash); i; i = apr_hash_next(i)) {
+    apr_hash_this(i, &key, NULL, &val);
+    element = val;
+    apr_table_set(table, key, element->value);
+  }
+  return table;
 }
 

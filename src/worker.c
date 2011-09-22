@@ -468,7 +468,6 @@ static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp,
   /* read from worker->proc.out to buf */
   if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
     bufreader_read_eof(br, buf, len);
-    worker_log_buf(worker, LOG_INFO, *buf, "<", *len);
   }
   if (status == APR_EOF) {
     status = APR_SUCCESS;
@@ -962,6 +961,7 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
       }	
     }
     if (tmpbuf) {
+      worker_log_buf(worker, LOG_INFO, tmpbuf, "<", len);
       //worker_log_buf(worker, LOG_INFO, tmpbuf, "<", len);
       worker_match(worker, worker->match.dot, tmpbuf, len);
       worker_match(worker, worker->match.body, tmpbuf, len);
