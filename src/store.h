@@ -24,6 +24,9 @@
 #ifndef HTTEST_STORE_H
 #define HTTEST_STORE_H
 
+#include <apr_pools.h>
+#include <apr_tables.h>
+
 typedef struct store_s store_t;
 
 APR_DECLARE(store_t *)store_make(apr_pool_t *pool);
