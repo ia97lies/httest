@@ -42,6 +42,7 @@
  ***********************************************************************/
 
 struct regex_s {
+  const char *pattern;
   int match;
   void *re_pcre;
   apr_size_t re_nsub;
@@ -79,6 +80,7 @@ regex_t *pregcomp(apr_pool_t * p, const char *pattern,
   regex_t *preg = apr_palloc(p, sizeof *preg);
 
   preg->match = 0;
+  preg->pattern = apr_pstrdup(p, pattern);
 
   preg->re_pcre = pcre_compile(pattern, 0, error, erroff, NULL);
   preg->re_erroffset = *erroff;
@@ -161,6 +163,15 @@ int regexec(regex_t * preg, const char *data, apr_size_t len,
  */
 int regdidmatch(regex_t * preg) {
   return preg->match;
+}
+
+/**
+ * return pattern of compiled regex
+ * @param preg IN regular expression
+ * @return pattern
+ */
+const char *regexpattern(regex_t *reg) {
+  return reg->pattern;
 }
 
 /**

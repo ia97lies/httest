@@ -36,5 +36,6 @@ regex_t *pregcomp(apr_pool_t * p, const char *pattern,
 int regexec(regex_t * preg, const char *data, apr_size_t len,
             apr_size_t nmatch, regmatch_t pmatch[], int eflags); 
 int regdidmatch(regex_t * preg); 
+const char *regexpattern(regex_t *reg);
 
 #endif

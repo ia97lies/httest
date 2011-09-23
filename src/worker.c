@@ -540,7 +540,6 @@ go_out:
  */
 apr_status_t worker_match(worker_t * worker, apr_table_t * regexs, 
                           const char *data, apr_size_t len) {
-  int rc;
   apr_table_entry_t *e;
   apr_table_entry_t *v;
   regmatch_t regmatch[11];
@@ -577,9 +576,8 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
     }
     
     if (e[i].val
-        && (rc =
-            regexec((regex_t *) e[i].val, data, len, n + 1, regmatch,
-                    PCRE_MULTILINE)) == 0) {
+        && regexec((regex_t *) e[i].val, data, len, n + 1, regmatch,
+                   PCRE_MULTILINE) == 0) {
       v = (apr_table_entry_t *) apr_table_elts(vtbl)->elts;
       for (j = 0; j < n; j++) {
 	val =
@@ -615,7 +613,6 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
  */
 apr_status_t worker_expect(worker_t * self, apr_table_t * regexs, 
                            const char *data, apr_size_t len) {
-  int rc;
   apr_table_entry_t *e;
   int i;
 
@@ -626,9 +623,8 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
   e = (apr_table_entry_t *) apr_table_elts(regexs)->elts;
   for (i = 0; i < apr_table_elts(regexs)->nelts; ++i) {
     if (e[i].val
-        && (rc =
-            regexec((regex_t *) e[i].val, data, len, 0, NULL,
-                    PCRE_MULTILINE)) == 0) {
+        && regexec((regex_t *) e[i].val, data, len, 0, NULL,
+                   PCRE_MULTILINE) == 0) {
     }
   }
 
@@ -643,8 +639,9 @@ static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match,
 
   e = (apr_table_entry_t *) apr_table_elts(match)->elts;
   for (i = 0; i < apr_table_elts(match)->nelts; ++i) {
-    if (!regdidmatch((regex_t *) e[i].val)) {
-      worker_log(worker, LOG_ERR, "%s: Did expect %s", error_prefix, e[i].key);
+    regex_t *regex = (regex_t *) e[i].val;
+    if (!regdidmatch(regex)) {
+      worker_log(worker, LOG_ERR, "%s: Did expect %s", error_prefix, regexpattern(regex));
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
       }
@@ -667,9 +664,10 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
 
   e = (apr_table_entry_t *) apr_table_elts(expect)->elts;
   for (i = 0; i < apr_table_elts(expect)->nelts; ++i) {
-    if (e[i].key[0] != '!' && !regdidmatch((regex_t *) e[i].val)) {
+    regex_t *regex = (regex_t *) e[i].val;
+    if (e[i].key[0] != '!' && !regdidmatch(regex)) {
       worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", error_prefix, 
-	         e[i].key);
+	         regexpattern(regex));
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
       }
