@@ -132,6 +132,68 @@ const char *varget(worker_t* worker, const char *var) {
 }
 
 /**
+ * call inline commands and replace them by their first return value.
+ * @param worker IN thread data object
+ * @param ptmp IN temporary pool
+ * @param line IN line where possible inline calls are
+ * @return new line
+ */
+static char *worker_inline_calls(worker_t *worker, apr_pool_t *ptmp, char *line) {
+  int i;
+  int start;
+  int line_end;
+  char *command;
+  char *new_line;
+  const char *val = NULL;
+
+  new_line = line;
+
+once_again:
+  i = 0;
+  while (line[i] != 0) {
+    if (line[i] == '@') {
+      line_end = i;
+      ++i;
+      start = i;
+      while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS, line[i])) {
+        ++i;
+      }
+      if (line[i] == '(') {
+	while (line[i] != 0 && line[i] != ')') {
+	  ++i;
+	}
+	if (line[i] == ')') {
+	  ++i;
+	}
+      }
+      command = apr_pstrndup(ptmp, &line[start], i - start);
+      {
+	int j = 0;
+	while (command[j] != 0) {
+	  if (command[j] == '(' || command[j] == ')') {
+	    command[j] = ' ';
+	  }
+	  ++j;
+	}
+      }
+      command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
+      /** call it */
+      command_CALL(NULL, worker, command, ptmp);
+      val = store_get(worker->vars, "__INLINE_RET");
+      if (val) {
+        line[line_end] = 0;
+        new_line = apr_pstrcat(ptmp, line, val, &line[i], NULL);
+        line = new_line;
+        goto once_again;
+      }
+    }
+    ++i;
+  }
+
+  return new_line;
+}
+
+/**
  * replace variables in a line
  *
  * @param worker IN thread data object
@@ -144,8 +206,11 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
   char *new_line;
   int trak_unresolved = 0;
 
+  /* replace by calling functions inline */
+  new_line = worker_inline_calls(worker, ptmp, line);
+
   /* replace all locals first */
-  new_line = my_replace_vars(ptmp, line, worker->locals, 0, 
+  new_line = my_replace_vars(ptmp, new_line, worker->locals, 0, 
                              unresolved); 
   if (unresolved) { trak_unresolved |= *unresolved; }
   /* replace all parameters first */
@@ -1015,6 +1080,166 @@ static void worker_set_cookie(worker_t *worker) {
 					   e[i].val, NULL);
     }
   }
+}
+
+/**
+ * CALL command calls a defined block
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN name of calling block 
+ *
+ * @return block status or APR_EINVAL 
+ */
+apr_status_t command_CALL(command_t *self, worker_t *worker, char *data, 
+                          apr_pool_t *ptmp) {
+  apr_status_t status;
+  char *copy;
+  const char *block_name;
+  char *last;
+  worker_t *block, *call;
+  apr_table_t *lines;
+  int cmd;
+  apr_pool_t *call_pool;
+  char *module;
+  apr_hash_t *blocks;
+  store_t *params;
+  store_t *retvars;
+  store_t *locals;
+
+  /** a pool for this call */
+  apr_pool_create(&call_pool, worker->pbody);
+
+  /** temporary tables for param, local vars and return vars */
+  params = store_make(call_pool);
+  retvars = store_make(call_pool);
+  locals = store_make(call_pool);
+
+  while (*data == ' ') ++data; 
+  copy = apr_pstrdup(call_pool, data);
+  copy = worker_replace_vars(worker, copy, NULL, call_pool); 
+  worker_log(worker, LOG_CMD, "%s", copy); 
+
+  /** get args from copy */
+  my_get_args(copy, params, call_pool);
+  block_name = store_get(params, "0");
+  module = apr_pstrdup(call_pool, block_name);
+
+  /** get module worker */
+  if ((last = strchr(block_name, ':'))) {
+    module = apr_strtok(module, ":", &last);
+    /* always jump over prefixing "_" */
+    module++;
+    block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
+      worker_log_error(worker, "Could not find module \"%s\"", module);
+      return APR_EINVAL;
+    }
+  }
+  else {
+    blocks = worker->blocks;
+  }
+
+  /** get block from module */
+  /* CR BEGIN */
+  apr_thread_mutex_lock(worker->mutex);
+  if (!(block = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
+    worker_log_error(worker, "Could not find block %s", block_name);
+    /* CR END */
+    apr_thread_mutex_unlock(worker->mutex);
+    status = APR_ENOENT;
+    goto error;
+  }
+  else { 
+    int log_mode; 
+    int i;
+    int j;
+    char *index;
+    const char *arg;
+    const char *val;
+
+    /** prepare call */
+    /* handle parameters first */
+    for (i = 1; i < store_get_size(block->params); i++) {
+      index = apr_itoa(call_pool, i);
+      if (!(arg = store_get(block->params, index))) {
+	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
+	apr_thread_mutex_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
+      }
+      if (!(val = store_get(params, index))) {
+	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
+	apr_thread_mutex_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
+      }
+      if (arg && val) {
+	store_set(params, arg, val);
+      }
+    }
+
+    /* handle return variables second */
+    j = i;
+    for (i = 0; i < store_get_size(block->retvars); i++, j++) {
+      index = apr_itoa(call_pool, j);
+      if (!(arg = store_get(block->retvars, index))) {
+	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
+	apr_thread_mutex_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
+      }
+      if (!(val = store_get(params, index))) {
+	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
+	apr_thread_mutex_unlock(worker->mutex);
+	status = APR_EGENERAL;
+	goto error;
+      }
+      if (arg && val) {
+	store_set(retvars, arg, val);
+      }
+    }
+
+    lines = my_table_deep_copy(call_pool, block->lines);
+    apr_thread_mutex_unlock(worker->mutex);
+    /* CR END */
+
+    /** call block */
+    call = apr_pcalloc(call_pool, sizeof(*call));
+    memcpy(call, worker, sizeof(*call));
+    call->params = params;
+    call->retvars = retvars;
+    call->locals = locals;
+    /* lines in block */
+    call->lines = lines;
+    log_mode = call->log_mode;
+    if (call->log_mode == LOG_CMD) {
+      call->log_mode = LOG_INFO;
+    }
+    status = block->interpret(call, worker, call_pool);
+
+    /** get infos from call back to worker */
+    call->log_mode = log_mode;
+    cmd = worker->cmd;
+    lines = worker->lines;
+    params = worker->params;
+    retvars = worker->retvars;
+    locals = worker->locals;
+    memcpy(worker, call, sizeof(*worker));
+    store_merge(worker->vars, call->retvars); 
+    worker->params = params;
+    worker->retvars = retvars;
+    worker->locals = locals;
+    worker->lines = lines;
+    worker->cmd = cmd;
+
+    goto error;
+  }
+
+error:
+  /** all ends here */
+  apr_pool_destroy(call_pool);
+  return status;
 }
 
 /**

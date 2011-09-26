@@ -321,6 +321,7 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
                                apr_size_t len); 
 
 /** commands */
+apr_status_t command_CALL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_REQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RES(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);

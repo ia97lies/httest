@@ -1,0 +1,28 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK _FOO BAR : RET
+_SET RET=$BAR
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_EXPECT body "hallo"
+_EXPECT body "!_FOO"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_FOO "foo" BAR
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== @_FOO("hallo") ==
+
+END
+
