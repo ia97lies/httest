@@ -168,26 +168,26 @@ once_again:
 	if (line[i] == ')') {
 	  ++i;
 	}
-      }
-      command = apr_pstrndup(ptmp, &line[start], i - start);
-      {
-	int j = 0;
-	while (command[j] != 0) {
-	  if (command[j] == '(' || command[j] == ')') {
-	    command[j] = ' ';
+	command = apr_pstrndup(ptmp, &line[start], i - start);
+	{
+	  int j = 0;
+	  while (command[j] != 0) {
+	    if (command[j] == '(' || command[j] == ')') {
+	      command[j] = ' ';
+	    }
+	    ++j;
 	  }
-	  ++j;
 	}
-      }
-      command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
-      /** call it */
-      if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
-	val = store_get(worker->vars, "__INLINE_RET");
-	if (val) {
-	  line[line_end] = 0;
-	  new_line = apr_pstrcat(ptmp, line, val, &line[i], NULL);
-	  line = new_line;
-	  goto once_again;
+	command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
+	/** call it */
+	if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
+	  val = store_get(worker->vars, "__INLINE_RET");
+	  if (val) {
+	    line[line_end] = 0;
+	    new_line = apr_pstrcat(ptmp, line, val, &line[i], NULL);
+	    line = new_line;
+	    goto once_again;
+	  }
 	}
       }
     }
