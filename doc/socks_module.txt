@@ -1,0 +1,12 @@
++ Goal
+_REQ should be able to connect to a SOCKS proxy
+
++ Httest Extensions
+_REQ <host> [SSL:]<port> extent to
+_REQ <host> [SSL:]<port> SOCKS[4|5]
+
++ Integration
+The client_port_args hook must be implemented. The key word SOCKS and the
+optional version must be read and after connection the SOCKS protocol is
+takes place.
+
