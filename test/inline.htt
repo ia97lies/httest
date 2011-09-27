@@ -16,6 +16,8 @@ __
 _EXPECT body "hello world"
 _EXPECT body "foo\+bar"
 _EXPECT body "bla bla bla bla bla bla bla"
+_EXPECT body "DONOTEXISTCOMMAND"
+_EXPECT body "!_CODER"
 _EXPECT body "!_FOO"
 _WAIT
 
@@ -31,6 +33,7 @@ __
 __== @_FOO("hello") ==
 __== @_CODER:URLENC("foo bar") ==
 __@STUFF
+__@DONOTEXISTCOMMAND
 
 END
 

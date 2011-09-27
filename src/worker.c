@@ -148,7 +148,9 @@ static char *worker_inline_calls(worker_t *worker, apr_pool_t *ptmp, char *line)
   int log_mode = worker->log_mode;
 
   new_line = line;
-  //worker->log_mode = LOG_NONE;
+  if (worker->log_mode < LOG_ALL_CMD) {
+    worker->log_mode = LOG_NONE;
+  }
 once_again:
   i = 0;
   while (line[i] != 0) {
@@ -191,7 +193,7 @@ once_again:
     }
     ++i;
   }
-  //worker->log_mode = log_mode;
+  worker->log_mode = log_mode;
   return new_line;
 }
 
