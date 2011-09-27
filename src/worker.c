@@ -145,9 +145,10 @@ static char *worker_inline_calls(worker_t *worker, apr_pool_t *ptmp, char *line)
   char *command;
   char *new_line;
   const char *val = NULL;
+  int log_mode = worker->log_mode;
 
   new_line = line;
-
+  //worker->log_mode = LOG_NONE;
 once_again:
   i = 0;
   while (line[i] != 0) {
@@ -155,7 +156,7 @@ once_again:
       line_end = i;
       ++i;
       start = i;
-      while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS, line[i])) {
+      while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS":", line[i])) {
         ++i;
       }
       if (line[i] == '(') {
@@ -178,18 +179,19 @@ once_again:
       }
       command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
       /** call it */
-      command_CALL(NULL, worker, command, ptmp);
-      val = store_get(worker->vars, "__INLINE_RET");
-      if (val) {
-        line[line_end] = 0;
-        new_line = apr_pstrcat(ptmp, line, val, &line[i], NULL);
-        line = new_line;
-        goto once_again;
+      if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
+	val = store_get(worker->vars, "__INLINE_RET");
+	if (val) {
+	  line[line_end] = 0;
+	  new_line = apr_pstrcat(ptmp, line, val, &line[i], NULL);
+	  line = new_line;
+	  goto once_again;
+	}
       }
     }
     ++i;
   }
-
+  //worker->log_mode = log_mode;
   return new_line;
 }
 

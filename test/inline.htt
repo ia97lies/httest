@@ -1,7 +1,11 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK _FOO BAR : RET
-_SET RET=$BAR
+_SET RET=$BAR world
+END
+
+BLOCK STUFF : OUT
+  _SET OUT=bla bla bla bla bla bla bla
 END
 
 CLIENT
@@ -9,7 +13,9 @@ _REQ $YOUR_HOST $YOUR_PORT
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __
-_EXPECT body "hallo"
+_EXPECT body "hello world"
+_EXPECT body "foo\+bar"
+_EXPECT body "bla bla bla bla bla bla bla"
 _EXPECT body "!_FOO"
 _WAIT
 
@@ -22,7 +28,9 @@ _WAIT
 __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __
-__== @_FOO("hallo") ==
+__== @_FOO("hello") ==
+__== @_CODER:URLENC("foo bar") ==
+__@STUFF
 
 END
 
