@@ -8,45 +8,16 @@ variables. For example @command(params...) will be replaced by the returned
 string.
 
 + Integration
-Need a hook for global commands. The lua module should make a lua block, which
-then will be called from httest like any other block. Only string return values
-are supported, everything else must throw an error.
+A lua script can be added as a module. All lua functions will be accessible 
+for httest scripts. The lua integration should be able to execute any httest
+command.
 
-+ Samples
-++ Simple
-LUA:BLOCK _doSomething param1 param2 : ret1 ret2
-  print("first parameter value is = " ..param1)
-  return "value1", param2 
-END
+The interface of lua functions must be string based, becaus httest can only
+handle strings.
 
-And this can be called like any other block as follow
-_doSomething "hello" "world" MyRet1 MyRet2
-_DEBUG $MyRet1 $MyRet2
+On the httest side a function "httest:load" do give the worker handle into
+lua. "httest:call" should call a httest function like
 
-++ Embedded
-LUA:BLOCK _convertSomething param1 : return1
-  return "hallo " .. param1
-END
-
-_REQ localhost 8080
-__GET /@_convertSomething("foo") HTTP/1.1
-__Host: localhost
-__
-_WAIT
-
-++ Embedded with Multi Return
-LUA:BLOCK _headers
-  RF = "\r\n"
-  return
-  "Host: localhost"..RF
-  "User-Agent: my simple agent"..RF
-  "Content-Type: foo/bar"..RF
-END
-
-_REQ locahost 8080
-__GET /foo HTTP/1.1
-__@headers()
-__
-_WAIT
-
-The multiple returned strings are catonated together.
+httest:call("_SET" "A=B");
+or
+encoded_string = httest:call("_URLENC", "foo bar");
