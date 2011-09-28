@@ -2,11 +2,9 @@
 _REQ should be able to connect to a SOCKS proxy
 
 + Httest Extensions
-_REQ <host> [SSL:]<port> extent to
-_REQ <host> [SSL:]<port> SOCKS[4|5]
+_REQ <socks_host> <socks_port> 
+_SOCKS:CONNECT <host> <port>
+_SSL:CONNECT SSL
 
 + Integration
-The client_port_args hook must be implemented. The key word SOCKS and the
-optional version must be read and after connection the SOCKS protocol is
-takes place.
 

@@ -6,7 +6,8 @@ httest_SOURCES= \
 	httest.c file.c socket.c regex.c util.c ssl.c worker.c module.c \
 	transport.c store.c eval.c \
 	modules.c binary_module.c ssl_module.c tcp_module.c skeleton_module.c \
-	date_module.c coder_module.c math_module.c sys_module.c udp_module.c\
+	date_module.c coder_module.c math_module.c sys_module.c udp_module.c \
+	socks_module.c \
 	# lua_module.c
 
 htproxy_SOURCES= \

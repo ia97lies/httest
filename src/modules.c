@@ -26,6 +26,7 @@ apr_status_t binary_module_init(global_t *global);
 apr_status_t udp_module_init(global_t *global);
 apr_status_t tcp_module_init(global_t *global);
 apr_status_t ssl_module_init(global_t *global);
+apr_status_t socks_module_init(global_t *global);
 
 module_t modules[] = {
   //{ lua_module_init },
@@ -37,6 +38,7 @@ module_t modules[] = {
   { udp_module_init },
   { tcp_module_init },
   { ssl_module_init },
+  { socks_module_init },
   { NULL }
 };
 

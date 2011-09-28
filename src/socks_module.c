@@ -25,6 +25,7 @@
  * Includes
  ***********************************************************************/
 #include "module.h"
+#include <netinet/in.h>
 
 /************************************************************************
  * Definitions 
@@ -37,24 +38,52 @@
 /************************************************************************
  * Local 
  ***********************************************************************/
+/**
+ * check if string is an IPv4 address
+ * @param addr IN addr to check
+ * @return 1 if it is IPv4 else 0
+ */ 
+static int socks_is_ipv4(const char *addr) {
+  return 1;
+}
 
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t socks_hook_connect(worker_t *worker) {
-  return APR_SUCCESS;
-}
+/**
+ * Do socks proxy handshake.
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temp pool
+ * @return apr status
+ */
+static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent, 
+                                        apr_pool_t *ptmp) {
+  apr_status_t status;
+  const char *hostname = store_get(worker->params, "1");
+  const char *portname = store_get(worker->params, "2");
+  apr_port_t port = apr_atoi64(portname);
 
-static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo, 
-                                         char **new_portinfo, char *rest) {
+  if (socks_is_ipv4(hostname)) {
+  }
+  else {
+  }
+
   return APR_SUCCESS;
 }
 /************************************************************************
  * Module
  ***********************************************************************/
 apr_status_t socks_module_init(global_t *global) {
-  htt_hook_connect(socks_hook_connect, NULL, NULL, 0);
-  htt_hook_client_port_args(socks_client_port_args, NULL, NULL, 0);
+  apr_status_t status;
+  if ((status = module_command_new(global, "SOCKS", "_CONNECT",
+	                           "<remote-host> <remote-port>",
+	                           "Do run socks protocol over a established TCP connection",
+	                           block_SOCKS_CONNECT)) != APR_SUCCESS) {
+    return status;
+  }
+
   return APR_SUCCESS;
 }
+
 
