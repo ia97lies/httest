@@ -379,9 +379,11 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
     case MATH_MOD:
       *result = *left % *right;
       break;
+#ifdef LINUX
     case MATH_POWER:
       *result = pow(*left, *right);
       break;
+#endif
     default:
       break;
     }
