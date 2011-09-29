@@ -53,7 +53,7 @@ typedef union port_s {
  * @return 1 if it is IPv4 else 0
  */ 
 static int socks_is_ipv4(const char *addr) {
-  return 1;
+  return apr_isdigit(addr[0]);
 }
 
 /************************************************************************
@@ -100,14 +100,7 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
     return APR_EINVAL;
   }
 
-  buf[0] = 5; buf[1] = 1; buf[2] = 0; buf[3] = 1;
-  if ((status = transport_write(transport, (char *)buf, 4)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not send initial SOCKS bytes");
-    return status;
-  }
-
-  port.port = atoi(portname);
-  port.port = htons(port.port);
+  buf[0] = 5; buf[1] = 1; buf[2] = 0; 
 
   if (socks_is_ipv4(hostname)) {
     ip_u ip;
@@ -120,14 +113,33 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
       digit = apr_strtok(NULL, ".", &last);
       i++;
     }
-
-    if ((status = transport_write(transport, (char *)ip.digit, 4)) != APR_SUCCESS) {
+    
+    /* ATYPE IPv4 */
+    buf[3] = 1;
+    for (i = 0; i < 4; i++) {
+      buf[4 + i] = ip.digit[i];
+    }
+    if ((status = transport_write(transport, (char *)buf, 8)) != APR_SUCCESS) {
       worker_log_error(worker, "Can not send IP to SOCKS proxy");
       return status;
     }
   }
   else {
+    /* ATYPE Domain name */
+    buf[3] = 3;
+    buf[4] = strlen(hostname);
+    if ((status = transport_write(transport, (char *)buf, 5)) != APR_SUCCESS) {
+      worker_log_error(worker, "Can not send hostname to SOCKS proxy");
+      return status;
+    }
+    if ((status = transport_write(transport, hostname, buf[4])) != APR_SUCCESS) {
+      worker_log_error(worker, "Can not send hostname to SOCKS proxy");
+      return status;
+    }
   }
+
+  port.port = atoi(portname);
+  port.port = htons(port.port);
 
   if ((status = transport_write(transport, (char *)port.digit, 2)) != APR_SUCCESS) {
     worker_log_error(worker, "Can not send port to SOCKS proxy");
