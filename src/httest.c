@@ -2175,10 +2175,11 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
     return APR_ENOENT;
   }
 
-  ++global->recursiv;
   prev_filename = global->filename;
   global->filename = argv[i];
+  ++global->recursiv;
   status = interpret_recursiv(fp, global);
+  --global->recursiv;
   if (!(global->blocks = apr_hash_get(global->modules, "DEFAULT", APR_HASH_KEY_STRING))) {
     fprintf(stderr, "\nDEFAULT module not found?!\n");
     return APR_EGENERAL;
@@ -2396,6 +2397,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 
   if (global->recursiv > 8) {
     fprintf(stderr, "\nRecursiv inlcudes too deep");
+    success = 0;
     exit(1);
   }
 
