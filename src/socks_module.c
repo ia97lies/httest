@@ -117,10 +117,9 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
     ip.addr = 0;
     while (digit) {
       ip.digit[i] = atoi(digit);
-      digit = apr_strtok(hostname, ".", &last);
+      digit = apr_strtok(NULL, ".", &last);
       i++;
     }
-    ip.addr = htonl(ip.addr);
 
     if ((status = transport_write(transport, (char *)ip.digit, 4)) != APR_SUCCESS) {
       worker_log_error(worker, "Can not send IP to SOCKS proxy");
