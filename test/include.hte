@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/test/dummy.htb
+INCLUDE $TOP/test/dummy2.htb
+INCLUDE $TOP/test/dummy3.htb
+INCLUDE $TOP/test/dummy4.htb
+INCLUDE $TOP/test/dummy5.htb
+INCLUDE $TOP/test/dummy6.htb
+INCLUDE $TOP/test/dummy7.htb
+INCLUDE $TOP/test/dummy8.htb
+INCLUDE $TOP/test/dummy9.htb
+INCLUDE $TOP/test/recursiv.htb
+
+CLIENT
+_DEBUG Until here
+END
