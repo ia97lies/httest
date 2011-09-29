@@ -101,6 +101,7 @@ EXTRA_DIST= \
 	ignore_body.htt \
 	ignore_body_space.htt \
 	incomplete.htt \
+	inline.htt \
 	late_var_replace.htt \
 	leftovertmpf.htt \
 	lock.htt \
@@ -167,6 +168,8 @@ EXTRA_DIST= \
 	run_ntlm_test.sh \
 	run.sh \
 	run_test_error_output.sh \
+	run_visual.sh \
+	run_visual_test.sh \
 	run_wild.sh \
 	sendfile.htt \
 	server.cert.pem \
@@ -180,6 +183,7 @@ EXTRA_DIST= \
 	socketbody.hte \
 	socketbody.htt \
 	socketbody.txt \
+	socks.htt \
 	sockstate.htt \
 	ssl_big_content.htt \
 	ssl_multi_socket.htt \
@@ -193,6 +197,7 @@ EXTRA_DIST= \
 	ssl_session_reuse.htt \
 	sslsimple2.htt \
 	sslsimple.htt \
+	ssl_socks.htt \
 	ssl_sockstate2.htt \
 	ssl_sockstate.htt \
 	ssl_stream_myself.htt \
@@ -235,4 +240,4 @@ EXTRA_DIST= \
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_store
-TESTS = test_store run_htt_test.sh run_htt_shell_test.sh run_hte_test.sh run_ntlm_test.sh run_coredump_test.sh
+TESTS = test_store run_htt_test.sh run_htt_shell_test.sh run_hte_test.sh run_visual_test.sh run_ntlm_test.sh run_coredump_test.sh
