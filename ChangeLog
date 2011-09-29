@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.4
+  *) httest: Fixed include problem with wrong recursiv detection. 
+
+  *) httest: Add a SOCKS module to connect to SOCKS proxy i.e. ssh SOCKS
+             tunnel. Usefull to connect to target in another network.
+
 Changes with httest 2.1.3
   *) httest: Fixed automatic content length calculation if used _BINARY:SEND.
 
