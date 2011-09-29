@@ -30,6 +30,15 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+typedef union ip_s {
+  uint32_t addr;
+  uint8_t  digit[4];
+} ip_u;
+
+typedef union port_s {
+  uint16_t port;
+  uint8_t  digit[2];
+} port_u;
 
 /************************************************************************
  * Globals 
@@ -59,18 +68,81 @@ static int socks_is_ipv4(const char *addr) {
  */
 static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent, 
                                         apr_pool_t *ptmp) {
+  port_u port;
+  unsigned char buf[10];
   apr_status_t status;
-  const char *hostname = store_get(worker->params, "1");
+  char *hostname = store_get_copy(worker->params, ptmp, "1");
   const char *portname = store_get(worker->params, "2");
-  apr_port_t port = apr_atoi64(portname);
+  transport_t *transport;
+  apr_size_t len;
+ 
+  if (!worker->socket) {
+    worker_log_error(worker, "Can not send initial SOCKS bytes");
+    return APR_ENOSOCKET;
+  }
+
+  transport = worker->socket->transport;
+
+  buf[0] = 5; buf[1] = 1; buf[2] = 0;
+  if ((status = transport_write(transport, (char *)buf, 3)) != APR_SUCCESS) {
+    worker_log_error(worker, "Can not send initial SOCKS bytes");
+    return status;
+  }
+  
+  len = 2;
+  if ((status = transport_read(transport, (char *)buf, &len)) != APR_SUCCESS) {
+    worker_log_error(worker, "Can not read initial SOCKS bytes");
+    return status;
+  }    
+
+  if (len != 2 || buf[0] != 5 || buf[1] != 0) {
+    worker_log_error(worker, "Wrong protocol bytes received");
+    return APR_EINVAL;
+  }
+
+  buf[0] = 5; buf[1] = 1; buf[2] = 0; buf[3] = 1;
+  if ((status = transport_write(transport, (char *)buf, 4)) != APR_SUCCESS) {
+    worker_log_error(worker, "Can not send initial SOCKS bytes");
+    return status;
+  }
+
+  port.port = atoi(portname);
+  port.port = htons(port.port);
 
   if (socks_is_ipv4(hostname)) {
+    ip_u ip;
+    char *last;
+    char *digit = apr_strtok(hostname, ".", &last);
+    int i = 0;
+    ip.addr = 0;
+    while (digit) {
+      ip.digit[i] = atoi(digit);
+      digit = apr_strtok(hostname, ".", &last);
+      i++;
+    }
+    ip.addr = htonl(ip.addr);
+
+    if ((status = transport_write(transport, (char *)ip.digit, 4)) != APR_SUCCESS) {
+      worker_log_error(worker, "Can not send IP to SOCKS proxy");
+      return status;
+    }
   }
   else {
   }
 
+  if ((status = transport_write(transport, (char *)port.digit, 2)) != APR_SUCCESS) {
+    worker_log_error(worker, "Can not send port to SOCKS proxy");
+    return status;
+  }
+
+  len = 10;
+  if ((status = transport_read(transport, (char *)buf, &len)) != APR_SUCCESS) {
+    worker_log_error(worker, "Can not read final SOCKS bytes");
+    return status;
+  }    
   return APR_SUCCESS;
 }
+
 /************************************************************************
  * Module
  ***********************************************************************/
