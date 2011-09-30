@@ -1,7 +1,7 @@
 INCLUDE $TOP/test/config.htb
 
 DAEMON
-_EXEC ssh -ND localhost:8082 localhost & echo $! > /tmp/socks.pid
+_EXEC ssh -ND localhost:$YOUR_PORT2 localhost & echo $! > /tmp/socks.pid
 END
 
 CLIENT
