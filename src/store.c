@@ -128,6 +128,20 @@ APR_DECLARE(void )store_set(store_t *store, const char *name,
 }
 
 /**
+ * Unset name value.
+ * @param store IN store hook
+ * @param name IN key
+ */
+APR_DECLARE(void )store_unset(store_t *store, const char *name) {
+  store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
+  if (element) {
+    apr_pool_destroy(element->pool);
+    apr_pool_create(&element->pool, store->pool);
+    apr_hash_set(store->hash, name, APR_HASH_KEY_STRING, NULL);
+  }
+}
+
+/**
  * Merge a foregin store into my store.
  * @param store IN store hook
  * @param other IN foreign store hook
