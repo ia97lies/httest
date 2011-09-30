@@ -8,6 +8,7 @@ htproxy
 
 httest
 ------
+- Update user guide!
 - Hash variable, btw. the variables are hold in hash :)
 - Add/Remove elements in hash variables
 - Print hash variables as query
