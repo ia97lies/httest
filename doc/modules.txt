@@ -1,11 +1,8 @@
-MODULES
--------
++MODULES
 
+++Workflow hooks
 
-Workflow hooks
---------------
-
-CLIENT
++++CLIENT
 
   htt_hook_client_port_args 
 
@@ -14,7 +11,7 @@ CLIENT
   htt_hook_close
 
 
-SERVER
++++SERVER
 
   htt_hook_server_port_args
 
@@ -23,7 +20,7 @@ SERVER
   htt_hook_close
 
 
-THREADED SERVER
++++THREADED SERVER
 
   htt_hook_server_port_args
 
@@ -34,6 +31,6 @@ THREADED SERVER
   htt_hook_close
 
 
-Workflow commands
+++Workflow commands
 
 

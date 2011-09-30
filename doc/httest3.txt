@@ -1,4 +1,4 @@
-Ideas for httest 3.0
++Ideas for httest 3.0
 - Microkernel for network, compare, threads and cut
 - be able to emulate any TCP(/UDP) protocol for testing
 - httest commands can be construct out of this microkernel
@@ -8,7 +8,7 @@ Ideas for httest 3.0
 - Microkernel need support for ssl, asn.1, compress, crypto and many more
 - All procotols should log the same way to be able to expect/match the stream
 
-What we need with in the syntax
++What we need with in the syntax
 - Functions which automaticaly get a thread/process wide context
 - The process context must be protected with mutexes
 - Functions can be called with arguments like that
@@ -20,4 +20,71 @@ What we need with in the syntax
 - Function can be a body for more functions to call like SERVER, CLIENT, BLOCK, ...
 - Enviroment variables: system, process and thread with variables
 
+thread
+  connect localhost:8080 
+  ssl "SSL"
 
+  test A
+    expect body "foo"
+    match headers "SCDID=([^;]+)" SCDID
+
+    >>GET /foo HTTP/1.1
+    >>Host: localhost
+    >>
+    wait;
+
+  test B
+    expect header "bar"
+    
+    >>POST /bar HTTP/1.1
+    >>Host: localhost
+    >>Content-Length: AUTO
+    >>
+     >hallo&world=bla
+    wait
+
+  close
+  connect localhost:8080
+  ssl "SSL"
+
+  test C
+    expect body "done"
+
+    >>GET /bla HTTP/1.1
+    >>Host: localhost
+    >>
+    wait
+end
+
+thread
+  listen 8080
+  ssl "SSL"
+  accept
+  wait
+  >>HTTP/1.1 200 OK
+  >>Content-Length: AUTO
+  >>
+  >>foo
+
+  test X
+    expect header "/bar"
+
+    accept
+    wait
+    >>HTTP/1.1 200 OK
+    >>Content-Length: AUTO
+    >>Foo: bar
+    >>
+    >>hahaha
+
+  test Y
+    expect header "GET"
+ 
+    accept
+    wait
+    >>HTTP/1.1 200 OK
+    >>Content-Length: AUTO
+    >>
+    >>done
+end
+     
