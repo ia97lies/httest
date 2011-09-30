@@ -2364,6 +2364,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   prev_filename = global->filename;
   global->filename = argv[i];
   status = interpret_recursiv(fp, global);
+  --global->recursiv;
   /* TODO reset module name */
   if (!(global->blocks = apr_hash_get(global->modules, "DEFAULT", APR_HASH_KEY_STRING))) {
     fprintf(stderr, "\nDEFAULT module not found?!\n");
