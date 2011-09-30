@@ -11,7 +11,6 @@ httest
 - Hash variable, btw. the variables are hold in hash :)
 - Add/Remove elements in hash variables
 - Print hash variables as query
-- Inline calls
 - Encrpyt the ntml type 3 message and extrakt user
 - Plain on SSL connection terminate with a clear error
 - Stack trace on error is not highlighted. Do it the C way :)
