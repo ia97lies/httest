@@ -42,6 +42,15 @@ EXTRA_DIST= \
 	daemon.htt \
 	deflate2.htt \
 	deflate.htt \
+	dummy2.htb \
+	dummy3.htb \
+	dummy4.htb \
+	dummy5.htb \
+	dummy6.htb \
+	dummy7.htb \
+	dummy8.htb \
+	dummy9.htb \
+	dummy.htb \
 	duration.htt \
 	embedded_file.htt \
 	embedded_sh.htt \
@@ -100,6 +109,9 @@ EXTRA_DIST= \
 	ifvareq.htt \
 	ignore_body.htt \
 	ignore_body_space.htt \
+	include.hte \
+	include.htt \
+	include.txt \
 	incomplete.htt \
 	inline.htt \
 	late_var_replace.htt \
@@ -152,6 +164,7 @@ EXTRA_DIST= \
 	process.txt \
 	proxy_main_functionality.htt \
 	random.htt \
+	recursiv.htb \
 	recv_chunked.htt \
 	recv_eof.htt \
 	recv_length.htt \
