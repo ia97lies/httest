@@ -2,22 +2,23 @@
 Enhance httest with new complicated functions. Lua could be used for customized
 string manipulation.
 
-+ Httest Extensions
-The httest should be enhanced that commands can embeded in lines like 
-variables. For example @command(params...) will be replaced by the returned
-string.
-
 + Integration
-A lua script can be added as a module. All lua functions will be accessible 
-for httest scripts. The lua integration should be able to execute any httest
-command.
+++ Registration
+The lua script need an anchor which do a module init. The name of the init
+function is module_init. This function is called in the lua_module_init 
+function and return a list of registered commands. Every registered command
+is an object which then is embodied into a worker. Every command do have
+the following three commands: get_module, get_name, interpret.
 
-The interface of lua functions must be string based, becaus httest can only
-handle strings.
+++ Call
+The lua objects interpreter is called. The lua object is embedded into a
+worker. Parameters of a call are pushed on the lua stack, and on luas return
+all values (strings namely) are stored as return values.
 
-On the httest side a function "httest:load" do give the worker handle into
-lua. "httest:call" should call a httest function like
++ Limitations
+  - Lua modules are not listen in the help, because the command _LUA:LOAD <file>
+    is not performed at this point.
+  - Only strings can be returned to httest. Httest is fully string based.
 
-httest:call("_SET" "A=B");
-or
-encoded_string = httest:call("_URLENC", "foo bar");
++ Future enhancements
+  - Calling httest functions in lua.

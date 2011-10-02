@@ -67,9 +67,9 @@ apr_status_t block_LUA_RUN(worker_t *worker, worker_t *parent, apr_pool_t *ptmp)
  ***********************************************************************/
 apr_status_t lua_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "LUA", "_RUN",
+  if ((status = module_command_new(global, "LUA", "_LOAD",
 	                           "<file>",
-	                           "Runs lua <file>",
+	                           "Load lua <file>",
 	                           block_LUA_RUN)) != APR_SUCCESS) {
     return status;
   }
