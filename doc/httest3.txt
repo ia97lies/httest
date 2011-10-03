@@ -1,23 +1,86 @@
-Ideas for httest 3.0
-- Microkernel for network, compare, threads and cut
-- be able to emulate any TCP(/UDP) protocol for testing
-- httest commands can be construct out of this microkernel
-- Configuration file defines protocol and its test commands
-- Microkernel commands are directly accessible
-- Microkernel supports, functions, if, while, variables, context, threads, ....
-- Microkernel need support for ssl, asn.1, compress, crypto and many more
-- All procotols should log the same way to be able to expect/match the stream
++Ideas for httest 3.0
+++Microkernel
+What kind of functions are need in all cases for testing.
+ - Expect
+ - cut
+ - transport
+ - thread
+ - extent
+ - reuse
 
-What we need with in the syntax
-- Functions which automaticaly get a thread/process wide context
-- The process context must be protected with mutexes
-- Functions can be called with arguments like that
-  SERVER 8080
-  WAIT
-  REQ localhost SSL:443 client.key.pem client.cert.pem
-  ...
-  END
-- Function can be a body for more functions to call like SERVER, CLIENT, BLOCK, ...
-- Enviroment variables: system, process and thread with variables
++++Expect
+Do expect something in the received data.
+
++++Cut
+Cut anything from the received data.
+
++++Transport
+A transport thing to bind anything to your test.
+
++++Thread
+Start one or more thread to emulate source and sink in the same script.
+
++++Extent
+To make it flexible and easily extentable a extent mechanisme is needed.
+
++++Reuse
+To avoid to copy&paste test code a reusable mechanisme is requested, like
+inheritance.
+
+++Example
+topic FooTest
+
+  test someThing
+    thread
+      tcp:connect localhost:8080
+      ssl:connect SSL
+      >>GET / HTTP/1.1
+      >>@headers()
+      >>
+      expect headers "foo"
+      wait
+    end
+
+    thread 
+      tcp:listen localhost:8080
+      expect headers "GET /"
+      tcp:accept
+      ssl:accept SSL
+      >>HTTP/1.1 200 OK
+      >>Foo: foo
+      >>Content-Length: %auto
+      >>
+      >>Hello World
+      wait
+    end
+
+    test someTingDiferent
+    end
+  end
+
+end
+
+topic BlaTest
+  function connect host
+    tcp:connect host
+    ssl:connect SSL
+  end 
+
+  test someThing
+    connect localhost:8080
+    ..
+  end 
+end
+
+topic FooBar
+  create BlaTest foo
+
+  test someThing
+    foo:connect localhost
+    ...
+  end
+end
+
+
 
 
