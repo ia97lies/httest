@@ -293,6 +293,9 @@ command_t local_commands[] = {
   {"_SET", (command_f )command_SET, "<variable>=<value>", 
   "Store a value in a local variable",
   COMMAND_FLAGS_NONE},
+  {"_UNSET", (command_f )command_UNSET, "<variable>", 
+  "Delete variable",
+  COMMAND_FLAGS_NONE},
   {"_EXEC", (command_f )command_EXEC, "<shell command>", 
   "Execute a shell command, _EXEC| will pipe the incoming stream on the\n"
   "socket in to the called shell command",

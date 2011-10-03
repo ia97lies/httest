@@ -192,10 +192,12 @@ EXTRA_DIST= \
 	server.key.pem \
 	server_reswait.htt \
 	server_up_down.htt \
+	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.hte \
 	socketbody.htt \
 	socketbody.txt \
+	socks_domain_name.htt \
 	socks.htt \
 	sockstate.htt \
 	ssl_big_content.htt \
@@ -238,6 +240,7 @@ EXTRA_DIST= \
 	udp.htt \
 	udp.txt \
 	unicode.ntlm \
+	unset.htt \
 	urldecode.htt \
 	urlencode.htt \
 	var_expect.hte \

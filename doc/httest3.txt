@@ -82,5 +82,71 @@ topic FooBar
 end
 
 
+thread
+  connect localhost:8080 
+  ssl "SSL"
 
+  test A
+    expect body "foo"
+    match headers "SCDID=([^;]+)" SCDID
 
+    >>GET /foo HTTP/1.1
+    >>Host: localhost
+    >>
+    wait;
+
+  test B
+    expect header "bar"
+    
+    >>POST /bar HTTP/1.1
+    >>Host: localhost
+    >>Content-Length: AUTO
+    >>
+     >hallo&world=bla
+    wait
+
+  close
+  connect localhost:8080
+  ssl "SSL"
+
+  test C
+    expect body "done"
+
+    >>GET /bla HTTP/1.1
+    >>Host: localhost
+    >>
+    wait
+end
+
+thread
+  listen 8080
+  ssl "SSL"
+  accept
+  wait
+  >>HTTP/1.1 200 OK
+  >>Content-Length: AUTO
+  >>
+  >>foo
+
+  test X
+    expect header "/bar"
+
+    accept
+    wait
+    >>HTTP/1.1 200 OK
+    >>Content-Length: AUTO
+    >>Foo: bar
+    >>
+    >>hahaha
+
+  test Y
+    expect header "GET"
+ 
+    accept
+    wait
+    >>HTTP/1.1 200 OK
+    >>Content-Length: AUTO
+    >>
+    >>done
+end
+     

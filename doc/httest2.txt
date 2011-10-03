@@ -1,19 +1,15 @@
-HTTEST 2.1
-----------
++HTTEST 2.1
 This is experimental code. The stable code is in the branche httest-2.0.
 
 Do restructure the code base to make it readable and extentable. This is a 
 preparation for httest3 test microkernel.
 
-
-GOALS
-----
+++GOALS
 - Capsulate topics into modules. 
 - Use ANY transport for testing i.e. socket, ssl, file, pipe and io.
 - Low Memory Usage
 
-MODULE
-------
+++MODULE
 A init function do hook everything into httest. A uniq key (a pool alloc of
 a void pointer) will be used to store modules own stuff in a workers config 
 hash.
@@ -34,8 +30,7 @@ will unregister socket and ssl transport object
 
 The default registered transport should be the socket transport object.
 
-TRANSPORT
----------
+++TRANSPORT
 Modules have a init function and implement commands and given hooks.
 The transport, do have some difficulties. I explain this in an example:
 Think about using chached SSL
@@ -73,8 +68,7 @@ status read(buf, len)
 status peek(buf, len)
 status write(buf, len)
 
-VARIABLES
----------
+++VARIABLES
 Variables should be stored in a variable store. Array and hash variables would also
 be cool.
 
@@ -84,8 +78,16 @@ the variable pool could be resetet and reused. Perhaps reset on every change is 
 
 New types of structured variables are needed to make GUI testing possible and readable.
 
-POOLS
------
++++HASH VARIBALES
+_SET A[foo]=bar
+_SET A[bar]=foo
+
+-> Resolved $A will be foo=bar&bar=foo
+-> Resolved $A[foo] will be bar
+-> Resolved $A[bar] will be foo
+-> And if B=foo then $A[$B] will be bar :)
+
+++POOLS
 For the moment we have only one pool which last for a hole body. Better would be to give
 the temporary call_pool to interperter, where a block could use this pool for temporary
 allocations to save memory.
