@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.5
+  *) httest: Bugfix segfault on solaris.
+
+  *) httest: Changed inline commands, must start with $ and must be in curly
+             braces.
+
 Changes with httest 2.1.4
   *) httest: Fixed include problem with wrong recursiv detection. 
 
