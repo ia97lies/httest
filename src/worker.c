@@ -79,11 +79,11 @@ typedef struct flush_s {
   int flags;
 } flush_t;
 
-typedef struct replace_vars_s {
+typedef struct replacer_s {
   int unresolved;
   apr_pool_t *ptmp;
   worker_t *worker;
-} replace_vars_t;
+} replacer_t;
 
 /************************************************************************
  * Globals 
@@ -140,13 +140,13 @@ const char *varget(worker_t* worker, const char *var) {
 
 /**
  * replace vars upcall function
- * @param udata IN void pointer to replace_vars_t object
+ * @param udata IN void pointer to replacer_t object
  * @param name IN name to lookup
  * @return value
  */
-static const char * replace_vars_upcall(void *udata, const char *name) {
+static const char * replacer_upcall(void *udata, const char *name) {
   const char *val = NULL;
-  replace_vars_t *hook = udata; 
+  replacer_t *hook = udata; 
   worker_t *worker = hook->worker; 
 
   if (strchr(name, '(')) {
@@ -180,12 +180,18 @@ static const char * replace_vars_upcall(void *udata, const char *name) {
   return val;
 }
 
-static const char * replace_vars_env_upcall(void *udata, const char *name) {
+/**
+ * Replace vars with store, inline call and env vars
+ * @param udata IN void pointer to replacer_t object
+ * @param name IN variable name
+ * @return value
+ */
+static const char * replacer_env_upcall(void *udata, const char *name) {
   const char *val = NULL;
-  replace_vars_t *hook = udata;
+  replacer_t *hook = udata;
   int unresolved = hook->unresolved;
   
-  val = replace_vars_upcall(udata, name);
+  val = replacer_upcall(udata, name);
   if (!val) {
     char *env;
     hook->unresolved = unresolved;
@@ -210,11 +216,11 @@ static const char * replace_vars_env_upcall(void *udata, const char *name) {
 char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                            apr_pool_t *ptmp) {
   char *new_line;
-  replace_vars_t *upcall_hook = apr_pcalloc(ptmp, sizeof(*upcall_hook));
+  replacer_t *upcall_hook = apr_pcalloc(ptmp, sizeof(*upcall_hook));
 
   upcall_hook->worker = worker;
   upcall_hook->ptmp = ptmp;
-  new_line = my_replace_vars2(ptmp, line, upcall_hook, replace_vars_env_upcall); 
+  new_line = my_replace_vars(ptmp, line, upcall_hook, replacer_env_upcall); 
 
   if (unresolved) {
     *unresolved = upcall_hook->unresolved;
@@ -326,7 +332,7 @@ void worker_log_buf(worker_t * self, int log_mode, char *buf,
 	if (i != len -1) {
 	  if (buf[i] == '\n') {
 	    fprintf(fd, "%c", buf[i]);
-	    fprintf(fd, "%s%s", self->prefix, prefix);
+	    fprintf(fd, "%s%s", self->prefix, prefix?prefix:"");
 	  }
 	}
 	i++;
