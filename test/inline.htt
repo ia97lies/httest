@@ -30,11 +30,11 @@ _WAIT
 __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __
-__== @_FOO("hello") ==
-__== @_FOO("hallo") ==
-__== @_CODER:URLENC("foo bar") ==
-__@STUFF()
-__@DONOTEXISTCOMMAND()
+__== $_FOO("hello") ==
+__== $_FOO("hallo") ==
+__== $_CODER:URLENC("foo bar") ==
+__$STUFF()
+__$DONOTEXISTCOMMAND()
 
 END
 

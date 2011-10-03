@@ -284,6 +284,63 @@ char *my_status_str(apr_pool_t * p, apr_status_t rc) {
  *
  * @return new line
  */
+char *my_replace_vars2(apr_pool_t * p, char *line, void *udata, 
+                       replace_vars_f replace) {
+  int i;
+  int start;
+  int line_end;
+  char *var_name;
+  char *new_line;
+  const char *val;
+
+  new_line = line;
+
+once_again:
+  i = 0;
+  while (line[i] != 0) {
+    if (line[i] == '$') {
+      line_end = i;
+      ++i;
+      if (line[i] == '{') {
+        ++i;
+      }
+      start = i;
+      while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS":", line[i])) {
+        ++i;
+      }
+      if (line[i] == '(') {
+	while (line[i] != 0 && line[i] != ')') {
+	  ++i;
+	}
+      }
+      var_name = apr_pstrndup(p, &line[start], i - start);
+      val = replace(udata, var_name);
+      if (val) {
+        line[line_end] = 0;
+        if (line[i] == '}') {
+          ++i;
+        }
+        new_line = apr_pstrcat(p, line, val, &line[i], NULL);
+        line = new_line;
+        goto once_again;
+      }
+    }
+    ++i;
+  }
+  return new_line;
+}
+
+/**
+ * replace vars in given line 
+ *
+ * @param p IN pool
+ * @param line IN line where to replace the vars with values
+ * @param vars IN table of key value pairs
+ * @param env IN do also lookup system enviroment
+ * @param unresolved OUT 1 if there are unresolved variables
+ *
+ * @return new line
+ */
 char *my_replace_vars(apr_pool_t * p, char *line, store_t * vars, 
                       int lookup_env, int *unresolved) {
   int i;

@@ -40,6 +40,7 @@
 #include <apr_hash.h>
 #include <apr_base64.h>
 #include <apr_hooks.h>
+#include <apr_env.h>
 
 #include <pcre.h>
 #if APR_HAVE_UNISTD_H
@@ -77,6 +78,12 @@ typedef struct flush_s {
 #define FLUSH_DO_SKIP 1
   int flags;
 } flush_t;
+
+typedef struct replace_vars_s {
+  int unresolved;
+  apr_pool_t *ptmp;
+  worker_t *worker;
+} replace_vars_t;
 
 /************************************************************************
  * Globals 
@@ -132,69 +139,64 @@ const char *varget(worker_t* worker, const char *var) {
 }
 
 /**
- * call inline commands and replace them by their first return value.
- * @param worker IN thread data object
- * @param ptmp IN temporary pool
- * @param line IN line where possible inline calls are
- * @return new line
+ * replace vars upcall function
+ * @param udata IN void pointer to replace_vars_t object
+ * @param name IN name to lookup
+ * @return value
  */
-static char *worker_inline_calls(worker_t *worker, apr_pool_t *ptmp, char *line) {
-  int i;
-  int start;
-  int line_end;
-  char *command;
-  char *new_line;
+static const char * replace_vars_upcall(void *udata, const char *name) {
   const char *val = NULL;
-  int log_mode = worker->log_mode;
+  replace_vars_t *hook = udata; 
+  worker_t *worker = hook->worker; 
 
-  new_line = line;
-  if (worker->log_mode < LOG_ALL_CMD) {
-    worker->log_mode = LOG_NONE;
-  }
-once_again:
-  i = 0;
-  while (line[i] != 0) {
-    if (line[i] == '@') {
-      line_end = i;
+  if (strchr(name, '(')) {
+    char *command = apr_pstrdup(hook->ptmp, name);
+    int i = 0;
+    while (command[i] != 0) {
+      if (command[i] == '(' || command[i] == ')') {
+	command[i] = ' ';
+      }
       ++i;
-      start = i;
-      while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS":", line[i])) {
-        ++i;
-      }
-      if (line[i] == '(') {
-	while (line[i] != 0 && line[i] != ')') {
-	  ++i;
-	}
-	if (line[i] == ')') {
-	  ++i;
-	}
-	command = apr_pstrndup(ptmp, &line[start], i - start);
-	{
-	  int j = 0;
-	  while (command[j] != 0) {
-	    if (command[j] == '(' || command[j] == ')') {
-	      command[j] = ' ';
-	    }
-	    ++j;
-	  }
-	}
-	command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
-	/** call it */
-	if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
-	  val = store_get(worker->vars, "__INLINE_RET");
-	  if (val) {
-	    line[line_end] = 0;
-	    new_line = apr_pstrcat(ptmp, line, val, &line[i], NULL);
-	    line = new_line;
-	    goto once_again;
-	  }
-	}
-      }
     }
-    ++i;
+    command = apr_pstrcat(hook->ptmp, command, " __INLINE_RET", NULL);
+    /** call it */
+    if (command_CALL(NULL, worker, command, hook->ptmp) == APR_SUCCESS) {
+      val = store_get(worker->vars, "__INLINE_RET");
+    }
   }
-  worker->log_mode = log_mode;
-  return new_line;
+
+  if (!val) {
+    val = store_get(worker->locals, name);
+  }
+  if (!val) {
+    val = store_get(worker->params, name);
+  }
+  if (!val) {
+    val = store_get(worker->vars, name);
+  }
+  if (!val) {
+    hook->unresolved = 1;
+  }
+  return val;
+}
+
+static const char * replace_vars_env_upcall(void *udata, const char *name) {
+  const char *val = NULL;
+  replace_vars_t *hook = udata;
+  int unresolved = hook->unresolved;
+  
+  val = replace_vars_upcall(udata, name);
+  if (!val) {
+    char *env;
+    hook->unresolved = unresolved;
+    if (apr_env_get(&env, name, hook->ptmp) == APR_SUCCESS) {
+      val = env;
+    }
+    if (!val) {
+      hook->unresolved = 1;
+    }
+  }
+  return val;
 }
 
 /**
@@ -208,26 +210,15 @@ once_again:
 char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                            apr_pool_t *ptmp) {
   char *new_line;
-  int trak_unresolved = 0;
+  replace_vars_t *upcall_hook = apr_pcalloc(ptmp, sizeof(*upcall_hook));
 
-  /* replace by calling functions inline */
-  new_line = worker_inline_calls(worker, ptmp, line);
+  upcall_hook->worker = worker;
+  upcall_hook->ptmp = ptmp;
+  new_line = my_replace_vars2(ptmp, line, upcall_hook, replace_vars_env_upcall); 
 
-  /* replace all locals first */
-  new_line = my_replace_vars(ptmp, new_line, worker->locals, 0, 
-                             unresolved); 
-  if (unresolved) { trak_unresolved |= *unresolved; }
-  /* replace all parameters first */
-  new_line = my_replace_vars(ptmp, new_line, worker->params, 0, 
-                             unresolved); 
-  if (unresolved) { trak_unresolved |= *unresolved; }
-  /* replace all vars */
-  new_line = my_replace_vars(ptmp, new_line, worker->vars, 1, 
-                             unresolved); 
-  if (unresolved) { trak_unresolved |= *unresolved; }
-
-  if (unresolved) { *unresolved = trak_unresolved; }
-
+  if (unresolved) {
+    *unresolved = upcall_hook->unresolved;
+  }
   return new_line;
 }
 

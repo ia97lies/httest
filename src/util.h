@@ -26,12 +26,16 @@
 
 #include "store.h"
 
+typedef const char *replace_vars_f(void *udata, const char *name);
+
 char *my_unescape(char *string, char **last); 
 apr_table_t *my_table_deep_copy(apr_pool_t *p, apr_table_t *orig); 
 apr_table_t *my_table_swallow_copy(apr_pool_t *p, apr_table_t *orig); 
 char *my_status_str(apr_pool_t * p, apr_status_t rc); 
 char *my_replace_vars(apr_pool_t * p, char *line, store_t * vars, 
                       int lookup_env, int *unresolved);
+char *my_replace_vars2(apr_pool_t * p, char *line, void *udata, 
+                       replace_vars_f replace);
 void copyright(const char *progname); 
 const char *filename(apr_pool_t *pool, const char *path); 
 char x2c(const char *what); 
