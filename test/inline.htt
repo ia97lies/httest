@@ -14,8 +14,12 @@ __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __
 _EXPECT body "hello world"
+_EXPECT body "!hello world\)"
 _EXPECT body "foo\+bar"
+_EXPECT body "!foo\+bar\)"
 _EXPECT body "bla bla bla bla bla bla bla"
+_EXPECT body "!bla bla bla bla bla bla bla\)"
+_EXPECT body "!bla bla bla bla bla bla bla\}"
 _EXPECT body "DONOTEXISTCOMMAND"
 _EXPECT body "!_CODER"
 _EXPECT body "!_FOO"
@@ -30,9 +34,9 @@ _WAIT
 __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __
-__== ${_FOO("hello")} ==
+__== $_FOO("hello") ==
 __== ${_FOO("hallo")} ==
-__== ${_CODER:URLENC("foo bar")} ==
+__== $_CODER:URLENC("foo bar") ==
 __${STUFF()}
 __${DONOTEXISTCOMMAND()}
 
