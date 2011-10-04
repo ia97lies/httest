@@ -65,6 +65,7 @@
 #include "socket.h"
 #include "regex.h"
 #include "util.h"
+#include "replacer.h"
 #include "worker.h"
 #include "module.h"
 #include "eval.h"
@@ -2306,7 +2307,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     return APR_EGENERAL; 
   } 
   copy = apr_pstrdup(global->pool, &data[i]); 
-  copy = my_replace_vars(global->pool, copy, replacer_hook, global_replacer);
+  copy = replacer(global->pool, copy, replacer_hook, global_replacer);
 
   no = apr_strtok(copy, " ", &last);
   var = apr_strtok(NULL, " ", &last);
@@ -2481,8 +2482,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       }
       else {
 	/* replace all variables for global commands */
-        line = my_replace_vars(global->pool, &line[i], replacer_hook, 
-	                       global_replacer);
+        line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
         /* lookup function index */
 	i = 0;

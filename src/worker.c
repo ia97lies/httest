@@ -49,6 +49,7 @@
 
 #include "defines.h"
 #include "util.h"
+#include "replacer.h"
 #include "regex.h"
 #include "file.h"
 #include "transport.h"
@@ -220,7 +221,7 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
 
   upcall_hook->worker = worker;
   upcall_hook->ptmp = ptmp;
-  new_line = my_replace_vars(ptmp, line, upcall_hook, replacer_env_upcall); 
+  new_line = replacer(ptmp, line, upcall_hook, replacer_env_upcall); 
 
   if (unresolved) {
     *unresolved = upcall_hook->unresolved;
