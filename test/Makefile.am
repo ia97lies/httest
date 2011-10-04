@@ -37,6 +37,7 @@ EXTRA_DIST= \
 	daemon.htt \
 	deflate2.htt \
 	deflate.htt \
+	dummy.htb \
 	duration.htt \
 	embedded_file.htt \
 	embedded_sh.htt \
@@ -89,10 +90,14 @@ EXTRA_DIST= \
 	ifcond.htt \
 	ifelse.htt \
 	ifequal.htt \
+	if_local_vars.htt \
 	ifnumber.htt \
 	ifvareq.htt \
 	ignore_body.htt \
 	ignore_body_space.htt \
+	include.htt \
+	include_recursive.hte \
+	include_recursive.txt \
 	incomplete.htt \
 	leftovertmpf.htt \
 	lock.htt \
@@ -140,6 +145,7 @@ EXTRA_DIST= \
 	process.txt \
 	proxy_main_functionality.htt \
 	random.htt \
+	recursiv.htb \
 	recv_chunked.htt \
 	recv_eof.htt \
 	recv_length.htt \

@@ -2574,6 +2574,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 
   if (global->recursiv > 8) {
     fprintf(stderr, "\nRecursiv inlcudes too deep");
+    success = 0;
     exit(1);
   }
 
