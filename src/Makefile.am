@@ -22,4 +22,4 @@ htntlm_SOURCES= \
 
 noinst_HEADERS= \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
-	module.h transport.h store.h eval.h
+	module.h transport.h store.h eval.h replacer.h
