@@ -4349,27 +4349,29 @@ error:
 /**
  * write worker data to file with worker->name
  *
- * @param self IN thread data object
+ * @param worker IN thread data object
  *
  * @return an apr status
  */
-apr_status_t worker_to_file(worker_t * self) {
+apr_status_t worker_to_file(worker_t * worker) {
   apr_status_t status;
   apr_file_t *fp;
   apr_table_entry_t *e;
   char *line;
+  char *copy;
   int i;
 
   if ((status =
-       apr_file_open(&fp, self->name, APR_CREATE | APR_WRITE, APR_OS_DEFAULT,
-		     self->pbody)) != APR_SUCCESS) {
+       apr_file_open(&fp, worker->name, APR_CREATE | APR_WRITE, APR_OS_DEFAULT,
+		     worker->pbody)) != APR_SUCCESS) {
     return status;
   }
 
-  e = (apr_table_entry_t *) apr_table_elts(self->lines)->elts;
-  for (i = 0; i < apr_table_elts(self->lines)->nelts; i++) {
+  e = (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
+  for (i = 0; i < apr_table_elts(worker->lines)->nelts; i++) {
     line = e[i].val;
-    apr_file_printf(fp, "%s\n", &line[1]);
+    copy = worker_replace_vars(worker, line, NULL, worker->pbody); 
+    apr_file_printf(fp, "%s\n", &copy[1]);
   }
 
   apr_file_close(fp);
