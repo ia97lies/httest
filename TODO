@@ -9,6 +9,7 @@ htproxy
 httest
 ------
 - Update user guide!
+- Nested lines like the one for lua with [[ ... ]]
 - Hash variable, btw. the variables are hold in hash :)
 - Add/Remove elements in hash variables
 - Print hash variables as query
