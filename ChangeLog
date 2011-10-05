@@ -2,8 +2,9 @@
 Changes with httest 2.1.5
   *) httest: Bugfix segfault on solaris.
 
-  *) httest: Changed inline commands, must start with $ and must be in curly
-             braces.
+  *) httest: Changed inline commands, they must start with $ and not @ and
+             must have round braces with zero or more space separated
+	     arguments.
 
 Changes with httest 2.1.4
   *) httest: Fixed include problem with wrong recursiv detection. 
