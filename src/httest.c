@@ -65,6 +65,7 @@
 #include "socket.h"
 #include "regex.h"
 #include "util.h"
+#include "replacer.h"
 #include "worker.h"
 #include "module.h"
 #include "eval.h"
@@ -76,6 +77,10 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
+typedef struct global_replacer_s {
+  apr_pool_t *ptmp;
+  store_t *store;
+} global_replacer_t;
 
 /************************************************************************
  * Globals 
@@ -293,6 +298,9 @@ command_t local_commands[] = {
   {"_SET", (command_f )command_SET, "<variable>=<value>", 
   "Store a value in a local variable",
   COMMAND_FLAGS_NONE},
+  {"_UNSET", (command_f )command_UNSET, "<variable>", 
+  "Delete variable",
+  COMMAND_FLAGS_NONE},
   {"_EXEC", (command_f )command_EXEC, "<shell command>", 
   "Execute a shell command, _EXEC| will pipe the incoming stream on the\n"
   "socket in to the called shell command",
@@ -470,19 +478,26 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
   }
 }
 
-static apr_hash_t *worker_lookup_block(worker_t * worker, char *data,
+/**
+ * Lookup a block name
+ * @param worker IN worker object
+ * @param line IN line with a possible block name
+ * @param ptmp IN temp pool
+ * @return block hash
+ */
+static apr_hash_t *worker_lookup_block(worker_t * worker, char *line,
                                        apr_pool_t *ptmp) {
   apr_size_t len = 0;
   char *block_name;
   apr_hash_t *block = NULL;
 
-  if (strncmp(data, "__", 2) == 0 || strncmp(data, "_-", 2) == 0) {
+  if (strncmp(line, "__", 2) == 0 || strncmp(line, "_-", 2) == 0) {
     /* very special commands, not possible to overwrite this one */
     return NULL;
   }
 
-  while (data[len] != ' ' && data[len] != '\0') ++len;
-  block_name = apr_pstrndup(ptmp, data, len);
+  while (line[len] != ' ' && line[len] != '\0') ++len;
+  block_name = apr_pstrndup(ptmp, line, len);
 
   /* if name space do handle otherwise */
   if (strchr(block_name, ':')) {
@@ -496,6 +511,25 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *data,
   sync_unlock(worker->mutex);
 
   return block;
+}
+
+/**
+ * Replacer upcall for global context
+ * @param udata IN void pointer to store
+ * @param name IN name of variable to lookup
+ * @param value
+ */
+static const char *global_replacer(void *udata, const char *name) {
+  const char *val;
+  global_replacer_t *hook = udata;
+  val = store_get(hook->store, name);
+  if (!val) {
+    char *env;
+    if (apr_env_get(&env, name, hook->ptmp) == APR_SUCCESS) {
+      val = env;
+    }
+  }
+  return val;
 }
 
 /**
@@ -2261,6 +2295,9 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
   char *no;
   char *var;
   int i = 0; 
+  global_replacer_t *replacer_hook = apr_pcalloc(ptmp, sizeof(*replacer_hook));
+  replacer_hook->ptmp = ptmp;
+  replacer_hook->store = global->vars;
 
   while (data[i] == ' ') { 
     ++i; 
@@ -2270,7 +2307,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     return APR_EGENERAL; 
   } 
   copy = apr_pstrdup(global->pool, &data[i]); 
-  copy = my_replace_vars(global->pool, copy, global->vars, 0, NULL);
+  copy = replacer(global->pool, copy, replacer_hook, global_replacer);
 
   no = apr_strtok(copy, " ", &last);
   var = apr_strtok(NULL, " ", &last);
@@ -2394,6 +2431,11 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   int k;
   int i;
   int line_nr;
+  global_replacer_t *replacer_hook;
+
+  replacer_hook = apr_pcalloc(global->pool, sizeof(*replacer_hook));
+  replacer_hook->ptmp = global->pool;
+  replacer_hook->store = global->vars;
 
   if (global->recursiv > 8) {
     fprintf(stderr, "\nRecursiv inlcudes too deep");
@@ -2414,9 +2456,6 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
     if (line[i] != '#' && line[i] != 0) {
       /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
-	/* replace all variables */
-	line = my_replace_vars(global->pool, &line[i], global->vars, 0, NULL);
-
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
 	  i += 3;
 	  if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
@@ -2435,13 +2474,15 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
           return status;
         }
 	else if (line[0] != '_') {
-          fprintf(stderr, "\nWrong scope:%d: %s is not a local command, close body with \"END\"", global->line_nr, line);
+          fprintf(stderr, 
+	          "\nWrong scope:%d: %s is not a local command, close body with \"END\"", 
+	          global->line_nr, line);
 	  return APR_EGENERAL;
 	}
       }
       else {
-	/* replace all variables */
-	line = my_replace_vars(global->pool, &line[i], global->vars, 1, NULL);
+	/* replace all variables for global commands */
+        line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
         /* lookup function index */
 	i = 0;

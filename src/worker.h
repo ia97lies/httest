@@ -333,6 +333,7 @@ apr_status_t command_TIMEOUT(command_t * self, worker_t * worker, char *data, ap
 apr_status_t command_MATCH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_GREP(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_SET(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_UNSET(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_DATA(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_BIN_DATA(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_FLUSH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);

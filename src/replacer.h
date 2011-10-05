@@ -18,21 +18,14 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool util.
+ * Interface of the HTTP Test Tool replacer.
  */
 
-#ifndef HTTEST_UTIL_H
-#define HTTEST_UTIL_H
+#ifndef HTTEST_REPLACER_H
+#define HTTEST_REPLACER_H
 
-#include "store.h"
-
-char *my_unescape(char *string, char **last); 
-apr_table_t *my_table_deep_copy(apr_pool_t *p, apr_table_t *orig); 
-apr_table_t *my_table_swallow_copy(apr_pool_t *p, apr_table_t *orig); 
-char *my_status_str(apr_pool_t * p, apr_status_t rc); 
-void copyright(const char *progname); 
-const char *filename(apr_pool_t *pool, const char *path); 
-char x2c(const char *what); 
-void my_get_args(char *line, store_t *params, apr_pool_t *pool); 
+typedef const char *replacer_f(void *udata, const char *name);
+char *replacer(apr_pool_t * p, char *line, void *udata, 
+               replacer_f replace);
 
 #endif

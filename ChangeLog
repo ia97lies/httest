@@ -1,9 +1,20 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.5
+  *) httest: Bugfix segfault on solaris.
+
+  *) httest: Changed inline commands, they must start with $ and not @ and
+             must have round braces with zero or more space separated
+	     arguments.
+
 Changes with httest 2.1.4
   *) httest: Fixed include problem with wrong recursiv detection. 
 
   *) httest: Add a SOCKS module to connect to SOCKS proxy i.e. ssh SOCKS
              tunnel. Usefull to connect to target in another network.
+
+  *) httest: Add _UNSET command to unset a variable. This is a preparation
+             for hash variables, to be able to add/remove hash entries with
+	     _SET and _UNSET.
 
 Changes with httest 2.1.3
   *) httest: Fixed automatic content length calculation if used _BINARY:SEND.

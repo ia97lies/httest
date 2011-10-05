@@ -1,13 +1,18 @@
+INCLUDE $TOP/test/config.htb
+
+SET FOO=bla
 FILE testfile
 _foo
 _bar
 _blafsel
+_$YOUR_PORT
 END
 
 CLIENT
 _EXPECT EXEC "foo\n"
 _EXPECT EXEC "bar\n"
 _EXPECT EXEC "blafsel\n"
+_EXPECT EXEC "!YOUR_PORT"
 _EXEC cat testfile
 END
 
