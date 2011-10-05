@@ -8,6 +8,7 @@ htproxy
 
 httest
 ------
+- Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Hash variable, btw. the variables are hold in hash :)
 - Add/Remove elements in hash variables
 - Print hash variables as query
@@ -23,3 +24,4 @@ httest
 - Array variable
 - Need more information on ssl failure
 - global vars can not resolve allready set vars on SET
+- Multiline blocks
