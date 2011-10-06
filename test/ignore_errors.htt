@@ -1,0 +1,5 @@
+CLIENT
+_ERROR ".*"
+_DEBUG No error at all
+_END ERROR
+END
