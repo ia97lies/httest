@@ -2,4 +2,10 @@ CLIENT
 _ERROR ".*"
 _DEBUG No error at all
 _END ERROR
+
+_DEBUG More ...
+
+_ERROR ".*"
+_CLOSE
+_END ERROR
 END
