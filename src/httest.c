@@ -1250,6 +1250,9 @@ static int lookup_func_index(command_t *commands, const char *line) {
  * Interpreter
  *
  * @param self IN thread data object
+ * @param parent IN caller
+ * @param dummy IN not used, but interface definition wants that
+ * @TODO: Too complicated need a refactoring.
  *
  * @return an apr status
  */
@@ -1527,6 +1530,7 @@ error:
  *
  * @param thread IN thread object
  * @param selfv IN void pointer to thread data object
+ * @TODO: Too big, too complicated refactor this.
  *
  * @return an apr status
  */

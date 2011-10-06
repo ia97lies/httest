@@ -8,6 +8,7 @@ htproxy
 
 httest
 ------
+- Resolve all TODO in the code
 - Update user guide!
 - Transparent proxy support
 - Nested lines like the one for lua with [[ ... ]]
