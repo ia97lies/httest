@@ -109,6 +109,7 @@ EXTRA_DIST= \
 	ifvareq.htt \
 	ignore_body.htt \
 	ignore_body_space.htt \
+	ignore_errors.htt \
 	include.hte \
 	include.htt \
 	include.txt \
