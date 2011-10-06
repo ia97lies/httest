@@ -9,7 +9,6 @@ htproxy
 httest
 ------
 - Update user guide!
-- Ignore error block
 - Nested lines like the one for lua with [[ ... ]]
 - Hash variable, btw. the variables are hold in hash :)
   - Add/Remove elements in hash variables

@@ -22,3 +22,29 @@ or response data, or for validation purposes.
 
 \end{itemize}
 
+\chapter{htt Functionality Changes}
+\label{chap:Changes}
+
+There are various changes to older httest 2.0 versions.
+
+\begin{itemize}
+
+\item Variable names are now case-sensitiv.
+
+\item Variable names ending with round braces will be interpreted as inline
+function calls. To avoid function calling embrace the variables in curl braces.
+For example you have the following line
+
+\begin{usplisting}
+__Any text $Foo(.*) bar
+\end{usplisting}
+
+Foo is called as a command and the return value will replace this
+inline command. If this is not what you expected you have to change this to
+
+\begin{usplisting}
+__Any text ${Foo}(.*) bar
+\end{usplisting}
+
+
+\end{itemize}
