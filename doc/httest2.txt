@@ -87,6 +87,19 @@ _SET A[bar]=foo
 -> Resolved $A[bar] will be foo
 -> And if B=foo then $A[$B] will be bar :)
 
+Perhaps there are a simpler way?
+
+_HASH:SET A[foo]=bar
+_HASH:SET A[bar]=foo
+
+would be the same as if you type -> _SET A=foo=bar&bar=foo.
+But how do we resolve $A[bar] inline? Need a hook were I get the line untouched 
+before httest core do replace stuff. Another way would be naming hash entries 
+@A[bar] or %A[bar] or something like that.
+
+Also an unset call is needed. Perhaps I should do this in the core and not in a
+module anyway.
+
 ++POOLS
 For the moment we have only one pool which last for a hole body. Better would be to give
 the temporary call_pool to interperter, where a block could use this pool for temporary
