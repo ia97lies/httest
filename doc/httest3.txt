@@ -149,4 +149,27 @@ thread
     >>
     >>done
 end
-     
+    
+++Example Lua
+
+function client()
+  while i < 100 do
+    htt:interpret([[
+    _REQ localhost 8080
+    __GET /$i HTTP/1.1
+    __Host: localhost
+    __
+    _EXPECT headers "HTTP/1.1 200"
+    _WAIT  
+    ]])
+  end
+end
+
+function server()
+  htt:interpret([[
+  _LISTEN 8080
+  _RES
+  _WAIT
+  ...
+  ]])
+end
