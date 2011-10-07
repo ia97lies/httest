@@ -440,8 +440,8 @@ int running_threads = 0;
  * Private 
  ***********************************************************************/
 
-static void worker_set_global_error(worker_t *self); 
-static apr_status_t worker_interpret(worker_t * self, worker_t *parent, 
+static void worker_set_global_error(worker_t *worker); 
+static apr_status_t worker_interpret(worker_t * worker, worker_t *parent, 
                                      apr_pool_t *ptmp); 
 
 /**
@@ -489,7 +489,6 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *line,
                                        apr_pool_t *ptmp) {
   apr_size_t len = 0;
   char *block_name;
-  apr_hash_t *block = NULL;
 
   if (strncmp(line, "__", 2) == 0 || strncmp(line, "_-", 2) == 0) {
     /* very special commands, not possible to overwrite this one */
@@ -504,13 +503,7 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *line,
     return NULL;
   }
 
-  /* CR BEGIN */
-  sync_lock(worker->mutex);
-  block = apr_hash_get(worker->blocks, block_name, APR_HASH_KEY_STRING);
-  /* CR END */
-  sync_unlock(worker->mutex);
-
-  return block;
+  return apr_hash_get(worker->blocks, block_name, APR_HASH_KEY_STRING);
 }
 
 /**
@@ -1215,10 +1208,10 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
  *
  * @param self IN thread data object
  */
-static void worker_set_global_error(worker_t *self) {
-  sync_lock(self->mutex);
+static void worker_set_global_error(worker_t *worker) {
+  sync_lock(worker->mutex);
   success = 0;
-  sync_unlock(self->mutex);
+  sync_unlock(worker->mutex);
 }
 
 /**
@@ -1249,14 +1242,14 @@ static int lookup_func_index(command_t *commands, const char *line) {
 /**
  * Interpreter
  *
- * @param self IN thread data object
+ * @param worker IN thread data object
  * @param parent IN caller
  * @param dummy IN not used, but interface definition wants that
  * @TODO: Too complicated need a refactoring.
  *
  * @return an apr status
  */
-static apr_status_t worker_interpret(worker_t * self, worker_t *parent, 
+static apr_status_t worker_interpret(worker_t * worker, worker_t *parent, 
                                      apr_pool_t *dummy) {
   apr_status_t status;
   char *line;
@@ -1266,30 +1259,30 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
   apr_pool_t *ptmp = NULL;
 
   apr_table_entry_t *e =
-    (apr_table_entry_t *) apr_table_elts(self->lines)->elts;
+    (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
 
-  if (self->cmd_from) {
-    self->cmd = self->cmd_from;
+  if (worker->cmd_from) {
+    worker->cmd = worker->cmd_from;
   }
   else {
-    self->cmd = 0;
+    worker->cmd = 0;
   }
 
-  if (self->cmd_to) {
-    to = self->cmd_to; 
+  if (worker->cmd_to) {
+    to = worker->cmd_to; 
   }
   else {
-    to = apr_table_elts(self->lines)->nelts;
+    to = apr_table_elts(worker->lines)->nelts;
   }
 
   /* iterate through all script line for this thread */
-  for (; self->cmd < to; self->cmd++) {
-    apr_pool_create(&ptmp, self->pbody);
-    self->file_and_line = e[self->cmd].key;
-    line = e[self->cmd].val;
+  for (; worker->cmd < to; worker->cmd++) {
+    apr_pool_create(&ptmp, worker->pbody);
+    worker->file_and_line = e[worker->cmd].key;
+    line = e[worker->cmd].val;
     /* lookup blocks */
-    if (worker_lookup_block(self, line, ptmp)) {
-      status = command_CALL(NULL, self, line, ptmp);
+    if (worker_lookup_block(worker, line, ptmp)) {
+      status = command_CALL(NULL, worker, line, ptmp);
       status = worker_check_error(parent, status);
     }
     else {
@@ -1299,7 +1292,7 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
       /* get command and test if found */
       if (local_commands[k].flags & COMMAND_FLAGS_LINK) {
 	j += strlen(local_commands[k].name);
-	status = command_CALL(NULL, self, apr_pstrcat(self->pbody, 
+	status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
 	                                              local_commands[k].syntax,
 						      " ", &line[j], NULL), 
 	                      ptmp);
@@ -1307,20 +1300,20 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
       }
       else if (local_commands[k].func) {
 	j += strlen(local_commands[k].name);
-	status = local_commands[k].func(&local_commands[k], self, &line[j], 
+	status = local_commands[k].func(&local_commands[k], worker, &line[j], 
 	                                ptmp);
 	status = worker_check_error(parent, status);
       }
       else {
-	status = command_CALL(NULL, self, line, ptmp);
+	status = command_CALL(NULL, worker, line, ptmp);
 	/* ignore not found error else the error message is not understandable */
 	if (!APR_STATUS_IS_ENOENT(status)) {
 	  status = worker_check_error(parent, status);
 	}
       }
       if (APR_STATUS_IS_ENOENT(status)) {
-	worker_log_error(self, "%s syntax error", self->name);
-	worker_set_global_error(self);
+	worker_log_error(worker, "%s syntax error", worker->name);
+	worker_set_global_error(worker);
 	return APR_EINVAL;
       }
     }
@@ -1335,66 +1328,66 @@ static apr_status_t worker_interpret(worker_t * self, worker_t *parent,
 /**
  * Call final block if exist
  *
- * @param self IN thread data object
+ * @param worker IN thread data object
  */
-void worker_finally(worker_t *self, apr_status_t status) {
+void worker_finally(worker_t *worker, apr_status_t status) {
   int k;
   int mode;
 
-  if (self->tmpf) {
+  if (worker->tmpf) {
     const char *name;
 
     /* get file name */
-    if (apr_file_name_get(&name, self->tmpf) == APR_SUCCESS) {
+    if (apr_file_name_get(&name, worker->tmpf) == APR_SUCCESS) {
       /* close file */
-      apr_file_close(self->tmpf);
-      self->tmpf = NULL;
+      apr_file_close(worker->tmpf);
+      worker->tmpf = NULL;
 
-      apr_file_remove(name, self->pbody);
+      apr_file_remove(name, worker->pbody);
     }
   }
 
   /* count down threads */
-  sync_lock(self->mutex);
+  sync_lock(worker->mutex);
   --running_threads;
-  sync_unlock(self->mutex);
+  sync_unlock(worker->mutex);
 
-  worker_var_set(self, "__ERROR", my_status_str(self->pbody, status));
-  worker_var_set(self, "__STATUS", apr_ltoa(self->pbody, status));
-  worker_var_set(self, "__THREAD", self->name);
+  worker_var_set(worker, "__ERROR", my_status_str(worker->pbody, status));
+  worker_var_set(worker, "__STATUS", apr_ltoa(worker->pbody, status));
+  worker_var_set(worker, "__THREAD", worker->name);
 
   if (!running_threads) { 
     k = lookup_func_index(local_commands, "_CALL");
     if (local_commands[k].func) {
-      mode = self->log_mode;
-      self->log_mode = 0;
-      self->blocks = apr_hash_get(self->modules, "DEFAULT", APR_HASH_KEY_STRING);
-      if (apr_hash_get(self->blocks, "FINALLY", APR_HASH_KEY_STRING)) {
-	local_commands[k].func(&local_commands[k], self, "FINALLY", NULL);
+      mode = worker->log_mode;
+      worker->log_mode = 0;
+      worker->blocks = apr_hash_get(worker->modules, "DEFAULT", APR_HASH_KEY_STRING);
+      if (apr_hash_get(worker->blocks, "FINALLY", APR_HASH_KEY_STRING)) {
+	local_commands[k].func(&local_commands[k], worker, "FINALLY", NULL);
       }
-      self->log_mode = mode;
+      worker->log_mode = mode;
     }
   }
 
   if (status != APR_SUCCESS) {
     k = lookup_func_index(local_commands, "_CALL");
     if (local_commands[k].func) {
-      self->blocks = apr_hash_get(self->modules, "DEFAULT", APR_HASH_KEY_STRING);
-      if (apr_hash_get(self->blocks, "ON_ERROR", APR_HASH_KEY_STRING)) {
-	local_commands[k].func(&local_commands[k], self, "ON_ERROR", NULL);
+      worker->blocks = apr_hash_get(worker->modules, "DEFAULT", APR_HASH_KEY_STRING);
+      if (apr_hash_get(worker->blocks, "ON_ERROR", APR_HASH_KEY_STRING)) {
+	local_commands[k].func(&local_commands[k], worker, "ON_ERROR", NULL);
 	goto exodus;
       }
     }
 
-    worker_set_global_error(self);
-//    worker_destroy(self);
-    worker_conn_close_all(self);
+    worker_set_global_error(worker);
+//    worker_destroy(worker);
+    worker_conn_close_all(worker);
     exit(1);
   }
 exodus:
-//  worker_destroy(self);
-  worker_conn_close_all(self);
-  apr_thread_exit(self->mythread, APR_SUCCESS);
+//  worker_destroy(worker);
+  worker_conn_close_all(worker);
+  apr_thread_exit(worker->mythread, APR_SUCCESS);
 }
 
 /**
@@ -1408,34 +1401,34 @@ exodus:
 static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *selfv) {
   apr_status_t status;
 
-  worker_t *self = selfv;
-  self->mythread = thread;
-  self->flags |= FLAGS_CLIENT;
+  worker_t *worker = selfv;
+  worker->mythread = thread;
+  worker->flags |= FLAGS_CLIENT;
 
-  self->file_and_line = apr_psprintf(self->pbody, "%s:-1", self->filename);
+  worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
-  sync_lock(self->mutex);
+  sync_lock(worker->mutex);
   ++running_threads;
-  sync_unlock(self->mutex);
+  sync_unlock(worker->mutex);
   
-  worker_log(self, LOG_INFO, "%s start ...", self->name);
+  worker_log(worker, LOG_INFO, "%s start ...", worker->name);
 
-  if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
+  if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
-  worker_flush(self, self->pbody);
+  worker_flush(worker, worker->pbody);
 
-  if ((status = worker_test_unused(self)) != APR_SUCCESS) {
+  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
     goto error;
   }
 
-  if ((status = worker_test_unused_errors(self)) != APR_SUCCESS) {
+  if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
     goto error;
   }
 
 error:
-  worker_finally(self, status);
+  worker_finally(worker, status);
   return NULL;
 }
 
@@ -1450,36 +1443,36 @@ error:
 static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *selfv) {
   apr_status_t status;
 
-  worker_t *self = selfv;
-  self->mythread = thread;
-  self->flags |= FLAGS_CLIENT;
+  worker_t *worker = selfv;
+  worker->mythread = thread;
+  worker->flags |= FLAGS_CLIENT;
 
-  self->file_and_line = apr_psprintf(self->pbody, "%s:-1", self->filename);
+  worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
-  worker_log(self, LOG_INFO, "Daemon start ...");
+  worker_log(worker, LOG_INFO, "Daemon start ...");
 
-  worker_log(self, LOG_DEBUG, "unlock %s", self->name);
+  worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
 
-  if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
+  if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
-  worker_flush(self, self->pbody);
+  worker_flush(worker, worker->pbody);
 
-  if ((status = worker_test_unused(self)) != APR_SUCCESS) {
+  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
     goto error;
   }
 
-  if ((status = worker_test_unused_errors(self)) != APR_SUCCESS) {
+  if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
     goto error;
   }
 
 error:
   /* no mather if there are other threads running set running threads to one */
-  sync_lock(self->mutex);
+  sync_lock(worker->mutex);
   running_threads = 1;
-  sync_unlock(self->mutex);
-  worker_finally(self, status);
+  sync_unlock(worker->mutex);
+  worker_finally(worker, status);
   return NULL;
 }
 
@@ -1494,25 +1487,25 @@ error:
 static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *selfv) {
   apr_status_t status;
 
-  worker_t *self = selfv;
-  self->mythread = thread;
-  self->flags |= FLAGS_SERVER;
+  worker_t *worker = selfv;
+  worker->mythread = thread;
+  worker->flags |= FLAGS_SERVER;
 
-  sync_lock(self->mutex);
+  sync_lock(worker->mutex);
   ++running_threads;
-  sync_unlock(self->mutex);
+  sync_unlock(worker->mutex);
 
-  if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
+  if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
-  worker_flush(self, self->pbody);
+  worker_flush(worker, worker->pbody);
 
-  if ((status = worker_test_unused(self)) != APR_SUCCESS) {
+  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
     goto error;
   }
 
-  if ((status = worker_test_unused_errors(self)) != APR_SUCCESS) {
+  if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1520,8 +1513,8 @@ error:
   /* do not close listener, there may be more servers which use this 
    * listener, signal this by setting listener to NULL
    */
-  self->listener = NULL;
-  worker_finally(self, status);
+  worker->listener = NULL;
+  worker_finally(worker, status);
   return NULL;
 }
 
@@ -1549,26 +1542,26 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   apr_table_t *servers;
   apr_table_entry_t *e;
 
-  worker_t *self = selfv;
-  self->mythread = thread;
-  self->flags |= FLAGS_SERVER;
+  worker_t *worker = selfv;
+  worker->mythread = thread;
+  worker->flags |= FLAGS_SERVER;
 
-  sync_lock(self->mutex);
+  sync_lock(worker->mutex);
   ++running_threads;
-  sync_unlock(self->mutex);
+  sync_unlock(worker->mutex);
 
   /* TODO  ["SSL:"]["*"|<IP>|<IPv6>:]<port> ["DOWN"|<concurrent>] */
   
-  portname = apr_strtok(self->additional, " ", &last);
+  portname = apr_strtok(worker->additional, " ", &last);
 
-  worker_get_socket(self, "Default", "0");
+  worker_get_socket(worker, "Default", "0");
 
-  if ((status = htt_run_server_port_args(self, portname, &portname, last)) != APR_SUCCESS) {
+  if ((status = htt_run_server_port_args(worker, portname, &portname, last)) != APR_SUCCESS) {
     goto error;
   }
 
   if (!portname) {
-    worker_log_error(self, "No port defined");
+    worker_log_error(worker, "No port defined");
     status = APR_EGENERAL;
     goto error;
   }
@@ -1586,42 +1579,42 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     threads = 0;
   }
 
-  if ((status = apr_parse_addr_port(&self->listener_addr, &scope_id, 
-	                            &self->listener_port, portname, 
-				    self->pbody)) != APR_SUCCESS) {
+  if ((status = apr_parse_addr_port(&worker->listener_addr, &scope_id, 
+	                            &worker->listener_port, portname, 
+				    worker->pbody)) != APR_SUCCESS) {
     goto error;
   }
 
-  if (!self->listener_addr) {
-    self->listener_addr = apr_pstrdup(self->pbody, APR_ANYADDR);
+  if (!worker->listener_addr) {
+    worker->listener_addr = apr_pstrdup(worker->pbody, APR_ANYADDR);
   }
 
-  if (!self->listener_port) {
-    if (self->socket->is_ssl) {
-      self->listener_port = 443;
+  if (!worker->listener_port) {
+    if (worker->socket->is_ssl) {
+      worker->listener_port = 443;
     }
     else {
-      self->listener_port = 80;
+      worker->listener_port = 80;
     }
   }
   
-  worker_log(self, LOG_INFO, "%s start on %s%s:%d", self->name, 
-             self->socket->is_ssl ? "SSL:" : "", self->listener_addr, 
-	     self->listener_port);
+  worker_log(worker, LOG_INFO, "%s start on %s%s:%d", worker->name, 
+             worker->socket->is_ssl ? "SSL:" : "", worker->listener_addr, 
+	     worker->listener_port);
 
   if (!nolistener) {
-    if ((status = worker_listener_up(self, LISTENBACKLOG_DEFAULT)) != APR_SUCCESS) {
-      worker_log_error(self, "%s(%d)", my_status_str(self->pbody, status), status);
+    if ((status = worker_listener_up(worker, LISTENBACKLOG_DEFAULT)) != APR_SUCCESS) {
+      worker_log_error(worker, "%s(%d)", my_status_str(worker->pbody, status), status);
       goto error;
     }
   }
-  sync_unlock(self->sync_mutex);
-  worker_log(self, LOG_DEBUG, "unlock %s", self->name);
+  sync_unlock(worker->sync_mutex);
+  worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
 
   if (threads != 0) {
     i = 0;
 
-    if ((status = apr_threadattr_create(&tattr, self->pbody)) != APR_SUCCESS) {
+    if ((status = apr_threadattr_create(&tattr, worker->pbody)) != APR_SUCCESS) {
       goto error;
     }
 
@@ -1634,51 +1627,51 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       goto error;
     }
 
-    servers = apr_table_make(self->pbody, 10);
+    servers = apr_table_make(worker->pbody, 10);
 
     while(threads == -1 || i < threads) {
-      if ((status = worker_clone(&clone, self)) != APR_SUCCESS) {
-	worker_log(self, LOG_ERR, "Could not clone server thread data");
+      if ((status = worker_clone(&clone, worker)) != APR_SUCCESS) {
+	worker_log(worker, LOG_ERR, "Could not clone server thread data");
 	goto error;
       }
-      if ((status = htt_run_worker_clone(self, clone)) != APR_SUCCESS) {
+      if ((status = htt_run_worker_clone(worker, clone)) != APR_SUCCESS) {
 	goto error;
       }
-      clone->listener = self->listener;
-      worker_log(self, LOG_DEBUG, "--- accept");
-      if (!self->listener) {
-	worker_log_error(self, "Server down");
+      clone->listener = worker->listener;
+      worker_log(worker, LOG_DEBUG, "--- accept");
+      if (!worker->listener) {
+	worker_log_error(worker, "Server down");
 	status = APR_EGENERAL;
 	goto error;
       }
 
       worker_get_socket(clone, "Default", "0");
-      clone->socket->is_ssl = self->socket->is_ssl;
+      clone->socket->is_ssl = worker->socket->is_ssl;
       
       if ((status =
-	   apr_socket_accept(&clone->socket->socket, self->listener,
+	   apr_socket_accept(&clone->socket->socket, worker->listener,
 			     clone->pbody)) != APR_SUCCESS) {
 	clone->socket->socket = NULL;
 	goto error;
       }
       if ((status =
-             apr_socket_timeout_set(clone->socket->socket, self->socktmo)) 
+             apr_socket_timeout_set(clone->socket->socket, worker->socktmo)) 
 	  != APR_SUCCESS) {
         goto error;
       }
       if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {
 	goto error;
       }
-      worker_log(self, LOG_DEBUG, "--- create thread");
+      worker_log(worker, LOG_DEBUG, "--- create thread");
       clone->socket->socket_state = SOCKET_CONNECTED;
       clone->which = i;
       if ((status =
 	   apr_thread_create(&threadl, tattr, worker_thread_server,
-			     clone, self->pbody)) != APR_SUCCESS) {
+			     clone, worker->pbody)) != APR_SUCCESS) {
 	goto error;
       }
 
-      apr_table_addn(servers, self->name, (char *)threadl);
+      apr_table_addn(servers, worker->name, (char *)threadl);
 
       ++i;
     }
@@ -1690,23 +1683,23 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     }
   }
   else {
-    if ((status = worker_interpret(self, self, NULL)) != APR_SUCCESS) {
+    if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
       goto error;
     }
 
-    worker_flush(self, self->pbody);
+    worker_flush(worker, worker->pbody);
 
-    if ((status = worker_test_unused(self)) != APR_SUCCESS) {
+    if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
       goto error;
     }
 
-    if ((status = worker_test_unused_errors(self)) != APR_SUCCESS) {
+    if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
       goto error;
     }
   }
 
 error:
-  worker_finally(self, status);
+  worker_finally(worker, status);
   return NULL;
 }
 
@@ -1717,71 +1710,71 @@ error:
 /**
  * Create new global object
  *
- * @param self OUT new global object
+ * @param global OUT new global object
  * @param vars IN global variable table
  * @param log_mode IN log mode
  * @param p IN pool
  *
  * @return apr status
  */
-static apr_status_t global_new(global_t **self, store_t *vars, 
+static apr_status_t global_new(global_t **global, store_t *vars, 
                                int log_mode, apr_pool_t *p) {
   apr_status_t status;
-  *self = apr_pcalloc(p, sizeof(global_t));
+  *global = apr_pcalloc(p, sizeof(global_t));
 
-  (*self)->pool = p;
-  (*self)->vars = vars;
-  (*self)->log_mode = log_mode;
+  (*global)->pool = p;
+  (*global)->vars = vars;
+  (*global)->log_mode = log_mode;
 
-  (*self)->threads = apr_table_make(p, 10);
-  (*self)->clients = apr_table_make(p, 5);
-  (*self)->servers = apr_table_make(p, 5);
-  (*self)->daemons = apr_table_make(p, 5);
-  (*self)->modules = apr_hash_make(p);
-  (*self)->blocks = apr_hash_make(p);
-  (*self)->files = apr_table_make(p, 5);
+  (*global)->threads = apr_table_make(p, 10);
+  (*global)->clients = apr_table_make(p, 5);
+  (*global)->servers = apr_table_make(p, 5);
+  (*global)->daemons = apr_table_make(p, 5);
+  (*global)->modules = apr_hash_make(p);
+  (*global)->blocks = apr_hash_make(p);
+  (*global)->files = apr_table_make(p, 5);
 
   /* set default blocks for blocks with no module name */
-  apr_hash_set((*self)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*self)->blocks);
+  apr_hash_set((*global)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*global)->blocks);
 
-  if ((status = apr_threadattr_create(&(*self)->tattr, (*self)->pool)) != APR_SUCCESS) {
+  if ((status = apr_threadattr_create(&(*global)->tattr, (*global)->pool)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create thread attr");
     return status;
   }
 
-  if ((status = apr_threadattr_stacksize_set((*self)->tattr, DEFAULT_THREAD_STACKSIZE))
+  if ((status = apr_threadattr_stacksize_set((*global)->tattr, DEFAULT_THREAD_STACKSIZE))
       != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not set stacksize");
     return status;
   }
 
-  if ((status = apr_threadattr_detach_set((*self)->tattr, 0)) != APR_SUCCESS) {
+  if ((status = apr_threadattr_detach_set((*global)->tattr, 0)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not set detach");
     return status;
   }
 
-  if ((status = apr_thread_cond_create(&(*self)->cond, p)) != APR_SUCCESS) {
+  if ((status = apr_thread_cond_create(&(*global)->cond, p)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create condition");
     return status;
   }
 
-  if ((status = apr_thread_mutex_create(&(*self)->sync, 
+  if ((status = apr_thread_mutex_create(&(*global)->sync, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         p)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create sync mutex");
     return status;
   }
  
-  if ((status = apr_thread_mutex_create(&(*self)->mutex, 
+  if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         p)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create mutex");
     return status;
   }
 
-  (*self)->state = GLOBAL_STATE_NONE;
-  (*self)->socktmo = 300000000;
-  (*self)->prefix = apr_pstrdup(p, "");
+  (*global)->state = GLOBAL_STATE_NONE;
+  (*global)->socktmo = 300000000;
+  (*global)->prefix = apr_pstrdup(p, "");
 
   return APR_SUCCESS;
 }
