@@ -9,6 +9,8 @@ htproxy
 httest
 ------
 - Update user guide!
+- Trailing headers on chunked http
+- Folded headers
 - Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Nested lines like the one for lua with [[ ... ]]
 - Hash variable, btw. the variables are hold in hash :)
