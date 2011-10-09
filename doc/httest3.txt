@@ -18,12 +18,12 @@ benefits from lua.
 
 The httest parser should replace blocks of httest to 
 interpret([[
-	_REQ locahost 8080
-	__GET /step/$i,$j HTTP/1.1
-	__Host: localhost
-	__
-	_EXPECT headers "200 OK"
-	_WAIT
+  _REQ locahost 8080
+  __GET /step/$i,$j HTTP/1.1
+  __Host: localhost
+  __
+  _EXPECT headers "200 OK"
+  _WAIT
 ]], { "i" = i, "j" = j })
 
 Every unresolved variable found in block should be added in a assoziative
