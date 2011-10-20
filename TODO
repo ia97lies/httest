@@ -11,6 +11,9 @@ httest
 - Resolve all TODO in the code
 - Update user guide!
 - Transparent proxy support
+- Trailing headers on chunked http
+- Folded headers
+- Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Nested lines like the one for lua with [[ ... ]]
 - Hash variable, btw. the variables are hold in hash :)
   - Add/Remove elements in hash variables
@@ -23,3 +26,7 @@ httest
 - Encrpyt the ntml type 3 message and extrakt user
 - Precompile httest script
 - Include concept with env variables
+- Array variable
+- Need more information on ssl failure
+- global vars can not resolve allready set vars on SET
+- Multiline blocks

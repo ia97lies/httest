@@ -1,175 +1,34 @@
 +Ideas for httest 3.0
-++Microkernel
-What kind of functions are need in all cases for testing.
- - Expect
- - cut
- - transport
- - thread
- - extent
- - reuse
+The main idea is do mesh up httest and lua
 
-+++Expect
-Do expect something in the received data.
-
-+++Cut
-Cut anything from the received data.
-
-+++Transport
-A transport thing to bind anything to your test.
-
-+++Thread
-Start one or more thread to emulate source and sink in the same script.
-
-+++Extent
-To make it flexible and easily extentable a extent mechanisme is needed.
-
-+++Reuse
-To avoid to copy&paste test code a reusable mechanisme is requested, like
-inheritance.
-
-++Example
-topic FooTest
-
-  test someThing
-    thread
-      tcp:connect localhost:8080
-      ssl:connect SSL
-      >>GET / HTTP/1.1
-      >>@headers()
-      >>
-      expect headers "foo"
-      wait
-    end
-
-    thread 
-      tcp:listen localhost:8080
-      expect headers "GET /"
-      tcp:accept
-      ssl:accept SSL
-      >>HTTP/1.1 200 OK
-      >>Foo: foo
-      >>Content-Length: %auto
-      >>
-      >>Hello World
-      wait
-    end
-
-    test someTingDiferent
-    end
-  end
-
-end
-
-topic BlaTest
-  function connect host
-    tcp:connect host
-    ssl:connect SSL
-  end 
-
-  test someThing
-    connect localhost:8080
-    ..
-  end 
-end
-
-topic FooBar
-  create BlaTest foo
-
-  test someThing
-    foo:connect localhost
-    ...
-  end
-end
-
-
-thread
-  connect localhost:8080 
-  ssl "SSL"
-
-  test A
-    expect body "foo"
-    match headers "SCDID=([^;]+)" SCDID
-
-    >>GET /foo HTTP/1.1
-    >>Host: localhost
-    >>
-    wait;
-
-  test B
-    expect header "bar"
-    
-    >>POST /bar HTTP/1.1
-    >>Host: localhost
-    >>Content-Length: AUTO
-    >>
-     >hallo&world=bla
-    wait
-
-  close
-  connect localhost:8080
-  ssl "SSL"
-
-  test C
-    expect body "done"
-
-    >>GET /bla HTTP/1.1
-    >>Host: localhost
-    >>
-    wait
-end
-
-thread
-  listen 8080
-  ssl "SSL"
-  accept
-  wait
-  >>HTTP/1.1 200 OK
-  >>Content-Length: AUTO
-  >>
-  >>foo
-
-  test X
-    expect header "/bar"
-
-    accept
-    wait
-    >>HTTP/1.1 200 OK
-    >>Content-Length: AUTO
-    >>Foo: bar
-    >>
-    >>hahaha
-
-  test Y
-    expect header "GET"
- 
-    accept
-    wait
-    >>HTTP/1.1 200 OK
-    >>Content-Length: AUTO
-    >>
-    >>done
-end
-    
-++Example Lua
-
-function client()
-  while i < 100 do
-    htt:interpret([[
-    _REQ localhost 8080
-    __GET /$i HTTP/1.1
+CLIENT
+  for i=1,10 do
+    _REQ locahost 8080
+    __GET /step/$i HTTP/1.1
     __Host: localhost
     __
-    _EXPECT headers "HTTP/1.1 200"
-    _WAIT  
-    ]])
+    _EXPECT headers "200 OK"
+    _WAIT
   end
-end
+END
+ 
+All variable used in lua are also usable in the old httest script.
+This could fundamentaly simplify httest and improve it with many
+benefits from lua.
 
-function server()
-  htt:interpret([[
-  _LISTEN 8080
-  _RES
+The httest parser should replace blocks of httest to 
+interpret([[
+  _REQ locahost 8080
+  __GET /step/$i,$j HTTP/1.1
+  __Host: localhost
+  __
+  _EXPECT headers "200 OK"
   _WAIT
-  ...
-  ]])
-end
+]], { "i" = i, "j" = j })
+
+Every unresolved variable found in block should be added in a assoziative
+table which is also handed over to C
+
+It seems to me that this would be the best way to improve httest, better than
+creating a new language.
+

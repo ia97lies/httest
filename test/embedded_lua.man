@@ -1,0 +1,40 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+  for i=1,10 do
+    _REQ localhost 8080
+    __GET /step/$i HTTP/1.1
+    __Host: sesdev:8080
+    __
+    _WAIT
+  end
+END
+
+SERVER 8080
+  local function foo(i)
+    io.write("foo" .. i)
+  end
+
+  for i=1,10 do
+    _RES
+    _WAIT
+    __HTTP/1.1 200 OK
+    __Content-Length: AUTO
+    __
+    __Step $i
+    foo(i)
+  end
+END
+
+# Should be transformed in something like
+# for i=1,10 do
+#   httest.interpret([[
+#     _REQ localhost 8080
+#     __GET /step/$i HTTP/1.1
+#     __Host: sesdev:8080
+#     __
+#     _WAIT
+#   ]], i)
+# end
+#
+# Automatic detection of lua and httest code for mesh up

@@ -2454,50 +2454,37 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
-	  i += 3;
-	  if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
-	      != APR_SUCCESS) {
-	    fprintf(stderr, "\nError on global END");
-	    return status;
-	  }
+					i += 3;
+					if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
+							!= APR_SUCCESS) {
+						fprintf(stderr, "\nError on global END");
+						return status;
+					}
         }
-        else if (line[0] == '_' && 
-	         (status = worker_add_line(global->worker, 
-		                           apr_psprintf(global->pool, "%s:%d", 
-					                global->filename, 
-							line_nr), line)) !=
-                 APR_SUCCESS) {
-	  fprintf(stderr, "\nCould not add line lines table");
+        else if ((status = worker_add_line(global->worker, 
+		                                       apr_psprintf(global->pool, "%s:%d", 
+																					 global->filename, line_nr), line)) 
+						!= APR_SUCCESS) {
+				 	fprintf(stderr, "\nCould not add line lines table");
           return status;
         }
-	else if (line[0] != '_') {
-          fprintf(stderr, 
-	          "\nWrong scope:%d: %s is not a local command, close body with \"END\"", 
-	          global->line_nr, line);
-	  return APR_EGENERAL;
-	}
       }
       else {
-	/* replace all variables for global commands */
+				/* replace all variables for global commands */
         line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
         /* lookup function index */
-	i = 0;
+			 	i = 0;
         k = lookup_func_index(global_commands, line);
-	/* found command? */
-	if (global_commands[k].func) {
-	  i += strlen(global_commands[k].name);
-	  if ((status =
-	       global_commands[k].func(&global_commands[k], global,
-				       &line[i], NULL)) != APR_SUCCESS) {
-	    return status;
-	  }
-	}
-	else {
-	  /* I ignore unknown commands to be able to set tags like 
-	   * DECLARE_SLOW_TEST
-	   */
-	}
+			 	/* found command? */
+				if (global_commands[k].func) {
+					i += strlen(global_commands[k].name);
+					if ((status = global_commands[k].func(&global_commands[k], global,
+										                            &line[i], NULL)) 
+							!= APR_SUCCESS) {
+						return status;
+					}
+				}
       }
     }
   }
