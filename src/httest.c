@@ -365,6 +365,7 @@ command_t local_commands[] = {
   "Define BLOCK local variables.",
   COMMAND_FLAGS_NONE},
 
+  /* body section */
   {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
    "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
    "negation with a leading '!' in the <regex>",
@@ -430,6 +431,13 @@ command_t local_commands[] = {
   {"_SSL_ENGINE", NULL, "_SSL:SET_ENGINE", NULL, COMMAND_FLAGS_LINK},
   {"_VERIFY_PEER", NULL, "_SSL:RENEG_CERT verify", NULL, COMMAND_FLAGS_LINK},
   {"_SSL_SECURE_RENEG_SUPPORTED", NULL, "_SSL:SECURE_RENEG_SUPPORTED", NULL, COMMAND_FLAGS_LINK},
+  /* mark end of list */
+  {NULL, NULL, NULL, 
+  NULL,
+  COMMAND_FLAGS_NONE},
+};
+
+command_t local_bodies[] = {
   /* mark end of list */
   {NULL, NULL, NULL, 
   NULL,
@@ -1225,7 +1233,7 @@ static void worker_set_global_error(worker_t *worker) {
  *
  * @return command index
  */
-static int lookup_func_index(command_t *commands, const char *line) {
+static command_t *lookup_command(command_t *commands, const char *line) {
   int k;
   apr_size_t len;
 
@@ -1240,7 +1248,7 @@ static int lookup_func_index(command_t *commands, const char *line) {
     ++k;
   }
 
-  return k;
+  return &commands[k];
 }
 
 /**
@@ -1258,7 +1266,6 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
   apr_status_t status;
   char *line;
   int j;
-  int k;
   int to;
   apr_pool_t *ptmp = NULL;
 
@@ -1290,21 +1297,22 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
       status = worker_check_error(parent, status);
     }
     else {
+      command_t *command;
       /* lookup function index */
       j = 0;
-      k = lookup_func_index(local_commands, line);
+      command = lookup_command(local_commands, line);
       /* get command and test if found */
-      if (local_commands[k].flags & COMMAND_FLAGS_LINK) {
-	j += strlen(local_commands[k].name);
+      if (command->flags & COMMAND_FLAGS_LINK) {
+	j += strlen(command->name);
 	status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
-	                                              local_commands[k].syntax,
-						      " ", &line[j], NULL), 
+							command->syntax,
+							" ", &line[j], NULL), 
 	                      ptmp);
 	status = worker_check_error(parent, status);
       }
-      else if (local_commands[k].func) {
-	j += strlen(local_commands[k].name);
-	status = local_commands[k].func(&local_commands[k], worker, &line[j], 
+      else if (command->func) {
+	j += strlen(command->name);
+	status = command->func(command, worker, &line[j], 
 	                                ptmp);
 	status = worker_check_error(parent, status);
       }
@@ -1335,7 +1343,6 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
  * @param worker IN thread data object
  */
 void worker_finally(worker_t *worker, apr_status_t status) {
-  int k;
   int mode;
 
   if (worker->tmpf) {
@@ -1361,24 +1368,24 @@ void worker_finally(worker_t *worker, apr_status_t status) {
   worker_var_set(worker, "__THREAD", worker->name);
 
   if (!running_threads) { 
-    k = lookup_func_index(local_commands, "_CALL");
-    if (local_commands[k].func) {
+    command_t *command = lookup_command(local_commands, "_CALL");
+    if (command->func) {
       mode = worker->log_mode;
       worker->log_mode = 0;
       worker->blocks = apr_hash_get(worker->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(worker->blocks, "FINALLY", APR_HASH_KEY_STRING)) {
-	local_commands[k].func(&local_commands[k], worker, "FINALLY", NULL);
+	command->func(command, worker, "FINALLY", NULL);
       }
       worker->log_mode = mode;
     }
   }
 
   if (status != APR_SUCCESS) {
-    k = lookup_func_index(local_commands, "_CALL");
-    if (local_commands[k].func) {
+    command_t *command = lookup_command(local_commands, "_CALL");
+    if (command->func) {
       worker->blocks = apr_hash_get(worker->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(worker->blocks, "ON_ERROR", APR_HASH_KEY_STRING)) {
-	local_commands[k].func(&local_commands[k], worker, "ON_ERROR", NULL);
+	command->func(command, worker, "ON_ERROR", NULL);
 	goto exodus;
       }
     }
@@ -2429,7 +2436,6 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   apr_status_t status;
   bufreader_t *bufreader;
   char *line;
-  int k;
   int i;
   int line_nr;
   global_replacer_t *replacer_hook;
@@ -2458,37 +2464,37 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
-					i += 3;
-					if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
-							!= APR_SUCCESS) {
-						fprintf(stderr, "\nError on global END");
-						return status;
-					}
+	  i += 3;
+	  if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
+	      != APR_SUCCESS) {
+	    fprintf(stderr, "\nError on global END");
+	    return status;
+	  }
         }
         else if ((status = worker_add_line(global->worker, 
-		                                       apr_psprintf(global->pool, "%s:%d", 
-																					 global->filename, line_nr), line)) 
-						!= APR_SUCCESS) {
-				 	fprintf(stderr, "\nCould not add line lines table");
+					   apr_psprintf(global->pool, "%s:%d", 
+					   global->filename, line_nr), line)) 
+	    != APR_SUCCESS) {
+	  fprintf(stderr, "\nCould not add line lines table");
           return status;
         }
       }
       else {
-				/* replace all variables for global commands */
-        line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
+	command_t *command;
+	/* replace all variables for global commands */
+	line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
-        /* lookup function index */
-			 	i = 0;
-        k = lookup_func_index(global_commands, line);
-			 	/* found command? */
-				if (global_commands[k].func) {
-					i += strlen(global_commands[k].name);
-					if ((status = global_commands[k].func(&global_commands[k], global,
-										                            &line[i], NULL)) 
-							!= APR_SUCCESS) {
-						return status;
-					}
-				}
+	/* lookup function index */
+	i = 0;
+	command = lookup_command(global_commands, line);
+	/* found command? */
+	if (command->func) {
+	  i += strlen(command->name);
+	  if ((status = command->func(command, global, &line[i], NULL)) 
+	      != APR_SUCCESS) {
+	    return status;
+	  }
+	}
       }
     }
   }
