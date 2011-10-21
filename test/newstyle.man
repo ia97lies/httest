@@ -1,0 +1,7 @@
+CLIENT
+  _IF "bla" MATCH "$BLA" 
+    _LOOP 10
+      _DEBUG bla
+    _END
+  _END
+END
