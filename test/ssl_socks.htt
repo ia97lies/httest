@@ -1,12 +1,12 @@
 INCLUDE $TOP/test/config.htb
 
 DAEMON
-_EXEC ssh -ND localhost:$YOUR_PORT2 localhost & echo $! > /tmp/socks.pid
+_EXEC ssh -ND localhost:${SOCKS_PORT} localhost & echo $! > /tmp/socks.pid
 END
 
 CLIENT
 _SLEEP 1000
-_REQ $YOUR_HOST $YOUR_PORT2 
+_REQ $YOUR_HOST $SOCKS_PORT 
 _SOCKS:CONNECT $YOUR_HOST $YOUR_PORT
 _SSL:CONNECT SSL
 __GET /your/path/to/your/resource?your=params HTTP/1.1
