@@ -251,43 +251,10 @@ command_t local_commands[] = {
   {"_SEQUENCE", (command_f )command_MATCH_SEQ, "<var-sequence>", 
    "Define a sequence of _MATCH variables which must apear in this order",
   COMMAND_FLAGS_NONE},
-  {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
-   "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
-   "negation with a leading '!' in the <regex>",
-   COMMAND_FLAGS_NONE},
-  {"_LOOP", (command_f )command_LOOP, "<n>", 
-  "Do loop the body <n> times,\n"
-  "close body with _END LOOP",
-  COMMAND_FLAGS_NONE},
-  {"_FOR", (command_f )command_FOR, "<variable> \"|'<string>*\"|'", 
-  "Do for each element,\n"
-  "close body with _END FOR",
-  COMMAND_FLAGS_NONE},
   {"_BREAK", (command_f )command_BREAK, "", 
    "Break a loop",
   COMMAND_FLAGS_NONE},
-  {"_BPS", (command_f )command_BPS, "<n> <duration>", 
-  "Send not more than defined bytes per second, while defined duration [s]\n"
-  "close body with _END BPS",
-  COMMAND_FLAGS_NONE},
-  {"_RPS", (command_f )command_RPS, "<n> <duration>", 
-  "Send not more than defined requests per second, while defined duration [s]\n"
-  "Request is count on every _WAIT call\n"
-  "close body with _END RPS",
-  COMMAND_FLAGS_NONE},
-  {"_SOCKET", (command_f )command_SOCKET, "", 
-  "Spawns a socket reader over the next _WAIT _RECV commands\n"
-  "close body with _END SOCKET",
-  COMMAND_FLAGS_NONE},
-  {"_ERROR", (command_f )command_ERROR, "", 
-  "We do expect specific error on body exit\n"
-  "close body with _END ERROR",
-  COMMAND_FLAGS_NONE},
 #if APR_HAS_FORK
-  {"_PROCESS", (command_f )command_PROCESS, "<name>", 
-  "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
-  "close body with _END PROCESS",
-  COMMAND_FLAGS_NONE},
   {"_PROC_WAIT", (command_f )command_PROC_WAIT, "<name>*", 
   "Wait for processes <name>*\n",
   COMMAND_FLAGS_NONE},
@@ -397,6 +364,43 @@ command_t local_commands[] = {
   {"_LOCAL", (command_f )command_LOCAL, "<var>+", 
   "Define BLOCK local variables.",
   COMMAND_FLAGS_NONE},
+
+  {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
+   "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
+   "negation with a leading '!' in the <regex>",
+   COMMAND_FLAGS_NONE},
+  {"_LOOP", (command_f )command_LOOP, "<n>", 
+  "Do loop the body <n> times,\n"
+  "close body with _END LOOP",
+  COMMAND_FLAGS_NONE},
+  {"_FOR", (command_f )command_FOR, "<variable> \"|'<string>*\"|'", 
+  "Do for each element,\n"
+  "close body with _END FOR",
+  COMMAND_FLAGS_NONE},
+  {"_BPS", (command_f )command_BPS, "<n> <duration>", 
+  "Send not more than defined bytes per second, while defined duration [s]\n"
+  "close body with _END BPS",
+  COMMAND_FLAGS_NONE},
+  {"_RPS", (command_f )command_RPS, "<n> <duration>", 
+  "Send not more than defined requests per second, while defined duration [s]\n"
+  "Request is count on every _WAIT call\n"
+  "close body with _END RPS",
+  COMMAND_FLAGS_NONE},
+  {"_SOCKET", (command_f )command_SOCKET, "", 
+  "Spawns a socket reader over the next _WAIT _RECV commands\n"
+  "close body with _END SOCKET",
+  COMMAND_FLAGS_NONE},
+  {"_ERROR", (command_f )command_ERROR, "", 
+  "We do expect specific error on body exit\n"
+  "close body with _END ERROR",
+  COMMAND_FLAGS_NONE},
+#if APR_HAS_FORK
+  {"_PROCESS", (command_f )command_PROCESS, "<name>", 
+  "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
+  "close body with _END PROCESS",
+  COMMAND_FLAGS_NONE},
+#endif
+
   /* Link section */
   {"_OP", NULL, "_MATH:OP", NULL, COMMAND_FLAGS_LINK},
   {"_RAND", NULL, "_MATH:RAND", NULL, COMMAND_FLAGS_LINK},
