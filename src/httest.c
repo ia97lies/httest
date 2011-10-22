@@ -579,7 +579,6 @@ static apr_status_t worker_body(worker_t **body, worker_t *worker) {
   ends = 1;
   (*body) = apr_pcalloc(p, sizeof(worker_t));
   memcpy(*body, worker, sizeof(worker_t));
-  (*body)->locals = store_make(p);
   (*body)->heartbeat = p;
 
   /* fill lines */
