@@ -369,37 +369,37 @@ command_t local_commands[] = {
   {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
    "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
    "negation with a leading '!' in the <regex>",
-   COMMAND_FLAGS_NONE},
+   COMMAND_FLAGS_BODY},
   {"_LOOP", (command_f )command_LOOP, "<n>", 
   "Do loop the body <n> times,\n"
   "close body with _END LOOP",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
   {"_FOR", (command_f )command_FOR, "<variable> \"|'<string>*\"|'", 
   "Do for each element,\n"
   "close body with _END FOR",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
   {"_BPS", (command_f )command_BPS, "<n> <duration>", 
   "Send not more than defined bytes per second, while defined duration [s]\n"
   "close body with _END BPS",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
   {"_RPS", (command_f )command_RPS, "<n> <duration>", 
   "Send not more than defined requests per second, while defined duration [s]\n"
   "Request is count on every _WAIT call\n"
   "close body with _END RPS",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
   {"_SOCKET", (command_f )command_SOCKET, "", 
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
   "close body with _END SOCKET",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
   "close body with _END ERROR",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
 #if APR_HAS_FORK
   {"_PROCESS", (command_f )command_PROCESS, "<name>", 
   "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
   "close body with _END PROCESS",
-  COMMAND_FLAGS_NONE},
+  COMMAND_FLAGS_BODY},
 #endif
 
   /* Link section */
@@ -431,13 +431,6 @@ command_t local_commands[] = {
   {"_SSL_ENGINE", NULL, "_SSL:SET_ENGINE", NULL, COMMAND_FLAGS_LINK},
   {"_VERIFY_PEER", NULL, "_SSL:RENEG_CERT verify", NULL, COMMAND_FLAGS_LINK},
   {"_SSL_SECURE_RENEG_SUPPORTED", NULL, "_SSL:SECURE_RENEG_SUPPORTED", NULL, COMMAND_FLAGS_LINK},
-  /* mark end of list */
-  {NULL, NULL, NULL, 
-  NULL,
-  COMMAND_FLAGS_NONE},
-};
-
-command_t local_bodies[] = {
   /* mark end of list */
   {NULL, NULL, NULL, 
   NULL,
@@ -538,6 +531,105 @@ static const char *global_replacer(void *udata, const char *name) {
 }
 
 /**
+ * Lookup function
+ *
+ * @param line IN line where the command resides
+ *
+ * @return command index
+ */
+static command_t *lookup_command(command_t *commands, const char *line) {
+  int k;
+  apr_size_t len;
+
+  k = 0;
+  /* lookup command function */
+  while (commands[k].name) {
+    len = strlen(commands[k].name);
+    if (len <= strlen(line)
+	&& strncmp(line, commands[k].name, len) == 0) {
+      break;
+    }
+    ++k;
+  }
+
+  return &commands[k];
+}
+
+/**
+ * Clone and copy a body of lines
+ *
+ * @param body OUT body which has been copied
+ * @param worker IN  worker from which we copy the lines for body
+ * @param end IN this bodys terminate string
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t worker_body(worker_t **body, worker_t *worker) {
+  char *file_and_line;
+  char *line = "";
+  apr_table_entry_t *e; 
+  apr_pool_t *p;
+  char *end;
+  int ends;
+  int end_len;
+
+  apr_pool_create(&p, NULL);
+  end = apr_pstrdup(p, "_END");
+  end_len = strlen(end);
+  ends = 1;
+  (*body) = apr_pcalloc(p, sizeof(worker_t));
+  memcpy(*body, worker, sizeof(worker_t));
+  (*body)->locals = store_make(p);
+  (*body)->heartbeat = p;
+
+  /* fill lines */
+  (*body)->lines = apr_table_make(p, 20);
+  e = (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
+  for (worker->cmd += 1; worker->cmd < apr_table_elts(worker->lines)->nelts; worker->cmd++) {
+    command_t *command;
+    file_and_line = e[worker->cmd].key;
+    line = e[worker->cmd].val;
+    command = lookup_command(local_commands, line);
+
+    if (command && command->flags & COMMAND_FLAGS_BODY) {
+      ++ends;
+      worker_log(worker, LOG_DEBUG, "Increment bodies: %d for line %s", ends, line);
+    }
+    if (ends == 1 && strlen(line) >= end_len && strncmp(line, end, end_len) == 0) {
+      break;
+    }
+    else if (strlen(line) >= end_len && strncmp(line, end, end_len) == 0) {
+      --ends;
+      worker_log(worker, LOG_DEBUG, "Decrement bodies: %d for line %s", ends, line);
+    }
+    apr_table_addn((*body)->lines, file_and_line, line);
+  }
+  /* check for end */
+  if (strlen(line) < end_len || strncmp(line, end, end_len) != 0) {
+    worker_log(worker, LOG_ERR, "Interpreter failed: no %s found", end);
+    return APR_EGENERAL;
+  }
+
+  return APR_SUCCESS;
+}
+ 
+/**
+ * Close a body 
+ *
+ * @param body IN body which has been copied
+ * @param worker IN  worker from which we copy the lines for body
+ */
+static void worker_body_end(worker_t *body, worker_t *worker) {
+  worker->flags = body->flags;
+  /* write back sockets and state */
+  worker->socket = body->socket;
+  worker->listener = body->listener;
+
+  /* destroy body */
+  worker_destroy(body);
+}
+
+/**
  * Exit program with OK|FAILED 
  *
  * @param self IN command object
@@ -604,7 +696,7 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
       worker_log(worker, LOG_DEBUG, "Increment: %d for line %s", ends, line);
     }
     /* check end and if it is our end */
-    if (ends==1 && strlen(line) >= my_else_len && strncmp(line, my_else, my_else_len) == 0) {
+    if (ends == 1 && strlen(line) >= my_else_len && strncmp(line, my_else, my_else_len) == 0) {
       worker_log(worker, LOG_DEBUG, "Found _ELSE in line %d", worker->cmd);
       *else_pos = worker->cmd;
       return APR_SUCCESS;
@@ -756,7 +848,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
   }
 
-  if ((status = worker_body(&body, worker, "IF")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
 
@@ -766,14 +858,14 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     if (doit) {
       body->cmd_from = 0;
       body->cmd_to = else_pos;
-      status = worker_interpret(body, worker, NULL);
+      status = body->interpret(body, worker, NULL);
       worker_log(worker, LOG_CMD, "_ELSE");
     }
     else {
       worker_log(worker, LOG_CMD, "_ELSE");
       body->cmd_from = else_pos + 1;
       body->cmd_to = 0;
-      status = worker_interpret(body, worker, NULL);
+      status = body->interpret(body, worker, NULL);
     }
   }
   else {
@@ -781,7 +873,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     if (doit) {
       body->cmd_from = 0;
       body->cmd_to = 0;
-      status = worker_interpret(body, worker, NULL);
+      status = body->interpret(body, worker, NULL);
     }
   }
 
@@ -819,14 +911,14 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   }
   
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "LOOP")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
   
   /* loop */
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
-    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
+    if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
   }
@@ -872,7 +964,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   list = my_unescape(last, &last);
 
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "FOR")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
   
@@ -881,7 +973,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   while (cur) {
     /* interpret */
     worker_var_set(body, var, cur);
-    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
+    if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_strtok(NULL, " ", &last);
@@ -929,7 +1021,7 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
   duration = apr_atoi64(val);
   
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "BPS")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
   
@@ -938,7 +1030,7 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
   for (;;) {
     /* interpret */
     start = apr_time_now();
-    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
+    if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_time_now();
@@ -1004,7 +1096,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   duration = apr_atoi64(val);
   
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "RPS")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
   
@@ -1013,7 +1105,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   for (;;) {
     /* interpret */
     start = apr_time_now();
-    if ((status = worker_interpret(body, worker, NULL)) != APR_SUCCESS) {
+    if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_time_now();
@@ -1089,12 +1181,12 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   }
 
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "ERROR")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
   
   /* interpret */
-  status = worker_interpret(body, worker, NULL);
+  status = body->interpret(body, worker, NULL);
   
   status_str = my_status_str(ptmp, status);
   if (regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
@@ -1138,7 +1230,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
   worker_flush(worker, ptmp);
 
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "SOCKET")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1152,7 +1244,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
     goto error;
   }
  
-  status = worker_interpret(body, worker, NULL);
+  status = body->interpret(body, worker, NULL);
   
   worker_log(worker, LOG_CMD, "_END SOCKET");
   
@@ -1182,7 +1274,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
   COMMAND_NEED_ARG("<name>");
 
   /* create a new worker body */
-  if ((status = worker_body(&body, worker, "PROCESS")) != APR_SUCCESS) {
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
   }
   
@@ -1192,7 +1284,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
 
   if (APR_STATUS_IS_INCHILD(status)) {
     /* interpret */
-    status = worker_interpret(body, worker, NULL);
+    status = body->interpret(body, worker, NULL);
   
     /* terminate */
     worker_log(worker, LOG_CMD, "_END PROCESS");
@@ -1224,31 +1316,6 @@ static void worker_set_global_error(worker_t *worker) {
   sync_lock(worker->mutex);
   success = 0;
   sync_unlock(worker->mutex);
-}
-
-/**
- * Lookup function
- *
- * @param line IN line where the command resides
- *
- * @return command index
- */
-static command_t *lookup_command(command_t *commands, const char *line) {
-  int k;
-  apr_size_t len;
-
-  k = 0;
-  /* lookup command function */
-  while (commands[k].name) {
-    len = strlen(commands[k].name);
-    if (len <= strlen(line)
-	&& strncmp(line, commands[k].name, len) == 0) {
-      break;
-    }
-    ++k;
-  }
-
-  return &commands[k];
 }
 
 /**
@@ -1303,30 +1370,29 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
       command = lookup_command(local_commands, line);
       /* get command and test if found */
       if (command->flags & COMMAND_FLAGS_LINK) {
-	j += strlen(command->name);
-	status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
-							command->syntax,
-							" ", &line[j], NULL), 
-	                      ptmp);
-	status = worker_check_error(parent, status);
+        j += strlen(command->name);
+        status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
+                              command->syntax,
+                              " ", &line[j], NULL), 
+                              ptmp);
+        status = worker_check_error(parent, status);
       }
       else if (command->func) {
-	j += strlen(command->name);
-	status = command->func(command, worker, &line[j], 
-	                                ptmp);
-	status = worker_check_error(parent, status);
+        j += strlen(command->name);
+        status = command->func(command, worker, &line[j], ptmp);
+        status = worker_check_error(parent, status);
       }
       else {
-	status = command_CALL(NULL, worker, line, ptmp);
-	/* ignore not found error else the error message is not understandable */
-	if (!APR_STATUS_IS_ENOENT(status)) {
-	  status = worker_check_error(parent, status);
-	}
+        status = command_CALL(NULL, worker, line, ptmp);
+        /* ignore not found error else the error message is not understandable */
+        if (!APR_STATUS_IS_ENOENT(status)) {
+          status = worker_check_error(parent, status);
+        }
       }
       if (APR_STATUS_IS_ENOENT(status)) {
-	worker_log_error(worker, "%s syntax error", worker->name);
-	worker_set_global_error(worker);
-	return APR_EINVAL;
+        worker_log_error(worker, "%s syntax error", worker->name);
+        worker_set_global_error(worker);
+        return APR_EINVAL;
       }
     }
     if (status != APR_SUCCESS) {
@@ -1374,7 +1440,7 @@ void worker_finally(worker_t *worker, apr_status_t status) {
       worker->log_mode = 0;
       worker->blocks = apr_hash_get(worker->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(worker->blocks, "FINALLY", APR_HASH_KEY_STRING)) {
-	command->func(command, worker, "FINALLY", NULL);
+        command->func(command, worker, "FINALLY", NULL);
       }
       worker->log_mode = mode;
     }
@@ -1385,8 +1451,8 @@ void worker_finally(worker_t *worker, apr_status_t status) {
     if (command->func) {
       worker->blocks = apr_hash_get(worker->modules, "DEFAULT", APR_HASH_KEY_STRING);
       if (apr_hash_get(worker->blocks, "ON_ERROR", APR_HASH_KEY_STRING)) {
-	command->func(command, worker, "ON_ERROR", NULL);
-	goto exodus;
+        command->func(command, worker, "ON_ERROR", NULL);
+        goto exodus;
       }
     }
 
@@ -1424,7 +1490,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
   
   worker_log(worker, LOG_INFO, "%s start ...", worker->name);
 
-  if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
+  if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1464,7 +1530,7 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
 
   worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
 
-  if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
+  if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1506,7 +1572,7 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
   ++running_threads;
   sync_unlock(worker->mutex);
 
-  if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
+  if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
   }
 
@@ -1694,7 +1760,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     }
   }
   else {
-    if ((status = worker_interpret(worker, worker, NULL)) != APR_SUCCESS) {
+    if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
       goto error;
     }
 
@@ -2102,7 +2168,7 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data,
   worker_add_line(worker, apr_psprintf(global->pool, "%s:%d", global->filename,
 	                               global->line_nr), 
 		  apr_pstrcat(worker->pbody, "_EXEC ", &data[i], NULL));
-  status = worker_interpret(worker, worker, NULL);
+  status = worker->interpret(worker, worker, NULL);
   if (status != APR_SUCCESS) {
     worker_set_global_error(worker);
   }

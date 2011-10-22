@@ -1,0 +1,13 @@
+CLIENT
+  _SET i=0
+  _LOOP 2 
+    _LOOP 3 
+      _IF "$i" EQ 2
+        _DEBUG hah $i
+      _ELSE
+        _DEBUG bla $i
+      _END
+      _OP $i ADD 1 i
+    _END
+  _END
+END

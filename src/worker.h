@@ -202,10 +202,11 @@ struct command_s {
   command_f func;
   char *syntax;
   char *help;
-#define COMMAND_FLAGS_NONE 0x0
-#define COMMAND_FLAGS_DEPRECIATED 0x1
-#define COMMAND_FLAGS_EXPERIMENTAL 0x2
-#define COMMAND_FLAGS_LINK 0x4
+#define COMMAND_FLAGS_NONE         0x00000000
+#define COMMAND_FLAGS_DEPRECIATED  0x00000001
+#define COMMAND_FLAGS_EXPERIMENTAL 0x00000002
+#define COMMAND_FLAGS_LINK         0x00000004
+#define COMMAND_FLAGS_BODY         0x00000008
   int flags;
 };
 
@@ -400,8 +401,6 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                            apr_pool_t *ptmp); 
 apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp);
 apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
-apr_status_t worker_body(worker_t **body, worker_t *worker, char *end); 
-void worker_body_end(worker_t *body, worker_t *worker); 
 void worker_destroy(worker_t * self); 
 apr_status_t worker_match(worker_t * worker, apr_table_t * regexs, 
                           const char *data, apr_size_t len); 
