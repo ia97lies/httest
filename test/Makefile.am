@@ -141,6 +141,7 @@ EXTRA_DIST= \
 	multi_socket.htt \
 	multi_var_match.htt \
 	neg_content_length.htt \
+	newstyle.htt \
 	nocrlf.htt \
 	nosocket.hte \
 	nosocket.txt \
