@@ -9,41 +9,94 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-" Global commands
-syn keyword httStorageClass	CLIENT SERVER DAEMON BLOCK END
-syn keyword httInclude          INCLUDE 
-syn keyword httStatement	SET GO EXEC TIMEOUT AUTO_CLOSE PROCESS FILE MODULE
-
-" Local commands
-syn keyword httStatement	_FLUSH _REQ _RESWAIT _RES _WAIT _CLOSE 
-syn keyword httStatement	_SEQUENCE _BREAK _EXPECT _MATCH _GREP
-syn keyword httStatement	_PROCESS _PROC_WAIT _SLEEP _TIMEOUT _SET _EXEC _PIPE 
-syn keyword httStatement	_SOCKSTATE _EXIT _HEADER _RAND _SENDFILE _DEBUG _UP _DOWN _TIMER 
-syn keyword httStatement	_TIME _CALL _LOG_LEVEL _SYNC _RECV _READLINE _OP _WHICH _CERT 
-syn keyword httStatement	_VERIFY_PEER _RENEG _ONLY_PRINTABLE _PRINT_HEX _SH _ADD_HEADER 
-syn keyword httStatement	_DETACH _PID _URLENC _URLDEC _B64ENC _B64DEC _STRFTIME _SSL_LEGACY 
-syn keyword httStatement	_SSL_ENGINE _SSL_SECURE_RENEG_SUPPORTED _AUTO_CLOSE _AUTO_COOKIE 
-syn keyword httStatement	_SSL_CERT_VAL _SSL_BUF_2_CERT 
-syn keyword httStatement	_TUNNEL _RECORD _PLAY _USE _CHUNK _CHECK
-syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY
-syn match httRepeat             "\<_END SOCKET\>"
-syn match httRepeat             "\<_END LOOP\>"
-syn match httRepeat             "\<_END FOR\>"
-syn match httRepeat             "\<_END BPS\>"
-syn match httRepeat             "\<_END RPS\>"
-syn keyword httConditional      _IF _ELSE _ERROR
-syn match httConditional        "\<_END IF\>" 
-syn match httConditional        "\<_END ERROR\>" 
-
-" Module commands
-"syn keyword httStatement	_SSL GET_SESSION SET_SESSION CONNECT ACCEPT CLOSE GET_SESSION_ID
-syn match httStatement		"\<_SSL:GET_SESSION\>"
-syn match httStatement		"\<_SSL:SET_SESSION\>"
-syn match httStatement		"\<_SSL:CONNECT ACCEPT\>" 
-syn match httStatement		"\<_SSL:CLOSE GET_SESSION_ID\>"
-syn match httStatement		"<\_SSL:RENEG\>"
-syn match httStatement		"\<_BINARY:SEND\>" 
-syn match httStatement		"\<_BINARY:RECV\>"
+syn keyword httStorageClass     CLIENT SERVER DAEMON BLOCK END
+syn keyword httInclude          INCLUDE
+syn keyword httStatement        SET GO EXEC TIMEOUT AUTO_CLOSE PROCESS FILE MODULE
+syn keyword httStatement        _-
+syn keyword httStatement        _ADD_HEADER
+syn keyword httStatement        _AUTO_CLOSE
+syn keyword httStatement        _AUTO_COOKIE
+syn keyword httStatement        _BREAK
+syn keyword httStatement        _CALL
+syn keyword httStatement        _CHECK
+syn keyword httStatement        _CHUNK
+syn keyword httStatement        _CLOSE
+syn keyword httStatement        _DEBUG
+syn keyword httStatement        _DOWN
+syn keyword httStatement        _EXEC
+syn keyword httStatement        _EXIT
+syn keyword httStatement        _EXPECT
+syn keyword httStatement        _FLUSH
+syn keyword httStatement        _GREP
+syn keyword httStatement        _HEADER
+syn keyword httStatement        _IGNORE_BODY
+syn keyword httStatement        _LOCAL
+syn keyword httStatement        _LOG_LEVEL
+syn keyword httStatement        _MATCH
+syn keyword httStatement        _ONLY_PRINTABLE
+syn keyword httStatement        _PIPE
+syn keyword httStatement        _PLAY
+syn keyword httStatement        _PRINT_HEX
+syn keyword httStatement        _PROCESS
+syn keyword httStatement        _PROC_WAIT
+syn keyword httStatement        _READLINE
+syn keyword httStatement        _RECORD
+syn keyword httStatement        _RECV
+syn keyword httStatement        _REQ
+syn keyword httStatement        _RES
+syn keyword httStatement        _RESWAIT
+syn keyword httStatement        _SENDFILE
+syn keyword httStatement        _SEQUENCE
+syn keyword httStatement        _SET
+syn keyword httStatement        _SH
+syn keyword httStatement        _SOCKET
+syn keyword httStatement        _SOCKSTATE
+syn keyword httStatement        _TIMEOUT
+syn keyword httStatement        _TIMER
+syn keyword httStatement        _TUNNEL
+syn keyword httStatement        _UNSET
+syn keyword httStatement        _UP
+syn keyword httStatement        _USE
+syn keyword httStatement        _WAIT
+syn keyword httStatement        __
+syn match httStatement          "\<_BINARY:RECV\>"
+syn match httStatement          "\<_BINARY:SEND\>"
+syn match httStatement          "\<_CODER:B64DEC\>"
+syn match httStatement          "\<_CODER:B64ENC\>"
+syn match httStatement          "\<_CODER:HTMLDEC\>"
+syn match httStatement          "\<_CODER:URLDEC\>"
+syn match httStatement          "\<_CODER:URLENC\>"
+syn match httStatement          "\<_DATE:FORMAT\>"
+syn match httStatement          "\<_DATE:GET_TIME\>"
+syn match httStatement          "\<_DATE:SYNC\>"
+syn match httStatement          "\<_MATH:EVAL\>"
+syn match httStatement          "\<_MATH:OP\>"
+syn match httStatement          "\<_MATH:RAND\>"
+syn match httStatement          "\<_PROC:DETACH\>"
+syn match httStatement          "\<_PROC:GET_PID\>"
+syn match httStatement          "\<_PROC:LOCK\>"
+syn match httStatement          "\<_PROC:UNLOCK\>"
+syn match httStatement          "\<_SOCKS:CONNECT\>"
+syn match httStatement          "\<_SSL:ACCEPT\>"
+syn match httStatement          "\<_SSL:CLOSE\>"
+syn match httStatement          "\<_SSL:CONNECT\>"
+syn match httStatement          "\<_SSL:GET_CERT_VALUE\>"
+syn match httStatement          "\<_SSL:GET_SESSION\>"
+syn match httStatement          "\<_SSL:GET_SESSION_ID\>"
+syn match httStatement          "\<_SSL:LOAD_CERT\>"
+syn match httStatement          "\<_SSL:LOAD_KEY\>"
+syn match httStatement          "\<_SSL:RENEG_CERT\>"
+syn match httStatement          "\<_SSL:SECURE_RENEG_SUPPORTED\>"
+syn match httStatement          "\<_SSL:SET_CERT\>"
+syn match httStatement          "\<_SSL:SET_ENGINE\>"
+syn match httStatement          "\<_SSL:SET_LEGACY\>"
+syn match httStatement          "\<_SSL:SET_SESSION\>"
+syn match httStatement          "\<_SYS:SLEEP\>"
+syn match httStatement          "\<_THREAD:GET_NUMBER\>"
+syn match httStatement          "\<_UDP:BIND\>"
+syn match httStatement          "\<_UDP:CONNECT\>"
+syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY _END
+syn keyword httConditional      _IF _ELSE _ERROR _END
 
 " Constants
 syn keyword httConstant         POLL CHUNKED DO_NOT_CHECK AUTO on off On Off SSL SSL2 SSL3 TLS1 OK FAILED
