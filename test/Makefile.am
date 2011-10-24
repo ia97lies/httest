@@ -32,6 +32,7 @@ EXTRA_DIST= \
 	break.htt \
 	ca.cert.pem \
 	chunk.htt \
+	chunk.visual \
 	client.cert.pem \
 	client.key.pem \
 	concurrent.htt \

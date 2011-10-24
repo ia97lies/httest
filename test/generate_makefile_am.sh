@@ -1,7 +1,7 @@
 #!/bin/bash
 
 printf "EXTRA_DIST= "
-for e in `ls -1 *.htt *.htb *.hte *.txt *.sh *.pem *.ntlm`; do echo \\; printf "\t$e "; done
+for e in `ls -1 *.htt *.htb *.hte *.txt *.sh *.pem *.ntlm *.visual`; do echo \\; printf "\t$e "; done
 echo
 echo
 echo "test_store_SOURCES=test_store.c \$(top_srcdir)/src/store.c"
