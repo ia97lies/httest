@@ -37,6 +37,9 @@ AC_ARG_ENABLE([use-static], AS_HELP_STRING(--enable-use-static,Try to use archiv
 AC_ARG_ENABLE([full-static], AS_HELP_STRING(--enable-full-static,Try to compile a statical linked executable))
 AC_ARG_ENABLE([iconv-support], AS_HELP_STRING(--enable-iconv-support,enable iconv support))
 AC_ARG_ENABLE([ssl-legacy-reneg], AS_HELP_STRING(--enable-ssl-legacy-reneg, enable unsafe legacy renegotation only needed for openssl 0.9.8l))
+AC_ARG_ENABLE([binary-module], AS_HELP_STRING(--enable-binary-module,Add binary support to httest))
+AC_ARG_ENABLE([udp-module], AS_HELP_STRING(--enable-udp-module,Add udp support to httest))
+AC_ARG_ENABLE([socks-module], AS_HELP_STRING(--enable-socks-module,Add SOCKS support to httest))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -103,6 +106,25 @@ if test "$enable_iconv_support" = "yes"; then
   CFLAGS="$CFLAGS $APR_ICONV_INCLUDES -DICONV_SUPPORT"
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
+
+MODULES=""
+HTTEST_MODULES='' 
+if test "$enable_binary_module" = "yes"; then
+  HTTEST_MODULES+='binary_module.$(OBJEXT) '
+  MODULES+="binary "
+fi
+
+if test "$enable_udp_module" = "yes"; then
+  HTTEST_MODULES+='udp_module.$(OBJEXT) '
+  MODULES+="udp "
+fi
+
+if test "$enable_socks_module" = "yes"; then
+  HTTEST_MODULES+='socks_module.$(OBJEXT) '
+  MODULES+="socks "
+fi
+./generate_modules_c.sh "${MODULES}"
+AC_SUBST([HTTEST_MODULES])
 
 # generate makefiles
 AC_CONFIG_FILES([Makefile

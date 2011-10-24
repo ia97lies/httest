@@ -3,7 +3,7 @@
 LIST=$1
 
 TEMPLATE=src/modules.c.tmpl
-TARGET=modules.c
+TARGET=src/modules.c
 
 #init
 cat > $TARGET << EOF
@@ -27,9 +27,21 @@ cat > $TARGET << EOF
 extern module_t modules[];
 
 //MODULES_DECLARATION//
+apr_status_t sys_module_init(global_t *global);
+apr_status_t math_module_init(global_t *global);
+apr_status_t coder_module_init(global_t *global);
+apr_status_t date_module_init(global_t *global);
+apr_status_t tcp_module_init(global_t *global);
+apr_status_t ssl_module_init(global_t *global);
 
 module_t modules[] = {
   //MODULES_REGISTRATION//
+  { sys_module_init },
+  { math_module_init },
+  { coder_module_init },
+  { date_module_init },
+  { tcp_module_init },
+  { ssl_module_init },
   { NULL }
 };
 
