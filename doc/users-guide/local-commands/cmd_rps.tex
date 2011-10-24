@@ -17,7 +17,7 @@ that may be sent during a certain period of time (specified in number of seconds
 The requests are counted during the invocation of the \texttt{\_WAIT} command.
 
 \subparagraph{}
-The body must be closed with the \texttt{\_END RPS} command.
+The body must be closed with the \texttt{\_END} command.
 
 \subparagraph{}
 The following example limits the number of requests to be sent within 
@@ -30,5 +30,5 @@ the next 300 seconds to 20:
     __Host: localhost
     __
     _WAIT
-    _END RPS
+    _END
 \end{usplisting}

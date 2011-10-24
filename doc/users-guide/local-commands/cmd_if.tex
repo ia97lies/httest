@@ -18,7 +18,7 @@ on either a given string which must match a regular expression or another string
 a numerical value to be equal, less than or greater than a certain number.
 
 \subparagraph{}
-The \texttt{\_IF}-body must be closed with a corresponding \texttt{\_END IF} command.
+The \texttt{\_IF}-body must be closed with a corresponding \texttt{\_END} command.
 
 \paragraph{String example:}
 \subparagraph{}
@@ -28,7 +28,7 @@ can be a variable, of course):
 \begin{usplisting}
     _IF "$MyVar" MATCH ".*xyz.*"
       _CALL SomeBlock
-    _END IF
+    _END
 \end{usplisting}
 
 \paragraph{Number example:}
@@ -39,7 +39,7 @@ a given threshold value:
 \begin{usplisting}
     _IF "$MyNumber" GT "1500"
     _CALL SomeBlock
-    _END IF
+    _END
 \end{usplisting}
 
 

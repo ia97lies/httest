@@ -16,7 +16,7 @@ Defines a code body which limits the maximum number of bytes
 that may be sent during a certain period of time (specified in number of seconds). 
 
 \subparagraph{}
-The body must be closed with the \texttt{\_END BPS} command.
+The body must be closed with the \texttt{\_END} command.
 
 \subparagraph{}
 The following example limits the number of bytes to be sent within 
@@ -29,5 +29,5 @@ the next 300 seconds to 50000:
     __Host: localhost
     __
     _WAIT
-    _END RPS
+    _END
 \end{usplisting}

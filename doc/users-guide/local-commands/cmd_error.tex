@@ -13,7 +13,7 @@
 \paragraph{Purpose:}
 \subparagraph{}
 Defines a body wherein a certain error is expected to happen. 
-The body must be closed with the \texttt{\_END ERROR} command.
+The body must be closed with the \texttt{\_END} command.
 
 \subparagraph{}
 In the following example, the error message "Broken pipe" is 
@@ -35,5 +35,5 @@ expected to be received during one of the three requests:
     __GET /and/another/one HTTP/1.1
     __Host: localhost
     _WAIT
-    _END ERROR
+    _END
 \end{usplisting}
