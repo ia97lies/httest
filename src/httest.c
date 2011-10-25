@@ -3122,6 +3122,7 @@ int main(int argc, const char *const argv[]) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
+  APR_HOOK_LINK(global_read_line)
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
 )
@@ -3134,3 +3135,8 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_clone, 
                                       (worker_t *worker, worker_t *clone), 
 				      (worker, clone), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, global_read_line, 
+                                      (global_t *global, char *line), 
+				      (global, line), APR_SUCCESS);
+

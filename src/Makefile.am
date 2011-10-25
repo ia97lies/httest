@@ -9,7 +9,8 @@ httest_SOURCES= \
 	coder_module.c math_module.c sys_module.c binary_module.c \
 	udp_module.c socks_module.c 
 
-EXTRA_httest_SOURCES=  
+EXTRA_httest_SOURCES= \
+	lua_module.c 
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)

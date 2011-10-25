@@ -48,7 +48,7 @@
  */
 apr_status_t block_LUA_RUN(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   lua_State *lua;
-  const char *filename = apr_table_get(worker->params, "1");
+  const char *filename = store_get(worker->params, "1");
 
   if (!filename) {
     worker_log_error(worker, "Need a lua file to run");
