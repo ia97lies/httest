@@ -2,7 +2,7 @@ INCLUDE $TOP/test/config.htb
 
 BLOCK Lua:MyLuaThing
   for i=1,10 do
-    print("hallo");
+    print("hallo"..i);
   end
 END
 

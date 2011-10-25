@@ -34,6 +34,44 @@
  * Definitions 
  ***********************************************************************/
 
+typedef struct lua_reader_s {
+  apr_pool_t *pool;
+  apr_table_t *lines;
+  int i;
+  int newline;
+} lua_reader_t;
+
+/**
+ * A simple lua line reader
+ * @param L in lua state
+ * @param ud IN user data
+ * @param size OUT len of string
+ * @return line
+ */
+static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
+  lua_reader_t *reader = ud;
+  apr_table_entry_t * e;  
+
+  e = (apr_table_entry_t *) apr_table_elts(reader->lines)->elts;
+  if (reader->i < apr_table_elts(reader->lines)->nelts) {
+    if (reader->newline) {
+      reader->newline = 0;
+      *size = 1;
+      return apr_pstrdup(reader->pool, "\n");
+    }
+    else {
+      const char *line = e[reader->i].val;
+      *size = strlen(line);
+      ++reader->i;
+      reader->newline = 1;
+      return line;    
+    }
+  }
+  else {
+    return NULL;    
+  }
+}
+
 /************************************************************************
  * Hooks 
  ***********************************************************************/
@@ -46,7 +84,22 @@
  */
 static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent, 
                                           apr_pool_t *ptmp) {
-  /** need to initialize and load it on the first call */
+  lua_reader_t *reader;
+  lua_State *lua = lua_open();
+  luaL_openlibs(lua);
+  reader = apr_pcalloc(ptmp, sizeof(*reader));
+  reader->pool = ptmp;
+  reader->lines = worker->lines;
+  if (lua_load(lua, lua_get_line, reader, "@client") != 0) {
+    const char *msg = lua_tostring(lua, -1);
+    if (msg == NULL) msg = "(error object is not a string)";
+    worker_log_error(worker, "Lua error: %s", msg);
+    lua_pop(lua, 1);
+    return APR_EGENERAL;
+  }
+  lua_pcall(lua, 0, LUA_MULTRET, 0);
+  lua_close(lua);
+
   return APR_SUCCESS;
 }
 
