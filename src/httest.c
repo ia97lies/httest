@@ -1695,7 +1695,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     }
 
     if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
-	!= APR_SUCCESS) {
+        != APR_SUCCESS) {
       goto error;
     }
 
@@ -1707,44 +1707,44 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 
     while(threads == -1 || i < threads) {
       if ((status = worker_clone(&clone, worker)) != APR_SUCCESS) {
-	worker_log(worker, LOG_ERR, "Could not clone server thread data");
-	goto error;
+        worker_log(worker, LOG_ERR, "Could not clone server thread data");
+        goto error;
       }
       if ((status = htt_run_worker_clone(worker, clone)) != APR_SUCCESS) {
-	goto error;
+        goto error;
       }
       clone->listener = worker->listener;
       worker_log(worker, LOG_DEBUG, "--- accept");
       if (!worker->listener) {
-	worker_log_error(worker, "Server down");
-	status = APR_EGENERAL;
-	goto error;
+        worker_log_error(worker, "Server down");
+        status = APR_EGENERAL;
+        goto error;
       }
 
       worker_get_socket(clone, "Default", "0");
       clone->socket->is_ssl = worker->socket->is_ssl;
       
       if ((status =
-	   apr_socket_accept(&clone->socket->socket, worker->listener,
-			     clone->pbody)) != APR_SUCCESS) {
-	clone->socket->socket = NULL;
-	goto error;
+           apr_socket_accept(&clone->socket->socket, worker->listener,
+                 clone->pbody)) != APR_SUCCESS) {
+        clone->socket->socket = NULL;
+        goto error;
       }
       if ((status =
              apr_socket_timeout_set(clone->socket->socket, worker->socktmo)) 
-	  != APR_SUCCESS) {
+          != APR_SUCCESS) {
         goto error;
       }
       if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {
-	goto error;
+        goto error;
       }
       worker_log(worker, LOG_DEBUG, "--- create thread");
       clone->socket->socket_state = SOCKET_CONNECTED;
       clone->which = i;
       if ((status =
-	   apr_thread_create(&threadl, tattr, worker_thread_server,
-			     clone, worker->pbody)) != APR_SUCCESS) {
-	goto error;
+           apr_thread_create(&threadl, tattr, worker_thread_server,
+                 clone, worker->pbody)) != APR_SUCCESS) {
+        goto error;
       }
 
       apr_table_addn(servers, worker->name, (char *)threadl);
@@ -2049,9 +2049,15 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
   /* Block start */
   global->state = GLOBAL_STATE_BLOCK;
 
-  /* Start a new worker */
-  if ((status = worker_new(&global->worker, data, global->prefix, global, 
-                           worker_interpret)) != APR_SUCCESS) {
+  if ((status = htt_run_block_start(global, &data)) 
+      == APR_ENOTIMPL) {
+    /* Start a new worker */
+    if ((status = worker_new(&global->worker, data, global->prefix, global, 
+                             worker_interpret)) != APR_SUCCESS) {
+      return status;
+    }
+  }
+  else if (status != APR_SUCCESS) {
     return status;
   }
   
@@ -2076,12 +2082,12 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     }
     else {
       if (input) {
-	store_set(global->worker->params, 
-	          apr_itoa(global->worker->pbody, i), token);
+	      store_set(global->worker->params, apr_itoa(global->worker->pbody, i), 
+                  token);
       }
       else {
-	store_set(global->worker->retvars, 
-	              apr_itoa(global->worker->pbody, i), token);
+        store_set(global->worker->retvars, apr_itoa(global->worker->pbody, i),
+                  token);
       }
       i++;
     }
@@ -3122,21 +3128,20 @@ int main(int argc, const char *const argv[]) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
-  APR_HOOK_LINK(global_read_line)
+  APR_HOOK_LINK(block_start)
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args, 
-                                      (worker_t *worker, char *portinfo, 
-				       char **new_portinfo, char *rest_of_line), 
-				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
+                                      (worker_t *worker, char *portinfo, char **new_portinfo, char *rest_of_line), 
+                                      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_clone, 
                                       (worker_t *worker, worker_t *clone), 
-				      (worker, clone), APR_SUCCESS);
+                                      (worker, clone), APR_SUCCESS);
 
-APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, global_read_line, 
-                                      (global_t *global, char *line), 
-				      (global, line), APR_SUCCESS);
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_start, 
+                                      (global_t *global, char **line), 
+                                      (global, line), APR_ENOTIMPL);
 
