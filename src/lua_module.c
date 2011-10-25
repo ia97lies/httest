@@ -118,8 +118,9 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
         != APR_SUCCESS) {
       return status;
     }
+    return APR_SUCCESS;
   }
-  return APR_SUCCESS;
+  return APR_ENOTIMPL;
 }
 
 /************************************************************************
