@@ -6,10 +6,10 @@ httest_SOURCES= \
 	httest.c file.c socket.c regex.c util.c replacer.c ssl.c worker.c \
 	module.c transport.c store.c eval.c \
 	modules.c ssl_module.c tcp_module.c skeleton_module.c date_module.c \
-	coder_module.c math_module.c sys_module.c
+	coder_module.c math_module.c sys_module.c binary_module.c \
+	udp_module.c socks_module.c 
 
-EXTRA_httest_SOURCES= \
-	binary_module.c udp_module.c socks_module.c 
+EXTRA_httest_SOURCES=  
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)
@@ -27,3 +27,4 @@ htntlm_SOURCES= \
 noinst_HEADERS= \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h
+
