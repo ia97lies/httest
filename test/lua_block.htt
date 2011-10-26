@@ -1,12 +1,12 @@
 INCLUDE $TOP/test/config.htb
 
-BLOCK Lua:MyLuaThing
+BLOCK Lua:MyLuaThing Foo Bar : Bla Fasel
   for i=1,10 do
     print("hallo"..i);
   end
 END
 
 CLIENT
-  MyLuaThing
+  MyLuaThing "Hello World" Hehehe FOO BAR
 END
 

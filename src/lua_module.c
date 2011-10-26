@@ -42,6 +42,19 @@ typedef struct lua_reader_s {
 } lua_reader_t;
 
 /**
+ * Get a new lua reader instance
+ * @param worker IN callee
+ * @param pool IN
+ * @return lua reader instance
+ */
+static lua_reader_t *lua_new_lua_reader(worker_t *worker, apr_pool_t *pool) {
+  lua_reader_t *reader = apr_pcalloc(pool, sizeof(*reader));
+  reader->pool = pool;
+  reader->lines = worker->lines;
+	return reader;
+}
+
+/**
  * A simple lua line reader
  * @param L in lua state
  * @param ud IN user data
@@ -84,12 +97,16 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
  */
 static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent, 
                                           apr_pool_t *ptmp) {
+	int i;
+	apr_table_t *param_iterator= store_get_table(worker->params, ptmp);
+	apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(param_iterator)->elts;
   lua_reader_t *reader;
   lua_State *lua = lua_open();
   luaL_openlibs(lua);
-  reader = apr_pcalloc(ptmp, sizeof(*reader));
-  reader->pool = ptmp;
-  reader->lines = worker->lines;
+  for (i = 0; i < apr_table_elts(param_iterator)->nelts; i++) {
+		worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
+	}
+  reader = lua_new_lua_reader(worker, ptmp);
   if (lua_load(lua, lua_get_line, reader, "@client") != 0) {
     const char *msg = lua_tostring(lua, -1);
     if (msg == NULL) msg = "(error object is not a string)";

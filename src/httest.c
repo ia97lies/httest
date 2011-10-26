@@ -2082,7 +2082,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     }
     else {
       if (input) {
-	      store_set(global->worker->params, apr_itoa(global->worker->pbody, i), 
+       store_set(global->worker->params, apr_itoa(global->worker->pbody, i), 
                   token);
       }
       else {
