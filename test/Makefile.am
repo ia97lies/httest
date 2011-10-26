@@ -20,6 +20,7 @@ EXTRA_DIST= \
 	block.hte \
 	block.htt \
 	block_local_vars.htt \
+	block_lua.htt \
 	block_not_found.hte \
 	block_not_found.txt \
 	block_params.htt \
