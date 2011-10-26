@@ -1165,19 +1165,19 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     for (i = 1; i < store_get_size(block->params); i++) {
       index = apr_itoa(call_pool, i);
       if (!(arg = store_get(block->params, index))) {
-	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
-	apr_thread_mutex_unlock(worker->mutex);
-	status = APR_EGENERAL;
-	goto error;
+        worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
+        apr_thread_mutex_unlock(worker->mutex);
+        status = APR_EGENERAL;
+        goto error;
       }
       if (!(val = store_get(params, index))) {
-	worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
-	apr_thread_mutex_unlock(worker->mutex);
-	status = APR_EGENERAL;
-	goto error;
+        worker_log_error(worker, "Param missmatch for block \"%s\"", block->name);
+        apr_thread_mutex_unlock(worker->mutex);
+        status = APR_EGENERAL;
+        goto error;
       }
       if (arg && val) {
-	store_set(params, arg, val);
+        store_set(params, arg, val);
       }
     }
 
@@ -1186,19 +1186,19 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     for (i = 0; i < store_get_size(block->retvars); i++, j++) {
       index = apr_itoa(call_pool, j);
       if (!(arg = store_get(block->retvars, index))) {
-	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
-	apr_thread_mutex_unlock(worker->mutex);
-	status = APR_EGENERAL;
-	goto error;
+        worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
+        apr_thread_mutex_unlock(worker->mutex);
+        status = APR_EGENERAL;
+        goto error;
       }
       if (!(val = store_get(params, index))) {
-	worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
-	apr_thread_mutex_unlock(worker->mutex);
-	status = APR_EGENERAL;
-	goto error;
+        worker_log_error(worker, "Return variables missmatch for block \"%s\"", block->name);
+        apr_thread_mutex_unlock(worker->mutex);
+        status = APR_EGENERAL;
+        goto error;
       }
       if (arg && val) {
-	store_set(retvars, arg, val);
+        store_set(retvars, arg, val);
       }
     }
 
@@ -1209,6 +1209,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     /** call block */
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
+    call->config = block->config;
     call->params = params;
     call->retvars = retvars;
     call->locals = locals;

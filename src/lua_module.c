@@ -33,6 +33,12 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+const char * lua_module = "lua_module";
+
+typedef struct lua_config_s {
+  apr_table_t *params;
+  apr_table_t *retvars;
+} lua_config_t;
 
 typedef struct lua_reader_s {
   apr_pool_t *pool;
@@ -40,6 +46,27 @@ typedef struct lua_reader_s {
   int i;
   int newline;
 } lua_reader_t;
+
+/************************************************************************
+ * Private 
+ ***********************************************************************/
+
+/**
+ * Get lua config from worker
+ *
+ * @param worker IN worker
+ * @return lua config
+ */
+static lua_config_t *lua_get_worker_config(worker_t *worker) {
+  lua_config_t *config = module_get_config(worker->config, lua_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    config->params = apr_table_make(worker->pbody, 5);
+    config->retvars = apr_table_make(worker->pbody, 5);
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, lua_module), config);
+  }
+  return config;
+}
 
 /**
  * Get a new lua reader instance
@@ -85,9 +112,6 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
   }
 }
 
-/************************************************************************
- * Hooks 
- ***********************************************************************/
 /**
  * Simple lua interpreter for lua block
  * @param worker IN callee
@@ -98,27 +122,75 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
 static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent, 
                                           apr_pool_t *ptmp) {
 	int i;
-	apr_table_t *param_iterator= store_get_table(worker->params, ptmp);
-	apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(param_iterator)->elts;
+  apr_table_entry_t *e; 
   lua_reader_t *reader;
+
+  lua_config_t *config = lua_get_worker_config(worker);
   lua_State *lua = lua_open();
+
   luaL_openlibs(lua);
-  for (i = 0; i < apr_table_elts(param_iterator)->nelts; i++) {
-		worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
+	e = (apr_table_entry_t *) apr_table_elts(config->params)->elts;
+  for (i = 1; i < apr_table_elts(config->params)->nelts; i++) {
+    lua_pushstring(lua, store_get(worker->params, e[i].key));
+    lua_setglobal(lua, e[i].key);
 	}
   reader = lua_new_lua_reader(worker, ptmp);
-  if (lua_load(lua, lua_get_line, reader, "@client") != 0) {
+  if (lua_load(lua, lua_get_line, reader, "@client") != 0 ||
+      lua_pcall(lua, 0, LUA_MULTRET, 0) != 0) {
     const char *msg = lua_tostring(lua, -1);
     if (msg == NULL) msg = "(error object is not a string)";
     worker_log_error(worker, "Lua error: %s", msg);
     lua_pop(lua, 1);
     return APR_EGENERAL;
   }
-  lua_pcall(lua, 0, LUA_MULTRET, 0);
+	e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
+  for (i = 0; i < apr_table_elts(config->retvars)->nelts; i++) {
+		worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
+    if (lua_isstring(lua, i+1)) {
+      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i+1));
+    }
+  }
+  
   lua_close(lua);
 
   return APR_SUCCESS;
 }
+
+/**
+ * Get variable names for in/out for mapping it to/from lua
+ * @param worker IN callee
+ * @param line IN command line
+ */
+static void lua_set_variable_names(worker_t *worker, char *line) {
+  char *token;
+  char *last;
+
+  int input = 1;
+  lua_config_t *config = lua_get_worker_config(worker);
+  char *data = apr_pstrdup(worker->pbody, line);
+ 
+  /* Get params and returns variable names for later mapping from/to lua */
+  token = apr_strtok(data, " ", &last);
+  while (token) {
+    if (strcmp(token, ":") == 0) {
+      /* : is separator between input and output vars */
+      input = 0;
+    }
+    else {
+      if (input) {
+        apr_table_setn(config->params, token, token);
+      }
+      else {
+        apr_table_setn(config->retvars, token, token);
+      }
+    }
+    token = apr_strtok(NULL, " ", &last);
+  }
+
+}
+/************************************************************************
+ * Hooks 
+ ***********************************************************************/
 
 /**
  * Do load a lua block
@@ -135,6 +207,7 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
         != APR_SUCCESS) {
       return status;
     }
+    lua_set_variable_names(global->worker, *line);
     return APR_SUCCESS;
   }
   return APR_ENOTIMPL;
@@ -143,41 +216,11 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
-/**
- * Do run a lua script, but with no data exchange for the moment
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN variable name 
- * @return APR_SUCCESS
- */
-static apr_status_t block_LUA_RUN(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  lua_State *lua;
-  const char *filename = store_get(worker->params, "1");
-
-  if (!filename) {
-    worker_log_error(worker, "Need a lua file to run");
-  }
-
-  lua = lua_open();
-  luaL_openlibs(lua);
-  luaL_dofile(lua, filename);
-  lua_close(lua);
-
-  return APR_SUCCESS;
-}
 
 /************************************************************************
  * Module
  ***********************************************************************/
 apr_status_t lua_module_init(global_t *global) {
-  apr_status_t status;
-  if ((status = module_command_new(global, "LUA", "_LOAD",
-                                   "<file>",
-                                   "Load lua <file>",
-                                   block_LUA_RUN)) != APR_SUCCESS) {
-    return status;
-  }
-
   htt_hook_block_start(lua_block_start, NULL, NULL, 0);
 
   return APR_SUCCESS;
