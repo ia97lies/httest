@@ -36,6 +36,7 @@
 const char * lua_module = "lua_module";
 
 typedef struct lua_wconf_s {
+  int starting_line_nr; 
   apr_table_t *params;
   apr_table_t *retvars;
 } lua_wconf_t;
@@ -49,6 +50,7 @@ typedef struct lua_reader_s {
   apr_table_t *lines;
   int i;
   int newline;
+  int starting_line_nr; 
 } lua_reader_t;
 
 /************************************************************************
@@ -94,9 +96,11 @@ static lua_gconf_t *lua_get_global_config(global_t *global) {
  * @return lua reader instance
  */
 static lua_reader_t *lua_new_lua_reader(worker_t *worker, apr_pool_t *pool) {
+  lua_wconf_t *wconf = lua_get_worker_config(worker);
   lua_reader_t *reader = apr_pcalloc(pool, sizeof(*reader));
   reader->pool = pool;
   reader->lines = worker->lines;
+  reader->starting_line_nr = wconf->starting_line_nr;
 	return reader;
 }
 
@@ -112,6 +116,11 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
   apr_table_entry_t * e;  
 
   e = (apr_table_entry_t *) apr_table_elts(reader->lines)->elts;
+  if (reader->starting_line_nr) {
+    --reader->starting_line_nr;
+    *size = 1;
+    return apr_pstrdup(reader->pool, "\n");
+  }
   if (reader->i < apr_table_elts(reader->lines)->nelts) {
     if (reader->newline) {
       reader->newline = 0;
@@ -220,6 +229,7 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
 static apr_status_t lua_block_start(global_t *global, char **line) {
   apr_status_t status;
   if (strncmp(*line, "Lua:", 4) == 0) {
+    lua_wconf_t *wconf;
 		lua_gconf_t *gconf = lua_get_global_config(global);
 		gconf->do_read_line = 1;
     *line += 4;
@@ -228,6 +238,8 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
         != APR_SUCCESS) {
       return status;
     }
+    wconf = lua_get_worker_config(global->worker);
+    wconf->starting_line_nr = global->line_nr;
     lua_set_variable_names(global->worker, *line);
     return APR_SUCCESS;
   }
