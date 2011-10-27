@@ -1799,6 +1799,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   *global = apr_pcalloc(p, sizeof(global_t));
 
   (*global)->pool = p;
+  (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
   (*global)->log_mode = log_mode;
 
@@ -1885,8 +1886,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     if (val) {
       concurrent = apr_atoi64(val);
       if (concurrent <= 0) {
-	fprintf(stderr, "\nNumber of concurrent clients must be > 0");
-	return EINVAL;
+				fprintf(stderr, "\nNumber of concurrent clients must be > 0");
+				return EINVAL;
       }
       global->worker->additional = NULL;
     }
@@ -1910,7 +1911,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     apr_hash_set(global->blocks, global->worker->name, APR_HASH_KEY_STRING, 
 	         global->worker);
     global->state = GLOBAL_STATE_NONE;
-    return APR_SUCCESS;
+		return htt_run_block_end(global);
     break; 
   case GLOBAL_STATE_DAEMON:
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
@@ -2531,6 +2532,9 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
     ++line_nr;
     global->line_nr = line_nr;
     i = 0;
+		if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS) {
+			return status;
+		}
     if (line[i] != '#' && line[i] != 0) {
       /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
@@ -3128,7 +3132,9 @@ int main(int argc, const char *const argv[]) {
 
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(module_init)
+  APR_HOOK_LINK(read_line)
   APR_HOOK_LINK(block_start)
+  APR_HOOK_LINK(block_end)
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
 )
@@ -3141,7 +3147,15 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_clone,
                                       (worker_t *worker, worker_t *clone), 
                                       (worker, clone), APR_SUCCESS);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_line, 
+                                      (global_t *global, char **line), 
+                                      (global, line), APR_ENOTIMPL);
+
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_start, 
                                       (global_t *global, char **line), 
                                       (global, line), APR_ENOTIMPL);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_end, 
+                                      (global_t *global), 
+                                      (global), APR_SUCCESS);
 

@@ -6,7 +6,7 @@ BLOCK Lua:MyLuaThing param1 param2 : ret1 ret2
 			error(param.." is not equal "..value)
 		end
   end
-
+ 
   expect(param1, "Hello World")
   expect(param2, "Hehehe")
   for i=1,10 do
@@ -17,6 +17,7 @@ END
 
 CLIENT
   MyLuaThing "Hello World" "Hehehe" FOO BAR
+
   _DEBUG $FOO $BAR
   _EXPECT VAR(FOO) "foo"
   _EXPECT VAR(BAR) "bar"

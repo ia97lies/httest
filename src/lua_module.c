@@ -35,10 +35,14 @@
  ***********************************************************************/
 const char * lua_module = "lua_module";
 
-typedef struct lua_config_s {
+typedef struct lua_wconf_s {
   apr_table_t *params;
   apr_table_t *retvars;
-} lua_config_t;
+} lua_wconf_t;
+
+typedef struct lua_gconf_s {
+	int do_read_line;
+} lua_gconf_t;
 
 typedef struct lua_reader_s {
   apr_pool_t *pool;
@@ -57,13 +61,28 @@ typedef struct lua_reader_s {
  * @param worker IN worker
  * @return lua config
  */
-static lua_config_t *lua_get_worker_config(worker_t *worker) {
-  lua_config_t *config = module_get_config(worker->config, lua_module);
+static lua_wconf_t *lua_get_worker_config(worker_t *worker) {
+  lua_wconf_t *config = module_get_config(worker->config, lua_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
     config->params = apr_table_make(worker->pbody, 5);
     config->retvars = apr_table_make(worker->pbody, 5);
     module_set_config(worker->config, apr_pstrdup(worker->pbody, lua_module), config);
+  }
+  return config;
+}
+
+/**
+ * Get lua config from global 
+ *
+ * @param global IN 
+ * @return lua config
+ */
+static lua_gconf_t *lua_get_global_config(global_t *global) {
+  lua_gconf_t *config = module_get_config(global->config, lua_module);
+  if (config == NULL) {
+    config = apr_pcalloc(global->pool, sizeof(*config));
+    module_set_config(global->config, apr_pstrdup(global->pool, lua_module), config);
   }
   return config;
 }
@@ -125,7 +144,7 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   apr_table_entry_t *e; 
   lua_reader_t *reader;
 
-  lua_config_t *config = lua_get_worker_config(worker);
+  lua_wconf_t *config = lua_get_worker_config(worker);
   lua_State *lua = lua_open();
 
   luaL_openlibs(lua);
@@ -166,7 +185,7 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
   char *last;
 
   int input = 1;
-  lua_config_t *config = lua_get_worker_config(worker);
+  lua_wconf_t *config = lua_get_worker_config(worker);
   char *data = apr_pstrdup(worker->pbody, line);
  
   /* Get params and returns variable names for later mapping from/to lua */
@@ -201,6 +220,8 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
 static apr_status_t lua_block_start(global_t *global, char **line) {
   apr_status_t status;
   if (strncmp(*line, "Lua:", 4) == 0) {
+		lua_gconf_t *gconf = lua_get_global_config(global);
+		gconf->do_read_line = 1;
     *line += 4;
     if ((status = worker_new(&global->worker, "", "", global, 
                              block_lua_interpreter)) 
@@ -213,6 +234,36 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
   return APR_ENOTIMPL;
 }
 
+/**
+ * Read line of block 
+ * @param global IN
+ * @param line INOUT line 
+ * @return APR_SUCCESS
+ */
+static apr_status_t lua_read_line(global_t *global, char **line) {
+  apr_status_t status;
+
+	lua_gconf_t *gconf = lua_get_global_config(global);
+	if (gconf->do_read_line) {
+		if (*line[0] == 0) {
+			*line = apr_pstrdup(global->pool, " ");
+		}
+	}
+  return APR_SUCCESS;
+}
+
+/**
+ * Do load a lua block
+ * @param global IN
+ * @param line INOUT line 
+ * @return APR_SUCCESS
+ */
+static apr_status_t lua_block_end(global_t *global) {
+	lua_gconf_t *gconf = lua_get_global_config(global);
+	gconf->do_read_line = 0;
+	return APR_SUCCESS;
+}
+
 /************************************************************************
  * Commands 
  ***********************************************************************/
@@ -222,6 +273,8 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
  ***********************************************************************/
 apr_status_t lua_module_init(global_t *global) {
   htt_hook_block_start(lua_block_start, NULL, NULL, 0);
+  htt_hook_read_line(lua_read_line, NULL, NULL, 0);
+  htt_hook_block_end(lua_block_end, NULL, NULL, 0);
 
   return APR_SUCCESS;
 }
