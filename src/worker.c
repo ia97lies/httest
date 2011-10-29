@@ -1153,6 +1153,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     goto error;
   }
   else { 
+    apr_hash_t *config;
     int log_mode; 
     int i;
     int j;
@@ -1202,18 +1203,17 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
+    config = apr_hash_copy(call_pool, block->config);
     lines = my_table_deep_copy(call_pool, block->lines);
     apr_thread_mutex_unlock(worker->mutex);
     /* CR END */
 
-    /** call block */
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
-    call->config = block->config;
+    call->config = config;
     call->params = params;
     call->retvars = retvars;
     call->locals = locals;
-    /* lines in block */
     call->lines = lines;
     log_mode = call->log_mode;
     if (call->log_mode == LOG_CMD) {
@@ -1228,8 +1228,10 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     params = worker->params;
     retvars = worker->retvars;
     locals = worker->locals;
+    config = worker->config;
     memcpy(worker, call, sizeof(*worker));
     store_merge(worker->vars, call->retvars); 
+    worker->config = config;
     worker->params = params;
     worker->retvars = retvars;
     worker->locals = locals;
