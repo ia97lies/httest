@@ -228,11 +228,11 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
  */
 static apr_status_t lua_block_start(global_t *global, char **line) {
   apr_status_t status;
-  if (strncmp(*line, "Lua:", 4) == 0) {
+  if (strncmp(*line, ":LUA ", 5) == 0) {
     lua_wconf_t *wconf;
 		lua_gconf_t *gconf = lua_get_global_config(global);
 		gconf->do_read_line = 1;
-    *line += 4;
+    *line += 5;
     if ((status = worker_new(&global->worker, "", "", global, 
                              block_lua_interpreter)) 
         != APR_SUCCESS) {
