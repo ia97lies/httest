@@ -1203,14 +1203,17 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
-    config = apr_hash_copy(call_pool, block->config);
+    if (!apr_hash_get(block->config, worker, sizeof(worker))) {
+      config = apr_hash_overlay(worker->pbody, block->config, worker->config);
+      worker->config = config;
+      apr_hash_set(block->config, worker, sizeof(worker), (void *)1);
+    }
     lines = my_table_deep_copy(call_pool, block->lines);
     apr_thread_mutex_unlock(worker->mutex);
     /* CR END */
 
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
-    call->config = config;
     call->params = params;
     call->retvars = retvars;
     call->locals = locals;
@@ -1228,10 +1231,8 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     params = worker->params;
     retvars = worker->retvars;
     locals = worker->locals;
-    config = worker->config;
     memcpy(worker, call, sizeof(*worker));
     store_merge(worker->vars, call->retvars); 
-    worker->config = config;
     worker->params = params;
     worker->retvars = retvars;
     worker->locals = locals;
