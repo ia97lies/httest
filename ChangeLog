@@ -2,9 +2,12 @@
 Changes with httest 2.1.6
   *) httest: Simplyfied syntax of _LOOP, _IF, _RPS, _BPS and all other local
              bodies. New you can close a local body with "_END" instead of 
-	     "_END IF", "_END LOOP", ...
+						 "_END IF", "_END LOOP", ...
 
   *) plugins: Maintained the vim plugin and added all new commands.
+
+	*) httest: Added experimental lua module, for full Lua power in httest. This
+	           needs liblua5.1 and its development header files.
 
 
 Changes with httest 2.1.5
@@ -12,7 +15,7 @@ Changes with httest 2.1.5
 
   *) httest: Changed inline commands, they must start with $ and not @ and
              must have round braces with zero or more space separated
-	     arguments.
+						 arguments.
 
 
 Changes with httest 2.1.4
