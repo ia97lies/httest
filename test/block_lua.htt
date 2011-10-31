@@ -1,6 +1,6 @@
 INCLUDE $TOP/test/config.htb
 
-BLOCK Lua:MyLuaThing param1 param2 : ret1 ret2
+BLOCK:LUA MyLuaThing param1 param2 : ret1 ret2
   function expect(param, value)
 		if param ~= value then
 			error(param.." is not equal "..value)
@@ -16,6 +16,7 @@ BLOCK Lua:MyLuaThing param1 param2 : ret1 ret2
 END
 
 CLIENT
+  MyLuaThing "Hello World" "Hehehe" FOO BAR
   MyLuaThing "Hello World" "Hehehe" FOO BAR
 
   _DEBUG $FOO $BAR
