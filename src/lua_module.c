@@ -253,8 +253,6 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
  * @return APR_SUCCESS
  */
 static apr_status_t lua_read_line(global_t *global, char **line) {
-  apr_status_t status;
-
 	lua_gconf_t *gconf = lua_get_global_config(global);
 	if (gconf->do_read_line) {
 		if (*line[0] == 0) {
