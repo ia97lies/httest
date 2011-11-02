@@ -1886,8 +1886,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     if (val) {
       concurrent = apr_atoi64(val);
       if (concurrent <= 0) {
-				fprintf(stderr, "\nNumber of concurrent clients must be > 0");
-				return EINVAL;
+	fprintf(stderr, "\nNumber of concurrent clients must be > 0");
+	return EINVAL;
       }
       global->worker->additional = NULL;
     }

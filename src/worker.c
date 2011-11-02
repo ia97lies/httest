@@ -1203,10 +1203,10 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
-    if (!apr_hash_get(block->config, worker, sizeof(worker))) {
+    if (!apr_hash_get(block->config, worker->name, APR_HASH_KEY_STRING)) {
       config = apr_hash_overlay(worker->pbody, block->config, worker->config);
       worker->config = config;
-      apr_hash_set(block->config, worker, sizeof(worker), (void *)1);
+      apr_hash_set(block->config, worker->name, APR_HASH_KEY_STRING, (void *)1);
     }
     lines = my_table_deep_copy(call_pool, block->lines);
     apr_thread_mutex_unlock(worker->mutex);
