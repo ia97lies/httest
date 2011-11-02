@@ -2,24 +2,28 @@ INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyLuaThing param1 param2 : ret1 ret2
   function expect(param, value)
-		if param ~= value then
-			error(param.." is not equal "..value)
-		end
+    if param ~= value then
+      error(param.." is not equal "..value)
+    end
   end
  
+  assert(param1)
+  assert(param1 == "Hello World")
+  assert(param2)
+  assert(param2 == "Hehehe")
+
   expect(param1, "Hello World")
   expect(param2, "Hehehe")
+  print()
   for i=1,10 do
-    print("hallo "..i.." "..param1.." "..param2);
+    print("hallo "..i.." "..param1.." "..param2)
   end
   return "foo", "bar", "bla"
 END
 
-CLIENT
-  MyLuaThing "Hello World" "Hehehe" FOO BAR
+CLIENT 30
   MyLuaThing "Hello World" "Hehehe" FOO BAR
 
-  _DEBUG $FOO $BAR
   _EXPECT VAR(FOO) "foo"
   _EXPECT VAR(BAR) "bar"
 END
