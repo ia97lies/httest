@@ -6,8 +6,8 @@ __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
 __
-_EXPECT . "HTTP/1.1 200 OK"
-_EXPECT . "[1]?[0-9]{3,3}"
+_EXPECT headers "HTTP/1.1 200 OK"
+_EXPECT body "[1]?[0-9]{3,3}"
 _WAIT
 END
 
