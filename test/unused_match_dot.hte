@@ -1,0 +1,3 @@
+CLIENT
+_MATCH . ".*" FOO
+END

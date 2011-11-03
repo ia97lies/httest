@@ -1,0 +1,3 @@
+CLIENT
+_MATCH body ".*" FOO
+END
