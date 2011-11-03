@@ -14,3 +14,7 @@ win
 .deps
 .libs
 *.log
+*.gcov
+*.gcda
+*.gcno
+
