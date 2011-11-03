@@ -3358,46 +3358,6 @@ apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * TIMER command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN variable name
- *
- * @return APR_SUCCESS
- */
-apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data, 
-                           apr_pool_t *ptmp) {
-  char *copy;
-  char *last;
-  char *cmd;
-  char *var;
-
-  apr_time_t cur = apr_time_now();
-
-  COMMAND_NEED_ARG("<variable> expected");
-  cmd = apr_strtok(copy, " ", &last);
-  var = apr_strtok(NULL, " ", &last);
- 
-  if (strcasecmp(cmd, "GET") == 0) {
-    /* nothing special to do */
-  }
-  else if (strcasecmp(cmd, "RESET") == 0) {
-    worker->start_time = apr_time_now();
-  }
-  else {
-    worker_log_error(worker, "Timer command %s not implemented", cmd);
-  }
-
-  if (var && var[0] != 0) {
-    worker_var_set(worker, var, 
-	           apr_off_t_toa(ptmp, 
-		                 apr_time_as_msec(cur - worker->start_time)));
-  }
-  return APR_SUCCESS;
-}
-
-/**
  * AUTO_CLOSE command
  *
  * @param self IN command
@@ -3726,7 +3686,6 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->vars = store_copy(global->vars, p);
   (*self)->modules = apr_hash_copy(p, global->modules);
   (*self)->blocks = global->blocks;
-  (*self)->start_time = apr_time_now();
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;
   (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
@@ -3781,7 +3740,6 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->grep.body = my_table_swallow_copy(p, orig->grep.body);
   (*self)->grep.error = my_table_swallow_copy(p, orig->grep.error);
   (*self)->grep.exec = my_table_swallow_copy(p, orig->grep.exec);
-  (*self)->start_time = orig->start_time;
   (*self)->listener = NULL;
   (*self)->sockets = apr_hash_make(p);
   (*self)->recorder = apr_pcalloc(p, sizeof(recorder_t));

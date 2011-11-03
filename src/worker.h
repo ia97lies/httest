@@ -137,7 +137,6 @@ struct worker_s {
   apr_table_t *tmp_table;
   apr_hash_t *modules;
   apr_hash_t *blocks;
-  apr_time_t start_time;
   apr_hash_t *sockets;
   apr_socket_t *listener;
   socket_t *socket;
@@ -378,7 +377,6 @@ apr_status_t command_STRFTIME(command_t *self, worker_t *worker, char *data, apr
 apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
-apr_status_t command_TIMER(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 

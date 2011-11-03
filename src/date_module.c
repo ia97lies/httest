@@ -29,10 +29,33 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+const char * date_module = "date_module";
+apr_time_t start_time;
+
+typedef struct date_wconf_s {
+  apr_time_t start_time;
+} date_wconf_t;
 
 /************************************************************************
  * Commands 
  ***********************************************************************/
+
+/**
+ * Get lua config from worker
+ *
+ * @param worker IN worker
+ * @return lua config
+ */
+static date_wconf_t *date_get_worker_config(worker_t *worker) {
+  date_wconf_t *config = module_get_config(worker->config, date_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    config->start_time = start_time;
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, date_module), config);
+  }
+  return config;
+}
+
 /**
  * TIME command stores time in a variable [ms]
  *
@@ -146,11 +169,47 @@ apr_status_t block_DATE_SYNC(worker_t *worker, worker_t *parent, apr_pool_t *ptm
   return APR_SUCCESS;
 }
 
+/**
+ * TIMER command
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary pool 
+ * @return APR_SUCCESS
+ */
+apr_status_t block_DATE_TIMER(worker_t *worker, worker_t *parent, 
+                              apr_pool_t *ptmp) {
+
+  const char *cmd;
+  const char *var;
+  date_wconf_t *wconf = date_get_worker_config(worker);
+
+  apr_time_t cur = apr_time_now();
+
+  cmd = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
+  
+  if (strcasecmp(cmd, "GET") == 0) {
+    if (var && var[0] != 0) {
+      worker_var_set(worker, var, 
+		     apr_off_t_toa(ptmp, 
+				   apr_time_as_msec(cur - wconf->start_time)));
+    }
+  }
+  else if (strcasecmp(cmd, "RESET") == 0) {
+    wconf->start_time = apr_time_now();
+  }
+  else {
+    worker_log_error(worker, "Timer command %s not implemented", cmd);
+  }
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Module
  ***********************************************************************/
 apr_status_t date_module_init(global_t *global) {
   apr_status_t status;
+  start_time = apr_time_now();
   if ((status = module_command_new(global, "DATE", "_GET_TIME",
 	                           "<var>",
 	                           "Stores the current time [ms] into <var>",
@@ -169,6 +228,13 @@ apr_status_t date_module_init(global_t *global) {
 				   "Default wait the next full second. "
 				   "Optional wait the next full minute.", 
 	                           block_DATE_SYNC)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "DATE", "_TIMER",
+	                           "GET|RESET [<variable>]",
+				   "Stores time duration from last reset or from start of test.",
+	                           block_DATE_TIMER)) != APR_SUCCESS) {
     return status;
   }
 
