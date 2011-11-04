@@ -6,6 +6,8 @@ Changes with httest 2.1.6
 
   *) plugins: Maintained the vim plugin and added all new commands.
 
+	*) plugins: Add embedded lua syntax support.
+
 	*) httest: Added experimental lua module, for full Lua power in httest. This
 	           needs liblua5.1 and its development header files.
 
