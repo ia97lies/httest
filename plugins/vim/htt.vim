@@ -10,6 +10,8 @@ elseif exists("b:current_syntax")
 endif
 
 syn keyword httStorageClass     CLIENT SERVER DAEMON BLOCK END
+syn match   httStorageClass     "\<BLOCK:LUA\>"
+syn match   httStorageClass     "\<BLOCK:SH\>"
 syn keyword httInclude          INCLUDE
 syn keyword httStatement        SET GO EXEC TIMEOUT AUTO_CLOSE PROCESS FILE MODULE
 syn keyword httStatement        _-
@@ -69,6 +71,7 @@ syn match httStatement          "\<_CODER:URLENC\>"
 syn match httStatement          "\<_DATE:FORMAT\>"
 syn match httStatement          "\<_DATE:GET_TIME\>"
 syn match httStatement          "\<_DATE:SYNC\>"
+syn match httStatement          "\<_DATE:TIMER\>"
 syn match httStatement          "\<_MATH:EVAL\>"
 syn match httStatement          "\<_MATH:OP\>"
 syn match httStatement          "\<_MATH:RAND\>"
@@ -111,6 +114,11 @@ syn region  httString		  start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=basicSpe
 syn region httComment	        display oneline start="^ *#" end="$" contains=httTodo
 syn keyword httTodo             contained TODO FIXME XXX NOTE
 syn keyword httType             EXEC HEADERS BODY VAR exec headers body var Exec Headers Body Var
+
+runtime! syntax/lua.vim
+unlet b:current_syntax
+syntax include @Lua syntax/lua.vim
+syntax region luaCode  start=+\<BLOCK:LUA\>+ keepend end=+END+  contains=@Lua
 
 " Define the default highlighting.
 " For version 5.7 and earlier: only when not done already

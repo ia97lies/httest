@@ -159,8 +159,27 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   luaL_openlibs(lua);
 	e = (apr_table_entry_t *) apr_table_elts(config->params)->elts;
   for (i = 1; i < apr_table_elts(config->params)->nelts; i++) {
-    lua_pushstring(lua, store_get(worker->params, e[i].key));
-    lua_setglobal(lua, e[i].key);
+		const char *val = NULL;
+		char *param = store_get_copy(worker->params, ptmp, e[i].key);
+		if (strncmp(param, "VAR(", 4) == 0) {
+			char *var = param + 4;
+      apr_size_t len = strlen(var);
+			if (len > 0) {
+				var[len-1] = 0;
+			}
+			val = store_get(worker->vars, var);
+			if (!val) {
+				val = store_get(worker->locals, var);
+			}
+			if (!val) {
+				val = param;
+			}
+		}
+		else {
+			val = param;
+		}
+    lua_pushstring(lua, val);
+		lua_setglobal(lua, e[i].key);
 	}
   reader = lua_new_lua_reader(worker, ptmp);
   if (lua_load(lua, lua_get_line, reader, "@client") != 0 ||
