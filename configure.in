@@ -109,7 +109,7 @@ fi
 MODULES=""
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
-	INCLUDE+=" $LUA_INCLUDES"
+	CFLAGS+=" $LUA_INCLUDES"
   LIBS+=" $LUA_LIB_PATH -llua5.1"
   HTTEST_MODULES+='lua_module.$(OBJEXT) '
   MODULES+="lua "
