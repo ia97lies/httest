@@ -1,9 +1,6 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyLuaThing buf : ret
-  function bla
-  end
-
   for i=1,2 do
 		print()
 		print("hallo"..buf)
