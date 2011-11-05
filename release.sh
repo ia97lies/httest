@@ -60,9 +60,9 @@ echo "  Build Configuration"
 
 echo
 echo "  Make Distribution"
-CFLAGS="-g -Wall" ./configure
+CFLAGS="-g -Wall" ./configure --enable-lua-module
 make clean all
-make distcheck 
+make distcheck DISTCHECK_CONFIGURE_FLAGS=--enable-lua-module
 
 echo
 echo "  Build Man Pages"
