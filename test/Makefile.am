@@ -20,7 +20,10 @@ EXTRA_DIST= \
 	block.hte \
 	block.htt \
 	block_local_vars.htt \
+	block_lua_buf.htt \
+	block_lua.hte \
 	block_lua.htt \
+	block_lua.txt \
 	block_not_found.hte \
 	block_not_found.txt \
 	block_params.htt \
@@ -245,6 +248,22 @@ EXTRA_DIST= \
 	udp.txt \
 	unicode.ntlm \
 	unset.htt \
+	unused_expect_body.hte \
+	unused_expect_body.txt \
+	unused_expect_dot.hte \
+	unused_expect_dot.txt \
+	unused_expect_exec.hte \
+	unused_expect_exec.txt \
+	unused_expect_headers.hte \
+	unused_expect_headers.txt \
+	unused_match_body.hte \
+	unused_match_body.txt \
+	unused_match_dot.hte \
+	unused_match_dot.txt \
+	unused_match_exec.hte \
+	unused_match_exec.txt \
+	unused_match_headers.hte \
+	unused_match_headers.txt \
 	urldecode.htt \
 	urlencode.htt \
 	var_expect.hte \

@@ -1,10 +1,10 @@
 [THANKS]
 Thanks to Thomas Frauenknecht for 
-- the windows build enviroment
+- the windows build enviroment.
 - many win32 changes.
 
 Thanks to Pascal Buchbinder for 
-- the ntlm tool.
+- the ntlm tool bugfixes.
 - the renegotiation command without client cert verify.
 
 Thanks to Michael Vogt for 
@@ -19,6 +19,7 @@ Thanks to Eva Ramon for
 
 Thanks to Alain Stalder for
 - cleaning up the windows build enviroment
+- the apple package.
 
 Thanks to Marcel Schoen for
 - writing and maintain the user manual
