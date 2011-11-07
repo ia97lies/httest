@@ -1390,7 +1390,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
       return status;
     }
     if (worker->recorder->on == RECORDER_RECORD &&
-	worker->recorder->flags & RECORDER_RECORD_HEADERS) {
+				worker->recorder->flags & RECORDER_RECORD_HEADERS) {
       sockreader_push_line(worker->recorder->sockreader, line);
     }
     worker_log(worker, LOG_INFO, "<%s", line);
@@ -1407,14 +1407,14 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     while (*val == ' ') ++val;
     if (worker->headers_allow) {
       if (!apr_table_get(worker->headers_allow, key)) {
-	worker_log(worker, LOG_ERR, "%s header not allowed", key);
-	status = APR_EGENERAL;
-	goto out_err;
+				worker_log(worker, LOG_ERR, "%s header not allowed", key);
+				status = APR_EGENERAL;
+				goto out_err;
       }
     }
     if (worker->headers_filter) {
       if (!apr_table_get(worker->headers_filter, key)) {
-	apr_table_add(worker->headers, key, val);
+				apr_table_add(worker->headers, key, val);
       }
     }
     else {
