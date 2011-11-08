@@ -10,8 +10,8 @@ elseif exists("b:current_syntax")
 endif
 
 syn keyword httStorageClass     CLIENT SERVER DAEMON BLOCK END
-syn match   httStorageClass     "\<BLOCK:LUA\>"
-syn match   httStorageClass     "\<BLOCK:SH\>"
+syn keyword httStorageClass     LUA
+syn keyword httStorageClass     SH
 syn keyword httInclude          INCLUDE
 syn keyword httStatement        SET GO EXEC TIMEOUT AUTO_CLOSE PROCESS FILE MODULE
 syn keyword httStatement        _-

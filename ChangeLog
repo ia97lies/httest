@@ -1,4 +1,8 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.7
+  *) configure: Correct --with-lua5.1 option.
+
+
 Changes with httest 2.1.6
 	*) plugins: Add embedded lua syntax support.
 

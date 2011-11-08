@@ -56,9 +56,9 @@ AC_ARG_WITH(apr-iconv,AS_HELP_STRING(--with-apr-iconv=PATH,path to apr-iconv dir
 AC_ARG_WITH(pcre,AS_HELP_STRING(--with-pcre=PATH,path to pcre-config script),
 	[if test ! -x $withval/pcre-config; then AC_MSG_ERROR($withval/pcre-config do not exist or is not executable); else PCRE_CONFIG="$withval/pcre-config"; fi],
 	[PCRE_CONFIG="pcre-config"])
-AC_ARG_WITH(lua5.1,AS_HELP_STRING(--with-lua5.1=PATH,path to lua5.1 source),
-	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else LUA_LIB_PATH="-L${withval}"; LUA_INCLUDES="-I${withval}"; fi],
-	[LUA_LIB_PATH=""; LUA_INCLUDES=""])
+AC_ARG_WITH(lua5.1,AS_HELP_STRING(--with-lua5.1=PATH,path to lua5.1 source dir),
+	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else LUA_LIB_PATH="-L${withval}"; LUA_INCLUDES="-I${withval}"; LUA_LIB="-llua"; fi],
+	[LUA_LIB_PATH=""; LUA_INCLUDES=""; LUA_LIB="-llua5.1"])
 AC_ARG_WITH(ssl,AS_HELP_STRING(--with-ssl=PATH,path to openssl source),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
 	[OPENSSL_LIB_PATH=""; OPENSSL_INCLUDES=""])
@@ -110,7 +110,7 @@ MODULES=""
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
 	CFLAGS+=" $LUA_INCLUDES"
-  LIBS+=" $LUA_LIB_PATH -llua5.1"
+  LIBS+=" $LUA_LIB_PATH $LUA_LIB"
   HTTEST_MODULES+='lua_module.$(OBJEXT) '
   MODULES+="lua "
 fi
