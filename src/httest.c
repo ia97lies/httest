@@ -482,20 +482,19 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
 }
 
 /**
- * Lookup a block name
+ * Lookup a block name in current module
  * @param worker IN worker object
  * @param line IN line with a possible block name
  * @param ptmp IN temp pool
  * @return block hash
  */
-static apr_hash_t *worker_lookup_block(worker_t * worker, char *line,
-                                       apr_pool_t *ptmp) {
+static int worker_is_block(worker_t * worker, char *line, apr_pool_t *ptmp) {
   apr_size_t len = 0;
   char *block_name;
 
   if (strncmp(line, "__", 2) == 0 || strncmp(line, "_-", 2) == 0) {
     /* very special commands, not possible to overwrite this one */
-    return NULL;
+    return 0;
   }
 
   while (line[len] != ' ' && line[len] != '\0') ++len;
@@ -503,10 +502,10 @@ static apr_hash_t *worker_lookup_block(worker_t * worker, char *line,
 
   /* if name space do handle otherwise */
   if (strchr(block_name, ':')) {
-    return NULL;
+    return 0;
   }
 
-  return apr_hash_get(worker->blocks, block_name, APR_HASH_KEY_STRING);
+  return apr_hash_get(worker->blocks, block_name, APR_HASH_KEY_STRING) != NULL;
 }
 
 /**
@@ -1321,51 +1320,33 @@ static void worker_set_global_error(worker_t *worker) {
  * @param worker IN thread data object
  * @param parent IN caller
  * @param dummy IN not used, but interface definition wants that
- * @TODO: Too complicated need a refactoring.
  *
  * @return an apr status
  */
 static apr_status_t worker_interpret(worker_t * worker, worker_t *parent, 
                                      apr_pool_t *dummy) {
   apr_status_t status;
-  char *line;
-  int j;
   int to;
-  apr_pool_t *ptmp = NULL;
 
   apr_table_entry_t *e =
     (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
 
-  if (worker->cmd_from) {
-    worker->cmd = worker->cmd_from;
-  }
-  else {
-    worker->cmd = 0;
-  }
+  to = worker->cmd_to ? worker->cmd_to : apr_table_elts(worker->lines)->nelts;
 
-  if (worker->cmd_to) {
-    to = worker->cmd_to; 
-  }
-  else {
-    to = apr_table_elts(worker->lines)->nelts;
-  }
+  for (worker->cmd = worker->cmd_from; worker->cmd < to; worker->cmd++) {
+    char *line;
+    apr_pool_t *ptmp;
 
-  /* iterate through all script line for this thread */
-  for (; worker->cmd < to; worker->cmd++) {
     apr_pool_create(&ptmp, worker->pbody);
     worker->file_and_line = e[worker->cmd].key;
     line = e[worker->cmd].val;
-    /* lookup blocks */
-    if (worker_lookup_block(worker, line, ptmp)) {
+    if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
       status = worker_check_error(parent, status);
     }
     else {
-      command_t *command;
-      /* lookup function index */
-      j = 0;
-      command = lookup_command(local_commands, line);
-      /* get command and test if found */
+      int j = 0;
+      command_t *command = lookup_command(local_commands, line);
       if (command->flags & COMMAND_FLAGS_LINK) {
         j += strlen(command->name);
         status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
@@ -1381,21 +1362,21 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
       }
       else {
         status = command_CALL(NULL, worker, line, ptmp);
-        /* ignore not found error else the error message is not understandable */
         if (!APR_STATUS_IS_ENOENT(status)) {
           status = worker_check_error(parent, status);
         }
-      }
-      if (APR_STATUS_IS_ENOENT(status)) {
-        worker_log_error(worker, "%s syntax error", worker->name);
-        worker_set_global_error(worker);
-        return APR_EINVAL;
+        else {
+          worker_log_error(worker, "%s syntax error", worker->name);
+          worker_set_global_error(worker);
+          status = APR_EINVAL;
+        }
       }
     }
+    apr_pool_destroy(ptmp);
+
     if (status != APR_SUCCESS) {
       return status;
     }
-    apr_pool_destroy(ptmp);
   }
   return APR_SUCCESS;
 }
