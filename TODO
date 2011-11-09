@@ -10,7 +10,7 @@ httest
 ------
 - Resolve all TODO in the code
 - Update user guide!
-- Transparent proxy support
+- Transparent forward proxy support
 - Trailing headers on chunked http
 - Folded headers
 - Fix that problem with command lookup, _SET and _SETUP do conflicting
@@ -18,6 +18,7 @@ httest
 - Hash variable, btw. the variables are hold in hash :)
   - Add/Remove elements in hash variables
   - Print hash variables as query
+- Array variable
 - Plain on SSL connection terminate with a clear error
 - Need more information on ssl failure
 - Stack trace on error is not highlighted. Do it the C way :)
@@ -25,8 +26,4 @@ httest
 - Store recorded stuff in a variable
 - Encrpyt the ntml type 3 message and extrakt user
 - Precompile httest script
-- Include concept with env variables
-- Array variable
-- Need more information on ssl failure
-- global vars can not resolve allready set vars on SET
-- Multiline blocks
+
