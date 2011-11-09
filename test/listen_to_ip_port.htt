@@ -1,0 +1,44 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_LOOP 10
+  _REQ 127.0.0.1 $YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: $YOUR_HOST 
+  __
+  _EXPECT body "OK 1"
+  _WAIT
+_END
+
+_LOOP 7
+  _REQ 127.0.0.2 $YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: $YOUR_HOST 
+  __
+  _EXPECT body "OK 2"
+  _WAIT
+_END
+END
+
+SERVER 127.0.0.1:$YOUR_PORT
+_LOOP 10
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __
+  __== OK 1 ==
+_END
+END
+
+SERVER 127.0.0.2:$YOUR_PORT
+_LOOP 7 
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK 2 ==
+_END
+END
+
