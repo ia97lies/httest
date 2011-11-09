@@ -8,8 +8,8 @@ BLOCK:LUA MyLuaThing buf : ret
   end
 
   for i=1,2 do
-		print()
-		foo("hallo"..buf)
+    print()
+    foo("hallo"..buf)
   end
   return "foo"
 END
