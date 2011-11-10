@@ -1,0 +1,48 @@
+SET MAX_DURATION=300000
+INCLUDE $TOP/test/config.htb
+
+CLIENT 2 
+_THREAD:GET_NUMBER NO
+
+_REQ $YOUR_HOST $YOUR_PORT
+__POST /setup HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Content-Length: AUTO 
+__
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__Data: $DATA
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_IF ($NO == 1)
+  _EXPECT . "FOO"
+_ELSE
+  _EXPECT . "AS1"
+_END
+_WAIT
+END
+
+SERVER $YOUR_PORT 2 
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__Ok
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+END
+
