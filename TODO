@@ -8,7 +8,6 @@ htproxy
 
 httest
 ------
-- Resolve all TODO in the code
 - Update user guide!
 - Transparent forward proxy support
 - Trailing headers on chunked http

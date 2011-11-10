@@ -1435,12 +1435,10 @@ void worker_finally(worker_t *worker, apr_status_t status) {
     }
 
     worker_set_global_error(worker);
-//    worker_destroy(worker);
     worker_conn_close_all(worker);
     exit(1);
   }
 exodus:
-//  worker_destroy(worker);
   worker_conn_close_all(worker);
   apr_thread_exit(worker->mythread, APR_SUCCESS);
 }
@@ -1532,6 +1530,34 @@ error:
 }
 
 /**
+ * start single server 
+ *
+ * @param thread IN thread object
+ * @param worker IN void thread data object
+ * @param threads IN number of threads
+ *
+ * @return an apr status
+ */
+static apr_status_t worker_run_single_server(worker_t *worker) {
+  apr_status_t status;
+
+  if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
+    return status;
+  }
+
+  worker_flush(worker, worker->pbody);
+
+  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
+    return status;
+  }
+  return APR_SUCCESS;
+}
+
+/**
  * server thread
  *
  * @param thread IN thread object
@@ -1550,21 +1576,8 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
   ++running_threads;
   sync_unlock(worker->mutex);
 
-  if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
-    goto error;
-  }
+  status = worker_run_single_server(worker);
 
-  worker_flush(worker, worker->pbody);
-
-  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
-    goto error;
-  }
-
-  if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
-    goto error;
-  }
-
-error:
   /* do not close listener, there may be more servers which use this 
    * listener, signal this by setting listener to NULL
    */
@@ -1574,28 +1587,110 @@ error:
 }
 
 /**
+ * start threaded servers 
+ *
+ * @param thread IN thread object
+ * @param worker IN void thread data object
+ * @param threads IN number of threads
+ *
+ * @return an apr status
+ */
+static apr_status_t worker_run_server_threads(worker_t *worker, int threads) {
+  apr_status_t status;
+  apr_threadattr_t *tattr;
+  apr_thread_t *threadl;
+  apr_table_t *servers;
+  apr_table_entry_t *e;
+  worker_t *clone;
+  int i = 0;
+
+  if ((status = apr_threadattr_create(&tattr, worker->pbody)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_threadattr_detach_set(tattr, 0)) != APR_SUCCESS) {
+    return status;
+  }
+
+  servers = apr_table_make(worker->pbody, 10);
+
+  while(threads == -1 || i < threads) {
+    if ((status = worker_clone(&clone, worker)) != APR_SUCCESS) {
+      worker_log(worker, LOG_ERR, "Could not clone server thread data");
+      return status;
+    }
+    if ((status = htt_run_worker_clone(worker, clone)) != APR_SUCCESS) {
+      return status;
+    }
+    clone->listener = worker->listener;
+    worker_log(worker, LOG_DEBUG, "--- accept");
+    if (!worker->listener) {
+      worker_log_error(worker, "Server down");
+      status = APR_EGENERAL;
+      return status;
+    }
+
+    worker_get_socket(clone, "Default", "0");
+    clone->socket->is_ssl = worker->socket->is_ssl;
+    
+    if ((status =
+         apr_socket_accept(&clone->socket->socket, worker->listener,
+               clone->pbody)) != APR_SUCCESS) {
+      clone->socket->socket = NULL;
+      return status;
+    }
+    if ((status =
+           apr_socket_timeout_set(clone->socket->socket, worker->socktmo)) 
+        != APR_SUCCESS) {
+      return status;
+    }
+    if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {
+      return status;
+    }
+    worker_log(worker, LOG_DEBUG, "--- create thread");
+    clone->socket->socket_state = SOCKET_CONNECTED;
+    clone->which = i;
+    if ((status =
+         apr_thread_create(&threadl, tattr, worker_thread_server,
+               clone, worker->pbody)) != APR_SUCCESS) {
+      return status;
+    }
+
+    apr_table_addn(servers, worker->name, (char *)threadl);
+
+    ++i;
+  }
+
+  e = (apr_table_entry_t *) apr_table_elts(servers)->elts;
+  for (i = 0; i < apr_table_elts(servers)->nelts; ++i) {
+    threadl = (apr_thread_t *) e[i].val;
+    apr_thread_join(&status, threadl);
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
  * listener server thread
  *
  * @param thread IN thread object
  * @param selfv IN void pointer to thread data object
- * @TODO: Too big, too complicated refactor this.
  *
  * @return an apr status
  */
 static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void *selfv) {
   apr_status_t status;
-  int i;
   int nolistener;
   char *last;
   char *portname;
   char *scope_id;
   char *value;
   int threads = 0;
-  worker_t *clone;
-  apr_threadattr_t *tattr;
-  apr_thread_t *threadl;
-  apr_table_t *servers;
-  apr_table_entry_t *e;
 
   worker_t *worker = selfv;
   worker->mythread = thread;
@@ -1605,8 +1700,6 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   ++running_threads;
   sync_unlock(worker->mutex);
 
-  /* TODO  ["SSL:"]["*"|<IP>|<IPv6>:]<port> ["DOWN"|<concurrent>] */
-  
   portname = apr_strtok(worker->additional, " ", &last);
 
   worker_get_socket(worker, "Default", "0");
@@ -1623,7 +1716,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   
   nolistener = 0;
   value = apr_strtok(NULL, " ", &last);
-  if (value && strcmp("DOWN", value) != 0) {
+  if (value && strcmp(value, "DOWN") != 0) {
     threads = apr_atoi64(value);
   }
   else if (value) {
@@ -1667,90 +1760,10 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
 
   if (threads != 0) {
-    i = 0;
-
-    if ((status = apr_threadattr_create(&tattr, worker->pbody)) != APR_SUCCESS) {
-      goto error;
-    }
-
-    if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
-        != APR_SUCCESS) {
-      goto error;
-    }
-
-    if ((status = apr_threadattr_detach_set(tattr, 0)) != APR_SUCCESS) {
-      goto error;
-    }
-
-    servers = apr_table_make(worker->pbody, 10);
-
-    while(threads == -1 || i < threads) {
-      if ((status = worker_clone(&clone, worker)) != APR_SUCCESS) {
-        worker_log(worker, LOG_ERR, "Could not clone server thread data");
-        goto error;
-      }
-      if ((status = htt_run_worker_clone(worker, clone)) != APR_SUCCESS) {
-        goto error;
-      }
-      clone->listener = worker->listener;
-      worker_log(worker, LOG_DEBUG, "--- accept");
-      if (!worker->listener) {
-        worker_log_error(worker, "Server down");
-        status = APR_EGENERAL;
-        goto error;
-      }
-
-      worker_get_socket(clone, "Default", "0");
-      clone->socket->is_ssl = worker->socket->is_ssl;
-      
-      if ((status =
-           apr_socket_accept(&clone->socket->socket, worker->listener,
-                 clone->pbody)) != APR_SUCCESS) {
-        clone->socket->socket = NULL;
-        goto error;
-      }
-      if ((status =
-             apr_socket_timeout_set(clone->socket->socket, worker->socktmo)) 
-          != APR_SUCCESS) {
-        goto error;
-      }
-      if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {
-        goto error;
-      }
-      worker_log(worker, LOG_DEBUG, "--- create thread");
-      clone->socket->socket_state = SOCKET_CONNECTED;
-      clone->which = i;
-      if ((status =
-           apr_thread_create(&threadl, tattr, worker_thread_server,
-                 clone, worker->pbody)) != APR_SUCCESS) {
-        goto error;
-      }
-
-      apr_table_addn(servers, worker->name, (char *)threadl);
-
-      ++i;
-    }
-    /* wait threads */
-    e = (apr_table_entry_t *) apr_table_elts(servers)->elts;
-    for (i = 0; i < apr_table_elts(servers)->nelts; ++i) {
-      threadl = (apr_thread_t *) e[i].val;
-      apr_thread_join(&status, threadl);
-    }
+    status = worker_run_server_threads(worker, threads);
   }
   else {
-    if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
-      goto error;
-    }
-
-    worker_flush(worker, worker->pbody);
-
-    if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
-      goto error;
-    }
-
-    if ((status = worker_test_unused_errors(worker)) != APR_SUCCESS) {
-      goto error;
-    }
+    status = worker_run_single_server(worker);
   }
 
 error:
