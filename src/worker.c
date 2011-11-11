@@ -698,8 +698,16 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
   return APR_SUCCESS;
 }
 
+/**
+ * Throws assertions if specified match did have noch hit.
+ * @param worker IN
+ * @param match IN table of all specified matchs
+ * @param namespace IN the namespace of this matchs
+ * @param status IN current status of earlier calls
+ * @return new status
+ */
 static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match, 
-                                        char *error_prefix, apr_status_t status) {
+                                        char *namespace, apr_status_t status) {
   apr_table_entry_t *e;
   int i;
   apr_pool_t *pool;
@@ -708,23 +716,31 @@ static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match,
   for (i = 0; i < apr_table_elts(match)->nelts; ++i) {
     regex_t *regex = (regex_t *) e[i].val;
     if (!regdidmatch(regex)) {
-      worker_log(worker, LOG_ERR, "%s: Did expect %s", error_prefix, regexpattern(regex));
+      worker_log(worker, LOG_ERR, "%s: Did expect %s", namespace, regexpattern(regex));
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
       }
     }
   }
   apr_table_clear(match);
-  pool = module_get_config(worker->config, error_prefix);
-  module_set_config(worker->config, error_prefix, NULL);
+  pool = module_get_config(worker->config, namespace);
+  module_set_config(worker->config, namespace, NULL);
   if (pool) {
     apr_pool_destroy(pool);
   }
   return status;
 }
 
+/**
+ * Throws assertions if specified expect did have noch hit.
+ * @param worker IN
+ * @param expect IN table of all specified expects
+ * @param namespace IN the namespace of this expects
+ * @param status IN current status of earlier calls
+ * @return new status
+ */
 static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect, 
-                                         char *error_prefix, apr_status_t status) {
+                                         char *namespace, apr_status_t status) {
   apr_table_entry_t *e;
   int i;
   apr_pool_t *pool;
@@ -733,14 +749,14 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
   for (i = 0; i < apr_table_elts(expect)->nelts; ++i) {
     regex_t *regex = (regex_t *) e[i].val;
     if (e[i].key[0] != '!' && !regdidmatch(regex)) {
-      worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", error_prefix, 
+      worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
 	         regexpattern(regex));
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
       }
     }
     if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
-      worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", error_prefix, 
+      worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
 	         &e[i].key[1]);
       if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
@@ -748,21 +764,30 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
     }
   }
   apr_table_clear(expect);
-  pool = module_get_config(worker->config, error_prefix);
-  module_set_config(worker->config, error_prefix, NULL);
+  pool = module_get_config(worker->config, namespace);
+  module_set_config(worker->config, namespace, NULL);
   if (pool) {
     apr_pool_destroy(pool);
   }
   return status;
 }
 
+
+/**
+ * Grep do not have an assertion at all, actually.
+ * @param worker IN
+ * @param expect IN table of all specified expects
+ * @param namespace IN the namespace of this expects
+ * @param status IN current status of earlier calls
+ * @return new status
+ */
 static apr_status_t worker_assert_grep(worker_t * worker, apr_table_t *grep, 
-                                       char *error_prefix, apr_status_t status) {
+                                       char *namespace, apr_status_t status) {
   apr_pool_t *pool;
 
   apr_table_clear(grep);
-  pool = module_get_config(worker->config, error_prefix);
-  module_set_config(worker->config, error_prefix, NULL);
+  pool = module_get_config(worker->config, namespace);
+  module_set_config(worker->config, namespace, NULL);
   if (pool) {
     apr_pool_destroy(pool);
   }
@@ -772,33 +797,33 @@ static apr_status_t worker_assert_grep(worker_t * worker, apr_table_t *grep,
 /**
  * Do check for if all defined expects are handled 
  *
- * @param self IN worker thread object
+ * @param worker IN worker thread object
  * @param status IN current status
  *
  * @return current status or APR_EINVAL if there are unhandled expects
  */
-apr_status_t worker_assert(worker_t * self, apr_status_t status) {
-  status = worker_assert_match(self, self->match.dot, "MATCH .", 
+apr_status_t worker_assert(worker_t * worker, apr_status_t status) {
+  status = worker_assert_match(worker, worker->match.dot, "MATCH .", 
                                status);
-  status = worker_assert_match(self, self->match.headers, "MATCH headers", 
+  status = worker_assert_match(worker, worker->match.headers, "MATCH headers", 
                                status);
-  status = worker_assert_match(self, self->match.body, "MATCH body", 
+  status = worker_assert_match(worker, worker->match.body, "MATCH body", 
                                status);
-  status = worker_assert_expect(self, self->expect.dot, "EXPECT .", 
+  status = worker_assert_expect(worker, worker->expect.dot, "EXPECT .", 
                                status);
-  status = worker_assert_expect(self, self->expect.headers, "EXPECT headers", 
+  status = worker_assert_expect(worker, worker->expect.headers, "EXPECT headers", 
                                status);
-  status = worker_assert_expect(self, self->expect.body, "EXPECT body", 
+  status = worker_assert_expect(worker, worker->expect.body, "EXPECT body", 
                                 status);
-  status = worker_assert_grep(self, self->grep.dot, "GREP .", 
+  status = worker_assert_grep(worker, worker->grep.dot, "GREP .", 
                               status);
-  status = worker_assert_grep(self, self->grep.headers, "GREP headers", 
+  status = worker_assert_grep(worker, worker->grep.headers, "GREP headers", 
                               status);
-  status = worker_assert_grep(self, self->grep.body, "GREP body", 
+  status = worker_assert_grep(worker, worker->grep.body, "GREP body", 
                               status);
   /* check if match sequence is empty */
-  if (self->match_seq && self->match_seq[0] != 0) {
-    worker_log(self, LOG_ERR, "The following match sequence \"%s\" was not in correct order", self->match_seq);
+  if (worker->match_seq && worker->match_seq[0] != 0) {
+    worker_log(worker, LOG_ERR, "The following match sequence \"%s\" was not in correct order", worker->match_seq);
     return APR_EINVAL;
   }
   return status;
@@ -1027,7 +1052,6 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
     }
     if (tmpbuf) {
       worker_log_buf(worker, LOG_INFO, tmpbuf, "<", len);
-      //worker_log_buf(worker, LOG_INFO, tmpbuf, "<", len);
       worker_match(worker, worker->match.dot, tmpbuf, len);
       worker_match(worker, worker->match.body, tmpbuf, len);
       worker_match(worker, worker->grep.dot, tmpbuf, len);
