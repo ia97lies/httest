@@ -1,0 +1,25 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK sendreq host url : code text
+_REQ $host $YOUR_PORT
+__GET $url HTTP/1.1
+__Host: $host
+__
+_MATCH headers "HTTP/1.1 ([0-9]+) (.*)" code text
+_WAIT
+END
+
+CLIENT
+sendreq $YOUR_HOST /foo/bar ret_code ret_text
+_EXPECT VAR(ret_code) "200" 
+_EXPECT VAR(ret_text) "OK"
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== AS1 OK ==
+END
