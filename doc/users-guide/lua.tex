@@ -1,0 +1,52 @@
+\section{Use Lua Power}
+
+If you have enabled Lua support in your httest you can use the full Lua
+power in htt. Lua fits perfekt into httest, because Lua also do have the feature
+of multiple return values like httest. 
+
+A simple Lua example:
+
+\begin{usplisting}
+    BLOCK:LUA my_lua_func text param val : res res2
+      print(text.." "..param.." = "..val)
+      return "hello", "world"
+    END
+      
+    CLIENT
+      my_lua_func "That is my text" "key" "abcdefg" ret ret2
+      _DEBUG $ret $ret2
+    END
+\end{usplisting}
+
+A simple but powerfull extention of \texttt{\_WAIT} makes it possible to hand over a
+received buffer to a Lua block. Additional we need a way to hand over the buffer
+unresolved. 
+
+A simple example will explain it:
+
+\begin{usplisting}
+    BLOCK:LUA my_lua_func buffer
+      print("Received buffer:")
+      print(buffer)
+    END
+      
+    CLIENT
+      _REQ www.wikipedia.com 80
+      __GET / HTTP/1.1
+      __Host: www.wikipedia.com
+      __
+      _WAIT buf
+      
+      my_lua_func VAR(buf)
+    END
+\end{usplisting}
+
+There are two special things which makes it possible to hand over a received 
+buffer to a Lua block. The first thing is, \texttt{\_WAIT} can store the buffer to a
+variable, if one is specified. The other special thing is \texttt{VAR(buf)}
+which do hand over the received buffer unresolved. Of course you can do it
+the old way with \texttt{\$buf}. But if the result is not a single word you have
+to quote it and if there are quotes in the received buffer it, it wont work at all,
+because the resolving is allwas done before execution. That's why we use
+the trick with \texttt{VAR(buf)}. Attention, this works only for Lua block calls.
+

@@ -22,6 +22,9 @@ The following global body types exist:
     handled in this block.
   \end{itemize}
   
+\item \texttt{BLOCK:LUA} - This defines a special block for embedding Lua into httest. Lua support must
+be enabled on compile time (\texttt{./configure --enable-lua-module}). 
+ 
 \item \texttt{DAEMON} - Other than a \texttt{SERVER}, a \texttt{DAEMON} does not implement any kind of listener. It is just 
 a separate thread that can be used to monitor or control the execution of the test, e.g. implement timeout 
 functionality to interrupt a hanging test etc.
@@ -37,7 +40,7 @@ The following local body types exist:
 \item \texttt{\_FOR} - Allows to define code with is executed for a given number of elements.
 \item \texttt{\_IF} - Allows to define code with is executed only if a given condition is true.
 \item \texttt{\_LOOP} - Allows to execute the given block of code a certain number of times.
-% \item \texttt{\_PROCESS} - Forks a process to run the body in.
+\item \texttt{\_PROCESS} - Forks a process to run the body in.
 \item \texttt{\_RPS} - Limits the number of requests sent during a period of time.
 \item \texttt{\_SOCKET} - Spawns a socket reader.
 \end{itemize}
@@ -63,7 +66,8 @@ and \texttt{DAEMON} bodies, on the other hand, will not automatically terminate
 the test.
 
 \subsection{Synchronization}
-There is no means of synchronization between those threads as of now.
+With the commands \texttt{\_PROC:LOCK} and \texttt{\_PROC:UNLOCK} it is possible to
+synchronize those threads. 
 
 
 % --------------------------- Section "Client" ------------------------------
@@ -228,3 +232,30 @@ The following example shows a \texttt{BLOCK} with some parameters:
     END
 \end{usplisting}
 % ---------------------- SAMPLE BOX ----- END ------------
+
+New it is possible to specify input and output parameters in the block
+definition. This input and output parameters are only visible with in the block.
+The parameters are space separated. The input parameters are separated from 
+the output parameters with a "\texttt{:}". The return values are mapped
+to the callers variables.
+
+A simple \texttt{BLOCK} example with defined paramters:
+
+% ---------------------- SAMPLE BOX ----- BEGIN ------------
+\begin{usplisting}
+    BLOCK SENDREQ host url : code text
+    _REQ $host 80 
+    __GET $url HTTP/1.1
+    __Host: $host
+    __
+    _MATCH headers "HTTP/1.1 ([0-9]+) (.*)" code text
+    _WAIT
+    END
+
+    CLIENT
+      SENDREQ www.wikipedia.com / my_code my_text
+      _DEBUG $my_code $my_text
+    END
+\end{usplisting}
+% ---------------------- SAMPLE BOX ----- END ------------
+

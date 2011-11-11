@@ -1,0 +1,39 @@
+\section{Forward Proxy}
+
+Using a plain forward proxy in your test is very straight forward. The following
+example will show it.
+\begin{usplisting}
+    CLIENT
+      _REQ my.forward.proxy 6667
+      __GET http://www.wikipedia.com/ HTTP/1.1
+      __Host: www.wikipedia.com
+      __User-Agent: httest
+      __
+      _WAIT
+    END
+\end{usplisting}
+
+The GET line do contain the full qualified URL including scheme, hostname and 
+optional the port.
+
+\section{Forward Proxy with SSL}
+
+Using a SSL forward proxy in your test is a more complicated task. You have to
+tell the forward proxy first where to connect and the SSL connection must be
+done after success.
+\begin{usplisting}
+    CLIENT
+    _REQ my.forward.proxy 6667
+    __CONNECT https://www.wikipedia.com
+    __
+    _EXPECT headers "HTTP/1.1 200"
+    _WAIT
+    _SSL:CONNECT SSL
+    __GET / HTTP/1.1
+    __Host: www.wikipedia.com
+    __
+    _WAIT
+    END
+\end{usplisting}
+
+With \texttt{\_SSL:CONNECT SSL} the SSL handshake is done after TCP connect.

@@ -1,0 +1,20 @@
+\section{SOCKS Proxy}
+
+The problem that a server is not reachable in a given network it makes
+it neccessary to build up a SOCKS tunnel to this network and run the test
+over that tunnel. Htt do have SOCKS support.
+
+\begin{usplisting}
+    CLIENT
+      _REQ your.socks.host 6667 
+      _SOCKS:CONNECT www.wikipedia.com 80
+      __GET / HTTP/1.1
+      __Host: www.wikipedia.com
+      __
+      _WAIT
+    END
+\end{usplisting}
+
+First htt do connect to your SOCKS host and port with \texttt{\_REQ}.
+An then htt do tell the SOCKS proxy to connect to wikipedia.
+
