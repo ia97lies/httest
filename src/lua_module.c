@@ -157,30 +157,30 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   lua_State *lua = lua_open();
 
   luaL_openlibs(lua);
-	e = (apr_table_entry_t *) apr_table_elts(config->params)->elts;
+  e = (apr_table_entry_t *) apr_table_elts(config->params)->elts;
   for (i = 1; i < apr_table_elts(config->params)->nelts; i++) {
-		const char *val = NULL;
-		char *param = store_get_copy(worker->params, ptmp, e[i].key);
-		if (strncmp(param, "VAR(", 4) == 0) {
-			char *var = param + 4;
+    const char *val = NULL;
+    char *param = store_get_copy(worker->params, ptmp, e[i].key);
+    if (strncmp(param, "VAR(", 4) == 0) {
+      char *var = param + 4;
       apr_size_t len = strlen(var);
-			if (len > 0) {
-				var[len-1] = 0;
-			}
-			val = store_get(worker->vars, var);
-			if (!val) {
-				val = store_get(worker->locals, var);
-			}
-			if (!val) {
-				val = param;
-			}
-		}
-		else {
-			val = param;
-		}
+      if (len > 0) {
+        var[len-1] = 0;
+      }
+      val = store_get(worker->vars, var);
+      if (!val) {
+        val = store_get(worker->locals, var);
+      }
+      if (!val) {
+        val = param;
+      }
+      }
+      else {
+        val = param;
+      }
     lua_pushstring(lua, val);
-		lua_setglobal(lua, e[i].key);
-	}
+    lua_setglobal(lua, e[i].key);
+  }
   reader = lua_new_lua_reader(worker, ptmp);
   if (lua_load(lua, lua_get_line, reader, "@client") != 0 ||
       lua_pcall(lua, 0, LUA_MULTRET, 0) != 0) {
@@ -190,9 +190,9 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
     lua_pop(lua, 1);
     return APR_EGENERAL;
   }
-	e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
+  e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
   for (i = 0; i < apr_table_elts(config->retvars)->nelts; i++) {
-		worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
+    worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
     if (lua_isstring(lua, i+1)) {
       store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i+1));
     }
@@ -233,8 +233,8 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
     }
     token = apr_strtok(NULL, " ", &last);
   }
-
 }
+
 /************************************************************************
  * Hooks 
  ***********************************************************************/
@@ -249,8 +249,8 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
   apr_status_t status;
   if (strncmp(*line, ":LUA ", 5) == 0) {
     lua_wconf_t *wconf;
-		lua_gconf_t *gconf = lua_get_global_config(global);
-		gconf->do_read_line = 1;
+    lua_gconf_t *gconf = lua_get_global_config(global);
+    gconf->do_read_line = 1;
     *line += 5;
     if ((status = worker_new(&global->worker, "", "", global, 
                              block_lua_interpreter)) 
@@ -272,12 +272,12 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
  * @return APR_SUCCESS
  */
 static apr_status_t lua_read_line(global_t *global, char **line) {
-	lua_gconf_t *gconf = lua_get_global_config(global);
-	if (gconf->do_read_line) {
-		if (*line[0] == 0) {
-			*line = apr_pstrdup(global->pool, " ");
-		}
-	}
+  lua_gconf_t *gconf = lua_get_global_config(global);
+  if (gconf->do_read_line) {
+    if (*line[0] == 0) {
+      *line = apr_pstrdup(global->pool, " ");
+    }
+  }
   return APR_SUCCESS;
 }
 
@@ -288,9 +288,9 @@ static apr_status_t lua_read_line(global_t *global, char **line) {
  * @return APR_SUCCESS
  */
 static apr_status_t lua_block_end(global_t *global) {
-	lua_gconf_t *gconf = lua_get_global_config(global);
-	gconf->do_read_line = 0;
-	return APR_SUCCESS;
+  lua_gconf_t *gconf = lua_get_global_config(global);
+  gconf->do_read_line = 0;
+  return APR_SUCCESS;
 }
 
 /************************************************************************
