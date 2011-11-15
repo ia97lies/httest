@@ -902,39 +902,49 @@ error:
 /**
  * Test for unused expects and matchs
  *
- * @param self IN thread data object
+ * @param worker IN thread data object
  *
  * @return APR_SUCCESS or APR_EGENERAL
  */
-apr_status_t worker_test_unused(worker_t * self) {
-  if (apr_table_elts(self->match.dot)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused MATCH .");
+apr_status_t worker_test_unused(worker_t * worker) {
+  if (apr_table_elts(worker->match.dot)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused MATCH .");
     return APR_EGENERAL;
   }
-  if (apr_table_elts(self->match.headers)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused MATCH headers");
+  if (apr_table_elts(worker->match.headers)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused MATCH headers");
     return APR_EGENERAL;
   }
-  if (apr_table_elts(self->match.body)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused MATCH body");
+  if (apr_table_elts(worker->match.body)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused MATCH body");
     return APR_EGENERAL;
   }
-  if (apr_table_elts(self->match.exec)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused MATCH exec");
+  if (apr_table_elts(worker->match.exec)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused MATCH exec");
     return APR_EGENERAL;
   }
-  if (apr_table_elts(self->expect.dot)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused EXPECT .");
+  if (apr_table_elts(worker->expect.dot)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused EXPECT .");
     return APR_EGENERAL;
   }
-  if (apr_table_elts(self->expect.headers)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused EXPECT headers");
+  if (apr_table_elts(worker->expect.headers)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused EXPECT headers");
     return APR_EGENERAL;
   }
-  if (apr_table_elts(self->expect.body)->nelts) {
-    worker_log(self, LOG_ERR, "There are unused EXPECT body");
+  if (apr_table_elts(worker->expect.body)->nelts) {
+    worker_log(worker, LOG_ERR, "There are unused EXPECT body");
     return APR_EGENERAL;
   }
+
+  /* reset the matcher tables */
+  apr_table_clear(worker->match.dot);
+  apr_table_clear(worker->match.headers);
+  apr_table_clear(worker->match.body);
+  apr_table_clear(worker->match.error);
+  apr_table_clear(worker->expect.dot);
+  apr_table_clear(worker->expect.headers);
+  apr_table_clear(worker->expect.body);
+  apr_table_clear(worker->expect.error);
 
   return APR_SUCCESS;
 }
@@ -1677,14 +1687,13 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       worker->socket->socket = NULL;
       return status;
     }
-    if ((status =
-         apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY,
-                            1)) != APR_SUCCESS) {
+    if ((status = apr_socket_opt_set(worker->socket->socket, 
+                                     APR_TCP_NODELAY, 1)) != APR_SUCCESS) {
       return status;
     }
 
-    if ((status =
-         apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) != APR_SUCCESS) {
+    if ((status = apr_socket_timeout_set(worker->socket->socket, 
+                                         worker->socktmo)) != APR_SUCCESS) {
       return status;
     }
 
@@ -1695,15 +1704,14 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       return status;
     }
 
-    if ((status =
-         apr_socket_connect(worker->socket->socket, remote_addr)) 
-				!= APR_SUCCESS) {
+    if ((status = apr_socket_connect(worker->socket->socket, remote_addr)) 
+        != APR_SUCCESS) {
       return status;
     }
 
-    if ((status =
-         apr_socket_opt_set(worker->socket->socket, APR_SO_KEEPALIVE,
-                            1)) != APR_SUCCESS) {
+    if ((status = apr_socket_opt_set(worker->socket->socket, 
+                                     APR_SO_KEEPALIVE, 1)) 
+        != APR_SUCCESS) {
       return status;
     }
 
@@ -1712,16 +1720,6 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
       return status;
     }
   }
-
-  /* reset the matcher tables */
-  apr_table_clear(worker->match.dot);
-  apr_table_clear(worker->match.headers);
-  apr_table_clear(worker->match.body);
-  apr_table_clear(worker->match.error);
-  apr_table_clear(worker->expect.dot);
-  apr_table_clear(worker->expect.headers);
-  apr_table_clear(worker->expect.body);
-  apr_table_clear(worker->expect.error);
 
   return APR_SUCCESS;
 }
@@ -1774,15 +1772,6 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
       return status;
     }
   }
-
-  apr_table_clear(worker->match.dot);
-  apr_table_clear(worker->match.headers);
-  apr_table_clear(worker->match.body);
-  apr_table_clear(worker->match.error);
-  apr_table_clear(worker->expect.dot);
-  apr_table_clear(worker->expect.headers);
-  apr_table_clear(worker->expect.body);
-  apr_table_clear(worker->expect.error);
 
   return APR_SUCCESS;
 }
