@@ -2879,8 +2879,8 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
     /* recv_len to max and timeout to min */
     recv_len = BLOCK_MAX;
     /* set timout to specified socket tmo */
-    if ((status =
-           apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
+    if ((status = apr_socket_timeout_set(worker->socket->socket, 
+                                         worker->socktmo)) 
 	!= APR_SUCCESS) {
       return status;
     }
