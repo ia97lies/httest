@@ -144,6 +144,74 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
  * @param ptmp IN temporary pool
  * @return an apr status
  */
+static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
+  char *scope_id;
+  apr_sockaddr_t *local_addr;
+  int backlog_size;
+
+  apr_status_t status = APR_SUCCESS;
+  char *address = store_get_copy(worker->params, ptmp, "1");
+  char *backlog = store_get_copy(worker->params, ptmp, "2");
+
+  if (!address) {
+    worker_log_error(worker, "no address specified");
+    status = APR_EINVAL;
+  }
+
+  backlog_size = backlog ? apr_atoi64(backlog) : LISTENBACKLOG_DEFAULT;
+
+  if ((status = apr_parse_addr_port(&worker->listener_addr, &scope_id, 
+	                            &worker->listener_port, address, 
+				    worker->pbody)) != APR_SUCCESS) {
+    goto error;
+  }
+  
+  if (worker->listener) {
+    worker_log_error(worker, "Server allready up");
+    return APR_EGENERAL;
+  }
+
+  if ((status = apr_sockaddr_info_get(&local_addr, worker->listener_addr, APR_UNSPEC,
+                                      worker->listener_port, APR_IPV4_ADDR_OK, worker->pbody))
+      != APR_SUCCESS) {
+    goto error;
+  }
+
+  if ((status = apr_socket_create(&worker->listener, local_addr->family, SOCK_STREAM,
+                                  APR_PROTO_TCP, worker->pbody)) != APR_SUCCESS)
+  {
+    worker->listener = NULL;
+    goto error;
+  }
+
+  status = apr_socket_opt_set(worker->listener, APR_SO_REUSEADDR, 1);
+  if (status != APR_SUCCESS && status != APR_ENOTIMPL) {
+    goto error;
+  }
+  
+  worker_log(worker, LOG_DEBUG, "--- bind");
+  if ((status = apr_socket_bind(worker->listener, local_addr)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not bind");
+    goto error;
+  }
+
+  worker_log(worker, LOG_DEBUG, "--- listen");
+  if ((status = apr_socket_listen(worker->listener, backlog_size)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not listen");
+    goto error;
+  }
+
+error:
+  return status;
+}
+
+/**
+ * Setup a connection to host
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary pool
+ * @return an apr status
+ */
 static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   apr_sockaddr_t *remote_addr;
@@ -307,6 +375,13 @@ static apr_status_t block_TCP_CLOSE(worker_t * worker, worker_t *parent, apr_poo
 apr_status_t tcp_module_init(global_t *global) {
   apr_status_t status;
 
+  if ((status = module_command_new(global, "TCP", "_LISTEN",
+				   "<host>:<port>",
+                                   "Listen for TCP connection.",
+	                           block_TCP_LISTEN)) != APR_SUCCESS) {
+    return status;
+  }
+
   if ((status = module_command_new(global, "TCP", "_CONNECT",
 				   "<host> <port>[:<tag>]",
                                    "Open connection to defined <host> <port>.\n"
@@ -331,8 +406,6 @@ apr_status_t tcp_module_init(global_t *global) {
 	                           block_TCP_CLOSE)) != APR_SUCCESS) {
     return status;
   }
-
-  /* TCP LISTEN */
 
   htt_hook_connect(tcp_hook_connect, NULL, NULL, 0);
   htt_hook_accept(tcp_hook_accept, NULL, NULL, 0);
