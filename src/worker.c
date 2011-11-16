@@ -936,16 +936,6 @@ apr_status_t worker_test_unused(worker_t * worker) {
     return APR_EGENERAL;
   }
 
-  /* reset the matcher tables */
-  apr_table_clear(worker->match.dot);
-  apr_table_clear(worker->match.headers);
-  apr_table_clear(worker->match.body);
-  apr_table_clear(worker->match.error);
-  apr_table_clear(worker->expect.dot);
-  apr_table_clear(worker->expect.headers);
-  apr_table_clear(worker->expect.body);
-  apr_table_clear(worker->expect.error);
-
   return APR_SUCCESS;
 }
 
@@ -1721,6 +1711,16 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
     }
   }
 
+  /* reset the matcher tables */
+  apr_table_clear(worker->match.dot);
+  apr_table_clear(worker->match.headers);
+  apr_table_clear(worker->match.body);
+  apr_table_clear(worker->match.error);
+  apr_table_clear(worker->expect.dot);
+  apr_table_clear(worker->expect.headers);
+  apr_table_clear(worker->expect.body);
+  apr_table_clear(worker->expect.error);
+
   return APR_SUCCESS;
 }
 
@@ -1773,6 +1773,16 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
     }
   }
 
+  /* reset the matcher tables */
+  apr_table_clear(worker->match.dot);
+  apr_table_clear(worker->match.headers);
+  apr_table_clear(worker->match.body);
+  apr_table_clear(worker->match.error);
+  apr_table_clear(worker->expect.dot);
+  apr_table_clear(worker->expect.headers);
+  apr_table_clear(worker->expect.body);
+  apr_table_clear(worker->expect.error);
+
   return APR_SUCCESS;
 }
 
@@ -1811,6 +1821,16 @@ apr_status_t command_CLOSE(command_t * self, worker_t * worker,
   if ((status = worker_conn_close(worker, copy)) != APR_SUCCESS) {
     return status;
   }
+
+  /* reset the matcher tables */
+  apr_table_clear(worker->match.dot);
+  apr_table_clear(worker->match.headers);
+  apr_table_clear(worker->match.body);
+  apr_table_clear(worker->match.error);
+  apr_table_clear(worker->expect.dot);
+  apr_table_clear(worker->expect.headers);
+  apr_table_clear(worker->expect.body);
+  apr_table_clear(worker->expect.error);
 
   return APR_SUCCESS;
 }

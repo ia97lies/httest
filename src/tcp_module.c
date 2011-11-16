@@ -301,6 +301,16 @@ static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_p
     }
   }
 
+  /* reset the matcher tables */
+  apr_table_clear(worker->match.dot);
+  apr_table_clear(worker->match.headers);
+  apr_table_clear(worker->match.body);
+  apr_table_clear(worker->match.error);
+  apr_table_clear(worker->expect.dot);
+  apr_table_clear(worker->expect.headers);
+  apr_table_clear(worker->expect.body);
+  apr_table_clear(worker->expect.error);
+
   return APR_SUCCESS;
 }
 
