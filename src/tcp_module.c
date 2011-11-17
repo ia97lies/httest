@@ -39,7 +39,7 @@
  * @param desc OUT os socket descriptor
  * @return apr status
  */
-apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
+static apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
   apr_socket_t *socket = data;
   return apr_os_sock_get(desc, socket);
 }
@@ -50,7 +50,7 @@ apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
  * @param desc OUT os socket descriptor
  * @return apr status
  */
-apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t) {
+static apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t) {
   apr_socket_t *socket = data;
   return apr_socket_timeout_set(socket, t);
 }
@@ -62,7 +62,7 @@ apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t) {
  * @param size INOUT buffer len
  * @return apr status
  */
-apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) {
+static apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) {
   apr_socket_t *socket = data;
   return apr_socket_recv(socket, buf, size);
 }
@@ -74,7 +74,7 @@ apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) {
  * @param size INOUT buffer len
  * @return apr status
  */
-apr_status_t tcp_transport_write(void *data, char *buf, apr_size_t size) {
+static apr_status_t tcp_transport_write(void *data, char *buf, apr_size_t size) {
   apr_socket_t *socket = data;
   apr_status_t status = APR_SUCCESS;
   apr_size_t total = size;
@@ -94,8 +94,8 @@ apr_status_t tcp_transport_write(void *data, char *buf, apr_size_t size) {
 }
 
 /************************************************************************
- * Commands
- ***********************************************************************/
+ * Hooks
+************************************************************************/
 /**
  * do ssl connect
  * @param worker IN
@@ -137,33 +137,25 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
   return APR_SUCCESS;
 }
 
+/************************************************************************
+ * Optional Functions 
+************************************************************************/
 /**
- * Setup a connection to host
+ * Listen to a tcp socket
  * @param worker IN callee
- * @param parent IN caller
- * @param ptmp IN temporary pool
- * @return an apr status
+ * @param address IN address to bind to
+ * @param backlog IN backlog size
+ * @return apr status
  */
-static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
+apr_status_t tcp_listen(worker_t *worker, char *address, int backlog) {
   char *scope_id;
   apr_sockaddr_t *local_addr;
-  int backlog_size;
-
   apr_status_t status = APR_SUCCESS;
-  char *address = store_get_copy(worker->params, ptmp, "1");
-  char *backlog = store_get_copy(worker->params, ptmp, "2");
-
-  if (!address) {
-    worker_log_error(worker, "no address specified");
-    status = APR_EINVAL;
-  }
-
-  backlog_size = backlog ? apr_atoi64(backlog) : LISTENBACKLOG_DEFAULT;
 
   if ((status = apr_parse_addr_port(&worker->listener_addr, &scope_id, 
 	                            &worker->listener_port, address, 
 				    worker->pbody)) != APR_SUCCESS) {
-    goto error;
+    return status;
   }
   
   if (worker->listener) {
@@ -174,63 +166,48 @@ static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_po
   if ((status = apr_sockaddr_info_get(&local_addr, worker->listener_addr, APR_UNSPEC,
                                       worker->listener_port, APR_IPV4_ADDR_OK, worker->pbody))
       != APR_SUCCESS) {
-    goto error;
+    return status;
   }
 
   if ((status = apr_socket_create(&worker->listener, local_addr->family, SOCK_STREAM,
-                                  APR_PROTO_TCP, worker->pbody)) != APR_SUCCESS)
-  {
+                                  APR_PROTO_TCP, worker->pbody)) != APR_SUCCESS) {
     worker->listener = NULL;
-    goto error;
+    return status;
   }
 
   status = apr_socket_opt_set(worker->listener, APR_SO_REUSEADDR, 1);
   if (status != APR_SUCCESS && status != APR_ENOTIMPL) {
-    goto error;
+    return status;
   }
   
   worker_log(worker, LOG_DEBUG, "--- bind");
   if ((status = apr_socket_bind(worker->listener, local_addr)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not bind");
-    goto error;
+    return status;
   }
 
   worker_log(worker, LOG_DEBUG, "--- listen");
-  if ((status = apr_socket_listen(worker->listener, backlog_size)) != APR_SUCCESS) {
+  if ((status = apr_socket_listen(worker->listener, backlog)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not listen");
-    goto error;
+    return status;
   }
 
-error:
   return status;
 }
 
 /**
- * Setup a connection to host
+ * Listen to a tcp socket
  * @param worker IN callee
- * @param parent IN caller
- * @param ptmp IN temporary pool
- * @return an apr status
+ * @param hostname IN host to connect
+ * @param portname IN port and optional tags
+ * @return apr status
  */
-static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  apr_status_t status;
+apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
+  apr_status_t status = APR_SUCCESS;
   apr_sockaddr_t *remote_addr;
-  char *portname;
-  char *hostname;
   char *tag;
   int port;
   int family = APR_INET;
-
-  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
-  }
-
-  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
-    return status;
-  }
-
-  hostname = store_get_copy(worker->params, ptmp, "1");
-  portname = store_get_copy(worker->params, ptmp, "2");
 
   worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
   worker_get_socket(worker, hostname, portname);
@@ -301,36 +278,16 @@ static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_p
     }
   }
 
-  /* reset the matcher tables */
-  apr_table_clear(worker->match.dot);
-  apr_table_clear(worker->match.headers);
-  apr_table_clear(worker->match.body);
-  apr_table_clear(worker->match.error);
-  apr_table_clear(worker->expect.dot);
-  apr_table_clear(worker->expect.headers);
-  apr_table_clear(worker->expect.body);
-  apr_table_clear(worker->expect.error);
-
-  return APR_SUCCESS;
+  return status;
 }
 
 /**
- * Accept connection from remote host 
+ * Accept a tcp socket
  * @param worker IN callee
- * @param parent IN caller
- * @param ptmp IN temporary pool
- * @return an apr status
+ * @return apr status
  */
-static apr_status_t block_TCP_ACCEPT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  apr_status_t status;
-
-  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
-  }
-
-  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
-    return status;
-  }
+apr_status_t tcp_accept(worker_t *worker) {
+  apr_status_t status = APR_SUCCESS;
 
   worker_get_socket(worker, "Default", "0");
 
@@ -357,8 +314,86 @@ static apr_status_t block_TCP_ACCEPT(worker_t * worker, worker_t *parent, apr_po
       return status;
     }
   }
+  return status;
+}
 
-  return APR_SUCCESS;
+/************************************************************************
+ * Commands
+ ***********************************************************************/
+
+/**
+ * Setup a connection to host
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary pool
+ * @return an apr status
+ */
+static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
+  int backlog_size;
+
+  apr_status_t status = APR_SUCCESS;
+  char *address = store_get_copy(worker->params, ptmp, "1");
+  char *backlog = store_get_copy(worker->params, ptmp, "2");
+
+  if (!address) {
+    worker_log_error(worker, "no address specified");
+    status = APR_EINVAL;
+  }
+
+  backlog_size = backlog ? apr_atoi64(backlog) : LISTENBACKLOG_DEFAULT;
+
+  return tcp_listen(worker, address, backlog_size);
+}
+
+/**
+ * Setup a connection to host
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary pool
+ * @return an apr status
+ */
+static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
+  apr_status_t status;
+  char *portname;
+  char *hostname;
+
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
+    return status;
+  }
+
+  hostname = store_get_copy(worker->params, ptmp, "1");
+  portname = store_get_copy(worker->params, ptmp, "2");
+
+  status = tcp_connect(worker, hostname, portname);
+
+  worker_test_reset(worker);
+
+  return status;
+}
+
+/**
+ * Accept connection from remote host 
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary pool
+ * @return an apr status
+ */
+static apr_status_t block_TCP_ACCEPT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
+  apr_status_t status;
+
+  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
+    return status;
+  }
+
+  return tcp_accept(worker);
 }
 
 /**
