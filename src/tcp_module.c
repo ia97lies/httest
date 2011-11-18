@@ -148,16 +148,9 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
  * @param backlog IN backlog size
  * @return apr status
  */
-apr_status_t tcp_listen(worker_t *worker, char *address, int backlog) {
-  char *scope_id;
+apr_status_t tcp_listen(worker_t *worker,  int backlog) {
+  apr_status_t status;
   apr_sockaddr_t *local_addr;
-  apr_status_t status = APR_SUCCESS;
-
-  if ((status = apr_parse_addr_port(&worker->listener_addr, &scope_id, 
-	                            &worker->listener_port, address, 
-				    worker->pbody)) != APR_SUCCESS) {
-    return status;
-  }
   
   if (worker->listener) {
     worker_log_error(worker, "Server allready up");
@@ -193,7 +186,7 @@ apr_status_t tcp_listen(worker_t *worker, char *address, int backlog) {
     return status;
   }
 
-  return status;
+  return APR_SUCCESS;
 }
 
 /**
@@ -330,6 +323,7 @@ apr_status_t tcp_close(worker_t *worker) {
  */
 static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   int backlog_size;
+  char *scope_id;
 
   apr_status_t status = APR_SUCCESS;
   char *address = store_get_copy(worker->params, ptmp, "1");
@@ -342,7 +336,14 @@ static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_po
 
   backlog_size = backlog ? apr_atoi64(backlog) : LISTENBACKLOG_DEFAULT;
 
-  return tcp_listen(worker, address, backlog_size);
+  if ((status = apr_parse_addr_port(&worker->listener_addr, &scope_id, 
+	                            &worker->listener_port, address, 
+				    worker->pbody)) != APR_SUCCESS) {
+    worker_log_error(worker, "Can not parse '%s'", address);
+    return status;
+  }
+
+  return tcp_listen(worker, backlog_size);
 }
 
 /**

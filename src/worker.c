@@ -2664,50 +2664,14 @@ apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data,
  * @return APR_SUCCESS
  */
 apr_status_t worker_listener_up(worker_t *worker, apr_int32_t backlog) {
-  apr_sockaddr_t *local_addr;
-
   apr_status_t status = APR_SUCCESS;
 
   worker_get_socket(worker, "Default", "0");
-  
-  if (worker->listener) {
-    worker_log_error(worker, "Server allready up");
-    return APR_EGENERAL;
-  }
 
-  if ((status = apr_sockaddr_info_get(&local_addr, worker->listener_addr, APR_UNSPEC,
-                                      worker->listener_port, APR_IPV4_ADDR_OK, worker->pbody))
-      != APR_SUCCESS) {
-    goto error;
-  }
-
-  if ((status = apr_socket_create(&worker->listener, local_addr->family, SOCK_STREAM,
-                                  APR_PROTO_TCP, worker->pbody)) != APR_SUCCESS)
-  {
-    worker->listener = NULL;
-    goto error;
-  }
-
-  status = apr_socket_opt_set(worker->listener, APR_SO_REUSEADDR, 1);
-  if (status != APR_SUCCESS && status != APR_ENOTIMPL) {
-    goto error;
-  }
-  
-  worker_log(worker, LOG_DEBUG, "--- bind");
-  if ((status = apr_socket_bind(worker->listener, local_addr)) != APR_SUCCESS) {
-    worker_log_error(worker, "Could not bind");
-    goto error;
-  }
-
-  worker_log(worker, LOG_DEBUG, "--- listen");
-  if ((status = apr_socket_listen(worker->listener, backlog)) != APR_SUCCESS) {
-    worker_log_error(worker, "Could not listen");
-    goto error;
-  }
+  status = tcp_listen(worker, backlog);
 
   worker->socket->socket_state = SOCKET_CLOSED;
 
-error:
   return status;
 }
 
