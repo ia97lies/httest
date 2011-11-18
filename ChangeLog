@@ -1,19 +1,26 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.1.7
+  *) httest: Refactoring code and remove duplicated functions in worker.c and
+             tcp_module.c.
+
+  *) httest: Add define for openssl libraries without SSLv2 support, thanks to
+             Eva Ramon for reporting this issue.
+
+Changes with httest 2.1.7
   *) configure: Correct --with-lua5.1 option.
 
 
 Changes with httest 2.1.6
-	*) plugins: Add embedded lua syntax support.
+  *) plugins: Add embedded lua syntax support.
 
-	*) httest: Added experimental lua module, for full Lua power in httest. This
-	           needs liblua5.1 and its development header files.
+  *) httest: Added experimental lua module, for full Lua power in httest. This
+             needs liblua5.1 and its development header files.
 
   *) plugins: Maintained the vim plugin and added all new commands.
 
   *) httest: Simplyfied syntax of _LOOP, _IF, _RPS, _BPS and all other local
              bodies. New you can close a local body with "_END" instead of 
-						 "_END IF", "_END LOOP", ...
+             "_END IF", "_END LOOP", ...
 
 
 Changes with httest 2.1.5

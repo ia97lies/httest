@@ -316,10 +316,12 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = SSLv23_client_method();
   }
+#ifndef OPENSSL_NO_SSL2 
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
     config->meth = SSLv2_client_method();
   }
+#endif
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
     config->meth = SSLv3_client_method();
@@ -346,11 +348,13 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
     config->meth = SSLv23_server_method();
-  }
+  } 
+#ifndef OPENSSL_NO_SSL2
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
     config->meth = SSLv2_server_method();
   }
+#endif
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
     config->meth = SSLv3_server_method();
@@ -529,7 +533,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
   is_ssl = worker_set_client_method(worker, sslstr);
   if (!is_ssl) {
     worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
-    return APR_EGENERAL;
+    return APR_ENOTIMPL;
   }
   worker->socket->is_ssl = is_ssl;
 
@@ -607,7 +611,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
   is_ssl = worker_set_server_method(worker, sslstr);
   if (!is_ssl) {
     worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
-    return APR_EGENERAL;
+    return APR_ENOTIMPL;
   }
   worker->socket->is_ssl = is_ssl;
 
