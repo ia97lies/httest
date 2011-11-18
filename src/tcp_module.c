@@ -25,6 +25,7 @@
  * Includes
  ***********************************************************************/
 #include "module.h"
+#include "tcp_module.h"
 
 /************************************************************************
  * Definitions 
@@ -209,9 +210,6 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
   int port;
   int family = APR_INET;
 
-  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
-  worker_get_socket(worker, hostname, portname);
-
   if (!hostname) {
     worker_log(worker, LOG_ERR, "no host name specified");
     return APR_EGENERAL;
@@ -230,55 +228,47 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
   }
   port = apr_atoi64(portname);
 
-  if (worker->socket->socket_state == SOCKET_CLOSED) {
 #if APR_HAVE_IPV6
-    /* hostname/address must be surrounded in square brackets */
-    if((hostname[0] == '[') && (hostname[strlen(hostname)-1] == ']')) {
-      family = APR_INET6;
-      hostname++;
-      hostname[strlen(hostname)-1] = '\0';
-    }
+  /* hostname/address must be surrounded in square brackets */
+  if((hostname[0] == '[') && (hostname[strlen(hostname)-1] == ']')) {
+    family = APR_INET6;
+    hostname++;
+    hostname[strlen(hostname)-1] = '\0';
+  }
 #endif
-    if ((status = apr_socket_create(&worker->socket->socket, family,
-				    SOCK_STREAM, APR_PROTO_TCP,
-                                    worker->pbody)) != APR_SUCCESS) {
-      worker->socket->socket = NULL;
-      return status;
-    }
-    if ((status = apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY, 1)) 
-        != APR_SUCCESS) {
-      return status;
-    }
-
-    if ((status = apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
-        != APR_SUCCESS) {
-      return status;
-    }
-
-    if ((status = apr_sockaddr_info_get(&remote_addr, hostname, AF_UNSPEC, port,
-                                        APR_IPV4_ADDR_OK, worker->pbody))
-        != APR_SUCCESS) {
-      return status;
-    }
-
-    if ((status = apr_socket_connect(worker->socket->socket, remote_addr)) 
-        != APR_SUCCESS) {
-      return status;
-    }
-
-    if ((status = apr_socket_opt_set(worker->socket->socket, APR_SO_KEEPALIVE, 1)) 
-        != APR_SUCCESS) {
-      return status;
-    }
-
-    worker->socket->socket_state = SOCKET_CONNECTED;
-
-    if ((status = tcp_hook_connect(worker)) != APR_SUCCESS) {
-      return status;
-    }
+  if ((status = apr_socket_create(&worker->socket->socket, family,
+                                  SOCK_STREAM, APR_PROTO_TCP,
+                                  worker->pbody)) != APR_SUCCESS) {
+    worker->socket->socket = NULL;
+    return status;
+  }
+  if ((status = apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY, 1)) 
+      != APR_SUCCESS) {
+    return status;
   }
 
-  return status;
+  if ((status = apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_sockaddr_info_get(&remote_addr, hostname, AF_UNSPEC, port,
+                                      APR_IPV4_ADDR_OK, worker->pbody))
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_socket_connect(worker->socket->socket, remote_addr)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_socket_opt_set(worker->socket->socket, APR_SO_KEEPALIVE, 1)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  return APR_SUCCESS;
 }
 
 /**
@@ -289,32 +279,42 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
 apr_status_t tcp_accept(worker_t *worker) {
   apr_status_t status = APR_SUCCESS;
 
-  worker_get_socket(worker, "Default", "0");
+  worker_log(worker, LOG_DEBUG, "--- accept");
+  if (!worker->listener) {
+    worker_log_error(worker, "Server down");
+    return APR_EGENERAL;
+  }
+
+  if ((status =
+       apr_socket_accept(&worker->socket->socket, worker->listener,
+                         worker->pbody)) != APR_SUCCESS) {
+    worker->socket->socket = NULL;
+    return status;
+  }
+  if ((status =
+         apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+  
+  return status;
+}
+
+/**
+ * Accept a tcp socket
+ * @param worker IN callee
+ * @return apr status
+ */
+apr_status_t tcp_close(worker_t *worker) {
+  if (!worker->socket || !worker->socket->socket) {
+    return APR_ENOSOCKET;
+  }
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
-    worker_log(worker, LOG_DEBUG, "--- accept");
-    if (!worker->listener) {
-      worker_log_error(worker, "Server down");
-      return APR_EGENERAL;
-    }
-
-    if ((status =
-         apr_socket_accept(&worker->socket->socket, worker->listener,
-                           worker->pbody)) != APR_SUCCESS) {
-      worker->socket->socket = NULL;
-      return status;
-    }
-    if ((status =
-           apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
-	!= APR_SUCCESS) {
-      return status;
-    }
-    worker->socket->socket_state = SOCKET_CONNECTED;
-    if ((status = tcp_hook_accept(worker, NULL)) != APR_SUCCESS) {
-      return status;
-    }
+    return APR_SUCCESS;
   }
-  return status;
+
+  return apr_socket_close(worker->socket->socket);
 }
 
 /************************************************************************
@@ -368,7 +368,18 @@ static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_p
   hostname = store_get_copy(worker->params, ptmp, "1");
   portname = store_get_copy(worker->params, ptmp, "2");
 
-  status = tcp_connect(worker, hostname, portname);
+  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
+  worker_get_socket(worker, hostname, portname);
+
+  if (worker->socket->socket_state == SOCKET_CLOSED) {
+    status = tcp_connect(worker, hostname, portname);
+
+    if ((status = tcp_hook_connect(worker)) != APR_SUCCESS) {
+      return status;
+    }
+
+    worker->socket->socket_state = SOCKET_CONNECTED;
+  }
 
   worker_test_reset(worker);
 
@@ -393,7 +404,22 @@ static apr_status_t block_TCP_ACCEPT(worker_t * worker, worker_t *parent, apr_po
     return status;
   }
 
-  return tcp_accept(worker);
+  worker_get_socket(worker, "Default", "0");
+
+  if (worker->socket->socket_state == SOCKET_CLOSED) {
+    if ((status = tcp_accept(worker)) != APR_SUCCESS) {
+      return status;
+    }
+
+    if ((status = tcp_hook_accept(worker, NULL)) != APR_SUCCESS) {
+      return status;
+    }
+    worker->socket->socket_state = SOCKET_CONNECTED;
+  }
+
+  worker_test_reset(worker);
+
+  return APR_SUCCESS;
 }
 
 /**
@@ -404,16 +430,9 @@ static apr_status_t block_TCP_ACCEPT(worker_t * worker, worker_t *parent, apr_po
  * @return an apr status
  */
 static apr_status_t block_TCP_CLOSE(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  if (!worker->socket || !worker->socket->socket) {
-    return APR_ENOSOCKET;
-  }
-
-  if (worker->socket->socket_state == SOCKET_CLOSED) {
-    return APR_SUCCESS;
-  }
-
-  return apr_socket_close(worker->socket->socket);
+  return tcp_close(worker);
 }
+
 /************************************************************************
  * Module 
  ***********************************************************************/
