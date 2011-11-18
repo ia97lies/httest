@@ -18,15 +18,15 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool store.
+ * Interface of the HTTP Test Tool tcp module.
  */
 
 #ifndef HTTEST_TCP_MODULE_H
 #define HTTEST_TCP_MODULE_H
 
-apr_status_t tcp_listen(worker_t *worker, int backlog); 
-apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname);
+apr_status_t tcp_listen(worker_t *worker,  int backlog); 
+apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname); 
 apr_status_t tcp_accept(worker_t *worker); 
-apr_status_t tcp_close(worker_t *worker); 
+apr_status_t tcp_close(worker_t *worker);
 
 #endif
