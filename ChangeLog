@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.13
+  *) httest: Solve problem with openssl without SSLv2 support, reported by Eva
+             Ramon.
+
+
 Changes with httest 2.0.12
   *) httest: Serious fix: Fixed include problem, wrong recursiv include
              detection.
