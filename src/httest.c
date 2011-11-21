@@ -1634,9 +1634,6 @@ static apr_status_t worker_run_server_threads(worker_t *worker, int threads) {
       status = APR_EGENERAL;
       return status;
     }
-
-    worker_get_socket(clone, "Default", "0");
-    clone->socket->is_ssl = worker->socket->is_ssl;
     
     if ((status =
          apr_socket_accept(&clone->socket->socket, worker->listener,

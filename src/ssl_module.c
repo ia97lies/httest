@@ -1100,6 +1100,9 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
 static apr_status_t ssl_worker_clone(worker_t *worker, worker_t *clone) {
   ssl_config_t *config = ssl_get_worker_config(worker);
 
+  worker_get_socket(clone, "Default", "0");
+  clone->socket->is_ssl = worker->socket->is_ssl;
+
   if (config->meth) {
     ssl_config_t *clone_config = ssl_get_worker_config(clone);
     /* copy workers content to clone */
