@@ -42,6 +42,9 @@
  */
 static apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
   apr_socket_t *socket = data;
+  if (!socket) {
+    return APR_ENOSOCKET;
+  }
   return apr_os_sock_get(desc, socket);
 }
 
@@ -53,6 +56,9 @@ static apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
  */
 static apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t) {
   apr_socket_t *socket = data;
+  if (!socket) {
+    return APR_ENOSOCKET;
+  }
   return apr_socket_timeout_set(socket, t);
 }
 
@@ -65,6 +71,9 @@ static apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t)
  */
 static apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) {
   apr_socket_t *socket = data;
+  if (!socket) {
+    return APR_ENOSOCKET;
+  }
   return apr_socket_recv(socket, buf, size);
 }
 
@@ -82,6 +91,9 @@ static apr_status_t tcp_transport_write(void *data, char *buf, apr_size_t size) 
   apr_size_t count = 0;
   apr_size_t len;
 
+  if (!socket) {
+    return APR_ENOSOCKET;
+  }
   while (total != count) {
     len = total - count;
     if ((status = apr_socket_send(socket, &buf[count], &len)) 
@@ -299,6 +311,8 @@ apr_status_t tcp_accept(worker_t *worker) {
  * @return apr status
  */
 apr_status_t tcp_close(worker_t *worker) {
+  apr_status_t status;
+
   if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
@@ -307,7 +321,9 @@ apr_status_t tcp_close(worker_t *worker) {
     return APR_SUCCESS;
   }
 
-  return apr_socket_close(worker->socket->socket);
+  status = apr_socket_close(worker->socket->socket);
+  worker->socket->socket = NULL;
+  return status;
 }
 
 /************************************************************************

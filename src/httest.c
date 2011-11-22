@@ -1634,16 +1634,7 @@ static apr_status_t worker_run_server_threads(worker_t *worker, int threads) {
       status = APR_EGENERAL;
       return status;
     }
-    
-    if ((status =
-         apr_socket_accept(&clone->socket->socket, worker->listener,
-               clone->pbody)) != APR_SUCCESS) {
-      clone->socket->socket = NULL;
-      return status;
-    }
-    if ((status =
-           apr_socket_timeout_set(clone->socket->socket, worker->socktmo)) 
-        != APR_SUCCESS) {
+    if ((status = tcp_accept(clone)) != APR_SUCCESS) {
       return status;
     }
     if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {

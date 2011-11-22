@@ -27,7 +27,7 @@
 typedef struct transport_s transport_t;
 
 /**
- * read method
+ * socket/file descriptor method
  * @param data IN custom data
  * @param buf OUT buffer which contains read bytes
  * @param size INOUT size of buffer and on return actually read bytes
@@ -36,7 +36,7 @@ typedef struct transport_s transport_t;
 typedef apr_status_t (*transport_os_desc_get_f)(void *data, int *desc);
 
 /**
- * read method
+ * set timeout method
  * @param data IN custom data
  * @param buf OUT buffer which contains read bytes
  * @param size INOUT size of buffer and on return actually read bytes

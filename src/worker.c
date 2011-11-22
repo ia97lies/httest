@@ -985,7 +985,7 @@ apr_status_t worker_test_unused_errors(worker_t * self) {
 apr_status_t worker_conn_close(worker_t * self, char *info) {
   apr_status_t status;
 
-  if (!self->socket || !self->socket->socket) {
+  if (!self->socket) {
     return APR_ENOSOCKET;
   }
 
@@ -1001,11 +1001,8 @@ apr_status_t worker_conn_close(worker_t * self, char *info) {
   }
 
   if (!info || !info[0] || strcmp(info, "TCP") == 0) {
-    if ((status = apr_socket_close(self->socket->socket)) != APR_SUCCESS) {
-      return status;
-    }
+    tcp_close(self);
     self->socket->socket_state = SOCKET_CLOSED;
-    self->socket->socket = NULL;
   }
 
   return APR_SUCCESS;
@@ -2184,7 +2181,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
   char *copy;
   int unresolved;
 
-  if (!worker->socket || !worker->socket->socket) {
+  if (!worker->socket) {
     return APR_ENOSOCKET;
   }
     
@@ -2778,9 +2775,8 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
     /* recv_len to max and timeout to min */
     recv_len = BLOCK_MAX;
     /* set timout to specified socket tmo */
-    if ((status = apr_socket_timeout_set(worker->socket->socket, 
-                                         worker->socktmo)) 
-	!= APR_SUCCESS) {
+    if ((status = transport_set_timeout(worker->socket->transport, 
+                                        worker->socktmo)) != APR_SUCCESS) {
       return status;
     }
   }
@@ -3186,7 +3182,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
   apr_pool_create(&backend.pool, NULL);
 
   /* client side */
-  if ((status = apr_socket_timeout_set(worker->socket->socket, 100000)) 
+  if ((status = transport_set_timeout(worker->socket->transport, 100000)) 
       != APR_SUCCESS) {
     goto error1;
   }
@@ -3208,7 +3204,7 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
   if ((status = command_REQ(self, worker, data, ptmp)) != APR_SUCCESS) {
     goto error1;
   }
-  if ((status = apr_socket_timeout_set(worker->socket->socket, 100000)) 
+  if ((status = transport_set_timeout(worker->socket->transport, 100000)) 
       != APR_SUCCESS) {
     goto error2;
   }
@@ -3991,7 +3987,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     return APR_SUCCESS;
   }
 
-  if (!self->socket || !self->socket->socket) {
+  if (!self->socket) {
     goto error;
   }
   
