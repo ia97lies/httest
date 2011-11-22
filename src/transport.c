@@ -52,6 +52,7 @@ struct transport_s {
   void *data;
   transport_os_desc_get_f os_desc_get;
   transport_set_timeout_f set_timeout;
+  transport_get_timeout_f get_timeout;
   transport_read_f read;
   transport_write_f write;
 };
@@ -74,6 +75,7 @@ transport_t *transport_new(void *data,
                            apr_pool_t *pool, 
                            transport_os_desc_get_f os_desc_get, 
                            transport_set_timeout_f set_timeout, 
+                           transport_get_timeout_f get_timeout, 
                            transport_read_f read, 
 			   transport_write_f write) {
   transport_t *hook = apr_pcalloc(pool, sizeof(*hook));
@@ -81,6 +83,7 @@ transport_t *transport_new(void *data,
   hook->data = data;
   hook->os_desc_get = os_desc_get;
   hook->set_timeout = set_timeout;
+  hook->get_timeout = get_timeout;
   hook->read = read;
   hook->write = write;
 
@@ -130,6 +133,21 @@ apr_status_t transport_os_desc_get(transport_t *hook, int *desc) {
 apr_status_t transport_set_timeout(transport_t *hook, apr_interval_time_t t) {
   if (hook && hook->set_timeout) {
     return hook->set_timeout(hook->data, t);
+  }
+  else {
+    return APR_EGENERAL;
+  }
+}
+
+/** 
+ * get timeout for this transport 
+ * @param transport IN hook
+ * @param t OUT timeout in ns
+ * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
+ */
+apr_status_t transport_get_timeout(transport_t *hook, apr_interval_time_t *t) {
+  if (hook && hook->get_timeout) {
+    return hook->get_timeout(hook->data, t);
   }
   else {
     return APR_EGENERAL;

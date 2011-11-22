@@ -421,10 +421,10 @@ apr_status_t ssl_transport_os_desc_get(void *data, int *desc) {
 }
 
 /**
- * Get os socket descriptor
+ * Set timeout
  *
  * @param data IN void pointer to socket
- * @param desc OUT os socket descriptor
+ * @param t IN timeout 
  * @return APR_ENOENT
  */
 apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
@@ -432,6 +432,19 @@ apr_status_t ssl_transport_set_timeout(void *data, apr_interval_time_t t) {
 
   ssl_transport->tmo = t;
   return transport_set_timeout(ssl_transport->tcp_transport, t);
+}
+
+/**
+ * Get timeout
+ *
+ * @param data IN void pointer to socket
+ * @param t OUT timeout 
+ * @return APR_ENOENT
+ */
+apr_status_t ssl_transport_get_timeout(void *data, apr_interval_time_t *t) {
+  ssl_transport_t *ssl_transport = data;
+
+  return transport_get_timeout(ssl_transport->tcp_transport, t);
 }
 
 /**
@@ -577,6 +590,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       transport = transport_new(ssl_transport, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
+				ssl_transport_get_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
       transport_register(worker->socket, transport);
@@ -644,6 +658,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
       transport = transport_new(ssl_transport, worker->pbody, 
 				ssl_transport_os_desc_get, 
 				ssl_transport_set_timeout, 
+				ssl_transport_get_timeout, 
 				ssl_transport_read, 
 				ssl_transport_write);
       transport_register(worker->socket, transport);
@@ -1244,6 +1259,7 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     transport = transport_new(ssl_transport, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
+			      ssl_transport_get_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
     transport_register(worker->socket, transport);
@@ -1297,6 +1313,7 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
     transport = transport_new(ssl_transport, worker->pbody, 
 			      ssl_transport_os_desc_get, 
 			      ssl_transport_set_timeout, 
+			      ssl_transport_get_timeout, 
 			      ssl_transport_read, 
 			      ssl_transport_write);
     transport_register(worker->socket, transport);
