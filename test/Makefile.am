@@ -19,6 +19,7 @@ EXTRA_DIST= \
 	block.htb \
 	block.hte \
 	block.htt \
+	block_in_out_params.htt \
 	block_local_vars.htt \
 	block_lua_buf.htt \
 	block_lua.hte \
@@ -45,6 +46,8 @@ EXTRA_DIST= \
 	custom_commands.htt \
 	daemon2.htt \
 	daemon.htt \
+	debug.htt \
+	debug.visual \
 	deflate2.htt \
 	deflate.htt \
 	dummy2.htb \
@@ -122,6 +125,7 @@ EXTRA_DIST= \
 	inline.htt \
 	late_var_replace.htt \
 	leftovertmpf.htt \
+	listen_to_ip_port.htt \
 	lock.htt \
 	loop_auto.htt \
 	loop.htt \
@@ -234,7 +238,10 @@ EXTRA_DIST= \
 	syntax_invalid_local.txt \
 	tab_and_space_before_local.htt \
 	tagged_sockets.htt \
+	tcp_main.htt \
+	threaded_server.hte \
 	threaded_server.htt \
+	threaded_server.txt \
 	time.htt \
 	timeout.htt \
 	trace_on_failure_2.htb \

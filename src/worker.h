@@ -357,7 +357,8 @@ apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data, apr_po
 apr_status_t command_UP(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_TIME(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
-apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_LOG_LEVEL_SET(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_LOG_LEVEL_GET(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RECV(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);

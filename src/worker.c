@@ -2732,14 +2732,33 @@ apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data,
  *
  * @return APR_SUCCESS
  */
-apr_status_t command_LOG_LEVEL(command_t *self, worker_t *worker, char *data, 
-                               apr_pool_t *ptmp) {
+apr_status_t command_LOG_LEVEL_SET(command_t *self, worker_t *worker, char *data, 
+                                   apr_pool_t *ptmp) {
   char *copy;
 
   COMMAND_NEED_ARG("Need a number between 0 and 4");
 
   worker->log_mode = apr_atoi64(copy);
 
+  return APR_SUCCESS;
+}
+
+/**
+ * GET_LOG_LEVEL command sets log level 
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN number 0-4 
+ *
+ * @return APR_SUCCESS
+ */
+apr_status_t command_LOG_LEVEL_GET(command_t *self, worker_t *worker, char *data, 
+                                   apr_pool_t *ptmp) {
+  char *copy;
+
+  COMMAND_NEED_ARG("<variable>");
+
+  worker_var_set(worker, copy, apr_itoa(ptmp, worker->log_mode));
   return APR_SUCCESS;
 }
 

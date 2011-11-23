@@ -69,6 +69,7 @@
 #include "worker.h"
 #include "module.h"
 #include "eval.h"
+#include "tcp_module.h"
 
 /************************************************************************
  * Defines 
@@ -302,7 +303,13 @@ command_t local_commands[] = {
   {"_CALL", (command_f )command_CALL, "<name of block>", 
   "Call a defined block",
   COMMAND_FLAGS_NONE},
-  {"_LOG_LEVEL", (command_f )command_LOG_LEVEL, "<level>", 
+  {"_LOG_LEVEL_SET", (command_f )command_LOG_LEVEL_SET, "<level>", 
+  "Level is a number 0-4",
+  COMMAND_FLAGS_NONE},
+  {"_LOG_LEVEL_GET", (command_f )command_LOG_LEVEL_GET, "<variable>", 
+  "Store log level into <variable>",
+  COMMAND_FLAGS_NONE},
+  {"_LOG_LEVEL", (command_f )command_LOG_LEVEL_SET, "<level>", 
   "Level is a number 0-4",
   COMMAND_FLAGS_NONE},
   {"_RECV", (command_f )command_RECV, "<bytes>|POLL|CHUNKED|CLOSE [DO_NOT_CHECK]", 
