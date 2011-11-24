@@ -2486,11 +2486,9 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
     return APR_ENOENT;
   }
   
-  if (flags & FLAGS_PIPE) {
-    if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
-				!= APR_SUCCESS) {
-      return status;
-    }
+  if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
+                              != APR_SUCCESS) {
+    return status;
   }
 
   apr_file_close(fp);
