@@ -7,7 +7,9 @@ __Host: $YOUR_HOST
 __User-Agent: mozilla
 __
 _EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "BEGIN"
 _EXPECT . "AS1"
+_EXPECT . "END"
 _WAIT
 END
 
@@ -15,12 +17,22 @@ SERVER $YOUR_PORT
 _RES
 _WAIT
 __HTTP/1.1 200 OK
-__Content-Length: AUTO
+__Transfer-Encoding: chunked
 __Content-Type: text/plain
-__
+_FLUSH
+_PIPE CHUNKED 10
 _SENDFILE foo.txt
+_CHUNK
+_CHUNK
 END
 
 FILE foo.txt
+_BEGIN
 _==AS1 OK==
+_==AS1 OK==
+_==AS1 OK==
+_==AS1 OK==
+_==AS1 OK==
+_==AS1 OK==
+_END
 END

@@ -195,6 +195,7 @@ EXTRA_DIST= \
 	run_visual.sh \
 	run_visual_test.sh \
 	run_wild.sh \
+	sendfile_chunked.htt \
 	sendfile.htt \
 	server.cert.pem \
 	server_connection_close.htt \
