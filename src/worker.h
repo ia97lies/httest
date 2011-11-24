@@ -101,9 +101,8 @@ struct worker_s {
 #define FLAGS_SSL_LEGACY     0x00000200
 #define FLAGS_AUTO_CLOSE     0x00000400
 #define FLAGS_AUTO_COOKIE    0x00000800
-#define FLAGS_IGNORE_BODY    0x00001000
-#define FLAGS_SKIP_FLUSH     0x00002000
-#define FLAGS_LOADED_BLOCK   0x00004000
+#define FLAGS_SKIP_FLUSH     0x00001000
+#define FLAGS_LOADED_BLOCK   0x00002000
   int flags;
   apr_proc_t proc;
   int cmd;
@@ -362,7 +361,6 @@ apr_status_t command_LOG_LEVEL_GET(command_t *self, worker_t *worker, char *data
 apr_status_t command_RECV(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
-apr_status_t command_OP(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_WHICH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_ONLY_PRINTABLE(command_t *self, worker_t *worker, 
                                     char *data, apr_pool_t *ptmp); 
@@ -380,7 +378,6 @@ apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data, apr_po
 apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
-apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 #if APR_HAS_FORK
 apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 #endif
@@ -391,6 +388,7 @@ apr_status_t command_USE(command_t *self, worker_t *worker, char *data, apr_pool
 apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_LOCK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 
 /** helper */
 void worker_log(worker_t * self, int log_mode, char *fmt, ...); 

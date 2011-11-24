@@ -1352,14 +1352,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     sockreader = worker->sockreader;
   }
 
-  /* bodies were read but not store */
-  if (worker->flags & FLAGS_IGNORE_BODY) {
-    sockreader_set_options(sockreader, SOCKREADER_OPTIONS_IGNORE_BODY);
-  }
-  else {
-    sockreader_set_options(sockreader, SOCKREADER_OPTIONS_NONE);
-  }
-
   if (worker->headers) {
     apr_table_clear(worker->headers);
   }
@@ -2931,73 +2923,6 @@ apr_status_t command_CHECK(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * OP command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN left op right var
- *
- * @return APR_SUCCESS or apr error code
- */
-apr_status_t command_OP(command_t *self, worker_t *worker, char *data, 
-                        apr_pool_t *ptmp) {
-  char *copy;
-  char *last;
-  char *left;
-  char *op;
-  char *right;
-  char *var;
-  apr_int64_t ileft;
-  apr_int64_t iright;
-  apr_int64_t result;
-
-  COMMAND_NEED_ARG("<left> ADD|SUB|MUL|DIV <right> <variable> expected");
-
-  /* split into left, op, right, var */
-  left = apr_strtok(copy, " ", &last);
-  op = apr_strtok(NULL, " ", &last);
-  right = apr_strtok(NULL, " ", &last);
-  var = apr_strtok(NULL, " ", &last);
-
-  /* do checks */
-  if (!left || !op || !right || !var) {
-    worker_log(worker, LOG_ERR, "<left> ADD|SUB|MUL|DIV <right> <variable> expected", copy);
-    return APR_EINVAL;
-  }
-
-  /* get integer value */
-  ileft = apr_atoi64(left);
-  iright = apr_atoi64(right);
-
-  /* do operation */
-  if (strcasecmp(op, "ADD") == 0) {
-    result = ileft + iright;
-  }
-  else if (strcasecmp(op, "SUB") == 0) {
-    result = ileft - iright;
-  }
-  else if (strcasecmp(op, "MUL") == 0) {
-    result = ileft * iright;
-  }
-  else if (strcasecmp(op, "DIV") == 0) {
-    if (iright == 0) {
-      worker_log(worker, LOG_ERR, "Division by zero");
-      return APR_EINVAL;
-    }
-    result = ileft / iright;
-  }
-  else {
-    worker_log(worker, LOG_ERR, "Unknown operant %s", op);
-    return APR_ENOTIMPL;
-  }
-
-  /* store it do var */
-  worker_var_set(worker, var, apr_off_t_toa(ptmp, result));
-  
-  return APR_SUCCESS;
-}
-
-/**
  * WHICH command
  *
  * @param self IN command
@@ -3530,30 +3455,16 @@ apr_status_t command_USE(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * IGNORE_BODY command
+ * DUMMY command used for opsolete commands
  *
- * @param self IN command
- * @param worker IN thread data object
+ * @param self IN unused
+ * @param worker IN unused 
  * @param data IN unused
  *
- * @return APR_SUCCESS or apr error code
+ * @return APR_SUCCESS
  */
-apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, 
-                                 apr_pool_t *ptmp) {
-  char *copy;
-  COMMAND_NEED_ARG("on|off, default off");
-
-  apr_collapse_spaces(copy, copy);
-  if (strcasecmp(copy, "on") == 0) {
-    worker->flags |= FLAGS_IGNORE_BODY;
-  }
-  else if (strcasecmp(copy, "off") == 0) {
-    worker->flags &= ~FLAGS_IGNORE_BODY;
-  }
-  else {
-    worker_log_error(worker, "Do not understand \"%s\"", copy);
-    return APR_EINVAL;
-  }
+apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, 
+                           apr_pool_t *ptmp) {
   return APR_SUCCESS;
 }
 

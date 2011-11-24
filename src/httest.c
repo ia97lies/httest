@@ -346,9 +346,9 @@ command_t local_commands[] = {
   {"_AUTO_COOKIE", (command_f )command_AUTO_COOKIE, "on|off", 
   "Handles cookies in a simple way, do not check expire or path",
   COMMAND_FLAGS_NONE},
-  {"_IGNORE_BODY", (command_f )command_IGNORE_BODY, "on|off", 
-  "Recv but do not store or inspect body, used for performance testing.",
-  COMMAND_FLAGS_NONE},
+  {"_IGNORE_BODY", (command_f )command_DUMMY, "", 
+  "Obsolete command.",
+  COMMAND_FLAGS_DEPRECIATED},
   {"_TUNNEL", (command_f )command_TUNNEL, "<host> [<SSL>:]<port>[:<tag>] [<cert-file> <key-file> [<ca-cert-file>]]", 
   "Open tunnel to defined host:port, with SSL support.\n"
   "If connection exist no connect will be performed\n"
