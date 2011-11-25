@@ -1,5 +1,7 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest 2.1.7
+Changes with httest 2.1.8
+  *) httest: Add setter/getter for log level. Old command still available.
+
   *) httest: Refactoring code and remove duplicated functions in worker.c and
              tcp_module.c.
 
