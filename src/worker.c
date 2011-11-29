@@ -1352,6 +1352,14 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     sockreader = worker->sockreader;
   }
 
+  /* bodies were read but not store */
+  if (worker->flags & FLAGS_IGNORE_BODY) {
+    sockreader_set_options(sockreader, SOCKREADER_OPTIONS_IGNORE_BODY);
+  }
+  else {
+    sockreader_set_options(sockreader, SOCKREADER_OPTIONS_NONE);
+  }
+
   if (worker->headers) {
     apr_table_clear(worker->headers);
   }
@@ -3449,6 +3457,34 @@ apr_status_t command_USE(command_t *self, worker_t *worker, char *data,
     return APR_EINVAL;
   }
 
+  return APR_SUCCESS;
+}
+
+/**
+ * IGNORE_BODY command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, 
+                                 apr_pool_t *ptmp) {
+  char *copy;
+  COMMAND_NEED_ARG("on|off, default off");
+
+  apr_collapse_spaces(copy, copy);
+  if (strcasecmp(copy, "on") == 0) {
+    worker->flags |= FLAGS_IGNORE_BODY;
+  }
+  else if (strcasecmp(copy, "off") == 0) {
+    worker->flags &= ~FLAGS_IGNORE_BODY;
+  }
+  else {
+    worker_log_error(worker, "Do not understand \"%s\"", copy);
+    return APR_EINVAL;
+  }
   return APR_SUCCESS;
 }
 

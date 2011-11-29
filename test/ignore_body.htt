@@ -33,7 +33,7 @@ __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __
 __Invisible
-__${1k}${1k}
+__${1K}${1K}
 _END LOOP
 _CLOSE
 _LOOP 10
@@ -43,9 +43,9 @@ __HTTP/1.1 200 OK
 __Transfer-Encoding: chunked 
 _FLUSH
 __Invisible
-_-${1k}
+_-${1K}
 _CHUNK
-__${1k}
+__${1K}
 _CHUNK
 _CHUNK
 _END LOOP
