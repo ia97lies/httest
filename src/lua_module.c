@@ -140,6 +140,26 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
   }
 }
 
+static int lua_foo(lua_State *lua) {
+  worker_t *worker;
+
+  lua_getglobal(lua, "httest_worker");
+  worker = lua_touserdata(lua, 1);
+  fprintf(stderr, "\nXXX foo %p\n", worker);
+  return 0;
+}
+
+static int lua_version(lua_State *lua) {
+  lua_pushstring(lua, PACKAGE_VERSION);
+  return 1;
+}
+
+static const struct luaL_Reg httlib[] = {
+  {"foo", lua_foo},
+  {"version", lua_version},
+  {NULL, NULL}
+};
+
 /**
  * Simple lua interpreter for lua block
  * @param worker IN callee
@@ -181,6 +201,9 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
     lua_pushstring(lua, val);
     lua_setglobal(lua, e[i].key);
   }
+  lua_pushlightuserdata(lua, worker);
+  lua_setglobal(lua, "httest_worker");
+  luaL_register(lua, "htt", httlib);
   reader = lua_new_lua_reader(worker, ptmp);
   if (lua_load(lua, lua_get_line, reader, "@client") != 0 ||
       lua_pcall(lua, 0, LUA_MULTRET, 0) != 0) {
@@ -193,8 +216,8 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
   for (i = 0; i < apr_table_elts(config->retvars)->nelts; i++) {
     worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
-    if (lua_isstring(lua, i+1)) {
-      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i+1));
+    if (lua_isstring(lua, i + 1)) {
+      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i + 1));
     }
   }
   

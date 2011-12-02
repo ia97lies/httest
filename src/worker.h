@@ -390,6 +390,7 @@ apr_status_t command_LOCAL(command_t *self, worker_t *worker, char *data, apr_po
 apr_status_t command_LOCK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_UNLOCK(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
+apr_status_t command_VERSION(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 
 /** helper */

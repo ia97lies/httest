@@ -368,6 +368,9 @@ command_t local_commands[] = {
   {"_LOCAL", (command_f )command_LOCAL, "<var>+", 
   "Define BLOCK local variables.",
   COMMAND_FLAGS_NONE},
+  {"_VERSION", (command_f )command_VERSION, "<var>", 
+  "Get version of running httest.",
+  COMMAND_FLAGS_NONE},
 
   /* body section */
   {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 

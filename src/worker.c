@@ -3489,6 +3489,23 @@ apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data,
 }
 
 /**
+ * VERSION command
+ *
+ * @param self IN unused
+ * @param worker IN thread data object
+ * @param data IN variable to store in 
+ *
+ * @return APR_SUCCESS
+ */
+apr_status_t command_VERSION(command_t *self, worker_t *worker, char *data, 
+                             apr_pool_t *ptmp) {
+  char *copy;
+  COMMAND_NEED_ARG("<variable>");
+  worker_var_set(worker, copy, PACKAGE_VERSION);
+  return APR_SUCCESS;
+}
+
+/**
  * DUMMY command used for opsolete commands
  *
  * @param self IN unused
