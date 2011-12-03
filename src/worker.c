@@ -1326,10 +1326,10 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     recv_len = apr_atoi64(copy);
   }
   else {
-		if (copy[0]) {
-			var = copy;
-			apr_collapse_spaces(var, var);
-		}
+    if (copy[0]) {
+      var = copy;
+      apr_collapse_spaces(var, var);
+    }
     recv_len = -1;
   }
 
@@ -3694,7 +3694,7 @@ apr_status_t worker_add_line(worker_t * self, const char *file_and_line,
  * @return apr status
  */
 apr_status_t worker_socket_send(worker_t *worker, char *buf, 
-                      apr_size_t len) {
+                                apr_size_t len) {
 
   worker_log(worker, LOG_DEBUG, "send socket: %p transport: %p", 
              worker->socket, worker->socket->transport);
