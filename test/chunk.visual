@@ -1,3 +1,4 @@
+                                                _CHUNK
                                                 >
                                                 >7
                                                 >BEGIN
@@ -14,6 +15,7 @@
                                                 _CHUNK
                                                 >
                                                 >0
+                        _WAIT 
                         <HTTP/1.1 200 OK
                         <Transfer-Encoding: chunked
                         <

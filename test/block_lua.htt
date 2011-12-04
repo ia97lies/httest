@@ -18,12 +18,13 @@ BLOCK:LUA MyLuaThing param1 param2 : ret1 ret2
   for i=1,10 do
     print("hallo "..i.." "..param1.." "..param2)
   end
-  return "foo", "bar", "bla"
+  return "foo", "bar", "bla", "asdf"
 END
 
-CLIENT 30
+CLIENT
   MyLuaThing "Hello World" "Hehehe" FOO BAR
 
+  _DEBUG FOO == $FOO ; BAR == $BAR
   _EXPECT VAR(FOO) "foo"
   _EXPECT VAR(BAR) "bar"
 END

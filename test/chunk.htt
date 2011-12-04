@@ -10,6 +10,8 @@ _EXPECT . "HTTP/1.1 200 OK"
 _EXPECT . "BEGIN"
 _EXPECT . "AS1"
 _EXPECT . "END"
+# make output stable for visual test
+_SYS:SLEEP 500
 _WAIT
 END
 
