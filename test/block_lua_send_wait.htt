@@ -1,0 +1,34 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK:LUA _MyLuaWait
+  print("httest "..htt.version())
+  htt.send("GET / HTTP/1.1");
+  htt.send("Host: localhost");
+  htt.send("");
+  status, headers, buf = htt.wait()
+  print()
+  print(status);
+  for k, v in pairs(headers) do print(k..": "..v) end
+  print()
+  print(buf);
+
+END
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+_MyLuaWait
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Content-Length: AUTO
+__
+__<html>
+__  <body>
+__    Hello World!!!!
+__  </body>
+__</html>
+END

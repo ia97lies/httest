@@ -24,6 +24,7 @@ EXTRA_DIST= \
 	block_lua_buf.htt \
 	block_lua.hte \
 	block_lua.htt \
+	block_lua_send_wait.htt \
 	block_lua.txt \
 	block_not_found.hte \
 	block_not_found.txt \
@@ -245,6 +246,8 @@ EXTRA_DIST= \
 	threaded_server.txt \
 	time.htt \
 	timeout.htt \
+	tmp2.htt \
+	tmp.htt \
 	trace_on_failure_2.htb \
 	trace_on_failure_3.htb \
 	trace_on_failure.htb \
