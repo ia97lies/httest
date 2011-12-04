@@ -56,20 +56,6 @@ typedef struct lua_reader_s {
 /************************************************************************
  * Private 
  ***********************************************************************/
-
-/**
- * Wait for data (same as command_recv)
- *
- * @param self IN command object
- * @param worker IN thread data object
- * @param data IN unused 
- *
- * @return an apr status
- */
-apr_status_t command_BLAB(command_t * self, worker_t * worker,
-                          char *data, apr_pool_t *ptmp) {
-}
-
 /**
  * Get lua config from worker
  *
@@ -198,7 +184,6 @@ static int lua_wait(lua_State *lua) {
   apr_size_t len;
   apr_ssize_t recv_len = -1;
   apr_size_t peeklen;
-  int ret = 1;
   int i;
 
   buf = NULL;
@@ -217,7 +202,8 @@ static int lua_wait(lua_State *lua) {
     worker->socket->peeklen = 0;
     if ((status = sockreader_new(&sockreader, worker->socket->transport, worker->socket->peek, peeklen, ptmp)) 
         != APR_SUCCESS) {
-      goto out_err;
+      luaL_error(lua, "Could not get buffered socket reader");
+      return 1;
     }
   }
   else {
@@ -236,7 +222,6 @@ static int lua_wait(lua_State *lua) {
   while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && line[0] == 0);
   if (line[0] != 0) { 
     lua_pushstring(lua, line);
-    ++ret;
     if (!strstr(line, "HTTP/") && !strstr(line, "ICAP/")) {
       worker_log(worker, LOG_DEBUG, "Not HTTP or ICAP version in \"%s\", must be HTTP/0.9", line); 
       apr_table_add(worker->headers, "Connection", "close");
@@ -246,19 +231,17 @@ static int lua_wait(lua_State *lua) {
   }
   else {
     if (line[0] == 0) {
-      worker_log_error(worker, "No status line received");
-      status = APR_EINVAL;
-      goto out_err;
+      luaL_error(lua, "No status line received");
+      return 1;
     }
     else {
-      worker_log_error(worker, "Network error");
-      goto out_err;
+      luaL_error(lua, "Network error");
+      return 1;
     }
   }
  
   /** get headers */
   lua_newtable(lua);
-  ++ret;
   i = 1;
   while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
          line[0] != 0) {
@@ -271,21 +254,7 @@ static int lua_wait(lua_State *lua) {
     lua_pushstring(lua, key);
     lua_pushstring(lua, value);
     lua_settable(lua, -3);
-    if (worker->headers_allow) {
-      if (!apr_table_get(worker->headers_allow, key)) {
-        worker_log(worker, LOG_ERR, "%s header not allowed", key);
-        status = APR_EGENERAL;
-        goto out_err;
-      }
-    }
-    if (worker->headers_filter) {
-      if (!apr_table_get(worker->headers_filter, key)) {
-        apr_table_add(worker->headers, key, value);
-      }
-    }
-    else {
-      apr_table_add(worker->headers, key, value);
-    }
+    apr_table_add(worker->headers, key, value);
   }
 
 http_0_9:
@@ -293,9 +262,10 @@ http_0_9:
     /* if recv len is specified use this */
     if (recv_len > 0) {
       len = recv_len;
-      if ((status = worker_check_error(worker, content_length_reader(sockreader, &buf, &len, ""))) 
+      if ((status = content_length_reader(sockreader, &buf, &len, "")) 
           != APR_SUCCESS) {
-        goto out_err;
+        luaL_error(lua, "Failed to read after %d bytes", len);
+        return 1;
       }
     }
     else if (recv_len == 0) {
@@ -306,31 +276,33 @@ http_0_9:
       len = apr_atoi64(val);
       if ((status = worker_check_error(worker, content_length_reader(sockreader, &buf, &len, val))) 
           != APR_SUCCESS) {
-        goto out_err;
+        luaL_error(lua, "Failed to read content-length body after %d bytes", len);
+        return 1;
       }
     }
     else if ((val = apr_table_get(worker->headers, "Transfer-Encoding"))) {
       if ((status = worker_check_error(worker, transfer_enc_reader(sockreader, &buf, &len, val))) 
           != APR_SUCCESS) {
-        goto out_err;
+        luaL_error(lua, "Failed to read chunked encoding body after %d bytes", len);
+        return 1;
       }
     }
     else if ((val = apr_table_get(worker->headers, "Encapsulated"))) {
       if ((status = worker_check_error(worker, encapsulated_reader(sockreader, &buf, &len, val, apr_table_get(worker->headers, "Preview"))))
           != APR_SUCCESS) {
-        goto out_err;
+        luaL_error(lua, "Failed to read encapsulated body after %d bytes", len);
+        return 1;
       }
     }
     else if (worker->flags & FLAGS_CLIENT && 
 	     (val = apr_table_get(worker->headers, "Connection"))) {
-      if ((status = worker_check_error(worker,
-        eof_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
-        goto out_err;
+      if ((status = worker_check_error(worker, eof_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
+        luaL_error(lua, "Failed to read until eof after %d bytes", len);
+        return 1;
       }
     }
     
     lua_pushlstring(lua, buf, len); 
-    ++ret;
 
     if (worker->flags & FLAGS_AUTO_CLOSE) {
       val = apr_table_get(worker->headers, "Connection");
@@ -340,17 +312,46 @@ http_0_9:
     }
   }
 
-out_err:
-  lua_pushinteger(lua, status);
-
   apr_pool_destroy(ptmp);
-  return ret;
+  return 3;
+}
+
+static apr_status_t lua_send(lua_State *lua) {
+  const char *line;
+  worker_t *worker;
+
+  line = lua_tostring(lua, -1);
+  lua_pop(lua, 1);
+
+  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(lua, 1);
+
+  if (!worker->socket) {
+    luaL_error(lua, "Failed to send line, no socket available");
+    return 1;
+  }
+    
+  if (strncasecmp(line, "Content-Length: AUTO", 20) == 0) {
+    apr_table_add(worker->cache, "Content-Length", "Content-Length");
+  }
+  else if (strncasecmp(line, "Encapsulated: ", 14) == 0 && strstr(line, "AUTO")) {
+    apr_table_add(worker->cache, "Encapsulated", line);
+  }
+  else if (strncasecmp(line, "Expect: 100-Continue", 20) == 0) {
+    apr_table_add(worker->cache, "100-Continue", line);
+  }
+  else {
+    apr_table_add(worker->cache, "PLAIN", line);
+  }
+
+  return 0;
 }
 
 static const struct luaL_Reg httlib[] = {
   {"foo", lua_foo},
   {"version", lua_version},
   {"wait", lua_wait},
+  {"send", lua_send},
   {NULL, NULL}
 };
 
