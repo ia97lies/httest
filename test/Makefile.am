@@ -246,8 +246,6 @@ EXTRA_DIST= \
 	threaded_server.txt \
 	time.htt \
 	timeout.htt \
-	tmp2.htt \
-	tmp.htt \
 	trace_on_failure_2.htb \
 	trace_on_failure_3.htb \
 	trace_on_failure.htb \
