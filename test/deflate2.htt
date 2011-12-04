@@ -17,13 +17,18 @@ END
 
 SERVER $YOUR_PORT
 _RES
+_SLEEP 1000
 _WAIT
 __HTTP/1.1 200 OK
 __Content-Type: text/plain
 __Content-Length: AUTO
 __
-_PIPE
-_EXEC cat test.html | gzip
+_EXEC rm -f test.html.gz; gzip test.html
+_SENDFILE test.html.gz
+END
+
+BLOCK FINALLY
+_EXEC rm -f test.html.gz
 END
 
 FILE test.html
