@@ -411,8 +411,8 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
   for (i = 0; i < apr_table_elts(config->retvars)->nelts; i++) {
     worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
-    if (lua_isstring(lua, i + 1)) {
-      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i + 1));
+    if (lua_isstring(lua, i + 2)) {
+      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i + 2));
     }
   }
   
