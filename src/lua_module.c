@@ -347,11 +347,46 @@ static apr_status_t lua_send(lua_State *lua) {
   return 0;
 }
 
+static int lua_interpret(lua_State *lua) {
+  apr_pool_t *ptmp;
+  worker_t *worker;
+  worker_t *parent;
+  worker_t *call;
+  const char *buf;
+  apr_table_t *lines;
+
+  if (!lua_isstring(lua, -1)) {
+    luaL_error(lua, "Expect a string to interpret");
+    return 1;
+  }
+
+  buf = lua_tostring(lua, -1);
+  lua_pop(lua, 1);
+
+  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(lua, 1);
+  lua_pop(lua, 1);
+
+  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_parent");
+  parent = lua_touserdata(lua, 1);
+  lua_pop(lua, 1);
+
+  apr_pool_create(&ptmp, worker->heartbeat);
+
+  lines = apr_table_make(ptmp, 5);
+
+  call = apr_pcalloc(ptmp, sizeof(*call));
+  memcpy(call, parent, sizeof(*call));
+
+  return 0;
+}
+
 static const struct luaL_Reg httlib[] = {
   {"foo", lua_foo},
   {"version", lua_version},
   {"wait", lua_wait},
   {"send", lua_send},
+  {"interpret", lua_interpret},
   {NULL, NULL}
 };
 
@@ -398,6 +433,8 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   }
   lua_pushlightuserdata(lua, worker);
   lua_setfield(lua, LUA_REGISTRYINDEX, "htt_worker");
+  lua_pushlightuserdata(lua, parent);
+  lua_setfield(lua, LUA_REGISTRYINDEX, "htt_parent");
   luaL_register(lua, "htt", httlib);
   reader = lua_new_lua_reader(worker, ptmp);
   if (lua_load(lua, lua_get_line, reader, "@client") != 0 ||
