@@ -1412,16 +1412,20 @@ void worker_finally(worker_t *worker, apr_status_t status) {
     }
   }
 
-  /* count down threads */
   sync_lock(worker->mutex);
-  --running_threads;
+  if (status != APR_SUCCESS) {
+    running_threads = 0;
+  }
+  else {
+    --running_threads;
+  }
   sync_unlock(worker->mutex);
 
   worker_var_set(worker, "__ERROR", my_status_str(worker->pbody, status));
   worker_var_set(worker, "__STATUS", apr_ltoa(worker->pbody, status));
   worker_var_set(worker, "__THREAD", worker->name);
 
-  if (!running_threads) { 
+  if (running_threads == 0) { 
     command_t *command = lookup_command(local_commands, "_CALL");
     if (command->func) {
       mode = worker->log_mode;
