@@ -163,204 +163,25 @@ static int lua_version(lua_State *lua) {
   return 1;
 }
 
-/**
- * Receive a HTTP request/response and push status, headers, body, error on
- * the stack.
- * @param lua IN lua state
- * @return 4
- * @TODO: behavour on error, the order on stack would be better the other way 
- *        around.
- */
-static int lua_wait(lua_State *lua) {
-  apr_status_t status;
-  worker_t *worker;
-  apr_pool_t *ptmp;
-  char *line;
-  char *buf;
-  sockreader_t *sockreader;
-  char *last;
-  char *key;
-  const char *val = "";
-  apr_size_t len;
-  apr_ssize_t recv_len = -1;
-  apr_size_t peeklen;
-  int i;
-
-  buf = NULL;
-  len = 0;
-
-  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
-  worker = lua_touserdata(lua, 1);
-  apr_pool_create(&ptmp, worker->heartbeat);
-
-  if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
-  }
-
-  if (worker->sockreader == NULL) {
-    peeklen = worker->socket->peeklen;
-    worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->transport, worker->socket->peek, peeklen, ptmp)) 
-        != APR_SUCCESS) {
-      luaL_error(lua, "Could not get buffered socket reader");
-      return 1;
-    }
-  }
-  else {
-    sockreader = worker->sockreader;
-  }
-
-  if (worker->headers) {
-    apr_table_clear(worker->headers);
-  }
-  else {
-    worker->headers = apr_table_make(worker->pbody, 5);
-  }
-  
-  /** Status line, make that a little fuzzy in reading trailing empty lines of last
-   *  request */
-  while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && line[0] == 0);
-  if (line[0] != 0) { 
-    lua_pushstring(lua, line);
-    if (!strstr(line, "HTTP/") && !strstr(line, "ICAP/")) {
-      worker_log(worker, LOG_DEBUG, "Not HTTP or ICAP version in \"%s\", must be HTTP/0.9", line); 
-      apr_table_add(worker->headers, "Connection", "close");
-      status = sockreader_push_line(sockreader, line);
-      goto http_0_9;
-    }
-  }
-  else {
-    if (line[0] == 0) {
-      luaL_error(lua, "No status line received");
-      return 1;
-    }
-    else {
-      luaL_error(lua, "Network error");
-      return 1;
-    }
-  }
- 
-  /** get headers */
-  lua_newtable(lua);
-  i = 1;
-  while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
-         line[0] != 0) {
-    char *value;
-    /* headers */
-    key = apr_strtok(line, ":", &last);
-    apr_collapse_spaces(key, key);
-    value = last;
-    apr_collapse_spaces(value, value);
-    lua_pushstring(lua, key);
-    lua_pushstring(lua, value);
-    lua_settable(lua, -3);
-    apr_table_add(worker->headers, key, value);
-  }
-
-http_0_9:
-  if (status == APR_SUCCESS) {
-    /* if recv len is specified use this */
-    if (recv_len > 0) {
-      len = recv_len;
-      if ((status = content_length_reader(sockreader, &buf, &len, "")) 
-          != APR_SUCCESS) {
-        luaL_error(lua, "Failed to read after %d bytes", len);
-        return 1;
-      }
-    }
-    else if (recv_len == 0) {
-      buf = NULL; 
-    }
-    /* else get transfer type */
-    else if ((val = apr_table_get(worker->headers, "Content-Length"))) {
-      len = apr_atoi64(val);
-      if ((status = worker_check_error(worker, content_length_reader(sockreader, &buf, &len, val))) 
-          != APR_SUCCESS) {
-        luaL_error(lua, "Failed to read content-length body after %d bytes", len);
-        return 1;
-      }
-    }
-    else if ((val = apr_table_get(worker->headers, "Transfer-Encoding"))) {
-      if ((status = worker_check_error(worker, transfer_enc_reader(sockreader, &buf, &len, val))) 
-          != APR_SUCCESS) {
-        luaL_error(lua, "Failed to read chunked encoding body after %d bytes", len);
-        return 1;
-      }
-    }
-    else if ((val = apr_table_get(worker->headers, "Encapsulated"))) {
-      if ((status = worker_check_error(worker, encapsulated_reader(sockreader, &buf, &len, val, apr_table_get(worker->headers, "Preview"))))
-          != APR_SUCCESS) {
-        luaL_error(lua, "Failed to read encapsulated body after %d bytes", len);
-        return 1;
-      }
-    }
-    else if (worker->flags & FLAGS_CLIENT && 
-	     (val = apr_table_get(worker->headers, "Connection"))) {
-      if ((status = worker_check_error(worker, eof_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
-        luaL_error(lua, "Failed to read until eof after %d bytes", len);
-        return 1;
-      }
-    }
-    
-    lua_pushlstring(lua, buf, len); 
-
-    if (worker->flags & FLAGS_AUTO_CLOSE) {
-      val = apr_table_get(worker->headers, "Connection");
-      if (val && strcasecmp(val, "close") == 0) {
-        command_CLOSE(NULL, worker, "do not test expects", ptmp);
-      }
-    }
-  }
-
-  apr_pool_destroy(ptmp);
-  return 3;
-}
-
-static apr_status_t lua_send(lua_State *lua) {
-  const char *line;
-  worker_t *worker;
-
-  line = lua_tostring(lua, -1);
-  lua_pop(lua, 1);
-
-  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
-  worker = lua_touserdata(lua, 1);
-
-  if (!worker->socket) {
-    luaL_error(lua, "Failed to send line, no socket available");
-    return 1;
-  }
-    
-  if (strncasecmp(line, "Content-Length: AUTO", 20) == 0) {
-    apr_table_add(worker->cache, "Content-Length", "Content-Length");
-  }
-  else if (strncasecmp(line, "Encapsulated: ", 14) == 0 && strstr(line, "AUTO")) {
-    apr_table_add(worker->cache, "Encapsulated", line);
-  }
-  else if (strncasecmp(line, "Expect: 100-Continue", 20) == 0) {
-    apr_table_add(worker->cache, "100-Continue", line);
-  }
-  else {
-    apr_table_add(worker->cache, "PLAIN", line);
-  }
-
-  return 0;
-}
-
 static int lua_interpret(lua_State *lua) {
+  apr_status_t status;
   apr_pool_t *ptmp;
   worker_t *worker;
   worker_t *parent;
   worker_t *call;
-  const char *buf;
+  const char *string;
   apr_table_t *lines;
+  char *buffer;
+  char *last;
+  char *line;
+  apr_size_t len;
 
   if (!lua_isstring(lua, -1)) {
     luaL_error(lua, "Expect a string to interpret");
     return 1;
   }
 
-  buf = lua_tostring(lua, -1);
+  string = lua_tolstring(lua, -1, &len);
   lua_pop(lua, 1);
 
   lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
@@ -376,7 +197,27 @@ static int lua_interpret(lua_State *lua) {
   lines = apr_table_make(ptmp, 5);
 
   call = apr_pcalloc(ptmp, sizeof(*call));
-  memcpy(call, parent, sizeof(*call));
+  memcpy(call, worker, sizeof(*call));
+
+  buffer = apr_pcalloc(ptmp, len+1);
+  memcpy(buffer, string, len);
+
+  line = apr_strtok(buffer, "\n", &last);
+  while (line) {
+    while (*line == ' ') ++line;
+    if (*line != '\0') {
+      apr_table_add(lines, "lua inline", line);
+    }
+    line = apr_strtok(NULL, "\n", &last);
+  }
+
+  call->lines = lines;
+  call->interpret = parent->interpret;
+
+  if ((status = call->interpret(call, worker, ptmp)) != APR_SUCCESS) {
+    luaL_error(lua, "Error: %s(%d)", my_status_str(ptmp, status), status);
+    return 1;
+  }
 
   return 0;
 }
@@ -384,8 +225,6 @@ static int lua_interpret(lua_State *lua) {
 static const struct luaL_Reg httlib[] = {
   {"foo", lua_foo},
   {"version", lua_version},
-  {"wait", lua_wait},
-  {"send", lua_send},
   {"interpret", lua_interpret},
   {NULL, NULL}
 };

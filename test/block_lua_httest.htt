@@ -1,0 +1,24 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK:LUA MyLuaThing
+  htt.interpret([[
+    _REQ $YOUR_HOST $YOUR_PORT
+    __GET / HTTP/1.1
+    __Host: httest
+    __
+    _WAIT
+  ]])
+END
+
+CLIENT
+  MyLuaThing
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== OK ==
+END
