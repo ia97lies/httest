@@ -8,6 +8,13 @@ Changes with httest 2.1.8
   *) httest: Add define for openssl libraries without SSLv2 support, thanks to
              Eva Ramon for reporting this issue.
 
+  *) httest: Add version command.
+
+  *) httest: An experimental send and wait command for lua. Use it with
+             caution because this can change in the future. See test script in
+	     the test folder.
+
+
 Changes with httest 2.1.7
   *) configure: Correct --with-lua5.1 option.
 
