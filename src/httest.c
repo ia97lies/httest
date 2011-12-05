@@ -1302,6 +1302,9 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
       exit(0);
     }
   }
+  else {
+    apr_pool_note_subprocess(worker->global->pool, proc, APR_KILL_ALWAYS);
+  }
 
   if (!worker->procs) {
     worker->procs = apr_hash_make(worker->pbody);
@@ -2400,6 +2403,9 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
         store_set(global->vars, var, apr_itoa(global->pool, i));
       }
       return APR_SUCCESS;
+    }
+    else {
+      apr_pool_note_subprocess(global->pool, &proc, APR_KILL_ALWAYS);
     }
   }
 

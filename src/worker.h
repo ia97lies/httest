@@ -67,9 +67,12 @@ typedef struct recorder_s {
 } recorder_t;
 
 typedef struct worker_s worker_t;
+typedef struct global_s global_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent, 
                                    apr_pool_t *ptmp);
 struct worker_s {
+  global_t *global;
+  /* interpreter function */
   interpret_f interpret;
   /* worker config */
   apr_hash_t *config;
@@ -157,7 +160,7 @@ struct worker_s {
 #endif
 };
 
-typedef struct global_s {
+struct global_s {
   apr_pool_t *pool;
   apr_hash_t *config;
   int flags;
@@ -192,7 +195,7 @@ typedef struct global_s {
   worker_t *worker;
   apr_threadattr_t *tattr;
   int recursiv;
-} global_t;
+};
 
 typedef struct command_s command_t;
 typedef apr_status_t(*command_f) (command_t * self, void * type, char *data, 

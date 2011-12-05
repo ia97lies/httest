@@ -2401,6 +2401,10 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
+  apr_thread_mutex_lock(worker->mutex);
+  apr_pool_note_subprocess(worker->global->pool, &worker->proc, APR_KILL_ALWAYS);
+  apr_thread_mutex_unlock(worker->mutex);
+
   if (flags & FLAGS_PIPE) {
     worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
     if ((status = worker_file_to_http(worker, worker->proc.out, flags, ptmp)) 
@@ -3538,6 +3542,7 @@ apr_status_t worker_new(worker_t ** self, char *additional,
 
   apr_pool_create(&p, NULL);
   (*self) = apr_pcalloc(p, sizeof(worker_t));
+  (*self)->global = global;
   (*self)->heartbeat = p;
   apr_pool_create(&p, (*self)->heartbeat);
   (*self)->pbody = p;
