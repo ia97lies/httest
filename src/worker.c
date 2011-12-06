@@ -2615,6 +2615,8 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
+  apr_pool_note_subprocess(worker->pbody, &worker->proc, APR_KILL_ALWAYS);
+
   if (flags & FLAGS_PIPE) {
     worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
     if ((status = worker_file_to_http(worker, worker->proc.out, flags)) != APR_SUCCESS) {

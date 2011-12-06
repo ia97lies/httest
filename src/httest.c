@@ -1361,6 +1361,9 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
       exit(0);
     }
   }
+  else {
+    apr_pool_note_subprocess(worker->pbody, proc, APR_KILL_ALWAYS);
+  }
 
   if (!worker->procs) {
     worker->procs = apr_hash_make(worker->pbody);
@@ -1498,14 +1501,19 @@ void worker_finally(worker_t *self, apr_status_t status) {
 
   /* count down threads */
   sync_lock(self->mutex);
-  --running_threads;
-  sync_unlock(self->mutex);
+  if (status != APR_SUCCESS) {
+    running_threads = 0;
+  }
+  else {
+    --running_threads;
+  }
+ sync_unlock(self->mutex);
 
   apr_table_set(self->vars, "__ERROR", my_status_str(self->pbody, status));
   apr_table_set(self->vars, "__STATUS", apr_ltoa(self->pbody, status));
   apr_table_set(self->vars, "__THREAD", self->name);
 
-  if (!running_threads) { 
+  if (running_threads == 0) { 
     k = lookup_func_index(local_commands, "_CALL");
     if (local_commands[k].func) {
       mode = self->log_mode;
@@ -1528,12 +1536,10 @@ void worker_finally(worker_t *self, apr_status_t status) {
     }
 
     worker_set_global_error(self);
-//    worker_destroy(self);
     worker_conn_close_all(self);
     exit(1);
   }
 exodus:
-//  worker_destroy(self);
   worker_conn_close_all(self);
   apr_thread_exit(self->mythread, APR_SUCCESS);
 }
@@ -2472,6 +2478,9 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
         apr_table_set(global->vars, var, apr_itoa(global->pool, i));
       }
       return APR_SUCCESS;
+    }
+    else {
+      apr_pool_note_subprocess(global->pool, &proc, APR_KILL_ALWAYS);
     }
   }
 

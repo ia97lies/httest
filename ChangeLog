@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.0.14
+  *) httest: Finally not called in some cases is fixed now.
+
+  *) httest: Called process clean up implemented, no zombie process any more.
+
+
 Changes with httest 2.0.13
   *) httest: Solve problem with openssl without SSLv2 support, reported by Eva
              Ramon.
