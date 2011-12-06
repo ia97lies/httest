@@ -140,21 +140,8 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
 }
 
 /**
- * This is test function
- * @param lua IN lua state
- * @return 0
- */
-static int lua_foo(lua_State *lua) {
-  worker_t *worker;
-
-  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
-  worker = lua_touserdata(lua, 1);
-  fprintf(stderr, "\nXXX foo %p\n", worker);
-  return 0;
-}
-
-/**
  * Do push the httest version on the stack
+ * @lua_return version as a string
  * @param lua IN lua state
  * @return 1
  */
@@ -163,6 +150,12 @@ static int lua_version(lua_State *lua) {
   return 1;
 }
 
+/**
+ * Execute httest script.
+ * @lua_arg string IN httest script
+ * @param lua IN lua state
+ * @return 0
+ */
 static int lua_interpret(lua_State *lua) {
   apr_status_t status;
   apr_pool_t *ptmp;
@@ -224,6 +217,8 @@ static int lua_interpret(lua_State *lua) {
 
 /**
  * This is test function
+ * @lua_arg string IN variable name
+ * @lua_return variable value
  * @param lua IN lua state
  * @return 0
  */
@@ -246,6 +241,9 @@ static int lua_getvar(lua_State *lua) {
   return 0;
 }
 
+/**
+ * Set of htt commands for lua
+ */
 static const struct luaL_Reg httlib[] = {
   {"version", lua_version},
   {"interpret", lua_interpret},
