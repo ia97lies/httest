@@ -1,6 +1,9 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyLuaThing
+  for i = 1,10 do
+    htt.interpret("_DEBUG adfasf");
+  end
   htt.interpret([[
     _REQ $YOUR_HOST $YOUR_PORT
     __GET / HTTP/1.1
