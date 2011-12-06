@@ -24,7 +24,7 @@ EXTRA_DIST= \
 	block_lua_buf.htt \
 	block_lua.hte \
 	block_lua.htt \
-	block_lua_send_wait.htt \
+	block_lua_httest.htt \
 	block_lua.txt \
 	block_not_found.hte \
 	block_not_found.txt \
@@ -89,6 +89,7 @@ EXTRA_DIST= \
 	expect_header_not_body.htt \
 	expect_header_not_body.txt \
 	finally_on_failed2.htt \
+	finally_on_failed3.htt \
 	finally_on_failed.hte \
 	finally_on_failed.htt \
 	finally_on_failed.txt \
