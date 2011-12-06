@@ -127,7 +127,7 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
  *
  * @return value
  */
-const char *varget(worker_t* worker, const char *var) {
+const char *worker_var_get(worker_t* worker, const char *var) {
   const char *val;
   if ((val = store_get(worker->locals, var))) {
     return val;
@@ -1843,7 +1843,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     
     var= apr_strtok(type, "(", &last);
     var = apr_strtok(NULL, ")", &last);
-    val = varget(worker, var);
+    val = worker_var_get(worker, var);
     if (val) {
       if (!worker->tmp_table) {
 	worker->tmp_table = apr_table_make(worker->pbody, 1);
@@ -1955,7 +1955,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     
     var= apr_strtok(type, "(", &last);
     var = apr_strtok(NULL, ")", &last);
-    val = varget(worker, var);
+    val = worker_var_get(worker, var);
     if (val) {
       if (!worker->tmp_table) {
 	worker->tmp_table = apr_table_make(worker->pbody, 1);
@@ -2066,7 +2066,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     
     var= apr_strtok(type, "(", &last);
     var = apr_strtok(NULL, ")", &last);
-    val = varget(worker, var);
+    val = worker_var_get(worker, var);
     if (val) {
       if (!worker->tmp_table) {
 	worker->tmp_table = apr_table_make(worker->pbody, 1);
@@ -3023,7 +3023,6 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 
   if (strcasecmp(copy, "END")== 0) {
     if (worker->tmpf) {
-      /* get file name */
       if ((status = apr_file_name_get((const char **)&name, worker->tmpf)) != APR_SUCCESS) {
 	return status;
       }

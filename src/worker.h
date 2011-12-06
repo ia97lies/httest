@@ -402,6 +402,7 @@ void worker_log_error(worker_t * self, char *fmt, ...);
 void worker_log_buf(worker_t * self, int log_mode, char *buf, char *prefix, 
                     int len); 
 void worker_var_set(worker_t * worker, const char *var, const char *val); 
+const char * worker_var_get(worker_t * worker, const char *var); 
 void worker_test_reset(worker_t * worker); 
 apr_status_t worker_test_unused(worker_t * self); 
 apr_status_t worker_test_unused_errors(worker_t * self); 

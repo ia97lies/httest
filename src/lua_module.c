@@ -222,10 +222,34 @@ static int lua_interpret(lua_State *lua) {
   return 0;
 }
 
+/**
+ * This is test function
+ * @param lua IN lua state
+ * @return 0
+ */
+static int lua_getvar(lua_State *lua) {
+  worker_t *worker;
+  const char *val;
+
+  const char *var = lua_tostring(lua, -1);
+
+  lua_pop(lua, 1);
+
+  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(lua, 1);
+ 
+  if ((val = worker_var_get(worker, var))) {
+    lua_pushstring(lua, val);
+    return 1;
+  }
+
+  return 0;
+}
+
 static const struct luaL_Reg httlib[] = {
-  {"foo", lua_foo},
   {"version", lua_version},
   {"interpret", lua_interpret},
+  {"getvar", lua_getvar},
   {NULL, NULL}
 };
 

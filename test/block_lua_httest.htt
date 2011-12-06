@@ -6,8 +6,12 @@ BLOCK:LUA MyLuaThing
     __GET / HTTP/1.1
     __Host: httest
     __
-    _WAIT
+    _WAIT BUF
   ]])
+  body = htt.getvar("BUF")
+  assert(body == "== OK ==\r\n")
+  print("\n------------------")
+  print(body.."------------------")
 END
 
 CLIENT
