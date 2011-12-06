@@ -10,9 +10,7 @@ Changes with httest 2.1.8
 
   *) httest: Add version command.
 
-  *) httest: An experimental send and wait command for lua. Use it with
-             caution because this can change in the future. See test script in
-	     the test folder.
+  *) httest: Embed an experimental httest interpreter into lua. 
 
 
 Changes with httest 2.1.7
