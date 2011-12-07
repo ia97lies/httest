@@ -1680,8 +1680,9 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 apr_status_t command_RES(command_t * self, worker_t * worker,
                          char *data, apr_pool_t *ptmp) {
   apr_status_t status;
+  char *copy;
 
-  COMMAND_NO_ARG;
+  COMMAND_OPTIONAL_ARG;
 
   if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     return status;
@@ -1693,14 +1694,29 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
 
   worker_get_socket(worker, "Default", "0");
 
-  if (worker->socket->socket_state == SOCKET_CLOSED) {
+  while (worker->socket->socket_state == SOCKET_CLOSED) {
     tcp_accept(worker);
     
     if ((status = htt_run_accept(worker, data)) != APR_SUCCESS) {
       return status;
     }
 
-    worker->socket->socket_state = SOCKET_CONNECTED;
+    apr_collapse_spaces(copy, copy);
+    if (strcmp("IGNORE_MONITORS", copy) == 0) {
+      if (worker->sockreader == NULL) {
+        worker->socket->peeklen = 1;
+        if ((status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen)) != APR_SUCCESS &&
+            status != APR_EOF) {
+          return status;
+        }
+        else if (status == APR_SUCCESS) {
+          worker->socket->socket_state = SOCKET_CONNECTED;
+        }
+      }
+    }
+    else {
+      worker->socket->socket_state = SOCKET_CONNECTED;
+    }
   }
 
   worker_test_reset(worker);
