@@ -120,6 +120,7 @@ EXTRA_DIST= \
 	ignore_body.htt \
 	ignore_body_space.htt \
 	ignore_errors.htt \
+	ignore_monitors.htt \
 	include.hte \
 	include.htt \
 	include.txt \
