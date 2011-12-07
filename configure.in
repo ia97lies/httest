@@ -85,7 +85,7 @@ CFLAGS="`$APR_CONFIG --cflags` `$PCRE_CONFIG --cflags` $CFLAGS $INCLUDES"
 CPPFLAGS="`$APR_CONFIG --cppflags` $CPPFLAGS"
 LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz"
 # math_module
-LIBS+=" -lm"
+LIBS="$LIBS -lm"
 
 if test "$enable_ssl_legacy_reneg" = "yes"; then
   CFLAGS="$CFLAGS -DSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION"
@@ -109,10 +109,10 @@ fi
 MODULES=""
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
-	CFLAGS+=" $LUA_INCLUDES"
-  LIBS+=" $LUA_LIB_PATH $LUA_LIB"
-  HTTEST_MODULES+='lua_module.$(OBJEXT) '
-  MODULES+="lua "
+  CFLAGS="$CFLAGS $LUA_INCLUDES"
+  LIBS="$LIBS $LUA_LIB_PATH $LUA_LIB"
+  HTTEST_MODULES="$HTTEST_MODULES lua_module.${OBJEXT}"
+  MODULES="$MODULES lua "
 fi
 if test -f ./generate_modules_c.sh; then
   ./generate_modules_c.sh "${MODULES}"
