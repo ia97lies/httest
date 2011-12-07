@@ -1908,7 +1908,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     apr_hash_set(global->blocks, global->worker->name, APR_HASH_KEY_STRING, 
 	         global->worker);
     global->state = GLOBAL_STATE_NONE;
-		return htt_run_block_end(global);
+    return htt_run_block_end(global);
     break; 
   case GLOBAL_STATE_DAEMON:
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
@@ -2056,6 +2056,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     }
   }
   else if (status != APR_SUCCESS) {
+    fprintf(stderr, "\nFailed on block start %s(%d)", my_status_str(global->pool, status), status);  
     return status;
   }
   
@@ -2532,9 +2533,11 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
     ++line_nr;
     global->line_nr = line_nr;
     i = 0;
-		if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS) {
-			return status;
-		}
+    if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS &&
+         status != APR_ENOTIMPL) {
+      fprintf(stderr, "\nFailed on read line %s(%d)", my_status_str(global->pool, status), status);  
+      return status;
+    }
     if (line[i] != '#' && line[i] != 0) {
       /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
