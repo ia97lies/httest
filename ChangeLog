@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.9
+  *) httest: Extend command _RES with a special parameter INGORE_MONITORS,
+             which do activly ignore peeking connections without any data.
+
+
 Changes with httest 2.1.8
   *) httest: Add setter/getter for log level. Old command still available.
 
