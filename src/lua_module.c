@@ -142,21 +142,21 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
 /**
  * Do push the httest version on the stack
  * @lua_return version as a string
- * @param lua IN lua state
+ * @param L IN lua state
  * @return 1
  */
-static int lua_version(lua_State *lua) {
-  lua_pushstring(lua, PACKAGE_VERSION);
+static int lua_version(lua_State *L) {
+  lua_pushstring(L, PACKAGE_VERSION);
   return 1;
 }
 
 /**
  * Execute httest script.
  * @lua_arg string IN httest script
- * @param lua IN lua state
+ * @param L IN lua state
  * @return 0
  */
-static int lua_interpret(lua_State *lua) {
+static int lua_interpret(lua_State *L) {
   apr_status_t status;
   apr_pool_t *ptmp;
   worker_t *worker;
@@ -169,21 +169,21 @@ static int lua_interpret(lua_State *lua) {
   char *line;
   apr_size_t len;
 
-  if (!lua_isstring(lua, -1)) {
-    luaL_error(lua, "Expect a string to interpret");
+  if (!lua_isstring(L, -1)) {
+    luaL_error(L, "Expect a string to interpret");
     return 1;
   }
 
-  string = lua_tolstring(lua, -1, &len);
-  lua_pop(lua, 1);
+  string = lua_tolstring(L, -1, &len);
+  lua_pop(L, 1);
 
-  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
-  worker = lua_touserdata(lua, 1);
-  lua_pop(lua, 1);
+  lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(L, 1);
+  lua_pop(L, 1);
 
-  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_parent");
-  parent = lua_touserdata(lua, 1);
-  lua_pop(lua, 1);
+  lua_getfield(L, LUA_REGISTRYINDEX, "htt_parent");
+  parent = lua_touserdata(L, 1);
+  lua_pop(L, 1);
 
   apr_pool_create(&ptmp, worker->heartbeat);
 
@@ -208,7 +208,33 @@ static int lua_interpret(lua_State *lua) {
   call->interpret = parent->interpret;
 
   if ((status = call->interpret(call, worker, ptmp)) != APR_SUCCESS) {
-    luaL_error(lua, "Error: %s(%d)", my_status_str(ptmp, status), status);
+    luaL_error(L, "Error: %s(%d)", my_status_str(ptmp, status), status);
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+ * Get variable from httest
+ * @lua_arg string IN variable name
+ * @lua_return variable value
+ * @param L IN lua state
+ * @return 0
+ */
+static int lua_getvar(lua_State *L) {
+  worker_t *worker;
+  const char *val;
+
+  const char *var = lua_tostring(L, -1);
+
+  lua_pop(L, 1);
+
+  lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(L, 1);
+ 
+  if ((val = worker_var_get(worker, var))) {
+    lua_pushstring(L, val);
     return 1;
   }
 
@@ -219,35 +245,88 @@ static int lua_interpret(lua_State *lua) {
  * This is test function
  * @lua_arg string IN variable name
  * @lua_return variable value
- * @param lua IN lua state
+ * @param L IN lua state
  * @return 0
  */
-static int lua_getvar(lua_State *lua) {
+static int lua_transport_new(lua_State *L) {
   worker_t *worker;
-  const char *val;
 
-  const char *var = lua_tostring(lua, -1);
+  lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(L, 1);
 
-  lua_pop(lua, 1);
-
-  lua_getfield(lua, LUA_REGISTRYINDEX, "htt_worker");
-  worker = lua_touserdata(lua, 1);
- 
-  if ((val = worker_var_get(worker, var))) {
-    lua_pushstring(lua, val);
+  if (!worker->socket || !worker->socket->transport) {
+    lua_pushnil(L);
     return 1;
   }
 
+  lua_pushlightuserdata(L, worker->socket->transport);
+    
+  luaL_getmetatable(L, "htt.transport");
+  lua_setmetatable(L, -2);
+    
+  return 1;
+}
+
+static transport_t *lua_checktransport (lua_State *L) {
+  void *ud = luaL_checkudata(L, 1, "htt.transport");
+  luaL_argcheck(L, ud != NULL, 1, "`transport' expected");
+  return (transport_t *)ud;
+}
+
+static int lua_transport_read(lua_State *L) {
+  if (lua_isnumber(L, -1)) {
+    apr_status_t status;
+    apr_pool_t *pool;
+    apr_size_t bytes;
+    transport_t *transport;
+    char *buffer;
+
+    bytes = lua_tointeger(L, -1);
+    transport = lua_checktransport(L);
+    apr_pool_create(&pool, NULL);
+    buffer = apr_pcalloc(pool, bytes);
+    if ((status = transport_read(transport, buffer, &bytes)) != APR_SUCCESS) {
+      luaL_error(L, "Could not read %d bytes", bytes);
+      return 1;
+    }
+    lua_pushlstring(L, buffer, bytes);
+    apr_pool_destroy(pool);
+    return 1;
+  }
+  else {
+    luaL_error(L, "Expect number of bytes");
+    return 1;
+  }
+}
+
+static int lua_transport_write(lua_State *L) {
+  if (lua_isstring(L, -1)) {
+    apr_status_t status;
+    apr_size_t bytes;
+    const char *buffer = lua_tolstring(L, -1, &bytes);
+    transport_t *transport = lua_checktransport(L);
+    if ((status = transport_write(transport, buffer, bytes)) != APR_SUCCESS) {
+      luaL_error(L, "Could not write %d bytes", bytes);
+      return 1;
+    }
+  }
   return 0;
 }
 
 /**
  * Set of htt commands for lua
  */
-static const struct luaL_Reg httlib[] = {
+static const struct luaL_Reg htt_lib_f[] = {
   {"version", lua_version},
   {"interpret", lua_interpret},
   {"getvar", lua_getvar},
+  {"get_transport", lua_transport_new},
+  {NULL, NULL}
+};
+
+static const struct luaL_Reg htt_transport_m[] = {
+  {"read", lua_transport_read},
+  {"write", lua_transport_write},
   {NULL, NULL}
 };
 
@@ -265,9 +344,9 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   lua_reader_t *reader;
 
   lua_wconf_t *config = lua_get_worker_config(worker);
-  lua_State *lua = lua_open();
+  lua_State *L = lua_open();
 
-  luaL_openlibs(lua);
+  luaL_openlibs(L);
   e = (apr_table_entry_t *) apr_table_elts(config->params)->elts;
   for (i = 1; i < apr_table_elts(config->params)->nelts; i++) {
     const char *val = NULL;
@@ -289,32 +368,37 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
       else {
         val = param;
       }
-    lua_pushstring(lua, val);
-    lua_setglobal(lua, e[i].key);
+    lua_pushstring(L, val);
+    lua_setglobal(L, e[i].key);
   }
-  lua_pushlightuserdata(lua, worker);
-  lua_setfield(lua, LUA_REGISTRYINDEX, "htt_worker");
-  lua_pushlightuserdata(lua, parent);
-  lua_setfield(lua, LUA_REGISTRYINDEX, "htt_parent");
-  luaL_register(lua, "htt", httlib);
+  lua_pushlightuserdata(L, parent);
+  lua_setfield(L, LUA_REGISTRYINDEX, "htt_parent");
+  lua_pushlightuserdata(L, worker);
+  lua_setfield(L, LUA_REGISTRYINDEX, "htt_worker");
+  luaL_newmetatable(L, "htt.transport");
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -2);  /* pushes the metatable */
+  lua_settable(L, -3);  /* metatable.__index = metatable */
+  luaL_openlib(L, NULL, htt_transport_m, 0);
+  luaL_openlib(L, "htt", htt_lib_f, 0);
   reader = lua_new_lua_reader(worker, ptmp);
-  if (lua_load(lua, lua_get_line, reader, "@client") != 0 ||
-      lua_pcall(lua, 0, LUA_MULTRET, 0) != 0) {
-    const char *msg = lua_tostring(lua, -1);
+  if (lua_load(L, lua_get_line, reader, "@client") != 0 ||
+      lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+    const char *msg = lua_tostring(L, -1);
     if (msg == NULL) msg = "(error object is not a string)";
     worker_log_error(worker, "Lua error: %s", msg);
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
     return APR_EGENERAL;
   }
   e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
   for (i = 0; i < apr_table_elts(config->retvars)->nelts; i++) {
     worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
-    if (lua_isstring(lua, i + 2)) {
-      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(lua, i + 2));
+    if (lua_isstring(L, i + 4)) {
+      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(L, i + 4));
     }
   }
   
-  lua_close(lua);
+  lua_close(L);
 
   return APR_SUCCESS;
 }

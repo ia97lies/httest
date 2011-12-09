@@ -178,7 +178,7 @@ apr_status_t transport_read(transport_t *hook, char *buf, apr_size_t *size) {
  * @param size IN size of buffer
  * @return APR_SUCCESS, APR_NOSOCK if no transport hook or any apr status
  */
-apr_status_t transport_write(transport_t *hook, char *buf, apr_size_t size) {
+apr_status_t transport_write(transport_t *hook, const char *buf, apr_size_t size) {
   if (hook && hook->write) {
     return hook->write(hook->data, buf, size);
   }
