@@ -4,4 +4,5 @@ EXTRA_DIST= \
 	simple_request.htb \
 	simple_urlenc.htb \
 	smtp.htb \
-	pop3.htb 
+	pop3.htb \
+	xml.lua
