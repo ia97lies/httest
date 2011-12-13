@@ -2,6 +2,8 @@
 Changes with httest 2.1.11
   *) httest: Enhance lua interface with transport functions.
 
+  *) configure: Solve sed problem with some unix derivates.
+
 
 Changes with httest 2.1.10
   *) httest: Did not work without lua is fixed. Thanks to Pascal Buchbinder
