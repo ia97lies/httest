@@ -2533,8 +2533,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
     ++line_nr;
     global->line_nr = line_nr;
     i = 0;
-    if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS &&
-         status != APR_ENOTIMPL) {
+    if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS) { 
       fprintf(stderr, "\nFailed on read line %s(%d)", my_status_str(global->pool, status), status);  
       return status;
     }
@@ -3152,7 +3151,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_clone,
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_line, 
                                       (global_t *global, char **line), 
-                                      (global, line), APR_ENOTIMPL);
+                                      (global, line), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_start, 
                                       (global_t *global, char **line), 

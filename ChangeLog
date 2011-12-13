@@ -1,4 +1,17 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.11
+  *) httest: Enhance lua interface with transport functions.
+
+
+Changes with httest 2.1.10
+  *) httest: Did not work without lua is fixed. Thanks to Pascal Buchbinder
+             and Alain Stalder for reporting this issue.
+
+  *) httest: Fixed shell problems with configure script. Hope this works now,
+             could not reproduce the problem of missing -lm. Thanks to Pascal
+	     Buchbinder for reporting this issue.
+	     
+
 Changes with httest 2.1.9
   *) httest: Extend command _RES with a special parameter INGORE_MONITORS,
              which do activly ignore peeking connections without any data.

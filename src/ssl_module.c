@@ -500,7 +500,7 @@ tryagain:
  * @param size INOUT buffer len
  * @return apr status
  */
-apr_status_t ssl_transport_write(void *data, char *buf, apr_size_t size) {
+apr_status_t ssl_transport_write(void *data, const char *buf, apr_size_t size) {
   ssl_transport_t *ssl_transport = data;
   apr_size_t e_ssl;
 

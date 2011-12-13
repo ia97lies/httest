@@ -98,7 +98,7 @@ static apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) 
  * @param size INOUT buffer len
  * @return apr status
  */
-static apr_status_t tcp_transport_write(void *data, char *buf, apr_size_t size) {
+static apr_status_t tcp_transport_write(void *data, const char *buf, apr_size_t size) {
   apr_socket_t *socket = data;
   apr_status_t status = APR_SUCCESS;
   apr_size_t total = size;

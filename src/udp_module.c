@@ -142,7 +142,7 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
  * @param size INOUT buffer len
  * @return apr status
  */
-apr_status_t udp_transport_write(void *data, char *buf, apr_size_t size) {
+apr_status_t udp_transport_write(void *data, const char *buf, apr_size_t size) {
   apr_status_t status;
   worker_t *worker = data;
   udp_socket_config_t *config = udp_get_socket_config(worker);
