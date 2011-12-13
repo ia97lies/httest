@@ -54,9 +54,10 @@ module_t modules[] = {
 EOF
 
 for I in $LIST; do
+  echo $I
   sed < $TARGET >${TARGET}.tmp \
-    -e "s/\/\/MODULES_DECLARATION\/\//\/\/MODULES_DECLARATION\/\/\napr_status_t ${I}_module_init(global_t *global);/g" \
-    -e "s/\/\/MODULES_REGISTRATION\/\//\/\/MODULES_REGISTRATION\/\/\n  { ${I}_module_init },/g"
+    -e "/\/\/MODULES_DECLARATION\/\// a apr_status_t ${I}_module_init(global_t *global);" \
+    -e "/\/\/MODULES_REGISTRATION\/\// a { ${I}_module_init },"
   mv ${TARGET}.tmp $TARGET 
 done
 
