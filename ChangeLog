@@ -1,6 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.12
+  *) httest: Enhance Lua interface with more transport functions.
+
+
 Changes with httest 2.1.11
-  *) httest: Enhance lua interface with transport functions.
+  *) httest: Enhance Lua interface with transport functions.
 
   *) configure: Solve sed problem with some unix derivates.
 
@@ -9,7 +13,7 @@ Changes with httest 2.1.11
 
 
 Changes with httest 2.1.10
-  *) httest: Did not work without lua is fixed. Thanks to Pascal Buchbinder
+  *) httest: Did not work without Lua is fixed. Thanks to Pascal Buchbinder
              and Alain Stalder for reporting this issue.
 
   *) httest: Fixed shell problems with configure script. Hope this works now,
@@ -33,7 +37,7 @@ Changes with httest 2.1.8
 
   *) httest: Add version command.
 
-  *) httest: Embed an experimental httest interpreter into lua. 
+  *) httest: Embed an experimental httest interpreter into Lua. 
 
 
 Changes with httest 2.1.7
@@ -41,9 +45,9 @@ Changes with httest 2.1.7
 
 
 Changes with httest 2.1.6
-  *) plugins: Add embedded lua syntax support.
+  *) plugins: Add embedded Lua syntax support.
 
-  *) httest: Added experimental lua module, for full Lua power in httest. This
+  *) httest: Added experimental Lua module, for full Lua power in httest. This
              needs liblua5.1 and its development header files.
 
   *) plugins: Maintained the vim plugin and added all new commands.

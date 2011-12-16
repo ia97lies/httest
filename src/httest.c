@@ -226,10 +226,11 @@ command_t local_commands[] = {
   "<cert-file>, <key-file> and <ca-cert-file> are optional for client/server authentication",
   COMMAND_FLAGS_NONE},	
   {"_RESWAIT", (command_f )command_RESWAIT, "", 
-   "Combines the _RES and _WAIT command ignoring TCP connections not sending any data." ,
-  COMMAND_FLAGS_NONE},
-  {"_RES", (command_f )command_RES, "", 
-  "Wait for a connection accept",
+   "Do use _RES IGNORE_MONITORS instead" ,
+  COMMAND_FLAGS_DEPRECIATED},
+  {"_RES", (command_f )command_RES, "[IGNORE_MONITORS]", 
+  "Wait for a connection accept \n"
+  "IGNORE_MONITORS do ignore all connection pings without data",
   COMMAND_FLAGS_NONE},
   {"_WAIT", (command_f )command_WAIT, "[<amount of bytes>]", 
   "Wait for data and receive them.\n"

@@ -152,7 +152,6 @@ static int lua_version(lua_State *L) {
 
 /**
  * Execute httest script.
- * @lua_arg string IN httest script
  * @param L IN lua state
  * @return 0
  */
@@ -217,8 +216,6 @@ static int lua_interpret(lua_State *L) {
 
 /**
  * Get variable from httest
- * @lua_arg string IN variable name
- * @lua_return variable value
  * @param L IN lua state
  * @return 0
  */
@@ -242,13 +239,11 @@ static int lua_getvar(lua_State *L) {
 }
 
 /**
- * This is test function
- * @lua_arg string IN variable name
- * @lua_return variable value
+ * Get transport object.
  * @param L IN lua state
  * @return 0
  */
-static int lua_transport_new(lua_State *L) {
+static int lua_transport_get(lua_State *L) {
   worker_t *worker;
 
   lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
@@ -267,12 +262,22 @@ static int lua_transport_new(lua_State *L) {
   return 1;
 }
 
+/**
+ * Get transport object.
+ * @param L IN lua state
+ * @return 0
+ */
 static transport_t *lua_checktransport (lua_State *L) {
   void *ud = luaL_checkudata(L, 1, "htt.transport");
   luaL_argcheck(L, ud != NULL, 1, "`transport' expected");
   return (transport_t *)ud;
 }
 
+/**
+ * Transport read method
+ * @param L IN lua state
+ * @return 0
+ */
 static int lua_transport_read(lua_State *L) {
   if (lua_isnumber(L, -1)) {
     apr_status_t status;
@@ -299,6 +304,11 @@ static int lua_transport_read(lua_State *L) {
   }
 }
 
+/**
+ * Transport write method
+ * @param L IN lua state
+ * @return 0
+ */
 static int lua_transport_write(lua_State *L) {
   if (lua_isstring(L, -1)) {
     apr_status_t status;
@@ -314,19 +324,58 @@ static int lua_transport_write(lua_State *L) {
 }
 
 /**
+ * Transport set timeout method
+ * @param L IN lua state
+ * @return 0
+ */
+static int lua_transport_set_timeout(lua_State *L) {
+  if (lua_isnumber(L, -1)) {
+    apr_status_t status;
+    apr_interval_time_t tmo = lua_tointeger(L, -1);
+    transport_t *transport = lua_checktransport(L);
+    if ((status = transport_set_timeout(transport, tmo * 1000)) != APR_SUCCESS) {
+      luaL_error(L, "Could not timeout %d ms", tmo);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Transport get timeout method
+ * @param L IN lua state
+ * @return 1
+ */
+static int lua_transport_get_timeout(lua_State *L) {
+  apr_status_t status;
+  apr_interval_time_t tmo;
+  transport_t *transport = lua_checktransport(L);
+  if ((status = transport_get_timeout(transport, &tmo)) != APR_SUCCESS) {
+    luaL_error(L, "Could not get timeout");
+    return 1;
+  }
+  else {
+    lua_pushinteger(L, tmo/1000);
+    return 1;
+  }
+}
+
+/**
  * Set of htt commands for lua
  */
 static const struct luaL_Reg htt_lib_f[] = {
   {"version", lua_version},
   {"interpret", lua_interpret},
   {"getvar", lua_getvar},
-  {"get_transport", lua_transport_new},
+  {"get_transport", lua_transport_get},
   {NULL, NULL}
 };
 
 static const struct luaL_Reg htt_transport_m[] = {
   {"read", lua_transport_read},
   {"write", lua_transport_write},
+  {"set_timeout", lua_transport_set_timeout},
+  {"get_timeout", lua_transport_get_timeout},
   {NULL, NULL}
 };
 
