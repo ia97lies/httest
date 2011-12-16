@@ -25,6 +25,7 @@ EXTRA_DIST= \
 	block_lua.hte \
 	block_lua.htt \
 	block_lua_httest.htt \
+	block_lua_transport.htt \
 	block_lua.txt \
 	block_not_found.hte \
 	block_not_found.txt \
@@ -120,6 +121,7 @@ EXTRA_DIST= \
 	ignore_body.htt \
 	ignore_body_space.htt \
 	ignore_errors.htt \
+	ignore_monitors.htt \
 	include.hte \
 	include.htt \
 	include.txt \
