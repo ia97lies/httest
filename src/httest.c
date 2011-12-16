@@ -1206,6 +1206,9 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
   worker_log(worker, LOG_CMD, "_END ERROR");
   
+  if (worker->socket) {
+    worker->socket->config = apr_hash_make(worker->pbody);
+  }
   worker_body_end(body, worker);
   return status;
 }
