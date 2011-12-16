@@ -381,6 +381,9 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   lua_settable(L, -3);  /* metatable.__index = metatable */
   luaL_openlib(L, NULL, htt_transport_m, 0);
   luaL_openlib(L, "htt", htt_lib_f, 0);
+  lua_pop(L, -1);
+  lua_pop(L, -1);
+  lua_pop(L, -1);
   reader = lua_new_lua_reader(worker, ptmp);
   if (lua_load(L, lua_get_line, reader, "@client") != 0 ||
       lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
@@ -393,8 +396,8 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   e = (apr_table_entry_t *) apr_table_elts(config->retvars)->elts;
   for (i = 0; i < apr_table_elts(config->retvars)->nelts; i++) {
     worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
-    if (lua_isstring(L, i + 4)) {
-      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(L, i + 4));
+    if (lua_isstring(L, i + 1)) {
+      store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(L, i + 1));
     }
   }
   
