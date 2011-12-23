@@ -8,6 +8,9 @@ htproxy
 
 httest
 ------
+- Clean up unused EXPECT/MATCH after a _ERROR ... _END 
+- websockets
+- md5, sha1
 - Update user guide!
 - Transparent forward proxy support
 - Trailing headers on chunked http
