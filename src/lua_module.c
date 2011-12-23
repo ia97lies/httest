@@ -425,12 +425,10 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   lua_pushlightuserdata(L, worker);
   lua_setfield(L, LUA_REGISTRYINDEX, "htt_worker");
   luaL_newmetatable(L, "htt.transport");
-  lua_pushstring(L, "__index");
-  lua_pushvalue(L, -2);  /* pushes the metatable */
-  lua_settable(L, -3);  /* metatable.__index = metatable */
-  luaL_openlib(L, NULL, htt_transport_m, 0);
-  luaL_openlib(L, "htt", htt_lib_f, 0);
-  lua_pop(L, -1);
+  lua_pushvalue(L, -1);  /* pushes the metatable */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+  luaL_register(L, NULL, htt_transport_m);
+  luaL_register(L, "htt", htt_lib_f);
   lua_pop(L, -1);
   lua_pop(L, -1);
   reader = lua_new_lua_reader(worker, ptmp);
