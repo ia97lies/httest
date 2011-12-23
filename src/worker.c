@@ -1478,31 +1478,27 @@ http_0_9:
     /* else get transfer type */
     else if ((val = apr_table_get(worker->headers, "Content-Length"))) {
       len = apr_atoi64(val);
-      if ((status = worker_check_error(worker, 
-					content_length_reader(sockreader, &buf, &len, val))) 
-					!= APR_SUCCESS) {
-				goto out_err;
+      if ((status = worker_check_error(worker, content_length_reader(sockreader, &buf, &len, val))) 
+          != APR_SUCCESS) {
+        goto out_err;
       }
     }
     else if ((val = apr_table_get(worker->headers, "Transfer-Encoding"))) {
-      if ((status = worker_check_error(worker, 
-					transfer_enc_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
-				goto out_err;
+      if ((status = worker_check_error(worker, transfer_enc_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
+        goto out_err;
       }
     }
     else if ((val = apr_table_get(worker->headers, "Encapsulated"))) {
-      if ((status = worker_check_error(worker,
-	   encapsulated_reader(sockreader, &buf, &len, val,
-	                       apr_table_get(worker->headers, "Preview"))))
-					!= APR_SUCCESS) {
-				goto out_err;
+      if ((status = worker_check_error(worker, encapsulated_reader(sockreader, &buf, &len, val, apr_table_get(worker->headers, "Preview"))))
+          != APR_SUCCESS) {
+        goto out_err;
       }
     }
     else if (worker->flags & FLAGS_CLIENT && 
 	     (val = apr_table_get(worker->headers, "Connection"))) {
-      if ((status = worker_check_error(worker,
-					eof_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
-				goto out_err;
+      if ((status = worker_check_error(worker, eof_reader(sockreader, &buf, &len, val))) 
+          != APR_SUCCESS) {
+        goto out_err;
       }
     }
     if ((status = htt_run_read_buf(worker, buf, len)) != APR_SUCCESS) {
@@ -1516,13 +1512,13 @@ http_0_9:
       sockreader_push_line(worker->recorder->sockreader, "");
       sockreader_push_back(worker->recorder->sockreader, buf, len);
     }
-		if (var) {
-			store_set(worker->vars, var, buf);
-		}
+    if (var) {
+      store_set(worker->vars, var, buf);
+    }
     if (worker->flags & FLAGS_AUTO_CLOSE) {
       val = apr_table_get(worker->headers, "Connection");
       if (val && strcasecmp(val, "close") == 0) {
-				command_CLOSE(self, worker, "do not test expects", ptmp);
+        command_CLOSE(self, worker, "do not test expects", ptmp);
       }
     }
     if (worker->flags & FLAGS_AUTO_COOKIE) {
