@@ -25,6 +25,13 @@ BLOCK:LUA WebsocketClient
   end
 
   function readeof(self)
+    local chunks = {}
+    while (self.buffer) do
+      table.insert(chunks, string.sub(self.buffer, self.pos))
+      self.pos = 1
+      self.buffer = self.transport:read(8192)
+    end
+    return table.concat(chunks)
   end
 
   htt.interpret("_FLUSH")
@@ -35,7 +42,7 @@ BLOCK:LUA WebsocketClient
       break;
     end
   end
-  print("Rest: "..string.sub(state.buffer, state.pos))
+  print("Rest: "..readeof(state))
   
 END
 
