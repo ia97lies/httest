@@ -291,7 +291,8 @@ static int lua_transport_read(lua_State *L) {
     apr_pool_create(&pool, NULL);
     buffer = apr_pcalloc(pool, bytes);
     if ((status = transport_read(transport, buffer, &bytes)) != APR_SUCCESS) {
-      luaL_error(L, "Could not read %d bytes", bytes);
+      lua_pushnil(L);
+      apr_pool_destroy(pool);
       return 1;
     }
     lua_pushlstring(L, buffer, bytes);
