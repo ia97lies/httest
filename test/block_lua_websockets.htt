@@ -1,43 +1,57 @@
 INCLUDE $TOP/test/config.htb
 
-BLOCK:LUA _WebsocketClient
+BLOCK:LUA WebsocketClient
+  
+  function lines(t)
+    local state = { transport = t, buffer = t:read(8192), pos = 1 }
+    return readline, state
+  end
+
+  function readline(self)
+    while (self.buffer) do
+      local s, e = string.find(self.buffer, "[^\r\n]*\r\n", self.pos)
+      if s then
+        self.pos = e + 1
+        return string.sub(self.buffer, s, e-2)
+      else
+        self.buffer = self.transport:read(8192)
+        self.pos = 1
+      end
+    end
+    return nil
+  end
+
+  function readblock(self, len)
+  end
+
+  function readeof(self)
+  end
+
   htt.interpret("_FLUSH")
-  t = htt.get_transport()
-  buf = t:read(8192)
-
-  buf = t:read(10)
-  print("\nRecievied "..buf)
-END
-
-BLOCK:LUA _WebsocketServer
-  t = htt.get_transport()
-  t:write("1234567890")
+  local func, state = lines(htt.get_transport())
+  for line in func, state do
+    print("XXX "..line)
+    if (string.len(line) == 0) then
+      break;
+    end
+  end
+  print("Rest: "..string.sub(state.buffer, state.pos))
+  
 END
 
 CLIENT
   _REQ $YOUR_HOST $YOUR_PORT
   __GET / HTTP/1.1
   __Host: httest
-  __Upgrade: websocket
-  __Connection: Upgrade
-  __Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-  __Origin: http://example.com
-  __Sec-WebSocket-Protocol: chat, superchat
-  __Sec-WebSocket-Version: 13
   __
-  _WebsocketClient
+  WebsocketClient
 END
 
 SERVER $YOUR_PORT
-  _RES
-  _WAIT
-  __HTTP/1.1 200 OK
-  __Upgrade: websocket
-  __Connection: Upgrade
-  __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
-  __Sec-WebSocket-Protocol: chat
-  __
-  _FLUSH
-  _SLEEP 100
-  _WebsocketServer
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+_-== OK ==
 END
