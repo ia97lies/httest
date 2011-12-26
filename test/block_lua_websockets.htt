@@ -8,12 +8,17 @@ BLOCK:LUA WebsocketClient
   end
 
   function readline(self)
+    local chunks = {}
     while (self.buffer) do
       local s, e = string.find(self.buffer, "[^\r\n]*\r\n", self.pos)
       if s then
         self.pos = e + 1
-        return string.sub(self.buffer, s, e-2)
+        table.insert(chunks, string.sub(self.buffer, s, e-2))
+        local line = table.concat(chunks) 
+        chunks = nil
+        return line
       else
+        table.insert(chunks, string.sub(self.buffer, self.pos))
         self.buffer = self.transport:read(8192)
         self.pos = 1
       end
@@ -22,6 +27,26 @@ BLOCK:LUA WebsocketClient
   end
 
   function readblock(self, len)
+    local rest_len = string.len(self.buffer) - self.pos + 1
+    if (len == 0) then
+      return ""
+    end
+    if (len <= rest_len) then
+      local block = string.sub(self.buffer, self.pos, self.pos + len - 1)
+      self.pos = self.pos + len
+      return block
+    end
+    local chunks = {}
+    local real_len = len - rest_len
+    table.insert(chunks, string.sub(self.buffer, self.pos))
+    while real_len > 0 do
+      self.buffer = self.transport:read(real_len)
+      real_len = real_len - string.len(self.buffer)
+      table.insert(chunks, self.buffer)
+    end
+    local block = table.concat(chunks)
+    chunks = nil
+    return block
   end
 
   function readeof(self)
@@ -31,18 +56,20 @@ BLOCK:LUA WebsocketClient
       self.pos = 1
       self.buffer = self.transport:read(8192)
     end
-    return table.concat(chunks)
+    local block = table.concat(chunks)
+    chunks = nil
+    return block
   end
 
   htt.interpret("_FLUSH")
   local func, state = lines(htt.get_transport())
   for line in func, state do
-    print("XXX "..line)
+    print("XXX \""..line.."\"")
     if (string.len(line) == 0) then
       break;
     end
   end
-  print("Rest: "..readeof(state))
+  print("Rest: \""..readblock(state, 512).."\"")
   
 END
 
@@ -60,5 +87,14 @@ _WAIT
 __HTTP/1.1 200 OK
 __Content-Length: AUTO
 __
-_-== OK ==
+_-S................................................................................................................
+_SLEEP 500
+_-.............................................................
+_SLEEP 500
+_-.......................................................................................................................................
+_SLEEP 500
+_-............................................................
+_SLEEP 500
+_-..............................................................................................................................................E......................
+_SLEEP 500
 END
