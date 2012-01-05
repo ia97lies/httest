@@ -15,27 +15,21 @@
 -- by christian liesch <liesch@gmx.ch>
 -----------------------------------------------------------------------------
  
-HTTP = {buffered = nil, headers = nil}
+Websocket = {buffered = nil}
 
 -- Constructor
 -- @param b IN buffered object
 -- @return buffered object
-function HTTP:new(b)
-  o = {buffered = b, headers = {}}
+function Websocket:new(b)
+  o = {buffered = b}
   setmetatable(o, self)
   self.__index = self
   return o 
 end
 
-function HTTP:readheaders()
-  local status = self.buffered:readline()
-  for line in self.buffered:lines() do
-    if (string.len(line) == 0) then
-      break;
-    end
-    name, value = string.match(line, "([^:]*): (.*)") 
-    self.headers[string.lower(name)] = value
-  end
-  return status, self.headers
+function HTTP:read()
+end
+
+function HTTP:write()
 end
 

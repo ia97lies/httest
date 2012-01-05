@@ -3,7 +3,7 @@ INCLUDE $TOP/test/config.htb
 BLOCK:LUA WebsocketCLIENT
   dofile("../macros/Buffered.lua")
   dofile("../macros/HTTP.lua")
-  dofile("../macros/Websockets.lua")
+  dofile("../macros/Websocket.lua")
   htt.interpret("_FLUSH")
 
   local buffered = Buffered:new(htt.get_transport())
