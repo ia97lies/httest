@@ -2,22 +2,24 @@ INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA WebsocketClient
   dofile("../macros/buffered.lua")
-
+  dofile("../macros/http.lua")
   htt.interpret("_FLUSH")
+
   local buffered = Buffered:new(htt.get_transport())
-  for line in buffered:lines() do
-    print("XXX \""..line.."\"")
-    if (string.len(line) == 0) then
-      break;
-    end
-  end
-  print("Rest: \""..buffered:readblock(512).."\"")
+  local HTTP = HTTP:new(buffered)
+  local status, headers = HTTP:readheaders()
+
+  assert(status == "HTTP/1.1 200 OK")
+  assert(headers["connection"] == "Upgrade")
+  print("Rest: \""..buffered:read(512).."\"")
 END
 
 CLIENT
   _REQ $YOUR_HOST $YOUR_PORT
   __GET / HTTP/1.1
-  __Host: httest
+  __Websocket: Upgrade
+  __Connection: Upgrade
+  __Protocol: chat, superchat
   __
   WebsocketClient
 END
@@ -26,7 +28,8 @@ SERVER $YOUR_PORT
 _RES
 _WAIT
 __HTTP/1.1 200 OK
-__Content-Length: AUTO
+__Connection: Upgrade
+__Protocol: chat
 __
 _-S................................................................................................................
 _SLEEP 500
