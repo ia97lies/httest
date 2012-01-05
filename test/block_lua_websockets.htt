@@ -1,44 +1,58 @@
 INCLUDE $TOP/test/config.htb
 
-BLOCK:LUA WebsocketClient
-  dofile("../macros/buffered.lua")
-  dofile("../macros/http.lua")
+BLOCK:LUA WebsocketCLIENT
+  dofile("../macros/Buffered.lua")
+  dofile("../macros/HTTP.lua")
+  dofile("../macros/Websockets.lua")
   htt.interpret("_FLUSH")
 
   local buffered = Buffered:new(htt.get_transport())
   local HTTP = HTTP:new(buffered)
+  local websocket = Websocket:new(buffered)
   local status, headers = HTTP:readheaders()
 
-  assert(status == "HTTP/1.1 200 OK")
+  assert(status == "HTTP/1.1 101 Switching Protocols")
   assert(headers["connection"] == "Upgrade")
   print("Rest: \""..buffered:read(512).."\"")
+END
+
+BLOCK:LUA WebsocketSERVER
+  htt.interpret([[
+  _-S................................................................................................................
+  _SLEEP 500
+  _-.............................................................
+  _SLEEP 500
+  _-.......................................................................................................................................
+  _SLEEP 500
+  _-............................................................
+  _SLEEP 500
+  _-..............................................................................................................................................E......................
+  _SLEEP 500
+  ]])
 END
 
 CLIENT
   _REQ $YOUR_HOST $YOUR_PORT
   __GET / HTTP/1.1
-  __Websocket: Upgrade
+  __Host: $YOUR_HOST:$YOUR_PORT 
+  __Upgrade: websocket
   __Connection: Upgrade
-  __Protocol: chat, superchat
+  __Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+  __Origin: http://$YOUR_HOST:$YOUR_PORT
+  __Sec-WebSocket-Protocol: chat, superchat
+  __Sec-WebSocket-Version: 13
   __
-  WebsocketClient
+  WebsocketCLIENT
 END
 
 SERVER $YOUR_PORT
-_RES
-_WAIT
-__HTTP/1.1 200 OK
-__Connection: Upgrade
-__Protocol: chat
-__
-_-S................................................................................................................
-_SLEEP 500
-_-.............................................................
-_SLEEP 500
-_-.......................................................................................................................................
-_SLEEP 500
-_-............................................................
-_SLEEP 500
-_-..............................................................................................................................................E......................
-_SLEEP 500
+  _RES
+  _WAIT
+  __HTTP/1.1 101 Switching Protocols
+  __Upgrade: websocket
+  __Connection: Upgrade
+  __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+  __Sec-WebSocket-Protocol: chat
+  __
+  WebsocketSERVER
 END
