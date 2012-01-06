@@ -239,6 +239,86 @@ static int lua_getvar(lua_State *L) {
 }
 
 /**
+ * Return len in network byte order
+ * @param L IN lua state
+ * @return 0
+ */
+static int lua_hton(lua_State *L) {
+  if (lua_isstring(L, -1)) {
+    worker_t *worker;
+    const char *val;
+    const int len;
+
+    const char *var = lua_tolstring(L, -1, &len);
+
+    lua_pop(L, 1);
+
+    if (len == 2) {
+      int network = hton16(*((uint16_t *)var));
+      lua_pushinteger(L, network);
+    }
+    else if (len == 4) {
+      int network = hton32(*((uint32_t *)var));
+      lua_pushinteger(L, network);
+    }
+    else if (len == 8) {
+      int network = hton64(*((uint64_t *)var));
+      lua_pushinteger(L, network);
+    }
+    else {
+      luaL_error(L, "Expect 2, 4 or 8 bytes");
+      return 1;
+    }
+
+    return 0;
+  }
+  else {
+    luaL_error(L, "Expect bytes");
+    return 1;
+  }
+}
+
+/**
+ * Return len in host byte order
+ * @param L IN lua state
+ * @return 0
+ */
+static int lua_ntoh(lua_State *L) {
+  if (lua_isstring(L, -1)) {
+    worker_t *worker;
+    const char *val;
+    int len;
+
+    const char *var = lua_tolstring(L, -1, &len);
+
+    lua_pop(L, 1);
+
+    if (len == 2) {
+      int network = ntoh16(*((uint16_t *)var));
+      lua_pushinteger(L, network);
+    }
+    else if (len == 4) {
+      int network = ntoh32(*((uint32_t *)var));
+      lua_pushinteger(L, network);
+    }
+    else if (len == 8) {
+      int network = ntoh64(*((uint64_t *)var));
+      lua_pushinteger(L, network);
+    }
+    else {
+      luaL_error(L, "Expect 2, 4 or 8 bytes");
+      return 1;
+    }
+
+    return 0;
+  }
+  else {
+    luaL_error(L, "Expect bytes");
+    return 1;
+  }
+}
+
+/**
  * Get transport object.
  * @param L IN lua state
  * @return 0
@@ -369,6 +449,8 @@ static const struct luaL_Reg htt_lib_f[] = {
   {"interpret", lua_interpret},
   {"getvar", lua_getvar},
   {"get_transport", lua_transport_get},
+  {"hton", lua_hton},
+  {"ntoh", lua_ntoh},
   {NULL, NULL}
 };
 

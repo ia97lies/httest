@@ -136,42 +136,6 @@
 #define HTNTLM_STR_RESP_NTLM2      "ntlm2" 
 #define HTNTLM_STR_RESP_NTLM2_SESS "ntlm2-session" 
 
-#define swap16(x) \
-  ((((x) & 0x00ffU) << 8)| \
-   (((x) & 0xff00U) >> 8))
-
-#define swap32(x) \
-  ((((x) & 0x000000ffUL) << 24)| \
-   (((x) & 0x0000ff00UL) <<  8)| \
-   (((x) & 0x00ff0000UL) >>  8)| \
-   (((x) & 0xff000000UL) >> 24))
-
-#define swap64(x) \
-  ((((x) & 0xff00000000000000ULL) >> 56)| \
-   (((x) & 0x00ff000000000000ULL) >> 40)| \
-   (((x) & 0x0000ff0000000000ULL) >> 24)| \
-   (((x) & 0x000000ff00000000ULL) >>  8)| \
-   (((x) & 0x00000000ff000000ULL) <<  8)| \
-   (((x) & 0x0000000000ff0000ULL) << 24)| \
-   (((x) & 0x000000000000ff00ULL) << 40)| \
-   (((x) & 0x00000000000000ffULL) << 56))
-
-#if APR_IS_BIGENDIAN
-# define hton16(x) swap16(x)
-# define hton32(x) swap32(x)
-# define hton64(x) swap64(x)
-# define ntoh16(x) swap16(x)
-# define ntoh32(x) swap32(x)
-# define ntoh64(x) swap64(x)
-#else
-# define hton16(x) (x)
-# define hton32(x) (x)
-# define hton64(x) (x)
-# define ntoh16(x) (x)
-# define ntoh32(x) (x)
-# define ntoh64(x) (x)
-#endif
-
 #ifdef WIN32
 #define FMT_LLX "%I64x"
 #else
