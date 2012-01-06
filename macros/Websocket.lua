@@ -28,8 +28,21 @@ function Websocket:new(b)
 end
 
 function HTTP:read()
+  opcode = self.buffered:readblock(1);
+  payloadLen = self.buffered:readblock(1);
+  if string.byte(payloadLen) == 126 then
+    payloadLen = self.buffered:readblock(2)
+  elseif string.byte(payloadLen) == 127 then
+    payloadLen = self.buffered:readblock(4)
+  end
+  self.buffered:readblock(payloadLen)
 end
 
-function HTTP:write()
+function HTTP:write(obcode, len, bytes)
+  if len < 126 then
+    self.buffered.transport:send(0, 1)
+    self.buffered.transport:send(len)
+    self.buffered.transport:send(bytes, len)
+  end
 end
 

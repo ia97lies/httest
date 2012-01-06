@@ -7,12 +7,12 @@ BLOCK:LUA WebsocketCLIENT
   htt.interpret("_FLUSH")
 
   local buffered = Buffered:new(htt.get_transport())
-  local HTTP = HTTP:new(buffered)
+  local http = HTTP:new(buffered)
   local websocket = Websocket:new(buffered)
-  local status, headers = HTTP:readheaders()
+  local status, headers = http:readheaders()
 
   assert(status == "HTTP/1.1 101 Switching Protocols")
-  assert(headers["connection"] == "Upgrade")
+  assert(headers["Connection"] == "Upgrade")
   print("Rest: \""..buffered:read(512).."\"")
 END
 

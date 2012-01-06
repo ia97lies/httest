@@ -21,12 +21,22 @@ HTTP = {buffered = nil, headers = nil}
 -- @param b IN buffered object
 -- @return buffered object
 function HTTP:new(b)
-  o = {buffered = b, headers = {}}
+  o = {buffered = b, headers = {mt = {}, values = {}}}
   setmetatable(o, self)
   self.__index = self
+  -- keys of headers are case-insensitiv
+  setmetatable(o.headers, o.headers.mt)
+  o.headers.mt.__index = function(t, key)
+    return t.values[string.lower(key)]
+  end
+  o.headers.mt.__newindex = function(t, key, value)
+    t.values[string.lower(key)] = value
+  end
   return o 
 end
 
+-- Read all headers but no body
+-- @return status, headers
 function HTTP:readheaders()
   local status = self.buffered:readline()
   for line in self.buffered:lines() do
@@ -34,19 +44,23 @@ function HTTP:readheaders()
       break;
     end
     name, value = string.match(line, "([^:]*): (.*)") 
-    self.headers[string.lower(name)] = value
+    self.headers[name] = value
   end
   return status, self.headers
 end
 
+-- Read body
+-- @return body
 function HTTP:readbody()
-  if (self.headers and self.headers[string.lower("Content-Length")]) then
-    local len = self.headers[string.lower("Content-Length")]
+  if (self.headers and self.headers["Content-Length"]) then
+    local len = self.headers["Content-Length"]
     return self.buffered:readblock(len)
   end
   return nil
 end
 
+-- Read hole request
+-- @return status, headers, body
 function HTTP:read()
   return self.readheaders(), self.readbody()
 end
