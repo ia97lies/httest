@@ -24,9 +24,10 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
-#include <lua5.1/lua.h>
-#include <lua5.1/lualib.h>
-#include <lua5.1/lauxlib.h>
+#define LUA_COMPAT_MODULE
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
  
 #include "module.h"
 
@@ -145,7 +146,7 @@ static const char *lua_get_line(lua_State *L, void *ud, size_t *size) {
  * @param L IN lua state
  * @return 1
  */
-static int lua_version(lua_State *L) {
+static int luam_version(lua_State *L) {
   lua_pushstring(L, PACKAGE_VERSION);
   return 1;
 }
@@ -155,7 +156,7 @@ static int lua_version(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_interpret(lua_State *L) {
+static int luam_interpret(lua_State *L) {
   apr_status_t status;
   apr_pool_t *ptmp;
   worker_t *worker;
@@ -219,7 +220,7 @@ static int lua_interpret(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_getvar(lua_State *L) {
+static int luam_getvar(lua_State *L) {
   worker_t *worker;
   const char *val;
 
@@ -243,11 +244,9 @@ static int lua_getvar(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_hton(lua_State *L) {
+static int luam_hton(lua_State *L) {
   if (lua_isstring(L, -1)) {
-    worker_t *worker;
-    const char *val;
-    const int len;
+    apr_size_t len;
 
     const char *var = lua_tolstring(L, -1, &len);
 
@@ -283,11 +282,9 @@ static int lua_hton(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_ntoh(lua_State *L) {
+static int luam_ntoh(lua_State *L) {
   if (lua_isstring(L, -1)) {
-    worker_t *worker;
-    const char *val;
-    int len;
+    apr_size_t len;
 
     const char *var = lua_tolstring(L, -1, &len);
 
@@ -323,7 +320,7 @@ static int lua_ntoh(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_transport_get(lua_State *L) {
+static int luam_transport_get(lua_State *L) {
   worker_t *worker;
 
   lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
@@ -358,7 +355,7 @@ static transport_t *lua_checktransport (lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_transport_read(lua_State *L) {
+static int luam_transport_read(lua_State *L) {
   if (lua_isnumber(L, -1)) {
     apr_status_t status;
     apr_pool_t *pool;
@@ -390,7 +387,7 @@ static int lua_transport_read(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_transport_write(lua_State *L) {
+static int luam_transport_write(lua_State *L) {
   if (lua_isstring(L, -1)) {
     apr_status_t status;
     apr_size_t bytes;
@@ -409,7 +406,7 @@ static int lua_transport_write(lua_State *L) {
  * @param L IN lua state
  * @return 0
  */
-static int lua_transport_set_timeout(lua_State *L) {
+static int luam_transport_set_timeout(lua_State *L) {
   if (lua_isnumber(L, -1)) {
     apr_status_t status;
     apr_interval_time_t tmo = lua_tointeger(L, -1);
@@ -427,7 +424,7 @@ static int lua_transport_set_timeout(lua_State *L) {
  * @param L IN lua state
  * @return 1
  */
-static int lua_transport_get_timeout(lua_State *L) {
+static int luam_transport_get_timeout(lua_State *L) {
   apr_status_t status;
   apr_interval_time_t tmo;
   transport_t *transport = lua_checktransport(L);
@@ -445,20 +442,20 @@ static int lua_transport_get_timeout(lua_State *L) {
  * Set of htt commands for lua
  */
 static const struct luaL_Reg htt_lib_f[] = {
-  {"version", lua_version},
-  {"interpret", lua_interpret},
-  {"getvar", lua_getvar},
-  {"get_transport", lua_transport_get},
-  {"hton", lua_hton},
-  {"ntoh", lua_ntoh},
+  {"version", luam_version},
+  {"interpret", luam_interpret},
+  {"getvar", luam_getvar},
+  {"get_transport", luam_transport_get},
+  {"hton", luam_hton},
+  {"ntoh", luam_ntoh},
   {NULL, NULL}
 };
 
 static const struct luaL_Reg htt_transport_m[] = {
-  {"read", lua_transport_read},
-  {"write", lua_transport_write},
-  {"set_timeout", lua_transport_set_timeout},
-  {"get_timeout", lua_transport_get_timeout},
+  {"read", luam_transport_read},
+  {"write", luam_transport_write},
+  {"set_timeout", luam_transport_set_timeout},
+  {"get_timeout", luam_transport_get_timeout},
   {NULL, NULL}
 };
 
@@ -471,12 +468,13 @@ static const struct luaL_Reg htt_transport_m[] = {
  */
 static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent, 
                                           apr_pool_t *ptmp) {
-	int i;
+  int failed;
+  int i;
   apr_table_entry_t *e; 
   lua_reader_t *reader;
 
   lua_wconf_t *config = lua_get_worker_config(worker);
-  lua_State *L = lua_open();
+  lua_State *L = luaL_newstate();
 
   luaL_openlibs(L);
   e = (apr_table_entry_t *) apr_table_elts(config->params)->elts;
@@ -515,8 +513,16 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   lua_pop(L, -1);
   lua_pop(L, -1);
   reader = lua_new_lua_reader(worker, ptmp);
-  if (lua_load(L, lua_get_line, reader, "@client") != 0 ||
-      lua_pcall(L, 0, LUA_MULTRET, 0) != 0) {
+#if ( LUA_VERSION_NUM == 501 )		
+  failed = (lua_load(L, lua_get_line, reader, "@client") != 0 || 
+            lua_pcall(L, 0, LUA_MULTRET, 0) != 0);
+#elif ( LUA_VERSION_NUM  == 502 )
+  failed = (lua_load(L, lua_get_line, reader, "@client", NULL) != 0 || 
+            lua_pcall(L, 0, LUA_MULTRET, 0) != 0);
+#else
+  #error this lua version is not supported
+#endif
+  if (failed) {
     const char *msg = lua_tostring(L, -1);
     if (msg == NULL) msg = "(error object is not a string)";
     worker_log_error(worker, "Lua error: %s", msg);
