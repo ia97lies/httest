@@ -55,9 +55,11 @@ EOF
 
 for I in $LIST; do
   echo $I
-  sed < $TARGET >${TARGET}.tmp \
-    -e "/\/\/MODULES_DECLARATION\/\// a apr_status_t ${I}_module_init(global_t *global);" \
-    -e "/\/\/MODULES_REGISTRATION\/\// a { ${I}_module_init },"
+  awk -v i=$I '
+    /.*/ { print $0 }
+    /\/\/MODULES_DECLARATION\/\// { printf("apr_status_t %s_module_init(global_t *global);\n", i); }
+    /\/\/MODULES_REGISTRATION\/\// { printf("  { %s_module_init },\n", i); }
+    ' < $TARGET >${TARGET}.tmp
   mv ${TARGET}.tmp $TARGET 
 done
 
