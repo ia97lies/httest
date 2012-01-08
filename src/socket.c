@@ -449,6 +449,9 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
   *buf = NULL;
   (*len) = 0;
 
+  if (my_strcasestr(val, "upgrade")) {
+    return APR_SUCCESS;
+  }
   if (!my_strcasestr(val, "close")) {
     return APR_ENOTIMPL;
   }

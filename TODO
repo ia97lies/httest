@@ -8,6 +8,7 @@ htproxy
 
 httest
 ------
+- Websocket support
 - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
 - websockets
 - md5, sha1

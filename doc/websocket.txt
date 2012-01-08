@@ -1,0 +1,41 @@
+Websocket Support
+-----------------
+
++ Sample
+
+CLIENT
+  _REQ $YOUR_HOST $YOUR_PORT
+  __GET / HTTP/1.1
+  __Host: $YOUR_HOST:$YOUR_PORT 
+  __Upgrade: websocket
+  __Connection: Upgrade
+  __Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+  __Origin: http://$YOUR_HOST:$YOUR_PORT
+  __Sec-WebSocket-Protocol: chat, superchat
+  __Sec-WebSocket-Version: 13
+  __
+  _SOCKET
+    _WAIT
+    _WS:RECV
+    _WS:RECV
+    _WS:RECV
+  _END
+  _CLOSE
+END
+
+SERVER $YOUR_PORT
+  _RES
+  _WAIT
+  __HTTP/1.1 101 Switching Protocols
+  __Upgrade: websocket
+  __Connection: Upgrade
+  __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+  __Sec-WebSocket-Protocol: chat
+  __
+  _SOCKET
+    _WS:SEND text blabla
+    _WS:SEND text blabla
+    _WS:SEND text blabla
+  _END
+  _CLOSE
+END

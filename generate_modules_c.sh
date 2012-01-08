@@ -32,6 +32,7 @@ apr_status_t math_module_init(global_t *global);
 apr_status_t coder_module_init(global_t *global);
 apr_status_t date_module_init(global_t *global);
 apr_status_t binary_module_init(global_t *global);
+apr_status_t websocket_module_init(global_t *global);
 apr_status_t socks_module_init(global_t *global);
 apr_status_t udp_module_init(global_t *global);
 apr_status_t tcp_module_init(global_t *global);
@@ -44,6 +45,7 @@ module_t modules[] = {
   { coder_module_init },
   { date_module_init },
   { binary_module_init },
+  { websocket_module_init },
   { socks_module_init },
   { udp_module_init },
   { tcp_module_init },
