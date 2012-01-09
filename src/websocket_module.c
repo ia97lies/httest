@@ -56,46 +56,39 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   apr_size_t payload_len;
   char *type;
   char *payload;
-  const char *op_param;
-  const char *mask_param;
-  const char *len_param;
-  const char *payload_param;
 
   if (!worker->sockreader) {
     worker_log_error(worker, "Websockets need a open HTTP stream, use _SOCKET");
   }
 
-  op_param = store_get(worker->params, "1");
-  mask_param = store_get(worker->params, "2");
-  len_param = store_get(worker->params, "3");
-  payload_param = store_get(worker->params, "4");
-
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&op, &len)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not read first frame byte");
   }
+  worker_log(worker, LOG_DEBUG, "Got opcode 0x%X", op);
   type = NULL;
   if (op & 0x01) {
     type = apr_pstrcat(ptmp, "FIN", type?",":NULL, type, NULL);
   }
   if (op & 0x10) {
-    type = apr_pstrcat(ptmp, type, "CONTINUE", type?",":NULL, type, NULL);
+    type = apr_pstrcat(ptmp, "CONTINUE", type?",":NULL, type, NULL);
   }
   if (op & 0x20) {
-    type = apr_pstrcat(ptmp, type, "TEXT", type?",":NULL, type, NULL);
+    type = apr_pstrcat(ptmp, "TEXT", type?",":NULL, type, NULL);
   }
   if (op & 0x40) {
-    type = apr_pstrcat(ptmp, type, "BINARY", type?",":NULL, type, NULL);
+    type = apr_pstrcat(ptmp, "BINARY", type?",":NULL, type, NULL);
   }
   if (op & 0x80) {
-    type = apr_pstrcat(ptmp, type, "CLOSE", type?",":NULL, type, NULL);
+    type = apr_pstrcat(ptmp, "CLOSE", type?",":NULL, type, NULL);
   }
-  worker_var_set(worker, op_param, type);
+  worker_log(worker, LOG_INFO, "Opcode: %s", type);
 
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&pl_len, &len)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not read first frame byte");
   }
+  worker_log(worker, LOG_DEBUG, "Got first len byte %x", pl_len);
   masked = pl_len & 0x01;
   pl_len = pl_len >> 1;
 
@@ -121,6 +114,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
   
   if (masked) {
+    worker_log(worker, LOG_INFO, "Masked: %s", masked?"TRUE":"FALSE");
     len = 2;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&mask, &len)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not read mask");
@@ -128,6 +122,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
 
   len = payload_len;
+  worker_log(worker, LOG_INFO, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
   if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not read payload");
@@ -166,27 +161,30 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     return APR_ENOSOCKET;
   }
 
+  worker_log(worker, LOG_DEBUG, "payload: \"%s\"", payload);
+
   e = apr_strtok(op_param, ",", &last);
   while (e) {
     if (strcmp(e, "FIN") == 0) {
       op |= 0x01;
     }
-    else if (strcmp(e, "CONTINUE")) {
+    else if (strcmp(e, "CONTINUE") == 0) {
       op |= 0x10;
     }
-    else if (strcmp(e, "TEXT")) {
+    else if (strcmp(e, "TEXT") == 0) {
       op |= 0x20;
     }
-    else if (strcmp(e, "BINARY")) {
+    else if (strcmp(e, "BINARY") == 0) {
       op |= 0x40;
     }
-    else if (strcmp(e, "CLOSE")) {
+    else if (strcmp(e, "CLOSE") == 0) {
       op |= 0x80;
     }
     e = apr_strtok(NULL, ",", &last);
   }
+  worker_log(worker, LOG_DEBUG, "Send opcod 0x%X", op);
   
-  if (strcmp(payload_len, "AUTO")) {
+  if (strcmp(payload_len, "AUTO") == 0) {
     if (payload) {
       len = strlen(payload);
     }
@@ -194,6 +192,8 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   else {
     len = apr_atoi64(payload_len);
   }
+
+  worker_log(worker, LOG_DEBUG, "Payload length: %ld", len);
 
   if (len < 126) {
     pl_len_8 = len;

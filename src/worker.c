@@ -300,7 +300,7 @@ void worker_log_error(worker_t * self, char *fmt, ...) {
  * @param prefix IN prefix before buf
  * @param len IN buf len
  */
-void worker_log_buf(worker_t * self, int log_mode, char *buf,
+void worker_log_buf(worker_t * self, int log_mode, const char *buf,
                     char *prefix, int len) {
   int i;
   char *null="<null>";
