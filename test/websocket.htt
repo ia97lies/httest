@@ -13,9 +13,10 @@ CLIENT
   __
   _SOCKET
     _WAIT
-    _WS:RECV
-    _WS:RECV
-    _WS:RECV
+    _WS:RECV OP MASK LEN PAYLOAD
+    _WS:RECV OP MASK LEN PAYLOAD
+    _WS:RECV OP MASK LEN PAYLOAD
+    _DEBUG $OP $MASK $LEN $PAYLOAD
   _END
   _CLOSE
 END
@@ -29,10 +30,9 @@ SERVER $YOUR_PORT
   __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
   __Sec-WebSocket-Protocol: chat
   __
-  _SOCKET
-    _WS:SEND text blabla
-    _WS:SEND text blabla
-    _WS:SEND text blabla
-  _END
+  _FLUSH
+  _WS:SEND TEXT AUTO blabla
+  _WS:SEND TEXT AUTO blabla
+  _WS:SEND TEXT AUTO "bla bla"
   _CLOSE
 END

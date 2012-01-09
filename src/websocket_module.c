@@ -49,23 +49,48 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
                                   apr_pool_t *ptmp) {
   apr_status_t status;
   apr_size_t len;
-  int fin;
   int masked;
   uint8_t op;
   uint8_t pl_len;
   uint16_t mask = 0x0;
   apr_size_t payload_len;
+  char *type;
   char *payload;
+  const char *op_param;
+  const char *mask_param;
+  const char *len_param;
+  const char *payload_param;
 
   if (!worker->sockreader) {
     worker_log_error(worker, "Websockets need a open HTTP stream, use _SOCKET");
   }
 
+  op_param = store_get(worker->params, "1");
+  mask_param = store_get(worker->params, "2");
+  len_param = store_get(worker->params, "3");
+  payload_param = store_get(worker->params, "4");
+
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&op, &len)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not read first frame byte");
   }
-  fin = op & 0x01;
+  type = NULL;
+  if (op & 0x01) {
+    type = apr_pstrcat(ptmp, "FIN", type?",":NULL, type, NULL);
+  }
+  if (op & 0x10) {
+    type = apr_pstrcat(ptmp, type, "CONTINUE", type?",":NULL, type, NULL);
+  }
+  if (op & 0x20) {
+    type = apr_pstrcat(ptmp, type, "TEXT", type?",":NULL, type, NULL);
+  }
+  if (op & 0x40) {
+    type = apr_pstrcat(ptmp, type, "BINARY", type?",":NULL, type, NULL);
+  }
+  if (op & 0x80) {
+    type = apr_pstrcat(ptmp, type, "CLOSE", type?",":NULL, type, NULL);
+  }
+  worker_var_set(worker, op_param, type);
 
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&pl_len, &len)) != APR_SUCCESS) {
@@ -83,12 +108,12 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     payload_len = ntoh16(length);
   }
   else if (pl_len == 127) {
-    uint32_t length;
-    len = 4;
+    uint64_t length;
+    len = 8;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not read 32 bit payload length");
     }
-    payload_len = ntoh32(length);
+    payload_len = ntoh64(length);
 
   }
   else {
@@ -108,6 +133,9 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     worker_log_error(worker, "Could not read payload");
   }
 
+  /* TODO: If masked unmask */
+  worker_log_buf(worker, LOG_INFO, payload, "<", len);
+
   return APR_SUCCESS;
 }
 
@@ -120,6 +148,109 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
  */
 static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent, 
                                   apr_pool_t *ptmp) {
+  apr_status_t status;
+  char *last;
+  char *e;
+  char *op_param = store_get_copy(worker->params, ptmp, "1");
+  const char *payload_len = store_get(worker->params, "2");
+  const char *payload = store_get(worker->params, "3");
+  const char *mask = store_get(worker->params, "4");
+  uint8_t op = 0;
+  uint8_t pl_len_8 = 0;
+  uint16_t pl_len_16 = 0;
+  uint64_t pl_len_64 = 0;
+  apr_size_t len;
+
+  if (!worker->socket || !worker->socket->transport) {
+    worker_log_error(worker, "No established socket for websocket protocol");
+    return APR_ENOSOCKET;
+  }
+
+  e = apr_strtok(op_param, ",", &last);
+  while (e) {
+    if (strcmp(e, "FIN") == 0) {
+      op |= 0x01;
+    }
+    else if (strcmp(e, "CONTINUE")) {
+      op |= 0x10;
+    }
+    else if (strcmp(e, "TEXT")) {
+      op |= 0x20;
+    }
+    else if (strcmp(e, "BINARY")) {
+      op |= 0x40;
+    }
+    else if (strcmp(e, "CLOSE")) {
+      op |= 0x80;
+    }
+    e = apr_strtok(NULL, ",", &last);
+  }
+  
+  if (strcmp(payload_len, "AUTO")) {
+    if (payload) {
+      len = strlen(payload);
+    }
+  }
+  else {
+    len = apr_atoi64(payload_len);
+  }
+
+  if (len < 126) {
+    pl_len_8 = len;
+  }
+  else if (len < 65536) {
+    uint16_t tmp;
+    pl_len_8 = 126;
+    tmp = len;
+    pl_len_16 = hton16(tmp);
+  }
+  else {
+    uint16_t tmp;
+    pl_len_8 = 127;
+    tmp = len;
+    pl_len_64 = hton64(tmp);
+  }
+
+  pl_len_8 = pl_len_8 << 1;
+  if (mask) {
+    pl_len_8 |= 0x01;
+  }
+
+  if ((status = transport_write(worker->socket->transport, (const char *)&op, 1)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not send Opcode");
+    return status;
+  }
+
+  if ((status = transport_write(worker->socket->transport, (const char *)&pl_len_8, 1)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not send first len byte");
+    return status;
+  }
+
+  if (pl_len_16) {
+    if ((status = transport_write(worker->socket->transport, (const char *)&pl_len_16, 2)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not send 16 bit len bytes");
+      return status;
+    }
+  }
+
+  if (pl_len_64) {
+    if ((status = transport_write(worker->socket->transport, (const char *)&pl_len_64, 8)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not send 64 bit len bytes");
+      return status;
+    }
+  }
+
+  if (mask) {
+    /* TODO */
+  }
+
+  if ((status = transport_write(worker->socket->transport, payload, len)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not send payload");
+    return status;
+  }
+  worker_log_buf(worker, LOG_INFO, payload, ">", len);
+
+
   return APR_SUCCESS;
 }
 
