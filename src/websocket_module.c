@@ -47,8 +47,65 @@ const char * ws_module = "ws_module";
  */
 static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent, 
                                   apr_pool_t *ptmp) {
+  apr_status_t status;
+  apr_size_t len;
+  int fin;
+  int masked;
+  uint8_t op;
+  uint8_t pl_len;
+  uint16_t mask = 0x0;
+  apr_size_t payload_len;
+  char *payload;
+
   if (!worker->sockreader) {
     worker_log_error(worker, "Websockets need a open HTTP stream, use _SOCKET");
+  }
+
+  len = 1;
+  if ((status = sockreader_read_block(worker->sockreader, (char *)&op, &len)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not read first frame byte");
+  }
+  fin = op & 0x01;
+
+  len = 1;
+  if ((status = sockreader_read_block(worker->sockreader, (char *)&pl_len, &len)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not read first frame byte");
+  }
+  masked = pl_len & 0x01;
+  pl_len = pl_len >> 1;
+
+  if (pl_len == 126) {
+    uint16_t length;
+    len = 2;
+    if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not read 16 bit payload length");
+    }
+    payload_len = ntoh16(length);
+  }
+  else if (pl_len == 127) {
+    uint32_t length;
+    len = 4;
+    if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not read 32 bit payload length");
+    }
+    payload_len = ntoh32(length);
+
+  }
+  else {
+    payload_len = pl_len;
+  }
+  
+  if (masked) {
+    len = 2;
+    if ((status = sockreader_read_block(worker->sockreader, (char *)&mask, &len)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not read mask");
+    }
+  }
+
+  len = payload_len;
+  payload = apr_pcalloc(worker->pbody, len + 1);
+  if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
+    worker_log_error(worker, "Could not read payload");
   }
 
   return APR_SUCCESS;
