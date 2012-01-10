@@ -57,8 +57,13 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   char *type;
   char *payload;
 
+  const char *type_param = store_get(worker->params, "1");
+  const char *len_param = store_get(worker->params, "2");
+  //const char *mask_param = store_get(worker->params, "3");
+
   if (!worker->sockreader) {
     worker_log_error(worker, "Websockets need a open HTTP stream, use _SOCKET");
+    return APR_ENOSOCKET;
   }
 
   len = 1;
@@ -70,19 +75,28 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if (op & 0x01) {
     type = apr_pstrcat(ptmp, "FIN", type?",":NULL, type, NULL);
   }
-  if (op & 0x10) {
+  if ((op & 0xF0) == 0x00) {
     type = apr_pstrcat(ptmp, "CONTINUE", type?",":NULL, type, NULL);
   }
-  if (op & 0x20) {
+  if ((op & 0xF0) == 0x10) {
     type = apr_pstrcat(ptmp, "TEXT", type?",":NULL, type, NULL);
   }
-  if (op & 0x40) {
+  if ((op & 0xF0) == 0x20) {
     type = apr_pstrcat(ptmp, "BINARY", type?",":NULL, type, NULL);
   }
-  if (op & 0x80) {
+  if ((op & 0xF0) == 0x80) {
     type = apr_pstrcat(ptmp, "CLOSE", type?",":NULL, type, NULL);
   }
+  if ((op & 0xF0) == 0x90) {
+    type = apr_pstrcat(ptmp, "PING", type?",":NULL, type, NULL);
+  }
+  if ((op & 0xF0) == 0xA0) {
+    type = apr_pstrcat(ptmp, "PONG", type?",":NULL, type, NULL);
+  }
   worker_log(worker, LOG_INFO, "Opcode: %s", type);
+  if (type_param) {
+    worker_var_set(worker, type_param, type?type:"<NONE>");
+  }
 
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&pl_len, &len)) != APR_SUCCESS) {
@@ -113,8 +127,8 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     payload_len = pl_len;
   }
   
+  worker_log(worker, LOG_INFO, "Masked: %s", masked?"TRUE":"FALSE");
   if (masked) {
-    worker_log(worker, LOG_INFO, "Masked: %s", masked?"TRUE":"FALSE");
     len = 2;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&mask, &len)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not read mask");
@@ -122,6 +136,9 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
 
   len = payload_len;
+  if (len_param) {
+    worker_var_set(worker, len_param, apr_itoa(ptmp, len));
+  }
   worker_log(worker, LOG_INFO, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
   if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
@@ -129,9 +146,11 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
 
   /* TODO: If masked unmask */
-  worker_log_buf(worker, LOG_INFO, payload, "<", len);
+  /* ... */
 
-  return APR_SUCCESS;
+  status = worker_handle_buf(worker, ptmp, payload, len);
+  status = worker_assert(worker, status);
+  return status;
 }
 
 /**
@@ -169,16 +188,22 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
       op |= 0x01;
     }
     else if (strcmp(e, "CONTINUE") == 0) {
-      op |= 0x10;
+      op |= 0x00;
     }
     else if (strcmp(e, "TEXT") == 0) {
-      op |= 0x20;
+      op |= 0x10;
     }
     else if (strcmp(e, "BINARY") == 0) {
-      op |= 0x40;
+      op |= 0x20;
     }
     else if (strcmp(e, "CLOSE") == 0) {
       op |= 0x80;
+    }
+    else if (strcmp(e, "PING") == 0) {
+      op |= 0x90;
+    }
+    else if (strcmp(e, "PONG") == 0) {
+      op |= 0xA0;
     }
     e = apr_strtok(NULL, ",", &last);
   }

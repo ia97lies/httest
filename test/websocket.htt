@@ -13,25 +13,36 @@ CLIENT
   __
   _SOCKET
     _WAIT
+    _WS:RECV OP
+    _EXPECT VAR(OP) "PING"
+    _WS:SEND PONG AUTO ""
+    _EXPECT . "bla"
+    _WS:RECV OP
+    _EXPECT . "blu"
     _WS:RECV
-    _WS:RECV
-    _WS:RECV
+    _EXPECT . "bli blo"
+    _WS:RECV OP LEN
   _END
   _CLOSE
 END
 
 SERVER $YOUR_PORT
   _RES
-  _WAIT
-  __HTTP/1.1 101 Switching Protocols
-  __Upgrade: websocket
-  __Connection: Upgrade
-  __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
-  __Sec-WebSocket-Protocol: chat
-  __
-  _FLUSH
-  _WS:SEND TEXT AUTO blabla
-  _WS:SEND TEXT AUTO blabla
-  _WS:SEND TEXT AUTO "bla bla"
+  _SOCKET
+    _WAIT
+    __HTTP/1.1 101 Switching Protocols
+    __Upgrade: websocket
+    __Connection: Upgrade
+    __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+    __Sec-WebSocket-Protocol: chat
+    __
+    _FLUSH
+    _WS:SEND PING AUTO ""
+    _WS:RECV OP
+    _EXPECT VAR(OP) "PONG"
+    _WS:SEND TEXT AUTO blabla
+    _WS:SEND TEXT AUTO blubla
+    _WS:SEND TEXT AUTO "bli blo"
+  _END
   _CLOSE
 END
