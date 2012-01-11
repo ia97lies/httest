@@ -52,7 +52,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   int masked;
   uint8_t op;
   uint8_t pl_len;
-  uint16_t mask = 0x0;
+  uint32_t mask = 0x0;
   apr_size_t payload_len;
   char *type;
   char *payload;
@@ -93,10 +93,6 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if ((op & 0xF0) == 0xA0) {
     type = apr_pstrcat(ptmp, "PONG", type?",":NULL, type, NULL);
   }
-  worker_log(worker, LOG_INFO, "Opcode: %s", type);
-  if (type_param) {
-    worker_var_set(worker, type_param, type?type:"<NONE>");
-  }
 
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&pl_len, &len)) != APR_SUCCESS) {
@@ -104,6 +100,13 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
   worker_log(worker, LOG_DEBUG, "Got first len byte %x", pl_len);
   masked = pl_len & 0x01;
+  if (masked) {
+    type = apr_pstrcat(ptmp, "MASKED", type?",":NULL, type, NULL);
+  }
+  worker_log(worker, LOG_DEBUG, "Opcode: %s", type);
+  if (type_param) {
+    worker_var_set(worker, type_param, type?type:"<NONE>");
+  }
   pl_len = pl_len >> 1;
 
   if (pl_len == 126) {
@@ -127,9 +130,8 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     payload_len = pl_len;
   }
   
-  worker_log(worker, LOG_INFO, "Masked: %s", masked?"TRUE":"FALSE");
   if (masked) {
-    len = 2;
+    len = 4;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&mask, &len)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not read mask");
     }
@@ -139,14 +141,21 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if (len_param) {
     worker_var_set(worker, len_param, apr_itoa(ptmp, len));
   }
-  worker_log(worker, LOG_INFO, "Payload-Length: %ld", len);
+  worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
   if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not read payload");
   }
 
   /* TODO: If masked unmask */
-  /* ... */
+  if (masked) {
+    int i, j;
+    for (i = 0; i < len; i++) {
+      j = i % 4;
+      payload[i] ^= ((uint8_t *)&mask)[j];
+    }
+  }
+
 
   status = worker_handle_buf(worker, ptmp, payload, len);
   status = worker_assert(worker, status);
@@ -167,8 +176,8 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   char *e;
   char *op_param = store_get_copy(worker->params, ptmp, "1");
   const char *payload_len = store_get(worker->params, "2");
-  const char *payload = store_get(worker->params, "3");
-  const char *mask = store_get(worker->params, "4");
+  char *payload = store_get_copy(worker->params, ptmp, "3");
+  const char *mask_str = store_get(worker->params, "4");
   uint8_t op = 0;
   uint8_t pl_len_8 = 0;
   uint16_t pl_len_16 = 0;
@@ -223,7 +232,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   if (len < 126) {
     pl_len_8 = len;
   }
-  else if (len < 65536) {
+  else if (len <= 0xFFFF) {
     uint16_t tmp;
     pl_len_8 = 126;
     tmp = len;
@@ -237,7 +246,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   }
 
   pl_len_8 = pl_len_8 << 1;
-  if (mask) {
+  if (mask_str) {
     pl_len_8 |= 0x01;
   }
 
@@ -265,8 +274,17 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     }
   }
 
-  if (mask) {
-    /* TODO */
+  if (mask_str) {
+    uint32_t mask = apr_strtoi64(mask_str, NULL, 0);
+    int i, j;
+    for (i = 0; i < len; i++) {
+      j = i % 4;
+      payload[i] ^= ((uint8_t *)&mask)[j];
+    }
+    if ((status = transport_write(worker->socket->transport, (const char *)&mask, 4)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not send mask bytes");
+      return status;
+    }
   }
 
   if ((status = transport_write(worker->socket->transport, payload, len)) != APR_SUCCESS) {

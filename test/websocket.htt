@@ -11,13 +11,14 @@ CLIENT
   __Sec-WebSocket-Protocol: chat, superchat
   __Sec-WebSocket-Version: 13
   __
-  _SOCKET
+  _SOCKET  # spawn a websocket
     _WAIT
     _WS:RECV OP
     _EXPECT VAR(OP) "PING"
     _WS:SEND PONG AUTO ""
-    _EXPECT . "bla"
+    _EXPECT . "blabla"
     _WS:RECV OP
+    _DEBUG $OP
     _EXPECT . "blu"
     _WS:RECV
     _EXPECT . "bli blo"
@@ -28,7 +29,7 @@ END
 
 SERVER $YOUR_PORT
   _RES
-  _SOCKET
+  _SOCKET # spawn a websocket
     _WAIT
     __HTTP/1.1 101 Switching Protocols
     __Upgrade: websocket
@@ -40,7 +41,7 @@ SERVER $YOUR_PORT
     _WS:SEND PING AUTO ""
     _WS:RECV OP
     _EXPECT VAR(OP) "PONG"
-    _WS:SEND TEXT AUTO blabla
+    _WS:SEND TEXT AUTO blabla 0x12345678
     _WS:SEND TEXT AUTO blubla
     _WS:SEND TEXT AUTO "bli blo"
   _END
