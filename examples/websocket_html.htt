@@ -1,0 +1,28 @@
+SERVER 8888 -1
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Content-Length: AUTO
+__
+__<!DOCTYPE html>
+__<html xmlns="http://www.w3.org/1999/xhtml">
+__  <head>
+__    <title>Web Socket Example</title>
+__    <meta charset="UTF-8">
+__    <script>
+__      window.onload = function() {
+__        var s = new WebSocket("ws://localhost:9876/");
+__        s.onopen = function(e) { alert("opened"); }
+__        s.onclose = function(e) { alert("closed"); }
+__        s.onmessage = function(e) { alert("got: " + e.data); }
+__      };
+__    </script>
+__  </head>
+__    Hallo Welt
+__    <body>
+__      <div id="holder" style="width:600px; height:300px"></div>
+__    </body>
+__</html>
+__
+END
