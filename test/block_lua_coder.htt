@@ -1,0 +1,15 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK:LUA MySha1 p1
+  coder = htt.get_coder()
+  hashed = coder:sha1(p1) 
+ 
+  for i = 0, string.len(hashed) do
+    print(string.byte(hashed, i))
+  end
+END
+
+CLIENT
+  MySha1 "blablablabla"
+END
+
