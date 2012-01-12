@@ -28,7 +28,9 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
- 
+
+#include <apr_sha1.h>
+
 #include "module.h"
 
 /************************************************************************
@@ -240,79 +242,60 @@ static int luam_getvar(lua_State *L) {
 }
 
 /**
- * Return len in network byte order
+ * Get coder object.
  * @param L IN lua state
  * @return 0
  */
-static int luam_hton(lua_State *L) {
-  if (lua_isstring(L, -1)) {
-    apr_size_t len;
+static int luam_get_coder(lua_State *L) {
+  worker_t *worker;
 
-    const char *var = lua_tolstring(L, -1, &len);
+  lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
+  worker = lua_touserdata(L, 1);
 
-    lua_pop(L, 1);
-
-    if (len == 2) {
-      int network = hton16(*((uint16_t *)var));
-      lua_pushinteger(L, network);
-    }
-    else if (len == 4) {
-      int network = hton32(*((uint32_t *)var));
-      lua_pushinteger(L, network);
-    }
-    else if (len == 8) {
-      int network = hton64(*((uint64_t *)var));
-      lua_pushinteger(L, network);
-    }
-    else {
-      luaL_error(L, "Expect 2, 4 or 8 bytes");
-      return 1;
-    }
-
-    return 0;
-  }
-  else {
-    luaL_error(L, "Expect bytes");
-    return 1;
-  }
+  lua_pushlightuserdata(L, worker);
+    
+  luaL_getmetatable(L, "htt.coder");
+  lua_setmetatable(L, -2);
+    
+  return 1;
 }
 
 /**
- * Return len in host byte order
+ * Get coder object.
  * @param L IN lua state
  * @return 0
  */
-static int luam_ntoh(lua_State *L) {
+static worker_t *lua_checkcoder(lua_State *L) {
+  void *ud = luaL_checkudata(L, 1, "htt.coder");
+  luaL_argcheck(L, ud != NULL, 1, "`coder' expected");
+  return (worker_t *)ud;
+}
+
+/**
+ * Transport write method
+ * @param L IN lua state
+ * @return 0
+ */
+static int luam_coder_sha1(lua_State *L) {
   if (lua_isstring(L, -1)) {
     apr_size_t len;
+    apr_sha1_ctx_t sha1;
+    unsigned char digest[APR_SHA1_DIGESTSIZE];
 
-    const char *var = lua_tolstring(L, -1, &len);
+    const char *buffer = lua_tolstring(L, -1, &len);
 
-    lua_pop(L, 1);
+    apr_sha1_init(&sha1);
+    apr_sha1_update(&sha1, buffer, len);
+    apr_sha1_final(digest, &sha1);
 
-    if (len == 2) {
-      int network = ntoh16(*((uint16_t *)var));
-      lua_pushinteger(L, network);
-    }
-    else if (len == 4) {
-      int network = ntoh32(*((uint32_t *)var));
-      lua_pushinteger(L, network);
-    }
-    else if (len == 8) {
-      int network = ntoh64(*((uint64_t *)var));
-      lua_pushinteger(L, network);
-    }
-    else {
-      luaL_error(L, "Expect 2, 4 or 8 bytes");
-      return 1;
-    }
-
-    return 0;
-  }
-  else {
-    luaL_error(L, "Expect bytes");
+    lua_pushlstring(L, (const char *)digest, APR_SHA1_DIGESTSIZE);
     return 1;
   }
+  else {
+    luaL_error(L, "Expect a string parameter");
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -446,8 +429,7 @@ static const struct luaL_Reg htt_lib_f[] = {
   {"interpret", luam_interpret},
   {"getvar", luam_getvar},
   {"get_transport", luam_transport_get},
-  {"hton", luam_hton},
-  {"ntoh", luam_ntoh},
+  {"get_coder", luam_get_coder},
   {NULL, NULL}
 };
 
@@ -456,6 +438,11 @@ static const struct luaL_Reg htt_transport_m[] = {
   {"write", luam_transport_write},
   {"set_timeout", luam_transport_set_timeout},
   {"get_timeout", luam_transport_get_timeout},
+  {NULL, NULL}
+};
+
+static const struct luaL_Reg htt_coder_m[] = {
+  {"sha1", luam_coder_sha1},
   {NULL, NULL}
 };
 
@@ -509,6 +496,10 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   lua_pushvalue(L, -1);  /* pushes the metatable */
   lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
   luaL_register(L, NULL, htt_transport_m);
+  luaL_newmetatable(L, "htt.coder");
+  lua_pushvalue(L, -1);  /* pushes the metatable */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+  luaL_register(L, NULL, htt_coder_m);
   luaL_register(L, "htt", htt_lib_f);
   lua_pop(L, -1);
   lua_pop(L, -1);
