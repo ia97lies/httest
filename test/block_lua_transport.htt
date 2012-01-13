@@ -1,7 +1,7 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyLuaThing
-  t = htt.get_transport()
+  t = htt.getTransport()
   print()
   buf = t:read(8192)
   print("\n--------------")

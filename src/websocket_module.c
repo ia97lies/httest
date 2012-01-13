@@ -245,10 +245,12 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     pl_len_64 = hton64(tmp);
   }
 
+  worker_log(worker, LOG_DEBUG, "pl_len: %0x", pl_len_8);
   pl_len_8 = pl_len_8 << 1;
   if (mask_str) {
     pl_len_8 |= 0x01;
   }
+  worker_log(worker, LOG_DEBUG, "pl_len_8: %0x, pl_len_16: %ld, pl_len_64: %ld", pl_len_8, pl_len_16, pl_len_64);
 
   if ((status = transport_write(worker->socket->transport, (const char *)&op, 1)) != APR_SUCCESS) {
     worker_log_error(worker, "Could not send Opcode");

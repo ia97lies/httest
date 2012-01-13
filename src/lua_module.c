@@ -247,13 +247,8 @@ static int luam_getvar(lua_State *L) {
  * @return 0
  */
 static int luam_get_coder(lua_State *L) {
-  worker_t *worker;
-
   lua_getfield(L, LUA_REGISTRYINDEX, "htt_worker");
-  worker = lua_touserdata(L, 1);
 
-  lua_pushlightuserdata(L, worker);
-    
   luaL_getmetatable(L, "htt.coder");
   lua_setmetatable(L, -2);
     
@@ -261,18 +256,7 @@ static int luam_get_coder(lua_State *L) {
 }
 
 /**
- * Get coder object.
- * @param L IN lua state
- * @return 0
- */
-static worker_t *lua_checkcoder(lua_State *L) {
-  void *ud = luaL_checkudata(L, 1, "htt.coder");
-  luaL_argcheck(L, ud != NULL, 1, "`coder' expected");
-  return (worker_t *)ud;
-}
-
-/**
- * Transport write method
+ * sha1 method
  * @param L IN lua state
  * @return 0
  */
@@ -289,6 +273,66 @@ static int luam_coder_sha1(lua_State *L) {
     apr_sha1_final(digest, &sha1);
 
     lua_pushlstring(L, (const char *)digest, APR_SHA1_DIGESTSIZE);
+    return 1;
+  }
+  else {
+    luaL_error(L, "Expect a string parameter");
+    return 1;
+  }
+  return 0;
+}
+
+/**
+ * b64Enc
+ * @param L IN lua state
+ * @return 0
+ */
+static int luam_coder_b64enc(lua_State *L) {
+  if (lua_isstring(L, -1)) {
+    apr_pool_t *pool;
+    apr_size_t len;
+    apr_size_t b64len;
+    char *base64;
+
+    const char *buffer = lua_tolstring(L, -1, &len);
+
+    apr_pool_create(&pool, NULL);
+    b64len = apr_base64_encode_len(len);
+    base64 = apr_pcalloc(pool, b64len + 1);
+    apr_base64_encode(base64, buffer, len);
+
+    lua_pushstring(L, base64);
+    apr_pool_destroy(pool);
+    return 1;
+  }
+  else {
+    luaL_error(L, "Expect a string parameter");
+    return 1;
+  }
+  return 0;
+}
+
+/**
+ * b64Dec
+ * @param L IN lua state
+ * @return 0
+ */
+static int luam_coder_b64dec(lua_State *L) {
+  if (lua_isstring(L, -1)) {
+    apr_pool_t *pool;
+    apr_size_t len;
+    unsigned char *plain;
+
+    const char *buffer = lua_tolstring(L, -1, &len);
+
+    apr_pool_create(&pool, NULL);
+
+    len = apr_base64_decode_len(buffer);
+    plain = apr_pcalloc(pool, len);
+    apr_base64_decode_binary(plain, buffer);
+
+    lua_pushlstring(L, (char *)plain, len);
+    apr_pool_destroy(pool);
     return 1;
   }
   else {
@@ -427,22 +471,24 @@ static int luam_transport_get_timeout(lua_State *L) {
 static const struct luaL_Reg htt_lib_f[] = {
   {"version", luam_version},
   {"interpret", luam_interpret},
-  {"getvar", luam_getvar},
-  {"get_transport", luam_transport_get},
-  {"get_coder", luam_get_coder},
+  {"getVar", luam_getvar},
+  {"getTransport", luam_transport_get},
+  {"getCoder", luam_get_coder},
   {NULL, NULL}
 };
 
 static const struct luaL_Reg htt_transport_m[] = {
   {"read", luam_transport_read},
   {"write", luam_transport_write},
-  {"set_timeout", luam_transport_set_timeout},
-  {"get_timeout", luam_transport_get_timeout},
+  {"setTimeout", luam_transport_set_timeout},
+  {"getTimeout", luam_transport_get_timeout},
   {NULL, NULL}
 };
 
 static const struct luaL_Reg htt_coder_m[] = {
   {"sha1", luam_coder_sha1},
+  {"encBase64", luam_coder_b64enc},
+  {"decBase64", luam_coder_b64dec},
   {NULL, NULL}
 };
 
