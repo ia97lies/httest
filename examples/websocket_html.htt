@@ -1,4 +1,14 @@
-SERVER 8888 -1
+
+BLOCK:LUA WebsocketAccept websocketKey : result
+  print()
+  print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+  print(websocketKey)
+  print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+  coder = htt.getCoder()
+  return coder:encBase64(coder:sha1(websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))
+END
+
+SERVER 8888
 _RES
 _WAIT
 __HTTP/1.1 200 OK
@@ -26,3 +36,24 @@ __    </body>
 __</html>
 __
 END
+
+SERVER 9876
+  _RES
+  _SOCKET # spawn a websocket
+    _MATCH headers "Sec-WebSocket-Key: (.*)" WebsocketKey 
+    _WAIT
+    __HTTP/1.1 101 Switching Protocols
+    __Upgrade: websocket
+    __Connection: Upgrade
+    __Sec-WebSocket-Accept: $WebsocketAccept($WebsocketKey)
+    __Sec-WebSocket-Protocol: chat
+    __
+    _FLUSH
+    _SLEEP 2000
+    _WS:SEND TEXT AUTO hallo
+    _SLEEP 2000
+    _WS:SEND FIN,TEXT AUTO welt
+  _END
+  _CLOSE
+END
+

@@ -11,7 +11,7 @@ BLOCK:LUA MyLuaThing
     __
     _WAIT BUF
   ]])
-  body = htt.getvar("BUF")
+  body = htt.getVar("BUF")
   assert(body == "== OK ==\r\n")
   print("\n------------------")
   print(body.."------------------")
