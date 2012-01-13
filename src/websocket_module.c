@@ -72,25 +72,25 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
   worker_log(worker, LOG_DEBUG, "Got opcode 0x%X", op);
   type = NULL;
-  if (op & 0x01) {
+  if ((op >> 7) & 1) {
     type = apr_pstrcat(ptmp, "FIN", type?",":NULL, type, NULL);
   }
-  if ((op & 0xF0) == 0x00) {
+  if ((op & 0xf) == 0x0) {
     type = apr_pstrcat(ptmp, "CONTINUE", type?",":NULL, type, NULL);
   }
-  if ((op & 0xF0) == 0x10) {
+  if ((op & 0xf) == 0x1) {
     type = apr_pstrcat(ptmp, "TEXT", type?",":NULL, type, NULL);
   }
-  if ((op & 0xF0) == 0x20) {
+  if ((op & 0xf) == 0x2) {
     type = apr_pstrcat(ptmp, "BINARY", type?",":NULL, type, NULL);
   }
-  if ((op & 0xF0) == 0x80) {
+  if ((op & 0xf) == 0x8) {
     type = apr_pstrcat(ptmp, "CLOSE", type?",":NULL, type, NULL);
   }
-  if ((op & 0xF0) == 0x90) {
+  if ((op & 0xf) == 0x9) {
     type = apr_pstrcat(ptmp, "PING", type?",":NULL, type, NULL);
   }
-  if ((op & 0xF0) == 0xA0) {
+  if ((op & 0xf) == 0xA) {
     type = apr_pstrcat(ptmp, "PONG", type?",":NULL, type, NULL);
   }
 
@@ -99,7 +99,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     worker_log_error(worker, "Could not read first frame byte");
   }
   worker_log(worker, LOG_DEBUG, "Got first len byte %x", pl_len);
-  masked = pl_len & 0x01;
+  masked = (pl_len & 0x80);
   if (masked) {
     type = apr_pstrcat(ptmp, "MASKED", type?",":NULL, type, NULL);
   }
@@ -107,7 +107,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if (type_param) {
     worker_var_set(worker, type_param, type?type:"<NONE>");
   }
-  pl_len = pl_len >> 1;
+  pl_len = pl_len & 0x7f;
 
   if (pl_len == 126) {
     uint16_t length;
@@ -194,25 +194,25 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   e = apr_strtok(op_param, ",", &last);
   while (e) {
     if (strcmp(e, "FIN") == 0) {
-      op |= 0x01;
+      op |= 1 << 7;
     }
     else if (strcmp(e, "CONTINUE") == 0) {
-      op |= 0x00;
+      op |= 0x0;
     }
     else if (strcmp(e, "TEXT") == 0) {
-      op |= 0x10;
+      op |= 0x1;
     }
     else if (strcmp(e, "BINARY") == 0) {
-      op |= 0x20;
+      op |= 0x2;
     }
     else if (strcmp(e, "CLOSE") == 0) {
-      op |= 0x80;
+      op |= 0x8;
     }
     else if (strcmp(e, "PING") == 0) {
-      op |= 0x90;
+      op |= 0x9;
     }
     else if (strcmp(e, "PONG") == 0) {
-      op |= 0xA0;
+      op |= 0xA;
     }
     e = apr_strtok(NULL, ",", &last);
   }
@@ -245,9 +245,9 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     pl_len_64 = hton64(tmp);
   }
 
-  pl_len_8 = pl_len_8 << 1;
+  pl_len_8 = pl_len_8;
   if (mask_str) {
-    pl_len_8 |= 0x01;
+    pl_len_8 |= 0x80;
   }
 
   if ((status = transport_write(worker->socket->transport, (const char *)&op, 1)) != APR_SUCCESS) {
