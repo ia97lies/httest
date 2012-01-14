@@ -22,6 +22,7 @@ EXTRA_DIST= \
 	block_in_out_params.htt \
 	block_local_vars.htt \
 	block_lua_buf.htt \
+	block_lua_coder.htt \
 	block_lua.hte \
 	block_lua.htt \
 	block_lua_httest.htt \
@@ -206,7 +207,6 @@ EXTRA_DIST= \
 	server_def_before_client.htt \
 	server_ip_port.htt \
 	server.key.pem \
-	server_reswait.htt \
 	server_up_down.htt \
 	skeleton.htt \
 	smtp_simple.htt \
@@ -286,7 +286,8 @@ EXTRA_DIST= \
 	var_match.htt \
 	var_match.txt \
 	wait0.htt \
-	wait.htt 
+	wait.htt \
+	websocket.htt 
 
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
