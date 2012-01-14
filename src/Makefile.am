@@ -10,7 +10,7 @@ httest_SOURCES= \
 	udp_module.c socks_module.c websocket_module.c
 
 EXTRA_httest_SOURCES= \
-	lua_module.c 
+	lua_crypto.c lua_module.c 
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)

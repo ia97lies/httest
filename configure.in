@@ -109,7 +109,7 @@ HTTEST_MODULES=''
 if test "$enable_lua_module" = "yes"; then
   CFLAGS="$CFLAGS $LUA_INCLUDES"
   LIBS="$LIBS $LUA_LIB_PATH $LUA_LIB"
-  HTTEST_MODULES="$HTTEST_MODULES lua_module.${OBJEXT}"
+  HTTEST_MODULES="$HTTEST_MODULES lua_crypto.${OBJEXT} lua_module.${OBJEXT}"
   MODULES="$MODULES lua "
 fi
 if test -f ./generate_modules_c.sh; then
