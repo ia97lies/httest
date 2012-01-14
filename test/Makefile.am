@@ -51,8 +51,6 @@ EXTRA_DIST= \
 	daemon.htt \
 	debug.htt \
 	debug.visual \
-	deflate2.htt \
-	deflate.htt \
 	dummy2.htb \
 	dummy3.htb \
 	dummy4.htb \
