@@ -1997,7 +1997,7 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
     return status;
   }
   global->prefix = apr_pstrcat(global->pool, global->prefix, 
-			     "                        ", NULL);
+			       "                        ", NULL);
   return APR_SUCCESS;
 }
 

@@ -2413,9 +2413,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
-  apr_thread_mutex_lock(worker->mutex);
-  apr_pool_note_subprocess(worker->global->pool, &worker->proc, APR_KILL_ALWAYS);
-  apr_thread_mutex_unlock(worker->mutex);
+  apr_pool_note_subprocess(worker->heartbeat, &worker->proc, APR_KILL_ALWAYS);
 
   if (flags & FLAGS_PIPE) {
     worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);

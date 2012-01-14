@@ -1,14 +1,9 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MySha1 p1 : hex b64
-  local coder = htt.getCoder()
-  local hashed = coder:sha1(p1) 
-  local result = ""
-  for i = 1, string.len(hashed) do
-    result = result..string.format("%02X", string.byte(hashed, i))
-  end
-  local base64 = coder:encBase64(p1)
-  return result, base64
+  local hashed = coder.evp.digest("sha1", p1) 
+  local base64 = coder.base64.encode(p1)
+  return hashed, base64
 END
 
 CLIENT
