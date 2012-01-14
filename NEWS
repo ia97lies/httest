@@ -1,3 +1,6 @@
+Version 2.2.0
+ - New      httest: HTML5 topics and websocket support.
+
 Version 2.1.0
  - New      httest: Modules support for better capsulating commands and give
                     them namespaces.

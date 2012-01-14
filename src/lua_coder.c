@@ -63,6 +63,7 @@
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 
+#define LUA_COMPAT_MODULE
 #include "lua.h"
 #include "lauxlib.h"
 #if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
@@ -106,7 +107,9 @@ static int coder_error(lua_State *L) {
 }
 
 static EVP_MD_CTX *evp_pget(lua_State *L, int i) {
-  if (luaL_checkudata(L, i, LUACRYPTO_EVPNAME) == NULL) luaL_typerror(L, i, LUACRYPTO_EVPNAME);
+  if (luaL_checkudata(L, i, LUACRYPTO_EVPNAME) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
   return lua_touserdata(L, i);
 }
 
@@ -155,7 +158,7 @@ static int evp_update(lua_State *L) {
   EVP_MD_CTX *c = evp_pget(L, 1);
   const char *s = luaL_checkstring(L, 2);
   
-  EVP_DigestUpdate(c, s, lua_strlen(L, 2));
+  EVP_DigestUpdate(c, s, strlen(s));
   
   lua_settop(L, 1);
   return 1;
@@ -171,7 +174,7 @@ static int evp_digest(lua_State *L) {
   
   if (lua_isstring(L, 2)) {  
     const char *s = luaL_checkstring(L, 2);
-    EVP_DigestUpdate(c, s, lua_strlen(L, 2));
+    EVP_DigestUpdate(c, s, strlen(s));
   }
   
   d = EVP_MD_CTX_create();
@@ -224,7 +227,7 @@ static int evp_fdigest(lua_State *L) {
   
   c = EVP_MD_CTX_create();
   EVP_DigestInit_ex(c, type, NULL);
-  EVP_DigestUpdate(c, s, lua_strlen(L, 2));
+  EVP_DigestUpdate(c, s, strlen(s));
   EVP_DigestFinal_ex(c, digest, &written);
   
   if (lua_toboolean(L, 3)) {
@@ -244,7 +247,7 @@ static int evp_fdigest(lua_State *L) {
 
 static HMAC_CTX *hmac_pget(lua_State *L, int i) {
  if (luaL_checkudata(L, i, LUACRYPTO_HMACNAME) == NULL) {
-   luaL_typerror(L, i, LUACRYPTO_HMACNAME);
+    luaL_argerror(L, 1, "invalid object type");
  }
  return lua_touserdata(L, i);
 }
@@ -268,7 +271,7 @@ static int hmac_fnew(lua_State *L) {
   }
 
   HMAC_CTX_init(c);
-  HMAC_Init_ex(c, k, lua_strlen(L, 2), type, NULL);
+  HMAC_Init_ex(c, k, strlen(k), type, NULL);
 
   return 1;
 }
@@ -290,7 +293,7 @@ static int hmac_update(lua_State *L) {
   HMAC_CTX *c = hmac_pget(L, 1);
   const char *s = luaL_checkstring(L, 2);
 
-  HMAC_Update(c, (unsigned char *)s, lua_strlen(L, 2));
+  HMAC_Update(c, (unsigned char *)s, strlen(s));
 
   lua_settop(L, 1);
   return 1;
@@ -306,7 +309,7 @@ static int hmac_digest(lua_State *L) {
   if (lua_isstring(L, 2))
   {
     const char *s = luaL_checkstring(L, 2);
-    HMAC_Update(c, (unsigned char *)s, lua_strlen(L, 2));
+    HMAC_Update(c, (unsigned char *)s, strlen(s));
   }
 
   HMAC_Final(c, digest, &written);
@@ -357,8 +360,8 @@ static int hmac_fdigest(lua_State *L) {
   }
 
   HMAC_CTX_init(&c);
-  HMAC_Init_ex(&c, k, lua_strlen(L, 3), type, NULL);
-  HMAC_Update(&c, (unsigned char *)s, lua_strlen(L, 2));
+  HMAC_Init_ex(&c, k, strlen(k), type, NULL);
+  HMAC_Update(&c, (unsigned char *)s, strlen(s));
   HMAC_Final(&c, digest, &written);
 
   if (lua_toboolean(L, 4)) {
@@ -503,7 +506,7 @@ static int b64_decode(lua_State *L) {
 /*
 ** Create a metatable and leave it on top of the stack.
 */
-int luacoder_createmeta (lua_State *L, const char *name, const luaL_reg *methods) {
+int luacoder_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
   if (!luaL_newmetatable (L, name))
     return 0;
   
@@ -526,12 +529,12 @@ int luacoder_createmeta (lua_State *L, const char *name, const luaL_reg *methods
 ** Create metatables for each class of object.
 */
 static void create_metatables (lua_State *L) {
-  struct luaL_reg evp_functions[] = {
+  struct luaL_Reg evp_functions[] = {
     { "digest", evp_fdigest },
     { "new", evp_fnew },
     {NULL, NULL},
   };
-  struct luaL_reg evp_methods[] = {
+  struct luaL_Reg evp_methods[] = {
     { "__tostring", evp_tostring },
     { "__gc", evp_gc },
     { "clone", evp_clone },
@@ -541,12 +544,12 @@ static void create_metatables (lua_State *L) {
     { "update",	evp_update },
     {NULL, NULL},
   };
-  struct luaL_reg hmac_functions[] = {
+  struct luaL_Reg hmac_functions[] = {
     { "digest", hmac_fdigest },
     { "new", hmac_fnew },
     { NULL, NULL }
   };
-  struct luaL_reg hmac_methods[] = {
+  struct luaL_Reg hmac_methods[] = {
     { "__tostring", hmac_tostring },
     { "__gc", hmac_gc },
     { "clone", hmac_clone },
@@ -556,7 +559,7 @@ static void create_metatables (lua_State *L) {
     { "update", hmac_update },
     { NULL, NULL }
   };
-  struct luaL_reg rand_functions[] = {
+  struct luaL_Reg rand_functions[] = {
     { "bytes", rand_bytes },
     { "pseudo_bytes", rand_pseudo_bytes },
     { "add", rand_add },
@@ -567,7 +570,7 @@ static void create_metatables (lua_State *L) {
     { "cleanup", rand_cleanup },
     { NULL, NULL }
   };
-  struct luaL_reg b64_functions[] = {
+  struct luaL_Reg b64_functions[] = {
     { "encode", b64_encode },
     { "decode", b64_decode },
     {NULL, NULL},
@@ -591,7 +594,7 @@ static void create_metatables (lua_State *L) {
 int luaopen_coder(lua_State *L) {
   OpenSSL_add_all_digests();
   
-  struct luaL_reg core[] = {
+  struct luaL_Reg core[] = {
     {NULL, NULL},
   };
   create_metatables (L);
