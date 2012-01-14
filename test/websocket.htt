@@ -17,6 +17,7 @@ CLIENT
   __Sec-WebSocket-Version: 13
   __
   _SOCKET  # spawn a websocket
+    _EXPECT headers "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK\+xOo="
     _WAIT
     _WS:RECV OP
     _EXPECT VAR(OP) "PING"
