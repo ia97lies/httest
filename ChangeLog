@@ -2,6 +2,10 @@
 Changes with httest 2.1.12
   *) httest: Enhance Lua interface with more transport functions.
 
+  *) httest: Enhance Lua interface with coder functions like sha1 md5 base64.
+
+  *) httest: Simple websocket support based on version 13.
+
 
 Changes with httest 2.1.11
   *) httest: Enhance Lua interface with transport functions.
