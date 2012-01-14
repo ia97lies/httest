@@ -1,0 +1,20 @@
+
+CLIENT
+  _REQ echo.websocket.org 80
+  __GET / HTTP/1.1
+  __Upgrade: websocket
+  __Connection: Upgrade
+  __Host: echo.websocket.org
+  __Origin: http://websocket.org
+  __Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+  __Sec-WebSocket-Version: 13
+  __
+  _SOCKET  # spawn a websocket
+    _WAIT
+    _WS:SEND FIN,TEXT AUTO "hallo welt" 0x12345678
+    _WS:RECV OP LEN
+    _DEBUG $OP $LEN
+  _END
+  _CLOSE
+END
+
