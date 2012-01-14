@@ -1,9 +1,5 @@
 
 BLOCK:LUA WebsocketAccept websocketKey : result
-  print()
-  print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-  print(websocketKey)
-  print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
   coder = htt.getCoder()
   return coder:encBase64(coder:sha1(websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))
 END
@@ -15,24 +11,47 @@ __HTTP/1.1 200 OK
 __Content-Type: text/html
 __Content-Length: AUTO
 __
-__<!DOCTYPE html>
-__<html xmlns="http://www.w3.org/1999/xhtml">
-__  <head>
-__    <title>Web Socket Example</title>
-__    <meta charset="UTF-8">
-__    <script>
-__      window.onload = function() {
-__        var s = new WebSocket("ws://localhost:9876/");
-__        s.onopen = function(e) { alert("opened"); }
-__        s.onclose = function(e) { alert("closed"); }
-__        s.onmessage = function(e) { alert("got: " + e.data); }
-__      };
-__    </script>
-__  </head>
-__    Hallo Welt
-__    <body>
-__      <div id="holder" style="width:600px; height:300px"></div>
-__    </body>
+__<!DOCTYPE HTML>
+__<html>
+__<head>
+__<script type="text/javascript">
+__function WebSocketTest()
+__{
+__  if ("WebSocket" in window)
+__  {
+__     alert("WebSocket is supported by your Browser!");
+__     // Let us open a web socket
+__     var ws = new WebSocket("ws://localhost:9876/echo");
+__     ws.onopen = function()
+__     {
+__        // Web Socket is connected, send data using send()
+__        ws.send("Message to send");
+__        alert("Message is sent...");
+__     };
+__     ws.onmessage = function (evt) 
+__     { 
+__        var received_msg = evt.data;
+__        alert("Message is received..."+evt.data);
+__     };
+__     ws.onclose = function()
+__     { 
+__        // websocket is closed.
+__        alert("Connection is closed..."); 
+__     };
+__  }
+__  else
+__  {
+__     // The browser doesnt support WebSocket
+__     alert("WebSocket NOT supported by your Browser!");
+__  }
+__}
+__</script>
+__</head>
+__<body>
+__<div id="sse">
+__   <a href="javascript:WebSocketTest()">Run WebSocket</a>
+__</div>
+__</body>
 __</html>
 __
 END
@@ -49,10 +68,8 @@ SERVER 9876
     __Sec-WebSocket-Protocol: chat
     __
     _FLUSH
-    _SLEEP 2000
-    _WS:SEND TEXT AUTO hallo
-    _SLEEP 2000
-    _WS:SEND FIN,TEXT AUTO welt
+    _WS:RECV 
+    _WS:SEND FIN,TEXT AUTO "hallo welt"
   _END
   _CLOSE
 END
