@@ -191,7 +191,6 @@ EXTRA_DIST= \
 	run_lib.sh \
 	run_ntlm.sh \
 	run.sh \
-	run_shell.sh \
 	run_visual.sh \
 	run_wild.sh \
 	sendfile_chunked.htt \
@@ -293,4 +292,4 @@ EXTRA_DIST= \
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_store
-TESTS = test_store test_run_all.sh test_run_shell.sh test_run_errors.sh test_run_visual.sh test_run_ntlm.sh test_check_coredumps.sh
+TESTS = test_store test_run_all.sh test_run_errors.sh test_run_visual.sh test_run_ntlm.sh test_check_coredumps.sh
