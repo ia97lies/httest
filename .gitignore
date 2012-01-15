@@ -17,4 +17,5 @@ win
 *.gcov
 *.gcda
 *.gcno
-
+*.error
+.out.txt

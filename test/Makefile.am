@@ -186,18 +186,13 @@ EXTRA_DIST= \
 	recv_polling.htt \
 	request_ended_server.htt \
 	rps.htt \
-	run_coredump_test.sh \
-	run_hte_test.sh \
-	run_htt.sh \
-	run_htt_shell_test.sh \
-	run_htt_sh_mode.sh \
-	run_htt_test.sh \
+	run_all.sh \
+	run_errors.sh \
+	run_lib.sh \
 	run_ntlm.sh \
-	run_ntlm_test.sh \
 	run.sh \
-	run_test_error_output.sh \
+	run_shell.sh \
 	run_visual.sh \
-	run_visual_test.sh \
 	run_wild.sh \
 	sendfile_chunked.htt \
 	sendfile.htt \
@@ -243,6 +238,12 @@ EXTRA_DIST= \
 	tab_and_space_before_local.htt \
 	tagged_sockets.htt \
 	tcp_main.htt \
+	test_check_coredumps.sh \
+	test_run_all.sh \
+	test_run_errors.sh \
+	test_run_ntlm.sh \
+	test_run_shell.sh \
+	test_run_visual.sh \
 	threaded_server.hte \
 	threaded_server.htt \
 	threaded_server.txt \
@@ -286,9 +287,10 @@ EXTRA_DIST= \
 	var_match.txt \
 	wait0.htt \
 	wait.htt \
-	websocket.htt 
+	websocket.htt \
+	_wrapper_test.sh 
 
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_store
-TESTS = test_store run_htt_test.sh run_htt_shell_test.sh run_hte_test.sh run_visual_test.sh run_ntlm_test.sh run_coredump_test.sh
+TESTS = test_store test_run_all.sh test_run_shell.sh test_run_errors.sh test_run_visual.sh test_run_ntlm.sh test_check_coredumps.sh

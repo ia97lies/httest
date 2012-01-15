@@ -9,8 +9,8 @@ function run_single {
   ./run.sh $E >> $OUT 2>> $OUT
 }
 
-echo ntlm tests
-LIST=`ls *.ntlm`
-COUNT=`ls *.ntlm | wc -l`
+echo normal test execution
+LIST=`ls *.htt`
+COUNT=`ls *.htt | wc -l`
 run_all "$LIST" $COUNT
 
