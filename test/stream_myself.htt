@@ -18,6 +18,8 @@ _EXPECT . "HTTP/1.1 200 OK"
 _EXPECT . "httest_streamed [0-9.]+"
 _WAIT
 
+_CLOSE
+
 _REQ $YOUR_HOST $YOUR_PORT
 __POST /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
@@ -50,7 +52,12 @@ _EXEC chmod u+x httest_streamed
 _PIPE 200 
 _EXEC ./httest_streamed --version
 _EXEC rm httest_streamed
+_CLOSE
 _END LOOP
 
 END
 
+BLOCK FINALLY
+_EXEC rm -f httest_streamed
+_EXEC rm -f httest_tmp
+END

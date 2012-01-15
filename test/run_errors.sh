@@ -9,7 +9,7 @@ function run_single {
   B=`echo $E | sed -e 's/\(.*\)\.hte/\1/'`
   if [ -f $B.txt ]; then
     ./run.sh -e $B.hte 2>/tmp/tmp.txt >/dev/null
-    diff -B /tmp/tmp.txt $B.txt >>$OUT
+    diff -Bw /tmp/tmp.txt $B.txt >>$OUT
   else
     printf "SKIP"
   fi

@@ -22,7 +22,6 @@ fi
 # start testing
 echo
 $PFX/$SCRIPT
-HTT_ERRORS=`expr $HTT_ERRORS + $?`
 
 rm -f tmp.txt
 
