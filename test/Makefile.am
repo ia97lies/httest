@@ -49,6 +49,7 @@ EXTRA_DIST= \
 	custom_commands.htt \
 	daemon2.htt \
 	daemon.htt \
+	dawn_of_the_deads.htt \
 	debug.htt \
 	debug.visual \
 	dummy2.htb \
