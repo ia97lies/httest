@@ -6,9 +6,14 @@ export TOP
 HTT_ERRORS=0
 PFX=.
 
+set +e
+
 COPY=0
 ls *.htt >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
+  cp ../../test/*.txt .
+  cp ../../test/*.visual .
+  cp ../../test/*.ntlm .
   cp ../../test/*.htt .
   cp ../../test/*.hte .
   cp ../../test/*.htb .

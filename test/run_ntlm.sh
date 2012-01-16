@@ -1,6 +1,10 @@
 #!/bin/bash
 
-. run_lib.sh
+if [ -z $srcdir ]; then
+  srcdir=.
+fi
+
+. $srcdir/run_lib.sh
 
 function run_single {
   E=$1

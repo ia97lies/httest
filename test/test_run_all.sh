@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./_wrapper_test.sh run_all.sh
+$srcdir/_wrapper_test.sh run_all.sh
