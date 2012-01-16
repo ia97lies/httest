@@ -26,11 +26,14 @@ fi
 
 # start testing
 echo
-$PFX/$SCRIPT
+. $PFX/$SCRIPT
 
 rm -f tmp.txt
 
 if [ $COPY -ne 0 ]; then
+  rm -f *.txt
+  rm -f *.ntlm
+  rm -f *.visual
   rm -f *.htt
   rm -f *.hte
   rm -f *.htb
@@ -39,14 +42,15 @@ if [ $COPY -ne 0 ]; then
   rm -f ../macros/*.htb
 fi
 
-CORES=`ls core* 2>/dev/null | wc -l` 
-if [ $HTT_ERRORS -ne 0 -o $CORES -gt 0 ]; then
-  echo "$HTT_ERRORS Errors"
-  if [ $CORES -gt 0 ]; then
-    echo $CORES coredumps
+cores=`ls core* 2>/dev/null | wc -l` 
+if [ $errors -ne 0 -o $cores -ne 0 ]; then
+  if [ $cores -gt 0 ]; then
+    echo $cores coredumps
   fi
+  echo "Failed"
   exit 1
+else
+  echo "Success"
+  exit 0
 fi
-echo "Success"
-exit 0
 
