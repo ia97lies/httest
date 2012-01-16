@@ -10,7 +10,7 @@ SET 1K=.........................................................................
 
 DAEMON
 _IF "$MAX_DURATION" MATCH "MAX_DURATION"
-_SET MAX_DURATION=120000
+_SET MAX_DURATION=180000
 _END IF
 _SLEEP $MAX_DURATION
 _DEBUGTest duration too long
