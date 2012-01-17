@@ -29,6 +29,13 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+#define WS_8_TYPE_CONTINUE 0x0
+#define WS_8_TYPE_TEXT 0x1
+#define WS_8_TYPE_BINARY 0x2
+#define WS_8_TYPE_CLOSE 0x8
+#define WS_8_TYPE_PING 0x9
+#define WS_8_TYPE_PONG 0xA
+
 const char * ws_module = "ws_module";
 
 /************************************************************************
@@ -75,23 +82,26 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if ((op >> 7) & 1) {
     type = apr_pstrcat(ptmp, "FIN", type?",":NULL, type, NULL);
   }
-  if ((op & 0xf) == 0x0) {
+  
+  switch (op &0xf) {
+  case WS_8_TYPE_CONTINUE:
     type = apr_pstrcat(ptmp, "CONTINUE", type?",":NULL, type, NULL);
-  }
-  if ((op & 0xf) == 0x1) {
+    break;
+  case WS_8_TYPE_TEXT:
     type = apr_pstrcat(ptmp, "TEXT", type?",":NULL, type, NULL);
-  }
-  if ((op & 0xf) == 0x2) {
+    break;
+  case WS_8_TYPE_BINARY:
     type = apr_pstrcat(ptmp, "BINARY", type?",":NULL, type, NULL);
-  }
-  if ((op & 0xf) == 0x8) {
+    break;
+  case WS_8_TYPE_CLOSE:
     type = apr_pstrcat(ptmp, "CLOSE", type?",":NULL, type, NULL);
-  }
-  if ((op & 0xf) == 0x9) {
+    break;
+  case WS_8_TYPE_PING:
     type = apr_pstrcat(ptmp, "PING", type?",":NULL, type, NULL);
-  }
-  if ((op & 0xf) == 0xA) {
+    break;
+  case WS_8_TYPE_PONG:
     type = apr_pstrcat(ptmp, "PONG", type?",":NULL, type, NULL);
+    break;
   }
 
   len = 1;
@@ -197,22 +207,22 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
       op |= 1 << 7;
     }
     else if (strcmp(e, "CONTINUE") == 0) {
-      op |= 0x0;
+      op |= WS_8_TYPE_CONTINUE;
     }
     else if (strcmp(e, "TEXT") == 0) {
-      op |= 0x1;
+      op |= WS_8_TYPE_TEXT;
     }
     else if (strcmp(e, "BINARY") == 0) {
-      op |= 0x2;
+      op |= WS_8_TYPE_BINARY;
     }
     else if (strcmp(e, "CLOSE") == 0) {
-      op |= 0x8;
+      op |= WS_8_TYPE_CLOSE;
     }
     else if (strcmp(e, "PING") == 0) {
-      op |= 0x9;
+      op |= WS_8_TYPE_PING;
     }
     else if (strcmp(e, "PONG") == 0) {
-      op |= 0xA;
+      op |= WS_8_TYPE_PONG;
     }
     e = apr_strtok(NULL, ",", &last);
   }
