@@ -1,4 +1,3 @@
 
 SSL peer verify failed: self signed certificate in certificate chain(19)                
-ssl_mutual.hte:8: error: CLT0-0 Permission denied(13)                                   
-ssl_mutual.hte:16: error: SRV0-0 End of file found(70014)                                FAILED
+ssl_mutual.hte:8: error: CLT0-0 Permission denied(13)                                    FAILED
