@@ -1,10 +1,10 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.1.12
-  *) httest: Enhance Lua interface with more transport functions.
-
   *) httest: Enhance Lua interface with coder functions like sha1 md5 base64.
 
-  *) httest: Simple websocket support based on version 13.
+  *) httest: Simple websocket support based on version 13. Testet against
+             Chrome Browser with websocket version 8 and
+	     ws://echo.websocket.org.
 
 
 Changes with httest 2.1.11
