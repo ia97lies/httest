@@ -210,6 +210,9 @@ EXTRA_DIST= \
 	socks.htt \
 	sockstate.htt \
 	ssl_big_content.htt \
+	ssl_get_cert.hte \
+	ssl_get_cert.htt \
+	ssl_get_cert.txt \
 	ssl_multi_socket.htt \
 	ssl_mutual2.hte \
 	ssl_mutual2.txt \

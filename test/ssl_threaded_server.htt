@@ -1,6 +1,6 @@
 INCLUDE $TOP/test/config.htb
 
-CLIENT 20 
+CLIENT 15 
 _SET DATA=initial
 
 _RAND 1 120 COUNT
@@ -30,7 +30,7 @@ _END LOOP
 _CLOSE
 END
 
-SERVER SSL:$YOUR_PORT 20 
+SERVER SSL:$YOUR_PORT 15 
 
 _RES
 _MATCH body "Count: (.*)" COUNT

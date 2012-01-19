@@ -1,0 +1,3 @@
+
+Handshake failed: error:140890C7:SSL routines:SSL3_GET_CLIENT_CERTIFICATE:peer did not return a certificate
+ssl_get_cert.hte:11: error: CLT0-0 Software caused connection abort(103)                 FAILED

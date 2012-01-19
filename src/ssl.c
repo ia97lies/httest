@@ -771,6 +771,15 @@ int debug_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
   return cur_ok;
 }
 
+/**
+ * verify callback to skip peer cert verification, want always the peer cert
+ * @param cur_ok IN current ok state
+ * @param ctx IN X509 store context
+ */
+int debug_skip_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
+  return 0;
+}
+
 #endif
 
 #endif
