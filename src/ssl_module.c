@@ -1068,8 +1068,8 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
   }
 
   /* else set cert */
-  if (!config || !config->cert || !config->pkey) {
-    worker_log_error(worker, "No cert and key to use, get a cert and key with _SSL:LOAD_KEY of _SSL:LOAD_CERT");
+  if (!config || !config->cert) {
+    worker_log_error(worker, "No cert to use, get a cert with _SSL:LOAD_CERT");
     return APR_EINVAL;
   }
 
@@ -1452,8 +1452,7 @@ apr_status_t ssl_module_init(global_t *global) {
 				   "  I_DN_<var>\n" 
 				   "  A_SIG\n" 
 				   "  A_KEY\n" 
-				   "  CERT"
-				   "Performs an SSL renegotiation.",
+				   "  CERT",
 	                           block_SSL_GET_CERT_VALUE)) != APR_SUCCESS) {
     return status;
   }
