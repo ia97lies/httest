@@ -39,13 +39,49 @@
 
 const char * ws_module = "ws_module";
 
+typedef struct ws_socket_config_s {
+  int version;
+} ws_socket_config_t;
+
 /************************************************************************
  * Private 
  ***********************************************************************/
 
+/**
+ * GET ssl socket config from socket
+ * @param worker IN worker
+ * @return socket config
+ */
+static ws_socket_config_t *ws_get_socket_config(worker_t *worker) {
+  if (!worker || !worker->socket) {
+    return NULL;
+  }
+
+  ws_socket_config_t *config = module_get_config(worker->socket->config, ws_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->socket->config, apr_pstrdup(worker->pbody, ws_module), config);
+  }
+  return config;
+}
+
 /************************************************************************
  * Commands 
  ***********************************************************************/
+/**
+ * Recevie websocket frames
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temp pool
+ * @return apr status
+ */
+static apr_status_t block_WS_VERSION(worker_t *worker, worker_t *parent, 
+                                     apr_pool_t *ptmp) {
+  ws_socket_config_t *sconf = ws_get_socket_config(worker);
+  sconf->version = 13;
+  return APR_SUCCESS;
+}
+
 /**
  * Recevie websocket frames
  * @param worker IN callee
@@ -325,6 +361,12 @@ apr_status_t websocket_module_init(global_t *global) {
   if ((status = module_command_new(global, "WS", "_SEND", "",
 				   "Send websocket frames",
 	                           block_WS_SEND)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "WS", "_VERSION", "",
+				   "Set version, for the moment only version 13 is implemented",
+	                           block_WS_VERSION)) != APR_SUCCESS) {
     return status;
   }
 

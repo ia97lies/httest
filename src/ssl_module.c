@@ -841,18 +841,16 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
   }
 
   if (worker->flags & FLAGS_SERVER) {
-    if (copy && strcasecmp(copy, "verify") == 0) {
-      /* if we are server request the peer cert */
-      if (worker->log_mode >= LOG_DEBUG) {
-	SSL_set_verify(sconfig->ssl,
-		       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-		       debug_verify_callback);
-      }
-      else {
-	SSL_set_verify(sconfig->ssl,
-		       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-		       NULL);
-      }
+    /* if we are server request the peer cert */
+    if (worker->log_mode >= LOG_DEBUG) {
+      SSL_set_verify(sconfig->ssl,
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     debug_verify_callback);
+    }
+    else {
+      SSL_set_verify(sconfig->ssl,
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     NULL);
     }
 
     if (worker->flags & FLAGS_SSL_LEGACY) {
@@ -873,8 +871,8 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
     sconfig->ssl->state=SSL_ST_ACCEPT;
     worker_ssl_handshake(worker);
 
+    config->cert = SSL_get_peer_certificate(sconfig->ssl);
     if (copy && strcasecmp(copy, "verify") == 0) {
-      config->cert = SSL_get_peer_certificate(sconfig->ssl);
       if (!config->cert) {
 	worker_log(worker, LOG_ERR, "No peer certificate");
 	return APR_EACCES;
@@ -1072,8 +1070,8 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
   }
 
   /* else set cert */
-  if (!config || !config->cert || !config->pkey) {
-    worker_log_error(worker, "No cert and key to use, get a cert and key with _SSL:LOAD_KEY of _SSL:LOAD_CERT");
+  if (!config || !config->cert) {
+    worker_log_error(worker, "No cert to use, get a cert with _SSL:LOAD_CERT");
     return APR_EINVAL;
   }
 
@@ -1456,8 +1454,7 @@ apr_status_t ssl_module_init(global_t *global) {
 				   "  I_DN_<var>\n" 
 				   "  A_SIG\n" 
 				   "  A_KEY\n" 
-				   "  CERT"
-				   "Performs an SSL renegotiation.",
+				   "  CERT",
 	                           block_SSL_GET_CERT_VALUE)) != APR_SUCCESS) {
     return status;
   }
