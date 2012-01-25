@@ -118,11 +118,13 @@ static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
  * @return socket config
  */
 static ssl_socket_config_t *ssl_get_socket_config(worker_t *worker) {
+  ssl_socket_config_t *config;
+
   if (!worker || !worker->socket) {
     return NULL;
   }
 
-  ssl_socket_config_t *config = module_get_config(worker->socket->config, ssl_module);
+  config = module_get_config(worker->socket->config, ssl_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
     module_set_config(worker->socket->config, apr_pstrdup(worker->pbody, ssl_module), config);

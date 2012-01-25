@@ -592,11 +592,10 @@ static void create_metatables (lua_State *L) {
  * @return 1
  */
 int luaopen_coder(lua_State *L) {
-  OpenSSL_add_all_digests();
-  
   struct luaL_Reg core[] = {
     {NULL, NULL},
   };
+  OpenSSL_add_all_digests();
   create_metatables (L);
   luaL_openlib (L, LUACRYPTO_CORENAME, core, 0);
   return 1;

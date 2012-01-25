@@ -61,7 +61,7 @@ typedef struct store_element_s {
  * @param pool IN pool to alloc this store
  * @return store
  */
-APR_DECLARE(store_t *)store_make(apr_pool_t *pool) {
+store_t *store_make(apr_pool_t *pool) {
   store_t *store = apr_pcalloc(pool, sizeof(*store));
   store->pool = pool;
   store->hash = apr_hash_make(pool);
@@ -74,7 +74,7 @@ APR_DECLARE(store_t *)store_make(apr_pool_t *pool) {
  * @param name IN key
  * @return value
  */
-APR_DECLARE(const char *)store_get(store_t *store, const char *name) {
+const char *store_get(store_t *store, const char *name) {
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
     return element->value;
@@ -91,8 +91,7 @@ APR_DECLARE(const char *)store_get(store_t *store, const char *name) {
  * @param name IN key
  * @return value copy from your pool
  */
-APR_DECLARE(char *)store_get_copy(store_t *store, apr_pool_t *pool, 
-                                  const char *name) {
+char *store_get_copy(store_t *store, apr_pool_t *pool, const char *name) {
   const char *value = store_get(store, name);
   if (value) {
     return apr_pstrdup(pool, value);
@@ -108,8 +107,7 @@ APR_DECLARE(char *)store_get_copy(store_t *store, apr_pool_t *pool,
  * @param name IN key
  * @param value IN
  */
-APR_DECLARE(void )store_set(store_t *store, const char *name, 
-                            const char *value) {
+void store_set(store_t *store, const char *name, const char *value) {
   apr_pool_t *pool;
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
@@ -132,7 +130,7 @@ APR_DECLARE(void )store_set(store_t *store, const char *name,
  * @param store IN store hook
  * @param name IN key
  */
-APR_DECLARE(void )store_unset(store_t *store, const char *name) {
+void store_unset(store_t *store, const char *name) {
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
     apr_pool_destroy(element->pool);
@@ -146,7 +144,7 @@ APR_DECLARE(void )store_unset(store_t *store, const char *name) {
  * @param store IN store hook
  * @param other IN foreign store hook
  */
-APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
+void store_merge(store_t *store, store_t *other) {
   apr_hash_index_t *i;
   const void *key;
   void *val;
@@ -168,7 +166,7 @@ APR_DECLARE(void )store_merge(store_t *store, store_t *other) {
  * @param store IN store hook
  * @return count
  */
-APR_DECLARE(apr_size_t )store_get_size(store_t *store) {
+apr_size_t store_get_size(store_t *store) {
   return apr_hash_count(store->hash);
 }
 
@@ -178,7 +176,7 @@ APR_DECLARE(apr_size_t )store_get_size(store_t *store) {
  * @param pool IN pool for new store 
  * @return new store
  */
-APR_DECLARE(store_t *)store_copy(store_t *store, apr_pool_t *pool) {
+store_t *store_copy(store_t *store, apr_pool_t *pool) {
   store_t *copy = store_make(pool);
   store_merge(copy, store);
   return copy;
@@ -190,7 +188,7 @@ APR_DECLARE(store_t *)store_copy(store_t *store, apr_pool_t *pool) {
  * @param pool IN to allocate keys table
  * @return table of key/values
  */
-APR_DECLARE(apr_table_t *)store_get_table(store_t *store, apr_pool_t *pool) {
+apr_table_t *store_get_table(store_t *store, apr_pool_t *pool) {
   apr_hash_index_t *i;
   const void *key;
   void *val;

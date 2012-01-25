@@ -49,11 +49,13 @@ const char * udp_module = "udp_module";
  * @return socket config
  */
 static udp_socket_config_t *udp_get_socket_config(worker_t *worker) {
+  udp_socket_config_t *config;
+
   if (!worker || !worker->socket) {
     return NULL;
   }
 
-  udp_socket_config_t *config = module_get_config(worker->socket->config, udp_module);
+  config = module_get_config(worker->socket->config, udp_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
     module_set_config(worker->socket->config, apr_pstrdup(worker->pbody, udp_module), config);

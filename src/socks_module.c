@@ -25,7 +25,12 @@
  * Includes
  ***********************************************************************/
 #include "module.h"
-#include <netinet/in.h>
+#include <stdint.h>
+#ifdef _WINDOWS
+  #include <winsock.h>
+#else
+  #include <netinet/in.h>
+#endif
 
 /************************************************************************
  * Definitions 
