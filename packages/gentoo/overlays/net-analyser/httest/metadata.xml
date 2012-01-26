@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer>
+		<email>christian.liesch@united-security-providers.ch</email>
+		<name>Christian Liesch</name>
+	</maintainer>
+	<longdescription>HTTP Test Tool</longdescription>
+	<upstream>
+		<bugs-to>http://sourceforge.net/projects/htt/forums/forum/718486</bugs-to>
+	</upstream>
+</pkgmetadata>
