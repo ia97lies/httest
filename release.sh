@@ -77,7 +77,9 @@ cd -
 echo
 echo "Build Packages"
 echo "  Gentoo"
-cp packages/gentoo/httest.ebuild httest-$VERSION.ebuild
+cp packages/gentoo/httest.ebuild packages/gentoo/overlays/net-analyser/httest/httest-$VERSION.ebuild
+git add packages/gentoo/overlays/net-analyser/httest/httest-$VERSION.ebuild
+git commit -m"new release"
 
 echo
 echo Checkout master

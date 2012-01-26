@@ -7,7 +7,7 @@ config.*
 configure
 libtool
 m4
-httest-*
+httest-*.tar.gz
 tags
 3thrdparty
 win
@@ -20,3 +20,4 @@ win
 *.error
 .out.txt
 3thrdparty
+*.exe

@@ -4,6 +4,9 @@ Changes with httest 2.1.13
              _SSL:RENEG_CERT did not get certificate with its handshake and
 	     that was not the idea.
 
+  *) packages: Nicolas Perrenoud will put httest into gentoos overlay system
+               and corrected the ebuild for httest.
+
 Changes with httest 2.1.12
   *) httest: Enhance Lua interface with coder functions like sha1 md5 base64.
 

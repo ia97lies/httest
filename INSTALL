@@ -1,10 +1,13 @@
 INSTALL INSTRUCTIONS
 --------------------
 Prerequisits:
-libapr-1
-libapr-util-1
-libpcre
-libssl
+  * libapr-1
+  * libapr-util-1
+  * libpcre
+  * libssl
+
+Optional:
+  * liblua (5.1 or 5.2)
 
 ./configure.sh
 ./make
