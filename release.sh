@@ -77,10 +77,7 @@ cd -
 echo
 echo "Build Packages"
 echo "  Gentoo"
-cd packages/gentoo
-./mkpkg.sh $VERSION
-mv *.ebuild ../../.
-cd ../..
+cp packages/gentoo/httest.ebuild httest-$VERSION.ebuild
 
 echo
 echo Checkout master
