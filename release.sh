@@ -2,6 +2,9 @@ TOP=`pwd`
 
 VERSION=$1
 
+set -e
+set -u
+
 echo
 echo "Release httest-$VERSION"
 
@@ -75,15 +78,15 @@ make all VERSION=$VERSION
 cd -
 
 echo
+echo Checkout master
+git checkout master
+
+echo
 echo "Build Packages"
 echo "  Gentoo"
 cp packages/gentoo/httest.ebuild packages/gentoo/overlays/net-analyser/httest/httest-$VERSION.ebuild
 git add packages/gentoo/overlays/net-analyser/httest/httest-$VERSION.ebuild
 git commit -m"new release"
-
-echo
-echo Checkout master
-git checkout master
 
 echo
 echo Release build SUCCESS 
