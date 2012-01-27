@@ -1,0 +1,29 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+_REQ $YOUR_HOST SSL:$YOUR_PORT ../ca2/client.cert.pem ../ca2/client.key.pem
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+
+END
+
+SERVER SSL:$YOUR_PORT
+_RES server.cert.pem server.key.pem ca.cert.pem
+_WAIT
+_SSL:RENEG_CERT
+_SSL:GET_CERT_VALUE M_VERSION VERSION 
+_DEBUG $VERSION
+__HTTP/1.1 200 OK
+__Content-Length: AUTO 
+__Content-Type: text/html
+__
+__==AS1 - 0==
+__
+END
+

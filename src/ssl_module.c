@@ -843,15 +843,29 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
 
   if (worker->flags & FLAGS_SERVER) {
     /* if we are server request the peer cert */
-    if (worker->log_mode >= LOG_DEBUG) {
-      SSL_set_verify(sconfig->ssl,
-                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                     debug_verify_callback);
+    if (copy && strcasecmp(copy, "verify") == 0) {
+      if (worker->log_mode >= LOG_DEBUG) {
+        SSL_set_verify(sconfig->ssl,
+                       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                       debug_verify_callback);
+      }
+      else {
+        SSL_set_verify(sconfig->ssl,
+                       SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                       NULL);
+      }
     }
     else {
-      SSL_set_verify(sconfig->ssl,
-                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                     NULL);
+      if (worker->log_mode >= LOG_DEBUG) {
+        SSL_set_verify(sconfig->ssl,
+                       SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                       debug_verify_callback);
+      }
+      else {
+        SSL_set_verify(sconfig->ssl,
+                       SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                       NULL);
+      }
     }
 
     if (worker->flags & FLAGS_SSL_LEGACY) {
