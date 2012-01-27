@@ -1,0 +1,88 @@
+# HTT authority
+HOME                    = .
+RANDFILE                = $ENV::HOME/.rnd
+
+[ ca ]
+default_ca      = CA_default
+
+[ CA_default ]
+dir             = .
+new_certs_dir   = $dir/newcerts
+crl_dir         = $dir/crl
+database        = $dir/index
+
+certificate     = $dir/ca.cert.pem
+serial          = $dir/serial
+crl             = $dir/ca-crl.pem
+private_key     = $dir/private/ca-key.pem
+RANDFILE        = $dir/private/.rand
+
+x509_extensions = usr_cert
+
+unique_subject  = no
+
+name_opt        = ca_default
+cert_opt        = ca_default
+
+default_crl_days= 30
+default_days    = 3650
+default_md      = sha1
+preserve        = no
+
+policy          = policy_match
+
+[ policy_match ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ policy_anything ]
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+####################################################################
+[ req ]
+default_bits            = 2048
+default_keyfile         = ./private/ca-key.pem
+default_md              = sha1
+
+prompt                  = no
+distinguished_name      = root_ca_distinguished_name
+
+x509_extensions = v3_ca
+
+string_mask = nombstr
+
+[ root_ca_distinguished_name ]
+commonName = htt.ca
+countryName = CH
+stateOrProvinceName = Aargau
+localityName = Wohlen
+0.organizationName = htt.sourceforge.net
+emailAddress = ia97lies@sourceforge.net
+
+[ usr_cert ]
+basicConstraints=CA:FALSE
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer:always
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+
+[ v3_ca ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer:always
+
+basicConstraints = CA:true
+
+[ crl_ext ]
+authorityKeyIdentifier=keyid:always,issuer:always
