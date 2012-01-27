@@ -856,16 +856,9 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
       }
     }
     else {
-      if (worker->log_mode >= LOG_DEBUG) {
-        SSL_set_verify(sconfig->ssl,
-                       SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                       debug_verify_callback);
-      }
-      else {
-        SSL_set_verify(sconfig->ssl,
-                       SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                       NULL);
-      }
+      SSL_set_verify(sconfig->ssl,
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     debug_skip_verify_callback);
     }
 
     if (worker->flags & FLAGS_SSL_LEGACY) {

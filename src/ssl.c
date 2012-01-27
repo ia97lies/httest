@@ -777,7 +777,7 @@ int debug_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
  * @param ctx IN X509 store context
  */
 int debug_skip_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
-  return 0;
+  return 1;
 }
 
 #endif
