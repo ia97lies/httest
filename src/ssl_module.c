@@ -26,6 +26,7 @@
  ***********************************************************************/
 #include <openssl/ssl.h>
 #include <openssl/pkcs12.h>
+#include "module.h"
 
 /* on windows the inclusion of windows.h/wincrypt.h causes
  * X509_NAME and a few more to be defined; found no other
