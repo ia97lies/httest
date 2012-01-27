@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE repositories SYSTEM "/dtd/repositories.dtd">
+<repositories xmlns="" version="1.0">
+  <repo quality="experimental" status="unofficial">
+    <name><![CDATA[httest]]></name>
+    <description lang="en"><![CDATA[httest HTTP Test Tool]]></description>
+    <homepage>http://htt.sourceforge.net</homepage>
+    <owner type="person">
+      <email>ia97lies@users.sourceforge.net</email>
+      <name><![CDATA[Christian Liesch]]></name>
+    </owner>
+    <source type="git">git://htt.git.sourceforge.net/gitroot/htt/htt</source>
+  </repo>
+</repositories>

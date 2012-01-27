@@ -2,7 +2,7 @@
 <!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
 	<maintainer>
-		<email>christian.liesch@united-security-providers.ch</email>
+		<email>ia97lies@users.sourceforge.net</email>
 		<name>Christian Liesch</name>
 	</maintainer>
 	<longdescription>HTTP Test Tool</longdescription>
