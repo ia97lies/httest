@@ -1,4 +1,12 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.14
+  *) httest: Fixed _SSL:RENEG_CERT Again. Without "verify" option
+             _SSL:RENEG_CERT get certificate but still verified it. Now it is
+	     possible to get a wrong client cert. It only do fail if there is
+	     no client certificate. You can inspect the received client cert
+	     with _SSL:GET_CERT_VALUE.
+
+
 Changes with httest 2.1.13
   *) httest: Fixed _SSL:RENEG_CERT Bug. Without "verify" option
              _SSL:RENEG_CERT did not get certificate with its handshake and
@@ -6,6 +14,7 @@ Changes with httest 2.1.13
 
   *) packages: Nicolas Perrenoud will put httest into gentoos overlay system
                and corrected the ebuild for httest.
+
 
 Changes with httest 2.1.12
   *) httest: Enhance Lua interface with coder functions like sha1 md5 base64.
