@@ -213,6 +213,9 @@ EXTRA_DIST= \
 	ssl_get_cert.hte \
 	ssl_get_cert.htt \
 	ssl_get_cert.txt \
+	ssl_get_wrong_cert.hte \
+	ssl_get_wrong_cert.htt \
+	ssl_get_wrong_cert.txt \
 	ssl_multi_socket.htt \
 	ssl_mutual2.hte \
 	ssl_mutual2.txt \
@@ -251,6 +254,7 @@ EXTRA_DIST= \
 	threaded_server.txt \
 	time.htt \
 	timeout.htt \
+	tmp.htt \
 	trace_on_failure_2.htb \
 	trace_on_failure_3.htb \
 	trace_on_failure.htb \

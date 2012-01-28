@@ -33,6 +33,6 @@ ENGINE *setup_engine(BIO *err, const char *engine, int debug);
 #endif
 char *ssl_var_lookup_ssl_cert(apr_pool_t *p, X509 *xs, const char *var); 
 int debug_verify_callback(int cur_ok, X509_STORE_CTX *ctx); 
-int debug_skip_verify_callback(int cur_ok, X509_STORE_CTX *ctx); 
+int skip_verify_callback(int cur_ok, X509_STORE_CTX *ctx); 
 
 #endif

@@ -776,8 +776,14 @@ int debug_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
  * @param cur_ok IN current ok state
  * @param ctx IN X509 store context
  */
-int debug_skip_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
-  return 1;
+int skip_verify_callback(int cur_ok, X509_STORE_CTX *ctx) {
+  X509 *err_cert = X509_STORE_CTX_get_current_cert(ctx);
+  if (!err_cert) {
+    return 0;
+  }
+  else {
+    return 1;
+  }
 }
 
 #endif
