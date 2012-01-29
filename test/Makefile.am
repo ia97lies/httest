@@ -38,9 +38,12 @@ EXTRA_DIST= \
 	bps.htt \
 	breakfor.htt \
 	break.htt \
+	ca2.cert.pem \
 	ca.cert.pem \
 	chunk.htt \
 	chunk.visual \
+	client2.cert.pem \
+	client2.key.pem \
 	client.cert.pem \
 	client.key.pem \
 	concurrent.htt \
@@ -254,7 +257,6 @@ EXTRA_DIST= \
 	threaded_server.txt \
 	time.htt \
 	timeout.htt \
-	tmp.htt \
 	trace_on_failure_2.htb \
 	trace_on_failure_3.htb \
 	trace_on_failure.htb \

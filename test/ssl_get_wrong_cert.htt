@@ -3,7 +3,7 @@ INCLUDE $TOP/test/config.htb
 # runs exactly one time
 CLIENT
 
-_REQ $YOUR_HOST SSL:$YOUR_PORT ../ca2/client.cert.pem ../ca2/client.key.pem
+_REQ $YOUR_HOST SSL:$YOUR_PORT client2.cert.pem client2.key.pem
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
