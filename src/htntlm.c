@@ -139,7 +139,7 @@
 #ifdef WIN32
 #define FMT_LLX "%I64x"
 #else
-#define FMT_LLX "%llx"
+#define FMT_LLX "%"APR_UINT64_T_HEX_FMT
 #endif
 
 /************************************************************************
