@@ -53,11 +53,12 @@ typedef struct ws_socket_config_s {
  * @return socket config
  */
 static ws_socket_config_t *ws_get_socket_config(worker_t *worker) {
-  if (!worker || !worker->socket) {
+   ws_socket_config_t *config;
+   if (!worker || !worker->socket) {
     return NULL;
   }
 
-  ws_socket_config_t *config = module_get_config(worker->socket->config, ws_module);
+  config = module_get_config(worker->socket->config, ws_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
     module_set_config(worker->socket->config, apr_pstrdup(worker->pbody, ws_module), config);

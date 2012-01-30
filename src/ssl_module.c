@@ -41,7 +41,6 @@
 #include <openssl/engine.h>
 #endif
 
-#include "module.h"
 #include "ssl.h"
 
 /************************************************************************
@@ -1289,6 +1288,8 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
 
   if (worker->socket->is_ssl) {
     char *last;
+    transport_t *transport;
+    ssl_transport_t *ssl_transport;
     char *cert = NULL;
     char *key = NULL;
     char *ca = NULL;
@@ -1312,8 +1313,6 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
       return status;
     }
 
-    transport_t *transport;
-    ssl_transport_t *ssl_transport;
     if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
       return status;
     }
