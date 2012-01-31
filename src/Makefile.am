@@ -10,7 +10,7 @@ httest_SOURCES= \
 	udp_module.c socks_module.c websocket_module.c
 
 EXTRA_httest_SOURCES= \
-	lua_coder.c lua_module.c 
+	lua_crypto.c lua_module.c 
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)
@@ -28,5 +28,5 @@ htntlm_SOURCES= \
 noinst_HEADERS= \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
-	lua_coder.h
+	lua_crypto.h
 

@@ -45,7 +45,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool lua coder extention.
+ * Interface of the HTTP Test Tool lua crypto extention.
  */
 
 
@@ -70,7 +70,7 @@
 #include "compat-5.1.h"
 #endif
 
-#include "lua_coder.h"
+#include "lua_crypto.h"
 #include "module.h"
 
 
@@ -79,25 +79,25 @@
  ***********************************************************************/
 
 #define LUACRYPTO_PREFIX "LuaCrypto: "
-#define LUACRYPTO_CORENAME "coder"
-#define LUACRYPTO_EVPNAME "coder.evp"
-#define LUACRYPTO_HMACNAME "coder.hmac"
-#define LUACRYPTO_RANDNAME "coder.rand"
-#define LUACRYPTO_B64NAME "coder.base64"
+#define LUACRYPTO_CORENAME "crypto"
+#define LUACRYPTO_EVPNAME "crypto.evp"
+#define LUACRYPTO_HMACNAME "crypto.hmac"
+#define LUACRYPTO_RANDNAME "crypto.rand"
+#define LUACRYPTO_B64NAME "crypto.base64"
 
 
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
 
-int luaopen_coder(lua_State *L);
+int luaopen_crypto(lua_State *L);
 
 
 /************************************************************************
  * Implementation 
  ***********************************************************************/
 
-static int coder_error(lua_State *L) {
+static int crypto_error(lua_State *L) {
   char buf[120];
   unsigned long e = ERR_get_error();
   ERR_load_crypto_strings();
@@ -389,7 +389,7 @@ static int rand_do_bytes(lua_State *L, int (*bytes)(unsigned char *, int)) {
     return luaL_error(L, "out of memory");
   }
   else if (!bytes(buf, count)) {
-    return coder_error(L);
+    return crypto_error(L);
   }
   lua_pushlstring(L, (char *)buf, count);
   if (buf != tmp) {
@@ -425,11 +425,11 @@ static int rand_load(lua_State *L) {
   char tmp[256];
   int n;
   if (!name && !(name = RAND_file_name(tmp, sizeof tmp))) {
-    return coder_error(L);
+    return crypto_error(L);
   }
   n = RAND_load_file(name, WRITE_FILE_COUNT);
   if (n == 0) {
-    return coder_error(L);
+    return crypto_error(L);
   }
   lua_pushnumber(L, n);
   return 1;
@@ -440,11 +440,11 @@ static int rand_write(lua_State *L) {
   char tmp[256];
   int n;
   if (!name && !(name = RAND_file_name(tmp, sizeof tmp))) {
-    return coder_error(L);
+    return crypto_error(L);
   }
   n = RAND_write_file(name);
   if (n == 0) {
-    return coder_error(L);
+    return crypto_error(L);
   }
   lua_pushnumber(L, n);
   return 1;
@@ -506,7 +506,7 @@ static int b64_decode(lua_State *L) {
 /*
 ** Create a metatable and leave it on top of the stack.
 */
-int luacoder_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
+int luacrypto_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
   if (!luaL_newmetatable (L, name))
     return 0;
   
@@ -577,9 +577,9 @@ static void create_metatables (lua_State *L) {
   };
 
   luaL_openlib (L, LUACRYPTO_EVPNAME, evp_functions, 0);
-  luacoder_createmeta(L, LUACRYPTO_EVPNAME, evp_methods);
+  luacrypto_createmeta(L, LUACRYPTO_EVPNAME, evp_methods);
   luaL_openlib (L, LUACRYPTO_HMACNAME, hmac_functions, 0);
-  luacoder_createmeta(L, LUACRYPTO_HMACNAME, hmac_methods);
+  luacrypto_createmeta(L, LUACRYPTO_HMACNAME, hmac_methods);
   luaL_openlib (L, LUACRYPTO_RANDNAME, rand_functions, 0);
   luaL_openlib (L, LUACRYPTO_B64NAME, b64_functions, 0);
   lua_pop (L, 3);
@@ -591,7 +591,7 @@ static void create_metatables (lua_State *L) {
  * @param L IN Lua hook
  * @return 1
  */
-int luaopen_coder(lua_State *L) {
+int luaopen_crypto(lua_State *L) {
   struct luaL_Reg core[] = {
     {NULL, NULL},
   };

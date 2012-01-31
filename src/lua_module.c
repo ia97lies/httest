@@ -31,7 +31,7 @@
 
 #include <apr_sha1.h>
 
-#include "lua_coder.h"
+#include "lua_crypto.h"
 #include "module.h"
 
 /************************************************************************
@@ -426,7 +426,7 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
     lua_pushstring(L, val);
     lua_setglobal(L, e[i].key);
   }
-  luaopen_coder(L);
+  luaopen_crypto(L);
   lua_pushlightuserdata(L, parent);
   lua_setfield(L, LUA_REGISTRYINDEX, "htt_parent");
   lua_pushlightuserdata(L, worker);
