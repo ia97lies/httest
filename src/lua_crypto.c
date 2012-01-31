@@ -58,10 +58,12 @@
 #endif
 
 #include <string.h>
+#include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#include <openssl/x509.h>
 
 #define LUA_COMPAT_MODULE
 #include "lua.h"
@@ -84,6 +86,7 @@
 #define LUACRYPTO_HMACNAME "crypto.hmac"
 #define LUACRYPTO_RANDNAME "crypto.rand"
 #define LUACRYPTO_B64NAME "crypto.base64"
+#define LUACRYPTO_X509NAME "crypto.x509"
 
 
 /************************************************************************
@@ -503,6 +506,58 @@ static int b64_decode(lua_State *L) {
   }
 }
 
+static X509 *x509_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, LUACRYPTO_X509NAME) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+static int x509_fload(lua_State *L) {
+  apr_size_t len;
+  const char *data = luaL_checklstring(L, 1, &len);
+  X509 *cert;
+  BIO *mem;
+
+  if (data == NULL) {
+    luaL_argerror(L, 1, "PEM cert to load");
+    return 0;
+  }
+  
+  mem = BIO_new_mem_buf((void *)data, len);
+  cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
+  
+  lua_pushlightuserdata(L, cert);
+  luaL_getmetatable(L, LUACRYPTO_X509NAME);
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
+static int x509_clone(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
+  X509 *copy = X509_dup(cert);
+
+  lua_pushlightuserdata(L, copy);
+  luaL_getmetatable(L, LUACRYPTO_X509NAME);
+  lua_setmetatable(L, -2);
+  return 0;
+}
+
+static int x509_tostring(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
+  char s[256];
+  sprintf(s, "X509 cert %p", cert);
+  lua_pushstring(L, s);
+  return 1;
+}
+
+static int x509_gc(lua_State *L) {
+  X509 *c = x509_pget(L, 1);
+  X509_free(c);
+  return 1;
+}
+
 /*
 ** Create a metatable and leave it on top of the stack.
 */
@@ -575,6 +630,18 @@ static void create_metatables (lua_State *L) {
     { "decode", b64_decode },
     {NULL, NULL},
   };
+  struct luaL_Reg x509_functions[] = {
+    { "load", x509_fload },
+    {NULL, NULL},
+  };
+  struct luaL_Reg x509_methods[] = {
+    { "__tostring", x509_tostring },
+    { "__gc", x509_gc },
+    { "clone", x509_clone },
+    { "tostring", x509_tostring },
+    {NULL, NULL},
+  };
+
 
   luaL_openlib (L, LUACRYPTO_EVPNAME, evp_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_EVPNAME, evp_methods);
@@ -582,6 +649,8 @@ static void create_metatables (lua_State *L) {
   luacrypto_createmeta(L, LUACRYPTO_HMACNAME, hmac_methods);
   luaL_openlib (L, LUACRYPTO_RANDNAME, rand_functions, 0);
   luaL_openlib (L, LUACRYPTO_B64NAME, b64_functions, 0);
+  luaL_openlib (L, LUACRYPTO_X509NAME, x509_functions, 0);
+  luacrypto_createmeta(L, LUACRYPTO_X509NAME, x509_methods);
   lua_pop (L, 3);
 }
 
