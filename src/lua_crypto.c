@@ -81,12 +81,13 @@
  ***********************************************************************/
 
 #define LUACRYPTO_PREFIX "LuaCrypto: "
-#define LUACRYPTO_CORENAME "crypto"
-#define LUACRYPTO_EVPNAME "crypto.evp"
-#define LUACRYPTO_HMACNAME "crypto.hmac"
-#define LUACRYPTO_RANDNAME "crypto.rand"
-#define LUACRYPTO_B64NAME "crypto.base64"
-#define LUACRYPTO_X509NAME "crypto.x509"
+#define LUACRYPTO_CORE "crypto"
+#define LUACRYPTO_EVP "crypto.evp"
+#define LUACRYPTO_HMAC "crypto.hmac"
+#define LUACRYPTO_RAND "crypto.rand"
+#define LUACRYPTO_BASE64 "crypto.base64"
+#define LUACRYPTO_X509 "crypto.x509"
+#define LUACRYPTO_X509NAME "crypto.x509Name"
 
 
 /************************************************************************
@@ -110,7 +111,7 @@ static int crypto_error(lua_State *L) {
 }
 
 static EVP_MD_CTX *evp_pget(lua_State *L, int i) {
-  if (luaL_checkudata(L, i, LUACRYPTO_EVPNAME) == NULL) {
+  if (luaL_checkudata(L, i, LUACRYPTO_EVP) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
   }
   return lua_touserdata(L, i);
@@ -118,7 +119,7 @@ static EVP_MD_CTX *evp_pget(lua_State *L, int i) {
 
 static EVP_MD_CTX *evp_pnew(lua_State *L) {
   EVP_MD_CTX *c = lua_newuserdata(L, sizeof(EVP_MD_CTX));
-  luaL_getmetatable(L, LUACRYPTO_EVPNAME);
+  luaL_getmetatable(L, LUACRYPTO_EVP);
   lua_setmetatable(L, -2);
   return c;
 }
@@ -202,7 +203,7 @@ static int evp_digest(lua_State *L) {
 static int evp_tostring(lua_State *L) {
   EVP_MD_CTX *c = evp_pget(L, 1);
   char s[64];
-  sprintf(s, "%s %p", LUACRYPTO_EVPNAME, (void *)c);
+  sprintf(s, "%s %p", LUACRYPTO_EVP, (void *)c);
   lua_pushstring(L, s);
   return 1;
 }
@@ -249,7 +250,7 @@ static int evp_fdigest(lua_State *L) {
 }
 
 static HMAC_CTX *hmac_pget(lua_State *L, int i) {
- if (luaL_checkudata(L, i, LUACRYPTO_HMACNAME) == NULL) {
+ if (luaL_checkudata(L, i, LUACRYPTO_HMAC) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
  }
  return lua_touserdata(L, i);
@@ -257,7 +258,7 @@ static HMAC_CTX *hmac_pget(lua_State *L, int i) {
 
 static HMAC_CTX *hmac_pnew(lua_State *L) {
   HMAC_CTX *c = lua_newuserdata(L, sizeof(HMAC_CTX));
-  luaL_getmetatable(L, LUACRYPTO_HMACNAME);
+  luaL_getmetatable(L, LUACRYPTO_HMAC);
   lua_setmetatable(L, -2);
   return c;
 }
@@ -335,7 +336,7 @@ static int hmac_digest(lua_State *L) {
 static int hmac_tostring(lua_State *L) {
   HMAC_CTX *c = hmac_pget(L, 1);
   char s[64];
-  sprintf(s, "%s %p", LUACRYPTO_HMACNAME, (void *)c);
+  sprintf(s, "%s %p", LUACRYPTO_HMAC, (void *)c);
   lua_pushstring(L, s);
   return 1;
 }
@@ -507,13 +508,13 @@ static int b64_decode(lua_State *L) {
 }
 
 static X509 *x509_pget(lua_State *L, int i) {
-  if (luaL_checkudata(L, i, LUACRYPTO_X509NAME) == NULL) {
+  if (luaL_checkudata(L, i, LUACRYPTO_X509) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
   }
   return lua_touserdata(L, i);
 }
 
-static int x509_fload(lua_State *L) {
+static int x509_fnew(lua_State *L) {
   apr_size_t len;
   const char *data = luaL_checklstring(L, 1, &len);
   X509 *cert;
@@ -528,7 +529,7 @@ static int x509_fload(lua_State *L) {
   cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
   
   lua_pushlightuserdata(L, cert);
-  luaL_getmetatable(L, LUACRYPTO_X509NAME);
+  luaL_getmetatable(L, LUACRYPTO_X509);
   lua_setmetatable(L, -2);
 
   return 1;
@@ -539,22 +540,76 @@ static int x509_clone(lua_State *L) {
   X509 *copy = X509_dup(cert);
 
   lua_pushlightuserdata(L, copy);
+  luaL_getmetatable(L, LUACRYPTO_X509);
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
+static int x509_get_subject_name(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
+  X509_NAME *name = X509_get_subject_name(cert);
+
+  lua_pushlightuserdata(L, name);
   luaL_getmetatable(L, LUACRYPTO_X509NAME);
   lua_setmetatable(L, -2);
+  return 1;
+}
+
+static int x509_get_issuer_name(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
+  X509_NAME *name = X509_get_issuer_name(cert);
+
+  lua_pushlightuserdata(L, name);
+  luaL_getmetatable(L, LUACRYPTO_X509NAME);
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
+static int x509_get_issuer_name(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
   return 0;
 }
 
 static int x509_tostring(lua_State *L) {
+  apr_pool_t *pool;
   X509 *cert = x509_pget(L, 1);
-  char s[256];
-  sprintf(s, "X509 cert %p", cert);
+  char *s;
+  apr_pool_create(&pool, NULL);
+  apr_psprintf(pool, s, "X509 cert %p", cert);
   lua_pushstring(L, s);
+  apr_pool_destroy(pool);
   return 1;
 }
 
 static int x509_gc(lua_State *L) {
   X509 *c = x509_pget(L, 1);
   X509_free(c);
+  return 1;
+}
+
+static X509_NAME *x509_name_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, LUACRYPTO_X509NAME) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+static int x509_name_clone(lua_State *L) {
+  return 0;
+}
+
+static int x509_name_tostring(lua_State *L) {
+  char *s;
+  X509_NAME *name = x509_name_pget(L, 1);
+  s = X509_NAME_oneline(name, NULL, 0);
+  lua_pushstring(L, s);
+  OPENSSL_free(s);
+  return 1;
+}
+
+static int x509_name_gc(lua_State *L) {
+  X509_NAME *name = x509_name_pget(L, 1);
+  X509_NAME_free(name);
   return 1;
 }
 
@@ -631,7 +686,7 @@ static void create_metatables (lua_State *L) {
     {NULL, NULL},
   };
   struct luaL_Reg x509_functions[] = {
-    { "load", x509_fload },
+    { "new", x509_fnew },
     {NULL, NULL},
   };
   struct luaL_Reg x509_methods[] = {
@@ -639,18 +694,29 @@ static void create_metatables (lua_State *L) {
     { "__gc", x509_gc },
     { "clone", x509_clone },
     { "tostring", x509_tostring },
+    { "get_subject_name", x509_get_subject_name }, 
+    { "get_issuer_name", x509_get_issuer_name }, 
+    {NULL, NULL},
+  };
+
+  struct luaL_Reg x509_name_methods[] = {
+    { "__tostring", x509_name_tostring },
+    { "__gc", x509_name_gc },
+    { "clone", x509_name_clone },
+    { "tostring", x509_name_tostring },
     {NULL, NULL},
   };
 
 
-  luaL_openlib (L, LUACRYPTO_EVPNAME, evp_functions, 0);
-  luacrypto_createmeta(L, LUACRYPTO_EVPNAME, evp_methods);
-  luaL_openlib (L, LUACRYPTO_HMACNAME, hmac_functions, 0);
-  luacrypto_createmeta(L, LUACRYPTO_HMACNAME, hmac_methods);
-  luaL_openlib (L, LUACRYPTO_RANDNAME, rand_functions, 0);
-  luaL_openlib (L, LUACRYPTO_B64NAME, b64_functions, 0);
-  luaL_openlib (L, LUACRYPTO_X509NAME, x509_functions, 0);
-  luacrypto_createmeta(L, LUACRYPTO_X509NAME, x509_methods);
+  luaL_openlib (L, LUACRYPTO_EVP, evp_functions, 0);
+  luacrypto_createmeta(L, LUACRYPTO_EVP, evp_methods);
+  luaL_openlib (L, LUACRYPTO_HMAC, hmac_functions, 0);
+  luacrypto_createmeta(L, LUACRYPTO_HMAC, hmac_methods);
+  luaL_openlib (L, LUACRYPTO_RAND, rand_functions, 0);
+  luaL_openlib (L, LUACRYPTO_BASE64, b64_functions, 0);
+  luaL_openlib (L, LUACRYPTO_X509, x509_functions, 0);
+  luacrypto_createmeta(L, LUACRYPTO_X509, x509_methods);
+  luacrypto_createmeta(L, LUACRYPTO_X509NAME, x509_name_methods);
   lua_pop (L, 3);
 }
 
@@ -666,6 +732,6 @@ int luaopen_crypto(lua_State *L) {
   };
   OpenSSL_add_all_digests();
   create_metatables (L);
-  luaL_openlib (L, LUACRYPTO_CORENAME, core, 0);
+  luaL_openlib (L, LUACRYPTO_CORE, core, 0);
   return 1;
 }
