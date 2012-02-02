@@ -27,12 +27,14 @@ NFbyeF0=
 
   cert = crypto.x509.new(cert);
   certname = cert:get_subject_name();
+  certnamB64 = crypto.base64.encode(certname:toasn1());
+  assert(certnamB64 == "MHYxCzAJBgNVBAYTAkNIMQ8wDQYDVQQIEwZBYXJnYXUxHDAaBgNVBAoTE2h0dC5zb3VyY2Vmb3JnZS5uZXQxDzANBgNVBAMTBmh0dC5jYTEnMCUGCSqGSIb3DQEJARYYaWE5N2xpZXNAc291cmNlZm9yZ2UubmV0");
   return certname:tostring(), crypto.base64.encode(certname:toasn1());
 END
 
 CLIENT
   MyCertSubjectName NAME B64
   _EXPECT VAR(NAME) "emailAddress=ia97lies"
-  _DEBUG $B64
+  _EXPECT VAR(B64) "MHY.*Z2UubmV0"
 END
 
