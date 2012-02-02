@@ -565,11 +565,6 @@ static int x509_get_issuer_name(lua_State *L) {
   return 1;
 }
 
-static int x509_get_issuer_name(lua_State *L) {
-  X509 *cert = x509_pget(L, 1);
-  return 0;
-}
-
 static int x509_tostring(lua_State *L) {
   apr_pool_t *pool;
   X509 *cert = x509_pget(L, 1);
@@ -603,6 +598,16 @@ static int x509_name_tostring(lua_State *L) {
   X509_NAME *name = x509_name_pget(L, 1);
   s = X509_NAME_oneline(name, NULL, 0);
   lua_pushstring(L, s);
+  OPENSSL_free(s);
+  return 1;
+}
+
+static int x509_name_toasn1(lua_State *L) {
+  unsigned char *s;
+  apr_size_t len;
+  X509_NAME *name = x509_name_pget(L, 1);
+  len = i2d_X509_NAME(name, &s);
+  lua_pushlstring(L, s, len);
   OPENSSL_free(s);
   return 1;
 }
@@ -696,6 +701,7 @@ static void create_metatables (lua_State *L) {
     { "tostring", x509_tostring },
     { "get_subject_name", x509_get_subject_name }, 
     { "get_issuer_name", x509_get_issuer_name }, 
+    { "get_serial_number", X509_get_serialNumber },
     {NULL, NULL},
   };
 
@@ -704,6 +710,7 @@ static void create_metatables (lua_State *L) {
     { "__gc", x509_name_gc },
     { "clone", x509_name_clone },
     { "tostring", x509_name_tostring },
+    { "toasn1", x509_name_toasn1 },
     {NULL, NULL},
   };
 

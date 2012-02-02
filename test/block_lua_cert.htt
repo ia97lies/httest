@@ -1,6 +1,6 @@
 INCLUDE $TOP/test/config.htb
 
-BLOCK:LUA MyCertSubjectName : name
+BLOCK:LUA MyCertSubjectName : name b64
   cert = [[
 -----BEGIN CERTIFICATE-----
 MIIDYTCCAsqgAwIBAgIBATANBgkqhkiG9w0BAQUFADCBhzEPMA0GA1UEAxMGaHR0
@@ -27,11 +27,12 @@ NFbyeF0=
 
   cert = crypto.x509.new(cert);
   certname = cert:get_subject_name();
-  return certname:tostring();
+  return certname:tostring(), crypto.base64.encode(certname:toasn1());
 END
 
 CLIENT
-  MyCertSubjectName NAME
+  MyCertSubjectName NAME B64
   _EXPECT VAR(NAME) "emailAddress=ia97lies"
+  _DEBUG $B64
 END
 
