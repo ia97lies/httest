@@ -587,7 +587,7 @@ static int x509_tostring(lua_State *L) {
   X509 *cert = x509_pget(L, 1);
   char *s;
   apr_pool_create(&pool, NULL);
-  apr_psprintf(pool, s, "X509 cert %p", cert);
+  s = apr_psprintf(pool, "X509 cert %p", cert);
   lua_pushstring(L, s);
   apr_pool_destroy(pool);
   return 1;
@@ -633,7 +633,7 @@ static int x509_name_toasn1(lua_State *L) {
   apr_size_t len;
   X509_NAME *name = x509_name_pget(L, 1);
   len = i2d_X509_NAME(name, &s);
-  lua_pushlstring(L, s, len);
+  lua_pushlstring(L, (char *)s, len);
   OPENSSL_free(s);
   return 1;
 }
@@ -645,8 +645,9 @@ static int x509_name_gc(lua_State *L) {
 }
 
 /**
- * DH Object
+ * DH object
  */
+
 static int dh_cb(int p, int n, BN_GENCB *cb) {
   char c='*';
 
@@ -669,13 +670,19 @@ static DH *dh_pget(lua_State *L, int i) {
 static int dh_fnew(lua_State *L) {
   int generator = luaL_checknumber(L, 1);
   int num = luaL_checknumber(L, 2);
+  DH *dh = DH_new();
+  BIO *bio_err;
+  if ((bio_err = BIO_new(BIO_s_file())) != NULL)
+    BIO_set_fp(bio_err,stderr,BIO_NOCLOSE|BIO_FP_TEXT);
   fprintf(stderr, "\nXXXX g: %d; num: %d\n", generator, num);
   fflush(stderr);
-  DH *dh = DH_new();
   BN_GENCB cb;
-  BN_GENCB_set(&cb, dh_cb, NULL);
+  BN_GENCB_set(&cb, dh_cb, bio_err);
   if (!DH_generate_parameters_ex(dh, num, generator, &cb)) {
+    luaL_argerror(L, 1, "could not generate DH paramters");
+    return 1;
   }
+  DH_generate_key(dh);
   lua_pushlightuserdata(L, dh);
   luaL_getmetatable(L, LUACRYPTO_DH);
   lua_setmetatable(L, -2);
@@ -698,8 +705,36 @@ static int dh_tostring(lua_State *L) {
   apr_pool_t *pool;
   DH *dh = dh_pget(L, 1);
   apr_pool_create(&pool, NULL);
-  apr_psprintf(pool, s, "DH %p", dh);
+  s = apr_psprintf(pool, "DH %p", dh);
   lua_pushstring(L, s);
+  apr_pool_destroy(pool);
+  return 1;
+}
+
+static int dh_get_priv_key(lua_State *L) {
+  apr_size_t len;
+  unsigned char *s;
+  apr_pool_t *pool;
+  apr_pool_create(&pool, NULL);
+  DH *dh = dh_pget(L, 1);
+  fprintf(stderr, "\nXXX %p\n", dh->priv_key);
+  fflush(stderr);
+  s = apr_pcalloc(pool, BN_num_bytes(dh->priv_key)); 
+  len = BN_bn2bin(dh->priv_key, s);
+  lua_pushlstring(L, (char *)s, len);
+  apr_pool_destroy(pool);
+  return 1;
+}
+
+static int dh_get_pub_key(lua_State *L) {
+  apr_size_t len;
+  unsigned char *s;
+  apr_pool_t *pool;
+  apr_pool_create(&pool, NULL);
+  DH *dh = dh_pget(L, 1);
+  s = apr_pcalloc(pool, BN_num_bytes(dh->pub_key)); 
+  len = BN_bn2bin(dh->pub_key, s);
+  lua_pushlstring(L, (char *)s, len);
   apr_pool_destroy(pool);
   return 1;
 }
@@ -820,6 +855,8 @@ static void create_metatables (lua_State *L) {
     { "__gc", dh_gc },
     { "clone", dh_clone },
     { "tostring", dh_tostring },
+    { "get_priv_key", dh_get_priv_key },
+    { "get_pub_key", dh_get_pub_key },
     {NULL, NULL},
   };
 

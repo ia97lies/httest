@@ -25,7 +25,6 @@ NFbyeF0=
 -----END CERTIFICATE-----
   ]]
 
-  dh = crypto.dh.new(1, 1024)
   cert = crypto.x509.new(cert);
   certname = cert:get_subject_name();
   certnamB64 = crypto.base64.encode(certname:toasn1());
