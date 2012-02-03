@@ -64,6 +64,7 @@
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 #include <openssl/x509.h>
+#include <openssl/dh.h>
 
 #define LUA_COMPAT_MODULE
 #include "lua.h"
@@ -88,6 +89,7 @@
 #define LUACRYPTO_BASE64 "crypto.base64"
 #define LUACRYPTO_X509 "crypto.x509"
 #define LUACRYPTO_X509NAME "crypto.x509Name"
+#define LUACRYPTO_DH "crypto.dh"
 
 
 /************************************************************************
@@ -110,6 +112,9 @@ static int crypto_error(lua_State *L) {
   return 2;
 }
 
+/**
+ * EVP Object
+ */
 static EVP_MD_CTX *evp_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, LUACRYPTO_EVP) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -249,6 +254,9 @@ static int evp_fdigest(lua_State *L) {
   return 1;
 }
 
+/**
+ * HMAC Object
+ */
 static HMAC_CTX *hmac_pget(lua_State *L, int i) {
  if (luaL_checkudata(L, i, LUACRYPTO_HMAC) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -383,6 +391,9 @@ static int hmac_fdigest(lua_State *L) {
   return 1;
 }
 
+/**
+ * Random Object
+ */
 static int rand_do_bytes(lua_State *L, int (*bytes)(unsigned char *, int)) {
   size_t count = luaL_checkint(L, 1);
   unsigned char tmp[256], *buf = tmp;
@@ -459,6 +470,9 @@ static int rand_cleanup(lua_State *L) {
   return 0;
 }
 
+/**
+ * Base64
+ */
 static int b64_encode(lua_State *L) {
   if (lua_isstring(L, -1)) {
     apr_pool_t *pool;
@@ -507,6 +521,9 @@ static int b64_decode(lua_State *L) {
   }
 }
 
+/**
+ * X509 Object
+ */
 static X509 *x509_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, LUACRYPTO_X509) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -582,6 +599,9 @@ static int x509_gc(lua_State *L) {
   return 1;
 }
 
+/**
+ * X509_NAME Object
+ */
 static X509_NAME *x509_name_pget(lua_State *L, int i) {
   if (luaL_checkudata(L, i, LUACRYPTO_X509NAME) == NULL) {
     luaL_argerror(L, 1, "invalid object type");
@@ -590,7 +610,13 @@ static X509_NAME *x509_name_pget(lua_State *L, int i) {
 }
 
 static int x509_name_clone(lua_State *L) {
-  return 0;
+  X509_NAME *name = x509_name_pget(L, 1);
+  X509_NAME *copy = X509_NAME_dup(name);
+
+  lua_pushlightuserdata(L, copy);
+  luaL_getmetatable(L, LUACRYPTO_X509NAME);
+  lua_setmetatable(L, -2);
+  return 1;
 }
 
 static int x509_name_tostring(lua_State *L) {
@@ -618,9 +644,75 @@ static int x509_name_gc(lua_State *L) {
   return 1;
 }
 
-/*
-** Create a metatable and leave it on top of the stack.
-*/
+/**
+ * DH Object
+ */
+static int dh_cb(int p, int n, BN_GENCB *cb) {
+  char c='*';
+
+  if (p == 0) c='.';
+  if (p == 1) c='+';
+  if (p == 2) c='*';
+  if (p == 3) c='\n';
+  BIO_write(cb->arg,&c,1);
+  (void)BIO_flush(cb->arg);
+  return 1;
+}
+
+static DH *dh_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, LUACRYPTO_DH) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+static int dh_fnew(lua_State *L) {
+  int generator = luaL_checknumber(L, 1);
+  int num = luaL_checknumber(L, 2);
+  fprintf(stderr, "\nXXXX g: %d; num: %d\n", generator, num);
+  fflush(stderr);
+  DH *dh = DH_new();
+  BN_GENCB cb;
+  BN_GENCB_set(&cb, dh_cb, NULL);
+  if (!DH_generate_parameters_ex(dh, num, generator, &cb)) {
+  }
+  lua_pushlightuserdata(L, dh);
+  luaL_getmetatable(L, LUACRYPTO_DH);
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
+static int dh_clone(lua_State *L) {
+  DH *dh = dh_pget(L, 1);
+  DH *copy = DHparams_dup(dh);
+
+  lua_pushlightuserdata(L, copy);
+  luaL_getmetatable(L, LUACRYPTO_DH);
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
+static int dh_tostring(lua_State *L) {
+  char *s;
+  apr_pool_t *pool;
+  DH *dh = dh_pget(L, 1);
+  apr_pool_create(&pool, NULL);
+  apr_psprintf(pool, s, "DH %p", dh);
+  lua_pushstring(L, s);
+  apr_pool_destroy(pool);
+  return 1;
+}
+
+static int dh_gc(lua_State *L) {
+  DH *dh = dh_pget(L, 1);
+  DH_free(dh);
+  return 1;
+}
+
+/**
+ * Create a metatable and leave it on top of the stack.
+ */
 int luacrypto_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
   if (!luaL_newmetatable (L, name))
     return 0;
@@ -640,15 +732,16 @@ int luacrypto_createmeta (lua_State *L, const char *name, const luaL_Reg *method
   return 1;
 }
 
-/*
-** Create metatables for each class of object.
-*/
+/**
+ * Create metatables for each class of object.
+ */
 static void create_metatables (lua_State *L) {
   struct luaL_Reg evp_functions[] = {
     { "digest", evp_fdigest },
     { "new", evp_fnew },
     {NULL, NULL},
   };
+
   struct luaL_Reg evp_methods[] = {
     { "__tostring", evp_tostring },
     { "__gc", evp_gc },
@@ -659,11 +752,13 @@ static void create_metatables (lua_State *L) {
     { "update",	evp_update },
     {NULL, NULL},
   };
+
   struct luaL_Reg hmac_functions[] = {
     { "digest", hmac_fdigest },
     { "new", hmac_fnew },
     { NULL, NULL }
   };
+
   struct luaL_Reg hmac_methods[] = {
     { "__tostring", hmac_tostring },
     { "__gc", hmac_gc },
@@ -690,10 +785,12 @@ static void create_metatables (lua_State *L) {
     { "decode", b64_decode },
     {NULL, NULL},
   };
+
   struct luaL_Reg x509_functions[] = {
     { "new", x509_fnew },
     {NULL, NULL},
   };
+
   struct luaL_Reg x509_methods[] = {
     { "__tostring", x509_tostring },
     { "__gc", x509_gc },
@@ -701,7 +798,6 @@ static void create_metatables (lua_State *L) {
     { "tostring", x509_tostring },
     { "get_subject_name", x509_get_subject_name }, 
     { "get_issuer_name", x509_get_issuer_name }, 
-    { "get_serial_number", X509_get_serialNumber },
     {NULL, NULL},
   };
 
@@ -714,6 +810,18 @@ static void create_metatables (lua_State *L) {
     {NULL, NULL},
   };
 
+  struct luaL_Reg dh_functions[] = {
+    { "new", dh_fnew },
+    {NULL, NULL},
+  };
+
+  struct luaL_Reg dh_methods[] = {
+    { "__tostring", dh_tostring },
+    { "__gc", dh_gc },
+    { "clone", dh_clone },
+    { "tostring", dh_tostring },
+    {NULL, NULL},
+  };
 
   luaL_openlib (L, LUACRYPTO_EVP, evp_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_EVP, evp_methods);
@@ -724,6 +832,8 @@ static void create_metatables (lua_State *L) {
   luaL_openlib (L, LUACRYPTO_X509, x509_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_X509, x509_methods);
   luacrypto_createmeta(L, LUACRYPTO_X509NAME, x509_name_methods);
+  luaL_openlib (L, LUACRYPTO_DH, dh_functions, 0);
+  luacrypto_createmeta(L, LUACRYPTO_DH, dh_methods);
   lua_pop (L, 3);
 }
 
