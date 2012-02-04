@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.15
+  *) httest: Add more functions for openssl x509 and dh stuff to Lua
+             interface.
+
+
 Changes with httest 2.1.14
   *) httest: Fixed _SSL:RENEG_CERT Again. Without "verify" option
              _SSL:RENEG_CERT get certificate but still verified it. Now it is
