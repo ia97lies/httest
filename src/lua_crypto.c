@@ -88,7 +88,7 @@
 #define LUACRYPTO_RAND "crypto.rand"
 #define LUACRYPTO_BASE64 "crypto.base64"
 #define LUACRYPTO_X509 "crypto.x509"
-#define LUACRYPTO_X509NAME "crypto.x509Name"
+#define LUACRYPTO_X509NAME "crypto.x509name"
 #define LUACRYPTO_DH "crypto.dh"
 
 
@@ -543,7 +543,27 @@ static int x509_fnew(lua_State *L) {
   }
   
   mem = BIO_new_mem_buf((void *)data, len);
-  cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
+  cert = PEM_read_bio_X509(mem, NULL, NULL, NULL);
+  
+  lua_pushlightuserdata(L, cert);
+  luaL_getmetatable(L, LUACRYPTO_X509);
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
+static int x509_fload(lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  X509 *cert;
+  BIO *file;
+
+  if (filename == NULL) {
+    luaL_argerror(L, 1, "path to x509 pem formated cert missing");
+    return 0;
+  }
+ 
+  file = BIO_new_file(filename, "r");
+  cert = PEM_read_bio_X509(file, NULL, NULL, NULL);
   
   lua_pushlightuserdata(L, cert);
   luaL_getmetatable(L, LUACRYPTO_X509);
@@ -823,6 +843,7 @@ static void create_metatables (lua_State *L) {
 
   struct luaL_Reg x509_functions[] = {
     { "new", x509_fnew },
+    { "load", x509_fload },
     {NULL, NULL},
   };
 
