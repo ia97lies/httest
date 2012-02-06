@@ -729,27 +729,27 @@ static int dh_tostring(lua_State *L) {
   return 1;
 }
 
-static int dh_get_priv_key(lua_State *L) {
+static int dh_get_prime(lua_State *L) {
   apr_size_t len;
   unsigned char *s;
   apr_pool_t *pool;
   apr_pool_create(&pool, NULL);
   DH *dh = dh_pget(L, 1);
-  s = apr_pcalloc(pool, BN_num_bytes(dh->priv_key)); 
-  len = BN_bn2bin(dh->priv_key, s);
+  s = apr_pcalloc(pool, BN_num_bytes(dh->p)); 
+  len = BN_bn2bin(dh->p, s);
   lua_pushlstring(L, (char *)s, len);
   apr_pool_destroy(pool);
   return 1;
 }
 
-static int dh_get_pub_key(lua_State *L) {
+static int dh_get_public(lua_State *L) {
   apr_size_t len;
   unsigned char *s;
   apr_pool_t *pool;
   apr_pool_create(&pool, NULL);
   DH *dh = dh_pget(L, 1);
-  s = apr_pcalloc(pool, BN_num_bytes(dh->pub_key)); 
-  len = BN_bn2bin(dh->pub_key, s);
+  s = apr_pcalloc(pool, BN_num_bytes(dh->g)); 
+  len = BN_bn2bin(dh->g, s);
   lua_pushlstring(L, (char *)s, len);
   apr_pool_destroy(pool);
   return 1;
@@ -872,8 +872,8 @@ static void create_metatables (lua_State *L) {
     { "__gc", dh_gc },
     { "clone", dh_clone },
     { "tostring", dh_tostring },
-    { "get_priv_key", dh_get_priv_key },
-    { "get_pub_key", dh_get_pub_key },
+    { "get_prime", dh_get_prime },
+    { "get_public", dh_get_public },
     {NULL, NULL},
   };
 
