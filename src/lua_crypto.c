@@ -649,7 +649,7 @@ static int x509_name_tostring(lua_State *L) {
 }
 
 static int x509_name_toasn1(lua_State *L) {
-  unsigned char *s;
+  unsigned char *s = NULL;
   apr_size_t len;
   X509_NAME *name = x509_name_pget(L, 1);
   len = i2d_X509_NAME(name, &s);
@@ -694,8 +694,6 @@ static int dh_fnew(lua_State *L) {
   BIO *bio_err;
   if ((bio_err = BIO_new(BIO_s_file())) != NULL)
     BIO_set_fp(bio_err,stderr,BIO_NOCLOSE|BIO_FP_TEXT);
-  fprintf(stderr, "\nXXXX g: %d; num: %d\n", generator, num);
-  fflush(stderr);
   BN_GENCB cb;
   BN_GENCB_set(&cb, dh_cb, bio_err);
   if (!DH_generate_parameters_ex(dh, num, generator, &cb)) {
@@ -737,8 +735,6 @@ static int dh_get_priv_key(lua_State *L) {
   apr_pool_t *pool;
   apr_pool_create(&pool, NULL);
   DH *dh = dh_pget(L, 1);
-  fprintf(stderr, "\nXXX %p\n", dh->priv_key);
-  fflush(stderr);
   s = apr_pcalloc(pool, BN_num_bytes(dh->priv_key)); 
   len = BN_bn2bin(dh->priv_key, s);
   lua_pushlstring(L, (char *)s, len);

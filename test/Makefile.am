@@ -22,7 +22,9 @@ EXTRA_DIST= \
 	block_in_out_params.htt \
 	block_local_vars.htt \
 	block_lua_buf.htt \
-	block_lua_coder.htt \
+	block_lua_cert.htt \
+	block_lua_crypto.htt \
+	block_lua_dh.htt \
 	block_lua.hte \
 	block_lua.htt \
 	block_lua_httest.htt \
@@ -69,6 +71,7 @@ EXTRA_DIST= \
 	embedded_sh.htt \
 	embedded_sh_pipe.htt \
 	env.htt \
+	error_body.hte \
 	error_body.htt \
 	error_match.htt \
 	errors.hte \

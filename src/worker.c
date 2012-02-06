@@ -752,16 +752,12 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
     if (e[i].key[0] != '!' && !regdidmatch(regex)) {
       worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
 	         regexpattern(regex));
-      if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
-      }
     }
     if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
       worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
 	         &e[i].key[1]);
-      if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
-      }
     }
   }
   apr_table_clear(expect);
