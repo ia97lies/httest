@@ -2343,7 +2343,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   bufreader_t *br;
   const char *progname;
   char *last;
-  const char *args[3];
+  const char * const*args;
   apr_exit_why_e exitwhy;
   int exitcode;
   int flags;
@@ -2366,10 +2366,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     worker->flags |= FLAGS_FILTER;
   }
 
-  args[0] = apr_strtok(copy, " ", &last);
-  args[1] = last;
-  args[2] = NULL;
-
+  my_tokenize_to_argv(copy, (char ***)&args, ptmp, 1);
   progname = args[0];
 
   if (!progname) {
