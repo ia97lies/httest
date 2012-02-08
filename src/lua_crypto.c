@@ -60,6 +60,7 @@
 #include <string.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -89,6 +90,7 @@
 #define LUACRYPTO_BASE64 "crypto.base64"
 #define LUACRYPTO_X509 "crypto.x509"
 #define LUACRYPTO_X509NAME "crypto.x509name"
+#define LUACRYPTO_ASN1TIME "crypto.asn1time"
 #define LUACRYPTO_DH "crypto.dh"
 
 
@@ -602,6 +604,26 @@ static int x509_get_issuer_name(lua_State *L) {
   return 1;
 }
 
+static int x509_get_not_before(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
+  ASN1_TIME *time = X509_get_notBefore(cert);
+
+  lua_pushlightuserdata(L, time);
+  luaL_getmetatable(L, LUACRYPTO_ASN1TIME);
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
+static int x509_get_not_after(lua_State *L) {
+  X509 *cert = x509_pget(L, 1);
+  ASN1_TIME *time = X509_get_notAfter(cert);
+
+  lua_pushlightuserdata(L, time);
+  luaL_getmetatable(L, LUACRYPTO_ASN1TIME);
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
 static int x509_tostring(lua_State *L) {
   apr_pool_t *pool;
   X509 *cert = x509_pget(L, 1);
@@ -661,6 +683,52 @@ static int x509_name_toasn1(lua_State *L) {
 static int x509_name_gc(lua_State *L) {
   X509_NAME *name = x509_name_pget(L, 1);
   X509_NAME_free(name);
+  return 1;
+}
+
+/**
+ * ASN1_TIME Object
+ */
+static ASN1_TIME *asn1_time_pget(lua_State *L, int i) {
+  if (luaL_checkudata(L, i, LUACRYPTO_ASN1TIME) == NULL) {
+    luaL_argerror(L, 1, "invalid object type");
+  }
+  return lua_touserdata(L, i);
+}
+
+static int asn1_time_clone(lua_State *L) {
+  ASN1_TIME *time = asn1_time_pget(L, 1);
+  ASN1_TIME *copy = M_ASN1_TIME_dup(time);
+
+  lua_pushlightuserdata(L, copy);
+  luaL_getmetatable(L, LUACRYPTO_ASN1TIME);
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
+static int asn1_time_tostring(lua_State *L) {
+  char s[1024];
+  BIO *mem;
+  ASN1_TIME *time = asn1_time_pget(L, 1);
+  mem = BIO_new_mem_buf((void *)s, 1024);
+  ASN1_TIME_print(mem, time);
+  lua_pushstring(L, s);
+  return 1;
+}
+
+static int asn1_time_toasn1(lua_State *L) {
+  unsigned char *s = NULL;
+  apr_size_t len;
+  ASN1_TIME *time = asn1_time_pget(L, 1);
+  len = i2d_ASN1_TIME(time, &s);
+  lua_pushlstring(L, (char *)s, len);
+  OPENSSL_free(s);
+  return 1;
+}
+
+static int asn1_time_gc(lua_State *L) {
+  ASN1_TIME *time = asn1_time_pget(L, 1);
+  M_ASN1_TIME_free(time);
   return 1;
 }
 
@@ -863,6 +931,8 @@ static void create_metatables (lua_State *L) {
     { "tostring", x509_tostring },
     { "get_subject_name", x509_get_subject_name }, 
     { "get_issuer_name", x509_get_issuer_name }, 
+    { "get_not_before", x509_get_not_before }, 
+    { "get_not_after", x509_get_not_after }, 
     {NULL, NULL},
   };
 
@@ -872,6 +942,15 @@ static void create_metatables (lua_State *L) {
     { "clone", x509_name_clone },
     { "tostring", x509_name_tostring },
     { "toasn1", x509_name_toasn1 },
+    {NULL, NULL},
+  };
+
+  struct luaL_Reg asn1_time_methods[] = {
+    { "__tostring", asn1_time_tostring },
+    { "__gc", asn1_time_gc },
+    { "clone", asn1_time_clone },
+    { "tostring", asn1_time_tostring },
+    { "toasn1", asn1_time_toasn1 },
     {NULL, NULL},
   };
 
@@ -900,6 +979,7 @@ static void create_metatables (lua_State *L) {
   luaL_openlib (L, LUACRYPTO_X509, x509_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_X509, x509_methods);
   luacrypto_createmeta(L, LUACRYPTO_X509NAME, x509_name_methods);
+  luacrypto_createmeta(L, LUACRYPTO_ASN1TIME, asn1_time_methods);
   luaL_openlib (L, LUACRYPTO_DH, dh_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_DH, dh_methods);
   lua_pop (L, 3);
