@@ -760,9 +760,9 @@ static int dh_fnew(lua_State *L) {
   int num = luaL_checknumber(L, 2);
   DH *dh = DH_new();
   BIO *bio_err;
+  BN_GENCB cb;
   if ((bio_err = BIO_new(BIO_s_file())) != NULL)
     BIO_set_fp(bio_err,stderr,BIO_NOCLOSE|BIO_FP_TEXT);
-  BN_GENCB cb;
   BN_GENCB_set(&cb, dh_cb, bio_err);
   if (!DH_generate_parameters_ex(dh, num, generator, &cb)) {
     luaL_argerror(L, 1, "could not generate DH paramters");
@@ -801,8 +801,8 @@ static int dh_get_prime(lua_State *L) {
   apr_size_t len;
   unsigned char *s;
   apr_pool_t *pool;
-  apr_pool_create(&pool, NULL);
   DH *dh = dh_pget(L, 1);
+  apr_pool_create(&pool, NULL);
   s = apr_pcalloc(pool, BN_num_bytes(dh->p)); 
   len = BN_bn2bin(dh->p, s);
   lua_pushlstring(L, (char *)s, len);
@@ -814,8 +814,8 @@ static int dh_get_priv_key(lua_State *L) {
   apr_size_t len;
   unsigned char *s;
   apr_pool_t *pool;
-  apr_pool_create(&pool, NULL);
   DH *dh = dh_pget(L, 1);
+  apr_pool_create(&pool, NULL);
   s = apr_pcalloc(pool, BN_num_bytes(dh->priv_key)); 
   len = BN_bn2bin(dh->priv_key, s);
   lua_pushlstring(L, (char *)s, len);
@@ -827,8 +827,8 @@ static int dh_get_pub_key(lua_State *L) {
   apr_size_t len;
   unsigned char *s;
   apr_pool_t *pool;
-  apr_pool_create(&pool, NULL);
   DH *dh = dh_pget(L, 1);
+  apr_pool_create(&pool, NULL);
   s = apr_pcalloc(pool, BN_num_bytes(dh->pub_key)); 
   len = BN_bn2bin(dh->pub_key, s);
   lua_pushlstring(L, (char *)s, len);

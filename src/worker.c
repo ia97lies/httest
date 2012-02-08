@@ -2342,7 +2342,6 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   apr_procattr_t *attr;
   bufreader_t *br;
   const char *progname;
-  char *last;
   const char * const*args;
   apr_exit_why_e exitwhy;
   int exitcode;
