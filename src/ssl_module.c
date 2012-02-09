@@ -28,15 +28,6 @@
 #include <openssl/pkcs12.h>
 #include "module.h"
 
-/* on windows the inclusion of windows.h/wincrypt.h causes
- * X509_NAME and a few more to be defined; found no other
- * way than to undef manually before inclusion of engine.h;
- * somehow the same undef in ossl_typ.h is not enough...
- */
-#ifdef OPENSSL_SYS_WIN32
-#undef X509_NAME
-#endif
-
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif

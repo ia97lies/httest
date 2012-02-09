@@ -53,7 +53,7 @@ __Content-Type: text/html
 __
 _-Start of line 
 _PIPE
-_EXEC echo -n `date`
+_EXEC printf "`date`"
 __ End of line
 __
 

@@ -2,7 +2,7 @@ INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyCertSubjectName : priv pub 
   dh = crypto.dh.new(2, 1024);
-  return crypto.base64.encode(dh:get_prime()), crypto.base64.encode(dh:get_public());
+  return crypto.base64.encode(dh:get_prime()), crypto.base64.encode(dh:get_pub_key());
 END
 
 CLIENT
