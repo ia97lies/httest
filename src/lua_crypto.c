@@ -696,6 +696,17 @@ static ASN1_TIME *asn1_time_pget(lua_State *L, int i) {
   return lua_touserdata(L, i);
 }
 
+static int asn1_time_fnew(lua_State *L) {
+  ASN1_TIME *asn1time = M_ASN1_TIME_new(); 
+  time_t t = time(NULL);
+  ASN1_TIME_set(asn1time, t);
+  lua_pushlightuserdata(L, asn1time);
+  luaL_getmetatable(L, LUACRYPTO_ASN1TIME);
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
 static int asn1_time_clone(lua_State *L) {
   ASN1_TIME *time = asn1_time_pget(L, 1);
   ASN1_TIME *copy = M_ASN1_TIME_dup(time);
@@ -945,6 +956,11 @@ static void create_metatables (lua_State *L) {
     {NULL, NULL},
   };
 
+  struct luaL_Reg asn1_time_functions[] = {
+    { "new", asn1_time_fnew },
+    {NULL, NULL},
+  };
+
   struct luaL_Reg asn1_time_methods[] = {
     { "__tostring", asn1_time_tostring },
     { "__gc", asn1_time_gc },
@@ -979,6 +995,7 @@ static void create_metatables (lua_State *L) {
   luaL_openlib (L, LUACRYPTO_X509, x509_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_X509, x509_methods);
   luacrypto_createmeta(L, LUACRYPTO_X509NAME, x509_name_methods);
+  luaL_openlib (L, LUACRYPTO_ASN1TIME, asn1_time_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_ASN1TIME, asn1_time_methods);
   luaL_openlib (L, LUACRYPTO_DH, dh_functions, 0);
   luacrypto_createmeta(L, LUACRYPTO_DH, dh_methods);
