@@ -1,8 +1,12 @@
-\section{Use Lua Power}
-
+\section{Extentions with Lua}
 If you have enabled Lua support in your httest you can use the full Lua
 power in htt. Lua fits perfekt into httest, because Lua also do have the feature
 of multiple return values like httest. 
+
+\subsection{Lua blocks}
+With a special block \texttt{BLOCK:LUA} you can embedd Lua into httest. Paired
+with the possibility to define parameter and return value signature you are
+able to define new fancy httest commands.
 
 A simple Lua example:
 
@@ -48,5 +52,10 @@ which do hand over the received buffer unresolved. Of course you can do it
 the old way with \texttt{\$buf}. But if the result is not a single word you have
 to quote it and if there are quotes in the received buffer it, it wont work at all,
 because the resolving is allwas done before execution. That's why we use
-the trick with \texttt{VAR(buf)}. Attention, this works only for Lua block calls.
+the trick with \texttt{VAR(buf)}. Attention, this works currently only for Lua 
+block calls.
+
+\subsection{Special Lua extentions}
+To make the lua integration more powerfull a set of special httest commands are
+accessable from Lua.
 
