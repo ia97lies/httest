@@ -76,14 +76,6 @@
 
 #include "lua_crypto.h"
 #include "module.h"
-/* on windows the inclusion of windows.h/wincrypt.h causes
- * X509_NAME and a few more to be defined, so reincluding
- * ossl_typ.h at the end in order to undefine these...
- */
-#ifdef OPENSSL_SYS_WIN32
-#undef HEADER_OPENSSL_TYPES_H
-#include <openssl/ossl_typ.h>
-#endif
 
 /************************************************************************
  * Definitions 
