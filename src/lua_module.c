@@ -406,23 +406,7 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   for (i = 1; i < apr_table_elts(config->params)->nelts; i++) {
     const char *val = NULL;
     char *param = store_get_copy(worker->params, ptmp, e[i].key);
-    if (strncmp(param, "VAR(", 4) == 0) {
-      char *var = param + 4;
-      apr_size_t len = strlen(var);
-      if (len > 0) {
-        var[len-1] = 0;
-      }
-      val = store_get(worker->vars, var);
-      if (!val) {
-        val = store_get(worker->locals, var);
-      }
-      if (!val) {
-        val = param;
-      }
-      }
-      else {
-        val = param;
-      }
+    val = worker_get_value_from_param(worker, param, ptmp);
     lua_pushstring(L, val);
     lua_setglobal(L, e[i].key);
   }

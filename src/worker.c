@@ -1117,6 +1117,35 @@ static void worker_set_cookie(worker_t *worker) {
 }
 
 /**
+ * Get value from a given param
+ * @param worker IN thread data object
+ * @param param IN resolved param or VAR param
+ * @return final resolved value
+ */
+const char *worker_get_value_from_param(worker_t *worker, const char *param, apr_pool_t *ptmp) {
+  const char *val = NULL;
+
+  if (strncmp(param, "VAR(", 4) == 0) {
+    char *var = apr_pstrdup(ptmp, param + 4);
+    apr_size_t len = strlen(var);
+    if (len > 0) {
+      var[len-1] = 0;
+    }
+    val = store_get(worker->vars, var);
+    if (!val) {
+      val = store_get(worker->locals, var);
+    }
+    if (!val) {
+      val = param;
+    }
+  }
+  else {
+    val = param;
+  }
+  return val;
+}
+
+/**
  * CALL command calls a defined block
  *
  * @param self IN command
@@ -1210,6 +1239,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
         goto error;
       }
       if (arg && val) {
+        val = worker_get_value_from_param(worker, val, ptmp);
         store_set(params, arg, val);
       }
     }

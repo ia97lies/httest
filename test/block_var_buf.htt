@@ -1,0 +1,37 @@
+INCLUDE $TOP/test/config.htb
+
+BLOCK MyLuaThing buf : ret
+_SET ret=foo
+_DEBUG $buf
+_EXPECT VAR(buf) "<html>\r\n.*It works"
+_EXPECT VAR(buf) "</html>"
+END
+
+CLIENT 
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "OK"
+_WAIT BUF
+
+ MyLuaThing VAR(BUF) RET
+_EXPECT VAR(RET) "foo"
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Content-Type: text/html
+__
+__<html>
+__  <body><h1>It works!</h1>
+__    <p>This is the default web page for this server.</p>
+__    <p>"The" web server software is running but no content has been added, yet.</p>
+__  </body>
+__</html>
+END
