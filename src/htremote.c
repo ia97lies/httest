@@ -105,7 +105,7 @@ static void usage(const char *progname) {
   }
   fprintf(stdout, "\n");
   fprintf(stdout, "\nExample: \n"
-          "%s -p 8080 -c \"./httproxy -p 8888 -d foo\"\n", progname);
+          "%s -p 8080 -e \"./httproxy -p 8888 -d foo\"\n", progname);
 }
 
 /**
