@@ -53,6 +53,22 @@
 #include "worker.h"
 #include "module.h"
 
+#ifdef _WINDOWS
+  /* on windows the inclusion of windows.h/wincrypt.h causes
+   * X509_NAME and a few more to be defined, so reincluding
+   * ossl_typ.h at the end in order to undefine these...
+   */
+  #undef HEADER_OPENSSL_TYPES_H
+  #include <openssl/ossl_typ.h>
+
+  /* windows has no uint8_t without inclusion of stdint.h */
+  typedef unsigned __int8 uint8_t;
+
+  /* windows has no netinet/in.h */
+  #define HAVE_NO_NETINET
+  #include <winsock.h>
+#endif
+
 typedef apr_status_t (*module_init_f)(global_t *global);
 typedef struct module_s {
   module_init_f module_init;
