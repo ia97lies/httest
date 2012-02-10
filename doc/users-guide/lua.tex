@@ -52,8 +52,7 @@ which do hand over the received buffer unresolved. Of course you can do it
 the old way with \texttt{\$buf}. But if the result is not a single word you have
 to quote it and if there are quotes in the received buffer it, it wont work at all,
 because the resolving is allwas done before execution. That's why we use
-the trick with \texttt{VAR(buf)}. Attention, this works currently only for Lua 
-block calls.
+the trick with \texttt{VAR(buf)}. 
 
 \subsection{Special Lua extentions}
 To make the lua integration more powerfull a set of special httest commands are
