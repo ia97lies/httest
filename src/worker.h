@@ -426,5 +426,6 @@ apr_status_t worker_add_line(worker_t * self, const char *file_and_line,
 apr_status_t worker_socket_send(worker_t *self, char *buf, 
                                 apr_size_t len); 
 apr_status_t worker_to_file(worker_t * self);
+const char *worker_get_value_from_param(worker_t *worker, const char *param, apr_pool_t *ptmp); 
 
 #endif
