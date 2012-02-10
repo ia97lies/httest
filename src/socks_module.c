@@ -25,10 +25,7 @@
  * Includes
  ***********************************************************************/
 #include "module.h"
-#include <stdint.h>
-#ifdef _WINDOWS
-  #include <winsock.h>
-#else
+#ifndef HAVE_NO_NETINET
   #include <netinet/in.h>
 #endif
 
