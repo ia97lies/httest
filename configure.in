@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.53)
-AC_INIT(httest, 2.1.14, ia97lies@sourceforge.net)
+AC_INIT(httest, snapshot, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 
@@ -109,7 +109,7 @@ HTTEST_MODULES=''
 if test "$enable_lua_module" = "yes"; then
   CFLAGS="$CFLAGS $LUA_INCLUDES"
   LIBS="$LIBS $LUA_LIB_PATH $LUA_LIB"
-  HTTEST_MODULES="$HTTEST_MODULES lua_coder.${OBJEXT} lua_module.${OBJEXT}"
+  HTTEST_MODULES="$HTTEST_MODULES lua_crypto.${OBJEXT} lua_module.${OBJEXT}"
   MODULES="$MODULES lua "
 fi
 if test -f ./generate_modules_c.sh; then
@@ -122,7 +122,6 @@ AC_CONFIG_FILES([Makefile
                  tools/Makefile
                  src/Makefile
                  macros/Makefile
-                 man/Makefile
                  examples/Makefile
                  plugins/Makefile
                  plugins/vim/Makefile

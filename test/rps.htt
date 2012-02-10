@@ -33,8 +33,12 @@ __HTTP/1.1 200 OK
 __
 
 _TIMER GET FOO 
-_IF "$FOO" LT "994"
+_IF "$FOO" LT "950"
 _DEBUGToo fast
+_EXIT FAILED
+_END IF
+_IF "$FOO" GT "1050"
+_DEBUGToo slow
 _EXIT FAILED
 _END IF
 

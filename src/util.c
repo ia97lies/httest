@@ -53,19 +53,19 @@
  * This function is taken from apr. The apr_tokenize_to_argv do remove
  * all leftover "\", but this breaks up my httest completly.
  *
- * @param token_context IN Context from which pool allocations will occur.
+ * @param pool IN Context from which pool allocations will occur.
  * @arg_str IN Input argument string for conversion to argv[].
  * @argv_out IN Output location. This is a pointer to an array
  *              of pointers to strings (ie. &(char *argv[]).
  *              This value will be allocated from the contexts
  *              pool and filled in with copies of the tokens
  *              found during parsing of the arg_str. 
+ * @param with_quotes IN do not strip quotes from quoted string
  *
  * @return SUCCESS
  */
-static apr_status_t my_tokenize_to_argv(const char *arg_str, 
-                                        char ***argv_out,
-                                        apr_pool_t *token_context)
+apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out,
+                                 apr_pool_t *pool, int with_quotes)
 {
     const char *cp;
     const char *ct;
@@ -126,7 +126,7 @@ static apr_status_t my_tokenize_to_argv(const char *arg_str,
         numargs++;
         SKIP_WHITESPACE(ct);
     }
-    *argv_out = apr_palloc(token_context, numargs * sizeof(char*));
+    *argv_out = apr_palloc(pool, numargs * sizeof(char*));
 
     /*  determine first argument */
     for (argnum = 0; argnum < (numargs-1); argnum++) {
@@ -135,8 +135,15 @@ static apr_status_t my_tokenize_to_argv(const char *arg_str,
         ct = cp;
         DETERMINE_NEXTSTRING(cp, isquoted);
         cp++;
-        (*argv_out)[argnum] = apr_palloc(token_context, cp - ct);
-        apr_cpystrn((*argv_out)[argnum], ct, cp - ct);
+        /* do not swallow quotes */
+        if (isquoted && with_quotes) {
+          (*argv_out)[argnum] = apr_palloc(pool, (cp+1) - (ct-1));
+          apr_cpystrn((*argv_out)[argnum], ct-1, (cp+1) - (ct-1));
+        }
+        else {
+          (*argv_out)[argnum] = apr_palloc(pool, cp - ct);
+          apr_cpystrn((*argv_out)[argnum], ct, cp - ct);
+        }
         cleaned = dirty = (*argv_out)[argnum];
     }
     (*argv_out)[argnum] = NULL;
@@ -285,7 +292,7 @@ void my_get_args(char *line, store_t *params, apr_pool_t *pool) {
   int i; 
   char **argv;
 
-  if (my_tokenize_to_argv(line, &argv, pool) == APR_SUCCESS) {
+  if (my_tokenize_to_argv(line, &argv, pool, 0) == APR_SUCCESS) {
     for (i = 0; argv[i] != NULL; i++) {
       /* store value by his index */
       store_set(params, apr_itoa(pool, i), argv[i]);

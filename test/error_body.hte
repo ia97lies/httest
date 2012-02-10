@@ -1,0 +1,21 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+
+_ERROR "End of file found"
+  _REQ $YOUR_HOST $YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: $YOUR_HOST 
+  __
+  _EXPECT . "OK"
+  _WAIT
+_END
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+
+END
+

@@ -71,5 +71,6 @@ void copyright(const char *progname);
 const char *filename(apr_pool_t *pool, const char *path); 
 char x2c(const char *what); 
 void my_get_args(char *line, store_t *params, apr_pool_t *pool); 
-
+apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out, 
+                                 apr_pool_t *pool, int with_quotes);
 #endif

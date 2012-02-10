@@ -1,0 +1,5 @@
+
+EXPECT .: Did expect "OK"                                                               
+error_body.hte:5: error: CLT0-0 Invalid argument(22)                                    
+error_body.hte:5: error: Did expect error "End of file found" but got "Invalid argument"
+error_body.hte:5: error: CLT0-0 Invalid argument(22)                                     FAILED

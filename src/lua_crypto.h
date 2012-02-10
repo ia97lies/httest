@@ -46,12 +46,12 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool lua coder extention.
+ * Interface of the HTTP Test Tool lua crypto extention.
  */
 
-#ifndef HTTEST_LUA_CODER_H
-#define HTTEST_LUA_CODER_H
+#ifndef HTTEST_LUA_CRYPTO_H
+#define HTTEST_LUA_CRYPTO_H
 
-int luaopen_coder(lua_State *L);
+int luaopen_crypto(lua_State *L);
 
 #endif

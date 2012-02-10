@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 echo aclocal
 aclocal
 echo autoconf
@@ -13,4 +14,8 @@ autoheader
 echo automake -i -f -a
 automake -i -f -a
 echo libtoolize
-libtoolize
+if [ `uname -s` == "Darwin" ]; then
+  glibtoolize
+else
+  libtoolize
+fi

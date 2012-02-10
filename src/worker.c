@@ -753,16 +753,12 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
     if (e[i].key[0] != '!' && !regdidmatch(regex)) {
       worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
 	         regexpattern(regex));
-      if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
-      }
     }
     if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
       worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
 	         &e[i].key[1]);
-      if (status == APR_SUCCESS) {
 	status = APR_EINVAL;
-      }
     }
   }
   apr_table_clear(expect);
@@ -2347,8 +2343,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   apr_procattr_t *attr;
   bufreader_t *br;
   const char *progname;
-  char *last;
-  const char *args[3];
+  const char * const*args;
   apr_exit_why_e exitwhy;
   int exitcode;
   int flags;
@@ -2371,10 +2366,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     worker->flags |= FLAGS_FILTER;
   }
 
-  args[0] = apr_strtok(copy, " ", &last);
-  args[1] = last;
-  args[2] = NULL;
-
+  my_tokenize_to_argv(copy, (char ***)&args, ptmp, 1);
   progname = args[0];
 
   if (!progname) {

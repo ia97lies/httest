@@ -68,10 +68,6 @@ make clean all
 make distcheck DISTCHECK_CONFIGURE_FLAGS=--enable-lua-module
 
 echo
-echo "  Build Man Pages"
-./generate_man_pages.sh
-
-echo
 echo "  Build User Guide"
 cd doc/users-guide
 make all VERSION=$VERSION

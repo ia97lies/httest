@@ -15,7 +15,7 @@ __
 _PIPE
 _EXEC cat httest_tmp 
 _EXPECT . "HTTP/1.1 200 OK"
-_EXPECT . "httest_streamed [0-9.]+"
+_EXPECT . "httest_streamed [0-9a-z.]+"
 _WAIT
 
 _CLOSE
@@ -32,7 +32,7 @@ _EXEC cat httest_tmp
 _CHUNK
 _CHUNK
 _EXPECT . "HTTP/1.1 200 OK"
-_EXPECT . "httest_streamed [0-9.]+"
+_EXPECT . "httest_streamed [0-9a-z.]+"
 _WAIT
 _EXEC rm httest_tmp
 
