@@ -29,11 +29,11 @@ htntlm_SOURCES = \
 noinst_HEADERS = \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
-	lua_crypto.h
+	lua_crypto.h httest.ext
 
      
 httest.1: httest$(EXEEXT)
-	help2man -N -n "test HTTP driven application" -i httest.ext --output=httest.1 ./httest$(EXEEXT)
+	help2man -N -n "test HTTP driven application" -i $(top_srcdir)/src/httest.ext --output=httest.1 ./httest$(EXEEXT)
 htproxy.1: htproxy$(EXEEXT)
 	help2man -N -n "record a HTTP session" --output=htproxy.1 ./htproxy$(EXEEXT)
 htntlm.1: htntlm$(EXEEXT)
