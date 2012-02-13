@@ -2329,9 +2329,9 @@ apr_status_t worker_file_to_http(worker_t *self, apr_file_t *file, int flags, ap
     }
     buf[len] = 0;
     apr_table_addn(self->cache, 
-		   apr_psprintf(self->pcache, "NOCRLF:%d", len), buf);
+		   apr_psprintf(self->pcache, "NOCRLF:%"APR_SIZE_T_FMT, len), buf);
     if (flags & FLAGS_CHUNKED) {
-      worker_log(self, LOG_DEBUG, "--- chunk size: %d", len);
+      worker_log(self, LOG_DEBUG, "--- chunk size: %"APR_SIZE_T_FMT, len);
       apr_table_add(self->cache, "CHUNKED", "CHUNKED");
       if ((status = worker_flush(self, ptmp)) != APR_SUCCESS) {
 	return status;
@@ -4042,7 +4042,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     }
 
     apr_table_set(self->cache, "Content-Length",
-                  apr_psprintf(self->pbody, "Content-Length: %d", len));
+                  apr_psprintf(self->pbody, "Content-Length: %"APR_SIZE_T_FMT, len));
 
     ct_len = len;
   }
@@ -4137,7 +4137,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 	len += strlen(e[i].val);
       }
     }
-    chunked = apr_psprintf(self->pbody, "\r\n%x\r\n", len);
+    chunked = apr_psprintf(self->pbody, "\r\n%"APR_UINT64_T_HEX_FMT"\r\n", len);
   }
   if (icap_body) {
     /* send all except the req/res body */
