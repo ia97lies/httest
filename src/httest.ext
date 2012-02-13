@@ -1,10 +1,29 @@
-[Script Samples]
-Cut and past from a HTTP stream, i.e we cut the apache host to access it in the second request.
+[Scripts]
+httest is script based. The following script examples can be but into a scripte i.e. sample.htt and can be called like
+
+.nf
+httest sample.htt
+
+[Simple Script]
+Get a page and do expect return code 200 OK.
 
 .nf
 CLIENT
 _REQ www.google.ch 80
-__GET /search?hl=de&q=apache&btnG=Google-Suche&meta=&aq=f&oq= HTTP/1.1
+__GET /search?q=apache HTTP/1.1
+__Host: www.google.ch
+__
+_EXPECT headers "HTTP/1.1 200 OK"
+_WAIT
+END
+
+[Cut and past Script]
+Cut and past from a HTTP stream, i.e we cut the apache host to access it in the second request. 
+
+.nf
+CLIENT
+_REQ www.google.ch 80
+__GET /search?q=apache HTTP/1.1
 __Host: www.google.ch
 __
 _MATCH body '\\<a href="http://([^\\/]*)/" class=l\\>Welcome! - The \\<em\\>Apache\\</em\\> HTTP Server Project' APACHE_HOST
@@ -16,3 +35,52 @@ __Host: $APACHE_HOST
 __
 _WAIT
 END
+
+[Client Server Script]
+We can hold client and server in the same host. Actually multiple client and multiple server.
+Very useful to test forward or reverse proxies. Or a webapplication which communicat itself with third party servers i.e. mail server.
+
+This is a very basic selfcontained test you can run on any maschine.
+
+.nf
+CLIENT
+_REQ localhost 8080
+__GET /foo HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+
+SERVER 8080
+_RES
+_EXPECT "/foo"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__Hello World
+END
+
+[SSL Script]
+Of course SSL do also work with httest, just put "SSL:" before port.
+
+.nf
+CLIENT
+_REQ localhost SSL:8080
+__GET /foo HTTP/1.1
+__Host: localhost
+__
+_WAIT
+END
+
+SERVER SSL:8080
+_RES
+_EXPECT "/foo"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__Hello World
+END
+
+
