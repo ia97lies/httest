@@ -2,6 +2,12 @@
 Changes with httest 2.1.15
   *) httest: Add more functions for openssl x509 and dh stuff to Lua
              interface.
+  
+  *) httest: Bugfix variable replacement where a final variable is the result
+             of given variables. For example if we set variable var1=any
+	     string and also set i=1 and use $var$i to resolve var1. With this
+	     bugfix array variables are possible without any extention in
+	     httest.
 
 
 Changes with httest 2.1.14
