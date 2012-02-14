@@ -16,5 +16,6 @@ Alain Stalder:
   changes for win32 -> httest htntlm
 
 Nioclas Perrenoud:
+  changes for openssl 1.0
   changes for ebuild
 

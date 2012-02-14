@@ -9,6 +9,9 @@ Changes with httest 2.1.15
 	     bugfix array variables are possible without any extention in
 	     httest.
 
+  *) httest: Bugfix use safestack internals which leads to compile problems
+             with openssl.
+
 
 Changes with httest 2.1.14
   *) httest: Fixed _SSL:RENEG_CERT Again. Without "verify" option
