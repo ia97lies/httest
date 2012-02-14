@@ -153,7 +153,7 @@ static apr_status_t binary_line_get_length(worker_t *worker, line_t *line) {
     worker_log_error(worker, "Binary data must have an equal number of digits");
     return APR_EINVAL;
   }
-  line->info = apr_psprintf(worker->pcache, "NOCRLF:%d", len);
+  line->info = apr_psprintf(worker->pcache, "NOCRLF:%"APR_SIZE_T_FMT, len);
   line->len = len;
 
   return APR_SUCCESS;
