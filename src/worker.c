@@ -3122,8 +3122,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data, 
                                 apr_pool_t *ptmp) {
   char *copy;
-  char *header;
-  char *value;
+  char **argv;
 
   COMMAND_NEED_ARG("<header> <value>");
 
@@ -3131,8 +3130,8 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data,
     worker->headers_add = apr_table_make(worker->pbody, 12);
   }
 
-  header = apr_strtok(copy, " ", &value);
-  apr_table_add(worker->headers_add, header, value);
+  apr_tokenize_to_argv(copy, &argv, ptmp);
+  apr_table_add(worker->headers_add, argv[0], argv[1]);
 
   return APR_SUCCESS;
 }

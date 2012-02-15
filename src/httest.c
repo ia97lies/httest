@@ -732,19 +732,8 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
 static apr_status_t command_IF(command_t * self, worker_t * worker,
                                char *data, apr_pool_t *ptmp) {
   char *copy;
-  char *left;
-  char *right;
-  apr_ssize_t left_val;
-  apr_ssize_t right_val;
-  char *middle;
-  char *last;
-  const char *err;
-  int off;
-  regex_t *compiled;
   apr_status_t status;
   worker_t *body;
-  apr_size_t len;
-
   int doit = 0;
   int not = 0;
   int else_pos = 0;
@@ -770,16 +759,28 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
     doit = val;
   }
-  else if (copy[0] =='"') {
+  else {
     /* old behavour */
-    ++copy;
-    left = apr_strtok(copy, "\"", &last);
-    middle = apr_strtok(NULL, " ", &last);
+    char *left;
+    char *right;
+    apr_ssize_t left_val;
+    apr_ssize_t right_val;
+    char *middle;
+    const char *err;
+    int off;
+    regex_t *compiled;
+    apr_size_t len;
+    char **argv;
+    int i = 0;
+
+    apr_tokenize_to_argv(copy, &argv, ptmp);
+    left = argv[i]; i++;
+    middle = argv[i]; i++;
     if (strcmp(middle, "NOT") == 0) {
       not = 1;
-      middle = apr_strtok(NULL, " ", &last);
+      middle = argv[i]; i++;
     }
-    right = apr_strtok(NULL, "\"", &last);
+    right = argv[i];
    
     if (!left || !middle || !right) {
       worker_log(worker, LOG_ERR, "%s: Syntax error '%s'", self->name, data);

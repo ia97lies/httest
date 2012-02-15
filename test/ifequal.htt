@@ -3,7 +3,7 @@ INCLUDE $TOP/test/config.htb
 CLIENT
 _SET VARA=foo
 _SET VARB=foo
-_IF "$VARA" EQUAL "$VARB"
+_IF $VARA EQUAL $VARB
   _IF "$VARA" NOT EQUAL "${VARB}foo"
     _IF "$VARA" EQUAL "!${VARB}"
     _ELSE
