@@ -773,7 +773,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     char **argv;
     int i = 0;
 
-    apr_tokenize_to_argv(copy, &argv, ptmp);
+    my_tokenize_to_argv(copy, &argv, ptmp, 0);
     left = argv[i]; i++;
     middle = argv[i]; i++;
     if (strcmp(middle, "NOT") == 0) {
@@ -907,16 +907,22 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   worker_t *body;
   char *copy;
   int loop;
+  char **argv;
   int i;
+  char *var;
 
   COMMAND_NEED_ARG("<number>|FOREVER"); 
  
-  if (strncmp(copy, "FOREVER", 7) == 0) {
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+
+  if (strncmp(argv[0], "FOREVER", 7) == 0) {
     loop = -1;
   }
   else {
-    loop = apr_atoi64(copy);
+    loop = apr_atoi64(argv[0]);
   }
+
+  var = argv[1]; 
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -926,6 +932,9 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   /* loop */
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
+    if (var) {
+      worker_var_set(body, var, apr_itoa(ptmp, i));
+    }
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
@@ -964,12 +973,13 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   char *var;
   char *list;
   char *cur;
+  char **argv;
 
   COMMAND_NEED_ARG("<variable> \"<string>*\""); 
  
-  var = apr_strtok(copy, " ", &last);
-  
-  list = my_unescape(last, &last);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  var = argv[0];
+  list = argv[1];
 
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1171,7 +1181,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("<error>"); 
  
- if ((status = apr_tokenize_to_argv(copy, &argv, ptmp)) == APR_SUCCESS) {
+ if ((status = my_tokenize_to_argv(copy, &argv, ptmp, 0)) == APR_SUCCESS) {
     if (!argv[0]) {
       worker_log_error(worker, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
@@ -2276,7 +2286,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   int i;
 
   status = APR_ENOENT;
-  if (apr_tokenize_to_argv(data, &argv, global->pool) == APR_SUCCESS) {
+  if (my_tokenize_to_argv(data, &argv, global->pool, 0) == APR_SUCCESS) {
     for (i = 0; argv[i] != NULL; i++) {
       /* open include file */
       if ((status =

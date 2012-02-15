@@ -2513,7 +2513,7 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
 
   COMMAND_NEED_ARG("Need a file name");
 
-  apr_tokenize_to_argv(copy, &argv, ptmp);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
   flags = worker->flags;
   worker->flags &= ~FLAGS_PIPE;
@@ -3130,7 +3130,7 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data,
     worker->headers_add = apr_table_make(worker->pbody, 12);
   }
 
-  apr_tokenize_to_argv(copy, &argv, ptmp);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
   apr_table_add(worker->headers_add, argv[0], argv[1]);
 
   return APR_SUCCESS;
