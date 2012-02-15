@@ -8,6 +8,7 @@ htproxy
 
 httest
 ------
+- PATH directive to search for INCLUDE files
 - Show SSL handshake information on stdout, perhaps make it expectable. 
 - Clean up unused EXPECT/MATCH after _ERROR ... _END 
 - Update user guide!
