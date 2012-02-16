@@ -1,8 +1,7 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest snapshot
-  *) httest: Cleanup quoting problem in various commands. Now most offen
-             quotes are not neccessary, except for _EXPECT, _MATCH and _GREP
-	     because this commands do have a very special quoting mechanisme.
+  *) httest: Use a generic tokenize to argv for most commands. Quoted
+             tokens are threaded as one parameter.
 
 
 Changes with httest 2.1.15
