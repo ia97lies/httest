@@ -3,6 +3,8 @@ Changes with httest snapshot
   *) httest: Use a generic tokenize to argv for most commands. Quoted
              tokens are threaded as one parameter.
 
+  *) httest: Improve _LOOP with an invariant.
+
 
 Changes with httest 2.1.15
   *) httest: Add more functions for openssl x509 and dh stuff to Lua
