@@ -475,10 +475,7 @@ static apr_status_t do_request_line(self_t *self, worker_t *worker, apr_pool_t *
     return status;
   }
   
-  //if rewrite root uri (-U)
   if (self->uri_var) {
-    //example:
-    //__GET /tt-nas-webui/styles/ttnas/layo...    -> replace /tt-nas-webui with variable
     tmp = apr_strtok(request_line, " /", &last);
     apr_strtok(NULL, "/", &last);
     request_line = apr_pstrcat(worker->pbody, tmp, " $",self->uri_var, "/", last, NULL);

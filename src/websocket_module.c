@@ -103,7 +103,6 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
 
   const char *type_param = store_get(worker->params, "1");
   const char *len_param = store_get(worker->params, "2");
-  //const char *mask_param = store_get(worker->params, "3");
 
   if (!worker->sockreader) {
     worker_log_error(worker, "Websockets need a open HTTP stream, use _SOCKET");

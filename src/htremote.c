@@ -465,11 +465,6 @@ int main(int argc, const char *const argv[]) {
     return exitcode;
   }
   
-  //fprintf(stdout, "\nJoin threads");
-  //apr_thread_join(&status, thread1);
-  //apr_thread_join(&status, thread2);
-  //apr_thread_join(&status, thread3);
-
   fprintf(stdout, "\nJoin command %s", cmd);
   fflush(stdout);
   apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT);

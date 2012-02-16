@@ -790,7 +790,6 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
 
   /* 3. blob */
   blob = apr_pcalloc(hook->pool, 28 + ti_len + 4);
-  //*((uint32_t *)&blob[0]) = hton32(0x01010000);
   *((uint32_t *)&blob[0]) = hton32(0x00000101);
   *((uint32_t *)&blob[4]) = hton32(0x00000000);
 #if defined(WIN32)
