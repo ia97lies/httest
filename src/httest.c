@@ -732,19 +732,8 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
 static apr_status_t command_IF(command_t * self, worker_t * worker,
                                char *data, apr_pool_t *ptmp) {
   char *copy;
-  char *left;
-  char *right;
-  apr_ssize_t left_val;
-  apr_ssize_t right_val;
-  char *middle;
-  char *last;
-  const char *err;
-  int off;
-  regex_t *compiled;
   apr_status_t status;
   worker_t *body;
-  apr_size_t len;
-
   int doit = 0;
   int not = 0;
   int else_pos = 0;
@@ -770,16 +759,28 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
     doit = val;
   }
-  else if (copy[0] =='"') {
+  else {
     /* old behavour */
-    ++copy;
-    left = apr_strtok(copy, "\"", &last);
-    middle = apr_strtok(NULL, " ", &last);
+    char *left;
+    char *right;
+    apr_ssize_t left_val;
+    apr_ssize_t right_val;
+    char *middle;
+    const char *err;
+    int off;
+    regex_t *compiled;
+    apr_size_t len;
+    char **argv;
+    int i = 0;
+
+    my_tokenize_to_argv(copy, &argv, ptmp, 0);
+    left = argv[i]; i++;
+    middle = argv[i]; i++;
     if (strcmp(middle, "NOT") == 0) {
       not = 1;
-      middle = apr_strtok(NULL, " ", &last);
+      middle = argv[i]; i++;
     }
-    right = apr_strtok(NULL, "\"", &last);
+    right = argv[i];
    
     if (!left || !middle || !right) {
       worker_log(worker, LOG_ERR, "%s: Syntax error '%s'", self->name, data);
@@ -906,16 +907,22 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   worker_t *body;
   char *copy;
   int loop;
+  char **argv;
   int i;
+  char *var;
 
   COMMAND_NEED_ARG("<number>|FOREVER"); 
  
-  if (strncmp(copy, "FOREVER", 7) == 0) {
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+
+  if (strncmp(argv[0], "FOREVER", 7) == 0) {
     loop = -1;
   }
   else {
-    loop = apr_atoi64(copy);
+    loop = apr_atoi64(argv[0]);
   }
+
+  var = argv[1]; 
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -925,6 +932,9 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   /* loop */
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
+    if (var) {
+      worker_var_set(body, var, apr_itoa(ptmp, i));
+    }
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
@@ -963,12 +973,13 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   char *var;
   char *list;
   char *cur;
+  char **argv;
 
   COMMAND_NEED_ARG("<variable> \"<string>*\""); 
  
-  var = apr_strtok(copy, " ", &last);
-  
-  list = my_unescape(last, &last);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  var = argv[0];
+  list = argv[1];
 
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1011,21 +1022,19 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  char *last;
   char *copy;
-  char *val;
   int bps;
   int duration;
+  char **argv;
   apr_time_t init;
   apr_time_t start;
   apr_time_t cur;
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
-  val = apr_strtok(copy, " ", &last);
-  bps = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  duration = apr_atoi64(val);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  bps = apr_atoi64(argv[0]);
+  duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1086,9 +1095,8 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  char *last;
   char *copy;
-  char *val;
+  char **argv;
   int rps;
   int duration;
   apr_time_t init;
@@ -1097,10 +1105,9 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
-  val = apr_strtok(copy, " ", &last);
-  rps = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  duration = apr_atoi64(val);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  rps = apr_atoi64(argv[0]);
+  duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1170,7 +1177,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("<error>"); 
  
- if ((status = apr_tokenize_to_argv(copy, &argv, ptmp)) == APR_SUCCESS) {
+ if ((status = my_tokenize_to_argv(copy, &argv, ptmp, 0)) == APR_SUCCESS) {
     if (!argv[0]) {
       worker_log_error(worker, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
@@ -2275,7 +2282,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   int i;
 
   status = APR_ENOENT;
-  if (apr_tokenize_to_argv(data, &argv, global->pool) == APR_SUCCESS) {
+  if (my_tokenize_to_argv(data, &argv, global->pool, 0) == APR_SUCCESS) {
     for (i = 0; argv[i] != NULL; i++) {
       /* open include file */
       if ((status =

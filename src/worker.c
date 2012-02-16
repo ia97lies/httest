@@ -2505,33 +2505,35 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
                               char *data, apr_pool_t *ptmp) {
   char *copy;
-  char *last;
-  char *filename;
+  char **argv;
   apr_status_t status;
   int flags;
   apr_file_t *fp;
+  int i;
 
   COMMAND_NEED_ARG("Need a file name");
 
-  filename = apr_strtok(copy, " ", &last);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
   flags = worker->flags;
   worker->flags &= ~FLAGS_PIPE;
   worker->flags &= ~FLAGS_CHUNKED;
   
-  if ((status =
-       apr_file_open(&fp, filename, APR_READ, APR_OS_DEFAULT,
-		     ptmp)) != APR_SUCCESS) {
-    fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
-    return APR_ENOENT;
-  }
-  
-  if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
-                              != APR_SUCCESS) {
-    return status;
-  }
+  for (i = 0; argv[i]; i++) {
+    if ((status =
+         apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
+                       ptmp)) != APR_SUCCESS) {
+      fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
+      return APR_ENOENT;
+    }
+    
+    if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
+                                != APR_SUCCESS) {
+      return status;
+    }
 
-  apr_file_close(fp);
+    apr_file_close(fp);
+  }
 
   return APR_SUCCESS;
 }
@@ -3120,8 +3122,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data, 
                                 apr_pool_t *ptmp) {
   char *copy;
-  char *header;
-  char *value;
+  char **argv;
 
   COMMAND_NEED_ARG("<header> <value>");
 
@@ -3129,8 +3130,8 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data,
     worker->headers_add = apr_table_make(worker->pbody, 12);
   }
 
-  header = apr_strtok(copy, " ", &value);
-  apr_table_add(worker->headers_add, header, value);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  apr_table_add(worker->headers_add, argv[0], argv[1]);
 
   return APR_SUCCESS;
 }

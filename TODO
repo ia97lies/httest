@@ -8,6 +8,7 @@ htproxy
 
 httest
 ------
+- PATH directive to search for INCLUDE files
 - Show SSL handshake information on stdout, perhaps make it expectable. 
 - Clean up unused EXPECT/MATCH after _ERROR ... _END 
 - Update user guide!
@@ -16,15 +17,9 @@ httest
 - Folded headers
 - Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Nested lines like the one for lua with [[ ... ]]
-- Hash variable, btw. the variables are hold in hash :)
-  - Add/Remove elements in hash variables
-  - Print hash variables as query
-- Array variable
 - Plain on SSL connection terminate with a clear error
 - Need more information on ssl failure
 - Stack trace on error is not highlighted. Do it the C way :)
 - SSL session reuse (partial)
-- Store recorded stuff in a variable
 - Encrpyt the ntml type 3 message and extrakt user
-- Precompile httest script
 

@@ -2,7 +2,7 @@
 
 VERSION=$1
 
-if [ ! $VERSION=snapshots ]; then
+if [ "$VERSION" != "snapshots" ]; then
   HTTEST=httest-${VERSION}
 else
   HTTEST=snapshot

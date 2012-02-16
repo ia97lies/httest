@@ -34,6 +34,7 @@ EXTRA_DIST= \
 	block_not_found.txt \
 	block_params.htt \
 	block.txt \
+	block_var_buf.htt \
 	block_var_missmatch.hte \
 	block_var_missmatch.txt \
 	block_var_params.htt \
@@ -73,6 +74,7 @@ EXTRA_DIST= \
 	env.htt \
 	error_body.hte \
 	error_body.htt \
+	error_body.txt \
 	error_match.htt \
 	errors.hte \
 	errors.htt \
@@ -289,6 +291,7 @@ EXTRA_DIST= \
 	unused_match_headers.txt \
 	urldecode.htt \
 	urlencode.htt \
+	var_double_ref.htt \
 	var_expect.hte \
 	var_expect.htt \
 	var_expect.txt \
