@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.16 *snapshot*
+  *) httest: Cleanup quoting problem in various commands. Now most offen
+             quotes are not neccessary, except for _EXPECT, _MATCH and _GREP
+	     because this commands do have a very special quoting mechanisme.
+
+
 Changes with httest 2.1.15
   *) httest: Add more functions for openssl x509 and dh stuff to Lua
              interface.
