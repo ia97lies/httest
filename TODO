@@ -21,7 +21,5 @@ httest
 - Need more information on ssl failure
 - Stack trace on error is not highlighted. Do it the C way :)
 - SSL session reuse (partial)
-- Store recorded stuff in a variable
 - Encrpyt the ntml type 3 message and extrakt user
-- Precompile httest script
 
