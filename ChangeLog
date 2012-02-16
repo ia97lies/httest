@@ -1,5 +1,5 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest 2.1.16 *snapshot*
+Changes with httest snapshot
   *) httest: Cleanup quoting problem in various commands. Now most offen
              quotes are not neccessary, except for _EXPECT, _MATCH and _GREP
 	     because this commands do have a very special quoting mechanisme.
