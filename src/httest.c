@@ -1022,21 +1022,19 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  char *last;
   char *copy;
-  char *val;
   int bps;
   int duration;
+  char **argv;
   apr_time_t init;
   apr_time_t start;
   apr_time_t cur;
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
-  val = apr_strtok(copy, " ", &last);
-  bps = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  duration = apr_atoi64(val);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  bps = apr_atoi64(argv[0]);
+  duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1097,9 +1095,8 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  char *last;
   char *copy;
-  char *val;
+  char **argv;
   int rps;
   int duration;
   apr_time_t init;
@@ -1108,10 +1105,9 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
-  val = apr_strtok(copy, " ", &last);
-  rps = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  duration = apr_atoi64(val);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  rps = apr_atoi64(argv[0]);
+  duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
