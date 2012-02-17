@@ -1,9 +1,14 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest snapshot
+Changes with httest 2.1.16
   *) httest: Use a generic tokenize to argv for most commands. Quoted
              tokens are threaded as one parameter.
 
   *) httest: Improve _LOOP with an invariant.
+
+  *) httest: PATH directiv to define paths for INCLUDE of relative include
+             files.
+
+  *) httest: More safestack fixes for openssl stuff.
 
 
 Changes with httest 2.1.15

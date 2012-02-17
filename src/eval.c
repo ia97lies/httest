@@ -54,7 +54,6 @@
 
 /* Use STACK from openssl to sort commands */
 #include <openssl/ssl.h>
-#include <openssl/safestack.h>
 
 #include <apr.h>
 #include <apr_lib.h>
@@ -90,7 +89,7 @@ enum {
 struct math_eval_s {
   apr_pool_t *pool;
   const char *delimiter;
-  STACK_OF(ASN1_INTEGER) *stack;
+  STACK_OF(long) *stack;
   const char *line;
   apr_size_t i;
   apr_size_t len;
@@ -317,7 +316,7 @@ static apr_status_t math_parse_factor(math_eval_t *hook) {
   case MATH_NUM:
     number = apr_pcalloc(hook->pool, sizeof(*number));
     *number = hook->last_number * sign;
-    sk_ASN1_INTEGER_push(hook->stack, number);
+    SKM_sk_push(long, hook->stack, number);
     math_get_token(hook);
     return APR_SUCCESS;
     break;
@@ -367,8 +366,8 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
       return status;
     }
 
-    right = (void *)sk_ASN1_INTEGER_pop(hook->stack);
-    left = (void *)sk_ASN1_INTEGER_pop(hook->stack);
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
     result = apr_pcalloc(hook->pool, sizeof(*result));
     switch (token) {
     case MATH_MUL:
@@ -388,7 +387,7 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
     default:
       break;
     }
-    sk_ASN1_INTEGER_push(hook->stack, result);
+    SKM_sk_push(long, hook->stack, result);
  
     token = math_peek_token(hook);
   }
@@ -424,8 +423,8 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
       return status;
     }
 
-    right = (void *)sk_ASN1_INTEGER_pop(hook->stack);
-    left = (void *)sk_ASN1_INTEGER_pop(hook->stack);
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
     result = apr_pcalloc(hook->pool, sizeof(*result));
     switch (token) {
     case MATH_ADD:
@@ -437,7 +436,7 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
     default:
       break;
     }
-    sk_ASN1_INTEGER_push(hook->stack, result);
+    SKM_sk_push(long, hook->stack, result);
 
     token = math_peek_token(hook);
   }
@@ -474,8 +473,8 @@ static apr_status_t math_parse_equalit(math_eval_t *hook) {
       return status;
     }
 
-    right = (void *)sk_ASN1_INTEGER_pop(hook->stack);
-    left = (void *)sk_ASN1_INTEGER_pop(hook->stack);
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
     result = apr_pcalloc(hook->pool, sizeof(*result));
     switch (token) {
     case MATH_EQ:
@@ -499,7 +498,7 @@ static apr_status_t math_parse_equalit(math_eval_t *hook) {
     default:
       break;
     }
-    sk_ASN1_INTEGER_push(hook->stack, result);
+    SKM_sk_push(long, hook->stack, result);
   }
   return APR_SUCCESS;
 }
@@ -512,7 +511,7 @@ static apr_status_t math_parse_equalit(math_eval_t *hook) {
 static apr_status_t math_parse(math_eval_t * hook, long *val) {
   long *result;
   apr_status_t status = math_parse_equalit(hook);
-  result = (void *)sk_ASN1_INTEGER_pop(hook->stack);
+  result = SKM_sk_pop(long, hook->stack);
   *val = *result;
   return status;
 }
@@ -530,7 +529,7 @@ static apr_status_t math_parse(math_eval_t * hook, long *val) {
 math_eval_t *math_eval_make(apr_pool_t * pool) {
   math_eval_t *hook = apr_pcalloc(pool, sizeof(*hook));
   hook->pool = pool; 
-  hook->stack = sk_ASN1_INTEGER_new_null();
+  hook->stack = SKM_sk_new_null(long);
   hook->delimiter = apr_pstrdup(pool, "+-*/=<>!()");
 
   return hook;

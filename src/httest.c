@@ -2307,8 +2307,6 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   status = APR_ENOENT;
   my_tokenize_to_argv(data, &argv, global->pool, 0);
   for (i = 0; argv[i] != NULL; i++) {
-        fprintf(stderr, "\nXXXXX: %s\n", argv[i]);
-        fflush(stderr);
     if (argv[i][0] == '/' || global->path == NULL) {
       if ((status =
            apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
@@ -2324,8 +2322,6 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
       cur = apr_strtok(path, ":", &last);
       while (cur) {
         char *file = apr_pstrcat(global->pool, cur, "/", argv[i], NULL);
-        fprintf(stderr, "\nXXXXX: %s\n", file);
-        fflush(stderr);
         if ((status = apr_file_open(&fp, file, APR_READ, APR_OS_DEFAULT, 
                                     global->pool)) == APR_SUCCESS) {
           break;
