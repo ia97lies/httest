@@ -4,6 +4,11 @@ General
 Functions should be short and should handle only one task. Keep the functions short and simple.
 Explain hacks within the code.
 
+Only ansi C comments /* my comment */ are allowed. Old Solaris maschines C compiler
+can not handle // comments.
+
+No vaiable declaration after statments are allowed because Windows C compiler can not
+handle this.
 
 Formating
 ---------
@@ -27,3 +32,10 @@ Every methode implementation must have a description header like:
  *
  * @return your return definition
  */
+
+Compilation
+-----------
+
+export CFLAGS="-Wall -Wdeclaration-after-statement -ansi"
+./configure
+make clean all
