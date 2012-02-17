@@ -164,6 +164,7 @@ struct global_s {
   apr_pool_t *pool;
   apr_hash_t *config;
   int flags;
+  const char *path;
   const char *filename;
   store_t *vars;
   apr_hash_t *modules;

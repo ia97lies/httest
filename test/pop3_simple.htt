@@ -1,5 +1,7 @@
-INCLUDE $TOP/test/config.htb
-INCLUDE $TOP/macros/pop3.htb
+PATH $TOP/test:$TOP/macros
+
+INCLUDE config.htb
+INCLUDE pop3.htb
 
 CLIENT
 _POP3:CONNECT $YOUR_HOST $YOUR_PORT

@@ -129,8 +129,10 @@ static apr_status_t global_EXEC(command_t *self, global_t *global,
 			       char *data, apr_pool_t *ptmp); 
 static apr_status_t global_SET(command_t *self, global_t *global, 
 			      char *data, apr_pool_t *ptmp); 
+static apr_status_t global_PATH(command_t *self, global_t *global, 
+				char *data, apr_pool_t *ptmp); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, 
-				  char *data, apr_pool_t *ptmp); 
+				   char *data, apr_pool_t *ptmp); 
 static apr_status_t global_TIMEOUT(command_t *self, global_t *global, 
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, 
@@ -165,6 +167,9 @@ command_t global_commands[] = {
   COMMAND_FLAGS_NONE},
   {"SET", (command_f )global_SET, "<variable>=<value>", 
   "Store a value in a global variable",
+  COMMAND_FLAGS_NONE},
+  {"PATH", (command_f )global_PATH, "<include paths colon separated>", 
+  "Defines a set of path where INCLUDE looks first for there include files",
   COMMAND_FLAGS_NONE},
   {"INCLUDE", (command_f )global_INCLUDE, "<include file>", 
   "Load and execute defined include file,\n"
@@ -2264,13 +2269,31 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
 }
 
 /**
+ * Global PATH command
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN path string
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_PATH(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
+  char **argv;
+
+  my_tokenize_to_argv(data, &argv, global->pool, 0);
+  global->path = argv[0];
+  return APR_SUCCESS;
+}
+
+/**
  * Global INCLUDE command
  *
  * @param self IN command
  * @param global IN global object
  * @param data IN relative to caller or absolut path
  *
- * @return APR_SUCCESS
+ * @return APR_SUCCESS or APR_ENOENT if no include file found
  */
 static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data, 
@@ -2282,13 +2305,32 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   int i;
 
   status = APR_ENOENT;
-  if (my_tokenize_to_argv(data, &argv, global->pool, 0) == APR_SUCCESS) {
-    for (i = 0; argv[i] != NULL; i++) {
-      /* open include file */
+  my_tokenize_to_argv(data, &argv, global->pool, 0);
+  for (i = 0; argv[i] != NULL; i++) {
+        fprintf(stderr, "\nXXXXX: %s\n", argv[i]);
+        fflush(stderr);
+    if (argv[i][0] == '/' || global->path == NULL) {
       if ((status =
-	   apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
-			 global->pool)) == APR_SUCCESS) {
-	break;
+           apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
+                         global->pool)) == APR_SUCCESS) {
+        break;
+      }
+    }
+    else if (global->path) {
+      char *last;
+      char *cur;
+      char *path = apr_pstrdup(global->pool, global->path);
+
+      cur = apr_strtok(path, ":", &last);
+      while (cur) {
+        char *file = apr_pstrcat(global->pool, cur, "/", argv[i], NULL);
+        fprintf(stderr, "\nXXXXX: %s\n", file);
+        fflush(stderr);
+        if ((status = apr_file_open(&fp, file, APR_READ, APR_OS_DEFAULT, 
+                                    global->pool)) == APR_SUCCESS) {
+          break;
+        }
+        cur = apr_strtok(NULL, ":", &last);
       }
     }
   }
