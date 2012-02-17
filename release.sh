@@ -63,7 +63,7 @@ echo "  Build Configuration"
 
 echo
 echo "  Make Distribution"
-CFLAGS="-g -Wall" ./configure --enable-lua-module
+CFLAGS="-g -Wall -ansi" ./configure --enable-lua-module
 make clean all
 make distcheck DISTCHECK_CONFIGURE_FLAGS=--enable-lua-module
 
