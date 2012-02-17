@@ -1326,8 +1326,6 @@ error:
 apr_status_t command_WAIT(command_t * self, worker_t * worker,
                           char *data, apr_pool_t *ptmp) {
   char *copy;
-  int matches;
-  int expects;
   char *line;
   char *buf;
   apr_status_t status;
@@ -1343,8 +1341,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 
   buf = NULL;
   len = 0;
-  matches = 0;
-  expects = 0;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -3148,7 +3144,6 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data,
 apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data, 
                             apr_pool_t *ptmp) {
   apr_status_t status;
-  apr_status_t rc;
   apr_threadattr_t *tattr;
   apr_thread_t *client_thread;
   apr_thread_t *backend_thread;
@@ -3229,11 +3224,11 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
     goto error2;
   }
 
-  rc = apr_thread_join(&status, client_thread);
+  apr_thread_join(&status, client_thread);
   if (status != APR_SUCCESS) {
     goto error2;
   }
-  rc = apr_thread_join(&status, backend_thread);
+  apr_thread_join(&status, backend_thread);
   if (status != APR_SUCCESS) {
     goto error2;
   }

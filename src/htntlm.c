@@ -682,7 +682,7 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   const EVP_MD *md5 = EVP_md5();
   MD4_CTX MD4;
   char *passwd; 
-  apr_size_t len;
+  unsigned int len;
   char *uuser;
   apr_size_t uuser_len;
   char *udomain;
@@ -753,7 +753,7 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   unsigned char ntlm_hash[16];
   unsigned char ntlm2_hash[16];
   unsigned char blob_hash[16];
-  apr_size_t len;
+  unsigned int len;
   unsigned char *blob;
   unsigned char *buf;
   unsigned char *target_info = NULL;
@@ -1277,7 +1277,6 @@ static void write_message(htntlm_t *hook) {
  */
 static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   int len;
-  int alloc;
   int offset;
 
   hook->flags = ntoh32(*((uint32_t *)&msg[12]));
@@ -1288,7 +1287,6 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   }
   /* domain */
   len = ntoh16(*((uint16_t *)&msg[16]));
-  alloc = ntoh16(*((uint16_t *)&msg[18]));
   offset = ntoh32(*((uint32_t *)&msg[20]));
   if (len) {
     hook->domain = apr_pstrndup(hook->pool, (char *)&msg[offset], len);
@@ -1299,7 +1297,6 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   }
   /* workstation */
   len = ntoh16(*((uint16_t *)&msg[24]));
-  alloc = ntoh16(*((uint16_t *)&msg[26]));
   offset = ntoh32(*((uint32_t *)&msg[28]));
   if (len) {
     hook->workstation = apr_pstrndup(hook->pool, (char *)&msg[offset], len);
@@ -1315,7 +1312,6 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
  */
 static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   uint16_t len;
-  uint16_t alloc;
   uint32_t offset;
   uint16_t subblk;
   char *b64msg;
@@ -1323,7 +1319,6 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
 
   /* target */
   len = ntoh16(*((uint16_t *)&msg[12]));
-  alloc = ntoh16(*((uint16_t *)&msg[14]));
   offset = ntoh32(*((uint32_t *)&msg[16]));
   if (len) {
     hook->target = handle_oem(hook, (char *)&msg[offset], len);
@@ -1348,7 +1343,6 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   }
   /* target info */
   len = ntoh16(*((uint16_t *)&msg[40]));
-  alloc = ntoh16(*((uint16_t *)&msg[42]));
   offset = ntoh32(*((uint32_t *)&msg[44]));
   if (len) {
     b64len = apr_base64_encode_len(len);
@@ -1391,12 +1385,10 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
  */
 static void read_type3_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   int len;
-  int alloc;
   int offset;
 
   /* lm/lmv2 response */
   len = ntoh16(*((uint16_t *)&msg[12]));
-  alloc = ntoh16(*((uint16_t *)&msg[14]));
   offset = ntoh32(*((uint32_t *)&msg[16]));
   if (len) {
     hook->lm.hash = apr_pcalloc(hook->pool, len); 
@@ -1405,7 +1397,6 @@ static void read_type3_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   }
   /* ntlm/ntlmv2 response */
   len = ntoh16(*((uint16_t *)&msg[20]));
-  alloc = ntoh16(*((uint16_t *)&msg[22]));
   offset = ntoh32(*((uint32_t *)&msg[24]));
   if (len) {
     hook->ntlm.hash = apr_pcalloc(hook->pool, len); 
@@ -1414,21 +1405,18 @@ static void read_type3_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   }
   /* domain */
   len = ntoh16(*((uint16_t *)&msg[28]));
-  alloc = ntoh16(*((uint16_t *)&msg[30]));
   offset = ntoh32(*((uint32_t *)&msg[32]));
   if (len) {
     hook->domain = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* user */
   len = ntoh16(*((uint16_t *)&msg[36]));
-  alloc = ntoh16(*((uint16_t *)&msg[38]));
   offset = ntoh32(*((uint32_t *)&msg[40]));
   if (len) {
     hook->user = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* workstation */
   len = ntoh16(*((uint16_t *)&msg[44]));
-  alloc = ntoh16(*((uint16_t *)&msg[46]));
   offset = ntoh32(*((uint32_t *)&msg[48]));
   if (len) {
     hook->workstation = handle_oem(hook, (char *)&msg[offset], len);

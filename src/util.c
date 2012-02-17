@@ -68,7 +68,6 @@ apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out,
 {
     const char *cp;
     const char *ct;
-    char *cleaned, *dirty;
     int isquoted, numargs = 0, argnum;
 
 #define SKIP_WHITESPACE(cp) \
@@ -143,7 +142,6 @@ apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out,
           (*argv_out)[argnum] = apr_palloc(pool, cp - ct);
           apr_cpystrn((*argv_out)[argnum], ct, cp - ct);
         }
-        cleaned = dirty = (*argv_out)[argnum];
     }
     (*argv_out)[argnum] = NULL;
 
