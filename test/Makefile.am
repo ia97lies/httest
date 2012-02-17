@@ -140,6 +140,7 @@ EXTRA_DIST= \
 	listen_to_ip_port.htt \
 	lock.htt \
 	loop_auto.htt \
+	loop_cur.htt \
 	loop.htt \
 	macro.htt \
 	macro_too_many_redirects.htt \
@@ -203,6 +204,7 @@ EXTRA_DIST= \
 	run_wild.sh \
 	sendfile_chunked.htt \
 	sendfile.htt \
+	sendfile_multiple.htt \
 	server.cert.pem \
 	server_connection_close.htt \
 	server_def_before_client.htt \
