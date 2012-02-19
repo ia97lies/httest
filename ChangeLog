@@ -1,4 +1,7 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest snapshot
+  *) httest: Read trailing headers after chunked body.
+
 Changes with httest 2.1.16
   *) httest: Use a generic tokenize to argv for most commands. Quoted
              tokens are threaded as one parameter.

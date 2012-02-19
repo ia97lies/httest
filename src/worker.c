@@ -1313,14 +1313,68 @@ error:
   apr_pool_destroy(call_pool);
   return status;
 }
+ 
+/**
+ * Read headers from transport
+ * @param worker IN thread data object
+ * @param sockreader IN reader
+ * @return apr status
+ */
+static apr_status_t worker_get_headers(worker_t *worker, sockreader_t *sockreader) {
+  apr_status_t status;
+  char *line;
+  char *last;
+  char *key;
+  const char *val = "";
+
+  /** get headers */
+  while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
+         line[0] != 0) {
+    if ((status = htt_run_read_header(worker, line)) != APR_SUCCESS) {
+      return status;
+    }
+    if (worker->recorder->on == RECORDER_RECORD &&
+				worker->recorder->flags & RECORDER_RECORD_HEADERS) {
+      sockreader_push_line(worker->recorder->sockreader, line);
+    }
+    worker_log(worker, LOG_INFO, "<%s", line);
+    worker_match(worker, worker->match.dot, line, strlen(line));
+    worker_match(worker, worker->match.headers, line, strlen(line));
+    worker_match(worker, worker->grep.dot, line, strlen(line));
+    worker_match(worker, worker->grep.headers, line, strlen(line));
+    worker_expect(worker, worker->expect.dot, line, strlen(line));
+    worker_expect(worker, worker->expect.headers, line, strlen(line));
+
+    /* headers */
+    key = apr_strtok(line, ":", &last);
+    val = last;
+    while (*val == ' ') ++val;
+    if (worker->headers_allow) {
+      if (!apr_table_get(worker->headers_allow, key)) {
+        worker_log(worker, LOG_ERR, "%s header not allowed", key);
+        return APR_EGENERAL;
+      }
+    }
+    if (worker->headers_filter) {
+      if (!apr_table_get(worker->headers_filter, key)) {
+				apr_table_add(worker->headers, key, val);
+      }
+    }
+    else {
+      apr_table_add(worker->headers, key, val);
+    }
+  }
+  if (status == APR_SUCCESS && line[0] == 0) {
+    worker_log(worker, LOG_INFO, "<");
+  }
+  return status;
+}
 
 /**
  * Wait for data (same as command_recv)
- *
  * @param self IN command object
  * @param worker IN thread data object
- * @param data IN unused 
- *
+ * @param data IN <number> or variable name
  * @return an apr status
  */
 apr_status_t command_WAIT(command_t * self, worker_t * worker,
@@ -1331,8 +1385,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   apr_status_t status;
   sockreader_t *sockreader;
   apr_pool_t *pool;
-  char *last;
-  char *key;
   char *var = NULL;
   const char *val = "";
   apr_size_t len;
@@ -1445,57 +1497,17 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
  
-  /** get headers */
-  while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
-         line[0] != 0) {
-    if ((status = htt_run_read_header(worker, line)) != APR_SUCCESS) {
-      return status;
-    }
-    if (worker->recorder->on == RECORDER_RECORD &&
-				worker->recorder->flags & RECORDER_RECORD_HEADERS) {
-      sockreader_push_line(worker->recorder->sockreader, line);
-    }
-    worker_log(worker, LOG_INFO, "<%s", line);
-    worker_match(worker, worker->match.dot, line, strlen(line));
-    worker_match(worker, worker->match.headers, line, strlen(line));
-    worker_match(worker, worker->grep.dot, line, strlen(line));
-    worker_match(worker, worker->grep.headers, line, strlen(line));
-    worker_expect(worker, worker->expect.dot, line, strlen(line));
-    worker_expect(worker, worker->expect.headers, line, strlen(line));
-
-    /* headers */
-    key = apr_strtok(line, ":", &last);
-    val = last;
-    while (*val == ' ') ++val;
-    if (worker->headers_allow) {
-      if (!apr_table_get(worker->headers_allow, key)) {
-				worker_log(worker, LOG_ERR, "%s header not allowed", key);
-				status = APR_EGENERAL;
-				goto out_err;
-      }
-    }
-    if (worker->headers_filter) {
-      if (!apr_table_get(worker->headers_filter, key)) {
-				apr_table_add(worker->headers, key, val);
-      }
-    }
-    else {
-      apr_table_add(worker->headers, key, val);
-    }
-  }
-  if (line[0] == 0) {
-    worker_log(worker, LOG_INFO, "<");
-  }
+  status = worker_get_headers(worker, sockreader);
 
 http_0_9:
   if (status == APR_SUCCESS) {
+    int doreadtrailing = 0;
     /* if recv len is specified use this */
     if (recv_len > 0) {
       len = recv_len;
-      if ((status = worker_check_error(worker, 
-					content_length_reader(sockreader, &buf, &len, val))) 
-					!= APR_SUCCESS) {
-				goto out_err;
+      if ((status = worker_check_error(worker, content_length_reader(sockreader, &buf, &len, val))) 
+          != APR_SUCCESS) {
+        goto out_err;
       }
     }
     else if (recv_len == 0) {
@@ -1510,7 +1522,12 @@ http_0_9:
       }
     }
     else if ((val = apr_table_get(worker->headers, "Transfer-Encoding"))) {
-      if ((status = worker_check_error(worker, transfer_enc_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
+      if ((status = transfer_enc_reader(sockreader, &buf, &len, val)) == APR_SUCCESS) {
+        if (strcmp(val, "chunked") == 0) {
+          doreadtrailing = 1;
+        }
+      }
+      else if ((status = worker_check_error(worker, status)) != APR_SUCCESS) {
         goto out_err;
       }
     }
@@ -1541,6 +1558,13 @@ http_0_9:
     if (var) {
       store_set(worker->vars, var, buf);
     }
+    if (doreadtrailing) {
+      /* read trailing headers */
+      if ((status = worker_get_headers(worker, sockreader)) != APR_SUCCESS) {
+        worker_log_error(worker, "Missing trailing header(s) after chunked encoded body");
+      }
+    }
+
     if (worker->flags & FLAGS_AUTO_CLOSE) {
       val = apr_table_get(worker->headers, "Connection");
       if (val && strcasecmp(val, "close") == 0) {
