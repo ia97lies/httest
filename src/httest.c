@@ -2720,6 +2720,8 @@ apr_getopt_option_t options[] = {
   { "help-command", 'C', 1, "Print help for specific command" },
   { "timestamp", 'T', 0, "Time stamp on every run" },
   { "shell", 'S', 0, "Shell mode" },
+  { "shell", 'S', 0, "Shell mode" },
+  { "define", 'D', 1, "Define variables" },
   { NULL, 0, 0, NULL }
 };
 
@@ -3039,6 +3041,9 @@ int main(int argc, const char *const argv[]) {
   log_mode = LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
+  /* create a global vars table */
+  vars = store_make(pool);
+
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
   while ((status = apr_getopt_long(opt, options, &c, &optarg)) == APR_SUCCESS) {
@@ -3084,6 +3089,23 @@ int main(int argc, const char *const argv[]) {
       break;
     case 'S':
       flags |= MAIN_FLAGS_USE_STDIN; 
+      break;
+    case 'D':
+      {
+        char *val;
+        char *var;
+        char *entry = apr_pstrdup(pool, optarg);
+
+        var = apr_strtok(entry, "=", &val);
+        if (val && val[0]) {
+          store_set(vars, var, val);
+        }
+        else {
+          fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
+          fflush(stderr);
+          exit(-1);
+        }
+      }
       break;
     }
   }
@@ -3157,9 +3179,6 @@ int main(int argc, const char *const argv[]) {
       success = 0;
       exit(1);
     }
-
-    /* create a global vars table */
-    vars = store_make(pool);
 
     /* interpret current file */
     if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {

@@ -2,6 +2,11 @@
 Changes with httest snapshot
   *) httest: Read trailing headers after chunked body.
 
+  *) httest: Support for variable definition in command line. You can now call
+             httest -Dyour=var or in long from httest --define your=var of
+	     course this is possible multiple time.
+
+
 Changes with httest 2.1.16
   *) httest: Use a generic tokenize to argv for most commands. Quoted
              tokens are threaded as one parameter.
