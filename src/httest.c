@@ -2649,7 +2649,6 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars,
   apr_status_t retstat = APR_SUCCESS;
   apr_table_entry_t *e;
   int i;
-  const char *name;
   global_t *global;
   apr_thread_t *thread;
 
@@ -2694,7 +2693,6 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars,
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     thread = (apr_thread_t *) e[i].val;
-    name = e[i].key;
     if ((retstat = apr_thread_join(&status, thread))) {
       fprintf(stderr, "\nCould not join thread: %d", retstat);
       return retstat;
@@ -2722,6 +2720,8 @@ apr_getopt_option_t options[] = {
   { "help-command", 'C', 1, "Print help for specific command" },
   { "timestamp", 'T', 0, "Time stamp on every run" },
   { "shell", 'S', 0, "Shell mode" },
+  { "shell", 'S', 0, "Shell mode" },
+  { "define", 'D', 1, "Define variables" },
   { NULL, 0, 0, NULL }
 };
 
@@ -3041,6 +3041,9 @@ int main(int argc, const char *const argv[]) {
   log_mode = LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
+  /* create a global vars table */
+  vars = store_make(pool);
+
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
   while ((status = apr_getopt_long(opt, options, &c, &optarg)) == APR_SUCCESS) {
@@ -3086,6 +3089,23 @@ int main(int argc, const char *const argv[]) {
       break;
     case 'S':
       flags |= MAIN_FLAGS_USE_STDIN; 
+      break;
+    case 'D':
+      {
+        char *val;
+        char *var;
+        char *entry = apr_pstrdup(pool, optarg);
+
+        var = apr_strtok(entry, "=", &val);
+        if (val && val[0]) {
+          store_set(vars, var, val);
+        }
+        else {
+          fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
+          fflush(stderr);
+          exit(-1);
+        }
+      }
       break;
     }
   }
@@ -3159,9 +3179,6 @@ int main(int argc, const char *const argv[]) {
       success = 0;
       exit(1);
     }
-
-    /* create a global vars table */
-    vars = store_make(pool);
 
     /* interpret current file */
     if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {

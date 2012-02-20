@@ -7,6 +7,9 @@ set -u
 
 echo
 echo "Release httest-$VERSION"
+sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
+mv configure.in.tmp configure.in
+git commit -m"New release $VERSION" configure.in
 
 echo "Tag release $VERSION"
   git tag $VERSION
@@ -82,7 +85,11 @@ echo "Build Packages"
 echo "  Gentoo"
 cp packages/gentoo/httest.ebuild packages/gentoo/overlays/net-analyzer/httest/httest-$VERSION.ebuild
 git add packages/gentoo/overlays/net-analyzer/httest/httest-$VERSION.ebuild
-git commit -m"new release"
+git commit -m"New release $VERSION"
+
+sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/"
+mv configure.in.tmp configure.in
+git commit -m"Prepare next release" configure.in
 
 echo
 echo Release build SUCCESS 
