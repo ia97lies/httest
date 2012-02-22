@@ -1318,13 +1318,16 @@ error:
  * Read headers from transport
  * @param worker IN thread data object
  * @param sockreader IN reader
+ * @param pool IN 
  * @return apr status
  */
-static apr_status_t worker_get_headers(worker_t *worker, sockreader_t *sockreader) {
+static apr_status_t worker_get_headers(worker_t *worker, 
+                                       sockreader_t *sockreader, 
+                                       apr_pool_t *pool) {
   apr_status_t status;
   char *line;
   char *last;
-  char *key;
+  char *key = NULL;
   const char *val = "";
 
   /** get headers */
@@ -1357,7 +1360,7 @@ static apr_status_t worker_get_headers(worker_t *worker, sockreader_t *sockreade
     }
     if (worker->headers_filter) {
       if (!apr_table_get(worker->headers_filter, key)) {
-				apr_table_add(worker->headers, key, val);
+                                apr_table_add(worker->headers, key, val);
       }
     }
     else {
@@ -1497,7 +1500,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
  
-  status = worker_get_headers(worker, sockreader);
+  status = worker_get_headers(worker, sockreader, pool);
 
 http_0_9:
   if (status == APR_SUCCESS) {
@@ -1560,8 +1563,8 @@ http_0_9:
     }
     if (doreadtrailing) {
       /* read trailing headers */
-      if ((status = worker_get_headers(worker, sockreader)) != APR_SUCCESS) {
-        worker_log_error(worker, "Missing trailing header(s) after chunked encoded body");
+      if ((status = worker_get_headers(worker, sockreader, pool)) != APR_SUCCESS) {
+        worker_log_error(worker, "Missing trailing empty header(s) after chunked encoded body");
       }
     }
 
