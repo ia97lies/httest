@@ -10,7 +10,6 @@ _WAIT
 
 _REQ $YOUR_HOST $YOUR_PORT:2
 __GET / HTTP/1.1
-__GET / HTTP/1.1
 __Host: localhost
 __
 _EXPECT . "AS1"
