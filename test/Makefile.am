@@ -103,6 +103,7 @@ EXTRA_DIST= \
 	finally_on_failed.htt \
 	finally_on_failed.txt \
 	finally_on_many_bodies.htt \
+	folded.htt \
 	foreach.htt \
 	functionality.ntlm \
 	function.htt \
