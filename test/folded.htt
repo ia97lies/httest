@@ -1,0 +1,24 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_EXPECT headers "Folded: foo bar"
+_EXPECT headers "bla fasel"
+_WAIT
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT 
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__Folded: foo bar
+__ bla fasel
+__
+__== OK ==
+
+END
+
