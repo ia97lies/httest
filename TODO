@@ -8,12 +8,10 @@ htproxy
 
 httest
 ------
-- PATH directive to search for INCLUDE files
 - Show SSL handshake information on stdout, perhaps make it expectable. 
 - Clean up unused EXPECT/MATCH after _ERROR ... _END 
 - Update user guide!
 - Transparent forward proxy support
-- Trailing headers on chunked http
 - Folded headers
 - Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Nested lines like the one for lua with [[ ... ]]
