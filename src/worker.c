@@ -141,18 +141,17 @@ const char *worker_var_get(worker_t* worker, const char *var) {
 }
 
 /**
- * replace vars upcall function
- * @param udata IN void pointer to replacer_t object
+ * resolve vars
+ * @param worker IN callee 
  * @param name IN name to lookup
+ * @param ptmp IN temp pool
  * @return value
  */
-static const char * replacer_upcall(void *udata, const char *name) {
+const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *ptmp) {
   const char *val = NULL;
-  replacer_t *hook = udata; 
-  worker_t *worker = hook->worker; 
 
   if (strchr(name, '(')) {
-    char *command = apr_pstrdup(hook->ptmp, name);
+    char *command = apr_pstrdup(ptmp, name);
     int i = 0;
     while (command[i] != 0) {
       if (command[i] == '(' || command[i] == ')') {
@@ -160,9 +159,9 @@ static const char * replacer_upcall(void *udata, const char *name) {
       }
       ++i;
     }
-    command = apr_pstrcat(hook->ptmp, command, " __INLINE_RET", NULL);
+    command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
     /** call it */
-    if (command_CALL(NULL, worker, command, hook->ptmp) == APR_SUCCESS) {
+    if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
       val = store_get(worker->vars, "__INLINE_RET");
     }
   }
@@ -176,6 +175,20 @@ static const char * replacer_upcall(void *udata, const char *name) {
   if (!val) {
     val = store_get(worker->vars, name);
   }
+  return val;
+}
+
+/**
+ * replace vars upcall function
+ * @param udata IN void pointer to replacer_t object
+ * @param name IN name to lookup
+ * @return value
+ */
+static const char * replacer_upcall(void *udata, const char *name) {
+  const char *val = NULL;
+  replacer_t *hook = udata; 
+
+  val = worker_resolve_var(hook->worker, name, hook->ptmp);
   if (!val) {
     hook->unresolved = 1;
   }
