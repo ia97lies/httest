@@ -1,5 +1,5 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest snapshot
+Changes with httest 2.1.17
   *) httest: Read trailing headers after chunked body.
 
   *) httest: Support for variable definition in command line. You can now call
