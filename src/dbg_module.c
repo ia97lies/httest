@@ -38,22 +38,27 @@
 /************************************************************************
  * Local 
  ***********************************************************************/
-
-/************************************************************************
- * Commands 
- ***********************************************************************/
-static apr_status_t block_DBG_BP(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+/**
+ * Simple dbg interpreter
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param pool IN temporary pool
+ * @return apr status
+ */
+static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   apr_file_t *input;
   apr_file_t *output;
   bufreader_t *bufreader;
   char *line = "";
+  int pos = 0;
 
   if ((status = apr_file_open_stdout(&output, ptmp)) != APR_SUCCESS) {
     worker_log_error(worker, "Can not open stdout");
     return status;
   }
 
+  apr_file_printf(output, "\nbreak %s", worker->file_and_line);
   apr_file_printf(output, "\n>");
   apr_file_flush(output);
 
@@ -91,45 +96,51 @@ static apr_status_t block_DBG_BP(worker_t *worker, worker_t *parent, apr_pool_t 
       apr_file_printf(output, "Abort\n");
       exit(0);
     }
-    else if (strcmp(entry, "get") == 0 || strcmp(entry, "g") == 0 ||
-             strcmp(entry, "set") == 0 || strcmp(entry, "s") == 0) {
-      store_t *store;
-      char *namespace;
+    else if (strcmp(entry, "get") == 0 || strcmp(entry, "g") == 0) {
       char *variable;
-      namespace = apr_strtok(NULL, " ", &last);
-      if (!namespace || !namespace[0]) {
-        apr_file_printf(output, "Need either local, global or param as argument\n");
-        goto prompt;
-      }
-      variable = apr_strtok(NULL, " ", &last);
+      const char *value;
+      variable = last;
       if (!variable|| !variable[0]) {
         apr_file_printf(output, "Need a variable name as argument\n");
         goto prompt;
       }
-      if (strcmp(namespace, "local") == 0) {
-        store = worker->locals;
+      value = worker_resolve_var(worker, variable, ptmp);
+      if (!value) {
+        char *env;
+        if (apr_env_get(&env, variable, ptmp) == APR_SUCCESS) {
+          value = env;
+        }
       }
-      else if (strcmp(namespace, "global") == 0) {
-        store = worker->vars;
-      }
-      else if (strcmp(namespace, "param") == 0) {
-        store = worker->params;
-      }
-      else {
-        apr_file_printf(output, "Namespace \"%s\" unknown, know local, global or param\n", namespace);
+
+      apr_file_printf(output, "%s\n", value ? value : "<undef>");
+    }
+    else if (strcmp(entry, "set") == 0 || strcmp(entry, "s") == 0) {
+      char *expr = last;
+      char *var;
+      char *val;
+      if (!expr || !strchr(expr, '=')) {
+        apr_file_printf(output, "Need an assignment <variable>=<ANY>\n");
         goto prompt;
       }
-      if (entry[0] == 'g') {
-        const char *value = store_get(store, variable); 
-        apr_file_printf(output, "%s\n", value ? value : "<undef>");
+      var = apr_strtok(expr, "=", &val);
+      if (!var || !val || !var[0] || !val[0]) {
+        apr_file_printf(output, "Need an assignment <variable>=<ANY>\n");
+        goto prompt;
       }
-      else {
-        if (!last) {
-          apr_file_printf(output, "Parser error\n");
-          goto prompt;
-        }
-        store_set(store, variable, last);
+      worker_var_set(worker, var, val);
+    }
+    else if (strcmp(entry, "list") == 0 || strcmp(entry, "ls") == 0 || strcmp(entry, "l") == 0) {
+      int i, j;
+      apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(parent->lines)->elts;
+
+      if (!pos) {
+        pos = worker->cmd;
+        pos = pos > 5 ? pos - 5 : 0;
       }
+      for (i = pos, j = 0; i < apr_table_elts(parent->lines)->nelts && j < 10; i++, j++) {
+        apr_file_printf(output, "> %s\n", e[i].val);
+      }
+      pos = i;
     }
     else {
       apr_file_printf(output, "\"%s\" unknown command\n", line);
@@ -141,6 +152,19 @@ prompt:
   }
 
   return APR_SUCCESS;
+}
+/************************************************************************
+ * Commands 
+ ***********************************************************************/
+/**
+ * Simple break point
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param pool IN temporary pool
+ * @return apr status
+ */
+static apr_status_t block_DBG_BP(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  return dbg_interpreter(worker, parent, ptmp);
 }
 
 /************************************************************************

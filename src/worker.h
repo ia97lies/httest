@@ -411,6 +411,7 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
                            const char *data, apr_size_t len); 
 apr_status_t worker_assert(worker_t * self, apr_status_t status); 
 apr_status_t worker_check_error(worker_t *self, apr_status_t status); 
+const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *ptmp); 
 char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                            apr_pool_t *ptmp); 
 apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp);

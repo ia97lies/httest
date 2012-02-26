@@ -1,10 +1,17 @@
                                                          -*- coding: utf-8 -*-
-Changes with httest snapshot
+Changes with httest 2.1.17
   *) httest: Read trailing headers after chunked body.
 
   *) httest: Support for variable definition in command line. You can now call
              httest -Dyour=var or in long from httest --define your=var of
 	     course this is possible multiple time.
+
+  *) httest: Started with a simple httest debuger. Can set breakpoint with
+             _DBG:BP. On breakpoint a simple command line interpreter helps
+	     you investigate your test. There is "cont" to continue test,
+	     "quit" for quit test, "list" to geht list around breakpoint,
+	     "set <var>=<ANY>" to set a variable and a "get <variable>" to get
+	     the value of a variable even enviroment variables.
 
 
 Changes with httest 2.1.16
