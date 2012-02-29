@@ -130,8 +130,10 @@ static apr_status_t global_EXEC(command_t *self, global_t *global,
 			       char *data, apr_pool_t *ptmp); 
 static apr_status_t global_SET(command_t *self, global_t *global, 
 			      char *data, apr_pool_t *ptmp); 
+static apr_status_t global_PATH(command_t *self, global_t *global, 
+				char *data, apr_pool_t *ptmp); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, 
-				  char *data, apr_pool_t *ptmp); 
+				   char *data, apr_pool_t *ptmp); 
 static apr_status_t global_TIMEOUT(command_t *self, global_t *global, 
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, 
@@ -166,6 +168,9 @@ command_t global_commands[] = {
   COMMAND_FLAGS_NONE},
   {"SET", (command_f )global_SET, "<variable>=<value>", 
   "Store a value in a global variable",
+  COMMAND_FLAGS_NONE},
+  {"PATH", (command_f )global_PATH, "<include paths colon separated>", 
+  "Defines a set of path where INCLUDE looks first for there include files",
   COMMAND_FLAGS_NONE},
   {"INCLUDE", (command_f )global_INCLUDE, "<include file>", 
   "Load and execute defined include file,\n"
@@ -733,19 +738,8 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
 static apr_status_t command_IF(command_t * self, worker_t * worker,
                                char *data, apr_pool_t *ptmp) {
   char *copy;
-  char *left;
-  char *right;
-  apr_ssize_t left_val;
-  apr_ssize_t right_val;
-  char *middle;
-  char *last;
-  const char *err;
-  int off;
-  regex_t *compiled;
   apr_status_t status;
   worker_t *body;
-  apr_size_t len;
-
   int doit = 0;
   int not = 0;
   int else_pos = 0;
@@ -771,16 +765,28 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
     doit = val;
   }
-  else if (copy[0] =='"') {
+  else {
     /* old behavour */
-    ++copy;
-    left = apr_strtok(copy, "\"", &last);
-    middle = apr_strtok(NULL, " ", &last);
+    char *left;
+    char *right;
+    apr_ssize_t left_val;
+    apr_ssize_t right_val;
+    char *middle;
+    const char *err;
+    int off;
+    regex_t *compiled;
+    apr_size_t len;
+    char **argv;
+    int i = 0;
+
+    my_tokenize_to_argv(copy, &argv, ptmp, 0);
+    left = argv[i]; i++;
+    middle = argv[i]; i++;
     if (strcmp(middle, "NOT") == 0) {
       not = 1;
-      middle = apr_strtok(NULL, " ", &last);
+      middle = argv[i]; i++;
     }
-    right = apr_strtok(NULL, "\"", &last);
+    right = argv[i];
    
     if (!left || !middle || !right) {
       worker_log(worker, LOG_ERR, "%s: Syntax error '%s'", self->name, data);
@@ -907,16 +913,22 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   worker_t *body;
   char *copy;
   int loop;
+  char **argv;
   int i;
+  char *var;
 
   COMMAND_NEED_ARG("<number>|FOREVER"); 
  
-  if (strncmp(copy, "FOREVER", 7) == 0) {
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+
+  if (strncmp(argv[0], "FOREVER", 7) == 0) {
     loop = -1;
   }
   else {
-    loop = apr_atoi64(copy);
+    loop = apr_atoi64(argv[0]);
   }
+
+  var = argv[1]; 
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -926,6 +938,9 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   /* loop */
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
+    if (var) {
+      worker_var_set(body, var, apr_itoa(ptmp, i));
+    }
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
@@ -964,12 +979,13 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   char *var;
   char *list;
   char *cur;
+  char **argv;
 
   COMMAND_NEED_ARG("<variable> \"<string>*\""); 
  
-  var = apr_strtok(copy, " ", &last);
-  
-  list = my_unescape(last, &last);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  var = argv[0];
+  list = argv[1];
 
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1012,21 +1028,19 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  char *last;
   char *copy;
-  char *val;
   int bps;
   int duration;
+  char **argv;
   apr_time_t init;
   apr_time_t start;
   apr_time_t cur;
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
-  val = apr_strtok(copy, " ", &last);
-  bps = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  duration = apr_atoi64(val);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  bps = apr_atoi64(argv[0]);
+  duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1087,9 +1101,8 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
                                 apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  char *last;
   char *copy;
-  char *val;
+  char **argv;
   int rps;
   int duration;
   apr_time_t init;
@@ -1098,10 +1111,9 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
-  val = apr_strtok(copy, " ", &last);
-  rps = apr_atoi64(val);
-  val = apr_strtok(NULL, " ", &last);
-  duration = apr_atoi64(val);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  rps = apr_atoi64(argv[0]);
+  duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -1171,7 +1183,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
   COMMAND_NEED_ARG("<error>"); 
  
- if ((status = apr_tokenize_to_argv(copy, &argv, ptmp)) == APR_SUCCESS) {
+ if ((status = my_tokenize_to_argv(copy, &argv, ptmp, 0)) == APR_SUCCESS) {
     if (!argv[0]) {
       worker_log_error(worker, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
@@ -2258,13 +2270,31 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
 }
 
 /**
+ * Global PATH command
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN path string
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_PATH(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
+  char **argv;
+
+  my_tokenize_to_argv(data, &argv, global->pool, 0);
+  global->path = argv[0];
+  return APR_SUCCESS;
+}
+
+/**
  * Global INCLUDE command
  *
  * @param self IN command
  * @param global IN global object
  * @param data IN relative to caller or absolut path
  *
- * @return APR_SUCCESS
+ * @return APR_SUCCESS or APR_ENOENT if no include file found
  */
 static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data, 
@@ -2276,13 +2306,28 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   int i;
 
   status = APR_ENOENT;
-  if (apr_tokenize_to_argv(data, &argv, global->pool) == APR_SUCCESS) {
-    for (i = 0; argv[i] != NULL; i++) {
-      /* open include file */
+  my_tokenize_to_argv(data, &argv, global->pool, 0);
+  for (i = 0; argv[i] != NULL; i++) {
+    if (argv[i][0] == '/' || global->path == NULL) {
       if ((status =
-	   apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
-			 global->pool)) == APR_SUCCESS) {
-	break;
+           apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
+                         global->pool)) == APR_SUCCESS) {
+        break;
+      }
+    }
+    else if (global->path) {
+      char *last;
+      char *cur;
+      char *path = apr_pstrdup(global->pool, global->path);
+
+      cur = apr_strtok(path, ":", &last);
+      while (cur) {
+        char *file = apr_pstrcat(global->pool, cur, "/", argv[i], NULL);
+        if ((status = apr_file_open(&fp, file, APR_READ, APR_OS_DEFAULT, 
+                                    global->pool)) == APR_SUCCESS) {
+          break;
+        }
+        cur = apr_strtok(NULL, ":", &last);
       }
     }
   }
@@ -2605,7 +2650,6 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars,
   apr_status_t retstat = APR_SUCCESS;
   apr_table_entry_t *e;
   int i;
-  const char *name;
   global_t *global;
   apr_thread_t *thread;
 
@@ -2650,7 +2694,6 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars,
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     thread = (apr_thread_t *) e[i].val;
-    name = e[i].key;
     if ((retstat = apr_thread_join(&status, thread))) {
       fprintf(stderr, "\nCould not join thread: %d", retstat);
       return retstat;
@@ -2678,6 +2721,8 @@ apr_getopt_option_t options[] = {
   { "help-command", 'C', 1, "Print help for specific command" },
   { "timestamp", 'T', 0, "Time stamp on every run" },
   { "shell", 'S', 0, "Shell mode" },
+  { "shell", 'S', 0, "Shell mode" },
+  { "define", 'D', 1, "Define variables" },
   { NULL, 0, 0, NULL }
 };
 
@@ -2997,6 +3042,9 @@ int main(int argc, const char *const argv[]) {
   log_mode = LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
+  /* create a global vars table */
+  vars = store_make(pool);
+
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
   while ((status = apr_getopt_long(opt, options, &c, &optarg)) == APR_SUCCESS) {
@@ -3042,6 +3090,23 @@ int main(int argc, const char *const argv[]) {
       break;
     case 'S':
       flags |= MAIN_FLAGS_USE_STDIN; 
+      break;
+    case 'D':
+      {
+        char *val;
+        char *var;
+        char *entry = apr_pstrdup(pool, optarg);
+
+        var = apr_strtok(entry, "=", &val);
+        if (val && val[0]) {
+          store_set(vars, var, val);
+        }
+        else {
+          fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
+          fflush(stderr);
+          exit(-1);
+        }
+      }
       break;
     }
   }
@@ -3115,9 +3180,6 @@ int main(int argc, const char *const argv[]) {
       success = 0;
       exit(1);
     }
-
-    /* create a global vars table */
-    vars = store_make(pool);
 
     /* interpret current file */
     if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {

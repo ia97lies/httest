@@ -34,6 +34,7 @@ EXTRA_DIST= \
 	block_not_found.txt \
 	block_params.htt \
 	block.txt \
+	block_var_buf.htt \
 	block_var_missmatch.hte \
 	block_var_missmatch.txt \
 	block_var_params.htt \
@@ -73,6 +74,7 @@ EXTRA_DIST= \
 	env.htt \
 	error_body.hte \
 	error_body.htt \
+	error_body.txt \
 	error_match.htt \
 	errors.hte \
 	errors.htt \
@@ -101,6 +103,7 @@ EXTRA_DIST= \
 	finally_on_failed.htt \
 	finally_on_failed.txt \
 	finally_on_many_bodies.htt \
+	folded.htt \
 	foreach.htt \
 	functionality.ntlm \
 	function.htt \
@@ -138,6 +141,7 @@ EXTRA_DIST= \
 	listen_to_ip_port.htt \
 	lock.htt \
 	loop_auto.htt \
+	loop_cur.htt \
 	loop.htt \
 	macro.htt \
 	macro_too_many_redirects.htt \
@@ -201,6 +205,7 @@ EXTRA_DIST= \
 	run_wild.sh \
 	sendfile_chunked.htt \
 	sendfile.htt \
+	sendfile_multiple.htt \
 	server.cert.pem \
 	server_connection_close.htt \
 	server_def_before_client.htt \
@@ -289,6 +294,7 @@ EXTRA_DIST= \
 	unused_match_headers.txt \
 	urldecode.htt \
 	urlencode.htt \
+	var_double_ref.htt \
 	var_expect.hte \
 	var_expect.htt \
 	var_expect.txt \

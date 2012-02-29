@@ -1,5 +1,7 @@
 INCLUDE $TOP/test/config.htb
 
+SET YOUR_PORT=9090
+
 CLIENT
 _REQ $YOUR_HOST $YOUR_PORT
 __GET /your/path/to/your/resource?your=params HTTP/1.1
@@ -13,6 +15,22 @@ _EXPECT . "END"
 # make output stable for visual test
 _SYS:SLEEP 500
 _WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT headers "HTTP/1.1 200 OK"
+_EXPECT body "BEGIN"
+_EXPECT body "AS2"
+_EXPECT body "END"
+_EXPECT headers "Trailing1: Stuff"
+_EXPECT headers "Trailing2: Stuff"
+# make output stable for visual test
+_SYS:SLEEP 500
+_WAIT
+
 END
 
 SERVER $YOUR_PORT
@@ -28,4 +46,21 @@ _CHUNK
 __END
 _CHUNK
 _CHUNK
+__
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Transfer-Encoding: chunked
+_FLUSH
+__BEGIN
+_CHUNK
+__AS2
+_CHUNK
+__END
+_CHUNK
+_CHUNK
+__Trailing1: Stuff
+__Trailing2: Stuff
+__
 END

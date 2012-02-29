@@ -1,6 +1,4 @@
 +HTTEST 2.1
-This is experimental code. The stable code is in the branche httest-2.0.
-
 Do restructure the code base to make it readable and extentable. This is a 
 preparation for httest3 test microkernel.
 

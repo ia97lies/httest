@@ -8,13 +8,15 @@ htproxy
 
 httest
 ------
+- On abort print current line number
+- Print line number in output
+- Color coding in output
 - Show SSL handshake information on stdout, perhaps make it expectable. 
 - Need more information on ssl failure
 - Plain on SSL connection terminate with a clear error
 - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
 - Update user guide!
 - Transparent forward proxy support
-- Trailing headers on chunked http
 - Folded headers
 - Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Nested lines like the one for lua with [[ ... ]]
@@ -24,5 +26,4 @@ httest
 - Array variable
 - Stack trace on error is not highlighted. Do it the C way :)
 - Encrpyt the ntml type 3 message and extrakt user
-- Precompile httest script
 

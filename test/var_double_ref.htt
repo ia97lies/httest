@@ -1,0 +1,6 @@
+CLIENT
+_SET foo1=blabla
+_SET i=1
+_SET result=$foo$i
+_EXPECT VAR(result) "blabla"
+END

@@ -13,18 +13,100 @@
 \paragraph{Purpose:}
 \subparagraph{}
 Begins a body with scripting code that can be invoked from anywhere 
-else, using the \texttt{CALL} or \texttt{\char`\_CALL} command.
+else directly as a command. In earlier version command \texttt{\_CALL} was
+needed to invoke a block, you still can use this style, but is not 
+neccessary anymore.
 
 The \texttt{BLOCK} must be closed using the \texttt{END} command.
 
-\paragraph{Error Handler}
-\subparagraph{}
+\paragraph{Parameters and Return Values}
+\subparagraph{Block Signature}
+A block can define a parameter and return values signature. You can define 
+multiple parameters and return values. parameters and return values are 
+separated by a ":". Parameters and return value list are separated with spaces.
+\begin{usplisting}
+    # Block signature
+    BLOCK myFunction myP mySecOne andThird : firstRet secOne
+      _DEBUG \$myP
+      _DEBUG \$mySecOne
+      _DEBUG \$andThird
+      _SET firstReturn=to any value
+      _SET secondOne=to another value
+    END 
+
+    CLIENT
+      myFunction aVal "Another one" "not enough" RET RETVAL2
+      _DEBUG \$RET
+      _DEBUG \$RETVAL2
+    END
+\end{usplisting}
+
+\subparagraph{No Block Signature}
+If there are no parameters and return values defined you can access parameters
+with \texttt{\$1..\$n} like a shell do access its parameters.
+\begin{usplisting}
+    # No block signature
+    BLOCK myFunction
+      _DEBUG \$1
+      _DEBUG \$2
+      _DEBUG \$3
+      _SET \$4=A return value
+      _SET \$5=And another
+    END
+
+    CLIENT
+      myFunction aValue "Another one" "still not enough" RET RETVAL2
+      _DEBUG \$RET
+      _DEBUG \$RETVAL2
+    END
+\end{usplisting}
+
+\subparagraph{Spaces in Variables Value}
+Imagine a variable holding for example "Hello World" and keep in mind that 
+variable resolving is done before calling. You got it my variable with the 
+value "Hello World" are suddently two parameters, not what we want in this 
+case. Ok there is a simple solution with by quoting the the variable. 
+\begin{usplisting}
+    # Spaces in variable 'myStuff'
+    BLOCK myFunction p1 p2 p3
+      _DEBUG \$p1
+      _DEBUG \$p2
+      _DEBUG \$p3
+    END 
+
+    CLIENT
+      _SET myStuff=Hello World
+      myFunction "\$myStuff" "next param" andStillNotEnoughParams
+    END
+\end{usplisting}
+
+\subparagraph{Spaces and Quotes in Variables Value}
+Imagine if your variable contains quotes and further on you got this variable 
+filled up by a \texttt{\_MATCH} and no way to remove or escape this quotes.
+Of course even for this a solution exist. You can handover parameters with
+\texttt{VAR(<param name>)}. This will not be resolved before calling the function
+and therefor a complicated value will not messup your call stack.
+\begin{usplisting}
+    # Spaces and quotes in variable 'myStuff'
+    BLOCK myFunction p1 p2 p3
+      _DEBUG \$p1
+      _DEBUG \$p2
+      _DEBUG \$p3
+    END 
+
+    CLIENT
+      _SET myStuff=Hello World "some quotes" messup your parameter's
+      myFunction VAR(myStuff) "next param" andStillNotEnoughParams
+    END
+\end{usplisting}
+
+
+\subparagraph{Error Handler}
 A special, reserved name for a \texttt{BLOCK} is \texttt{ON\_ERROR}. It 
 designates the block to be invoked if an unexpected error occurs during 
 a test. The block can then handle the error, output some information etc. 
-Example:
-
 \begin{usplisting}
+    # A simple error handler example
     BLOCK ON_ERROR
     _DEBUG
     _DEBUG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -34,3 +116,17 @@ Example:
     _EXIT FAILED
     END
 \end{usplisting}
+
+\subparagraph{Finally Handler}
+A special, reserved name for a \texttt{BLOCK} is \texttt{FINALLY}. It 
+designates the block to be invoked on test termination.  The block can 
+then handle cleanup stuff like restarting a server, removing generated
+resources during test or logout from a service.
+\begin{usplisting}
+    # A simple finally handler example
+    BLOCK FINALLY
+    _EXEC server restart
+    _EXEC rm -f test.txt
+    END
+\end{usplisting}
+

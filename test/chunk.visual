@@ -1,12 +1,18 @@
+                                                __HTTP/1.1 200 OK
+                                                __Transfer-Encoding: chunked
+                                                _FLUSH
+                                                >HTTP/1.1 200 OK
+                                                >Transfer-Encoding: chunked
+                                                __BEGIN
                                                 _CHUNK
                                                 >
                                                 >7
                                                 >BEGIN
-                                                __AS1
+                                                __AS2
                                                 _CHUNK
                                                 >
                                                 >5
-                                                >AS1
+                                                >AS2
                                                 __END
                                                 _CHUNK
                                                 >
@@ -15,10 +21,19 @@
                                                 _CHUNK
                                                 >
                                                 >0
+                                                __Trailing1: Stuff
+                                                __Trailing2: Stuff
+                                                __
+                                                >Trailing1: Stuff
+                                                >Trailing2: Stuff
+                                                >
                         _WAIT 
                         <HTTP/1.1 200 OK
                         <Transfer-Encoding: chunked
                         <
                         <BEGIN
-                        <AS1
-                        <END OK
+                        <AS2
+                        <END
+                        <Trailing1: Stuff
+                        <Trailing2: Stuff
+                        < OK

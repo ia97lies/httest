@@ -142,18 +142,17 @@ const char *worker_var_get(worker_t* worker, const char *var) {
 }
 
 /**
- * replace vars upcall function
- * @param udata IN void pointer to replacer_t object
+ * resolve vars
+ * @param worker IN callee 
  * @param name IN name to lookup
+ * @param ptmp IN temp pool
  * @return value
  */
-static const char * replacer_upcall(void *udata, const char *name) {
+const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *ptmp) {
   const char *val = NULL;
-  replacer_t *hook = udata; 
-  worker_t *worker = hook->worker; 
 
   if (strchr(name, '(')) {
-    char *command = apr_pstrdup(hook->ptmp, name);
+    char *command = apr_pstrdup(ptmp, name);
     int i = 0;
     while (command[i] != 0) {
       if (command[i] == '(' || command[i] == ')') {
@@ -161,9 +160,9 @@ static const char * replacer_upcall(void *udata, const char *name) {
       }
       ++i;
     }
-    command = apr_pstrcat(hook->ptmp, command, " __INLINE_RET", NULL);
+    command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
     /** call it */
-    if (command_CALL(NULL, worker, command, hook->ptmp) == APR_SUCCESS) {
+    if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
       val = store_get(worker->vars, "__INLINE_RET");
     }
   }
@@ -177,6 +176,20 @@ static const char * replacer_upcall(void *udata, const char *name) {
   if (!val) {
     val = store_get(worker->vars, name);
   }
+  return val;
+}
+
+/**
+ * replace vars upcall function
+ * @param udata IN void pointer to replacer_t object
+ * @param name IN name to lookup
+ * @return value
+ */
+static const char * replacer_upcall(void *udata, const char *name) {
+  const char *val = NULL;
+  replacer_t *hook = udata; 
+
+  val = worker_resolve_var(hook->worker, name, hook->ptmp);
   if (!val) {
     hook->unresolved = 1;
   }
@@ -720,7 +733,7 @@ static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match,
     if (!regdidmatch(regex)) {
       worker_log(worker, LOG_ERR, "%s: Did expect %s", namespace, regexpattern(regex));
       if (status == APR_SUCCESS) {
-	status = APR_EINVAL;
+        status = APR_EINVAL;
       }
     }
   }
@@ -753,12 +766,16 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
     if (e[i].key[0] != '!' && !regdidmatch(regex)) {
       worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
 	         regexpattern(regex));
-	status = APR_EINVAL;
+      if (status == APR_SUCCESS) {
+        status = APR_EINVAL;
+      }
     }
     if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
       worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
 	         &e[i].key[1]);
-	status = APR_EINVAL;
+      if (status == APR_SUCCESS) {
+        status = APR_EINVAL;
+      }
     }
   }
   apr_table_clear(expect);
@@ -1118,6 +1135,35 @@ static void worker_set_cookie(worker_t *worker) {
 }
 
 /**
+ * Get value from a given param
+ * @param worker IN thread data object
+ * @param param IN resolved param or VAR param
+ * @return final resolved value
+ */
+const char *worker_get_value_from_param(worker_t *worker, const char *param, apr_pool_t *ptmp) {
+  const char *val = NULL;
+
+  if (strncmp(param, "VAR(", 4) == 0) {
+    char *var = apr_pstrdup(ptmp, param + 4);
+    apr_size_t len = strlen(var);
+    if (len > 0) {
+      var[len-1] = 0;
+    }
+    val = store_get(worker->vars, var);
+    if (!val) {
+      val = store_get(worker->locals, var);
+    }
+    if (!val) {
+      val = param;
+    }
+  }
+  else {
+    val = param;
+  }
+  return val;
+}
+
+/**
  * CALL command calls a defined block
  *
  * @param self IN command
@@ -1211,6 +1257,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
         goto error;
       }
       if (arg && val) {
+        val = worker_get_value_from_param(worker, val, ptmp);
         store_set(params, arg, val);
       }
     }
@@ -1280,28 +1327,81 @@ error:
   apr_pool_destroy(call_pool);
   return status;
 }
+ 
+/**
+ * Read headers from transport
+ * @param worker IN thread data object
+ * @param sockreader IN reader
+ * @param pool IN 
+ * @return apr status
+ */
+static apr_status_t worker_get_headers(worker_t *worker, 
+                                       sockreader_t *sockreader, 
+                                       apr_pool_t *pool) {
+  apr_status_t status;
+  char *line;
+  char *last;
+  char *key = NULL;
+  const char *val = "";
+
+  /** get headers */
+  while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
+         line[0] != 0) {
+    if ((status = htt_run_read_header(worker, line)) != APR_SUCCESS) {
+      return status;
+    }
+    if (worker->recorder->on == RECORDER_RECORD &&
+				worker->recorder->flags & RECORDER_RECORD_HEADERS) {
+      sockreader_push_line(worker->recorder->sockreader, line);
+    }
+    worker_log(worker, LOG_INFO, "<%s", line);
+    worker_match(worker, worker->match.dot, line, strlen(line));
+    worker_match(worker, worker->match.headers, line, strlen(line));
+    worker_match(worker, worker->grep.dot, line, strlen(line));
+    worker_match(worker, worker->grep.headers, line, strlen(line));
+    worker_expect(worker, worker->expect.dot, line, strlen(line));
+    worker_expect(worker, worker->expect.headers, line, strlen(line));
+
+    /* headers */
+    key = apr_strtok(line, ":", &last);
+    val = last;
+    while (*val == ' ') ++val;
+    if (worker->headers_allow) {
+      if (!apr_table_get(worker->headers_allow, key)) {
+        worker_log(worker, LOG_ERR, "%s header not allowed", key);
+        return APR_EGENERAL;
+      }
+    }
+    if (worker->headers_filter) {
+      if (!apr_table_get(worker->headers_filter, key)) {
+                                apr_table_add(worker->headers, key, val);
+      }
+    }
+    else {
+      apr_table_add(worker->headers, key, val);
+    }
+  }
+  if (status == APR_SUCCESS && line[0] == 0) {
+    worker_log(worker, LOG_INFO, "<");
+  }
+  return status;
+}
 
 /**
  * Wait for data (same as command_recv)
- *
  * @param self IN command object
  * @param worker IN thread data object
- * @param data IN unused 
- *
+ * @param data IN <number> or variable name
  * @return an apr status
  */
 apr_status_t command_WAIT(command_t * self, worker_t * worker,
                           char *data, apr_pool_t *ptmp) {
   char *copy;
-  int matches;
-  int expects;
   char *line;
   char *buf;
   apr_status_t status;
   sockreader_t *sockreader;
   apr_pool_t *pool;
-  char *last;
-  char *key;
   char *var = NULL;
   const char *val = "";
   apr_size_t len;
@@ -1310,8 +1410,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 
   buf = NULL;
   len = 0;
-  matches = 0;
-  expects = 0;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -1416,57 +1514,17 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
  
-  /** get headers */
-  while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
-         line[0] != 0) {
-    if ((status = htt_run_read_header(worker, line)) != APR_SUCCESS) {
-      return status;
-    }
-    if (worker->recorder->on == RECORDER_RECORD &&
-				worker->recorder->flags & RECORDER_RECORD_HEADERS) {
-      sockreader_push_line(worker->recorder->sockreader, line);
-    }
-    worker_log(worker, LOG_INFO, "<%s", line);
-    worker_match(worker, worker->match.dot, line, strlen(line));
-    worker_match(worker, worker->match.headers, line, strlen(line));
-    worker_match(worker, worker->grep.dot, line, strlen(line));
-    worker_match(worker, worker->grep.headers, line, strlen(line));
-    worker_expect(worker, worker->expect.dot, line, strlen(line));
-    worker_expect(worker, worker->expect.headers, line, strlen(line));
-
-    /* headers */
-    key = apr_strtok(line, ":", &last);
-    val = last;
-    while (*val == ' ') ++val;
-    if (worker->headers_allow) {
-      if (!apr_table_get(worker->headers_allow, key)) {
-				worker_log(worker, LOG_ERR, "%s header not allowed", key);
-				status = APR_EGENERAL;
-				goto out_err;
-      }
-    }
-    if (worker->headers_filter) {
-      if (!apr_table_get(worker->headers_filter, key)) {
-				apr_table_add(worker->headers, key, val);
-      }
-    }
-    else {
-      apr_table_add(worker->headers, key, val);
-    }
-  }
-  if (line[0] == 0) {
-    worker_log(worker, LOG_INFO, "<");
-  }
+  status = worker_get_headers(worker, sockreader, pool);
 
 http_0_9:
   if (status == APR_SUCCESS) {
+    int doreadtrailing = 0;
     /* if recv len is specified use this */
     if (recv_len > 0) {
       len = recv_len;
-      if ((status = worker_check_error(worker, 
-					content_length_reader(sockreader, &buf, &len, val))) 
-					!= APR_SUCCESS) {
-				goto out_err;
+      if ((status = worker_check_error(worker, content_length_reader(sockreader, &buf, &len, val))) 
+          != APR_SUCCESS) {
+        goto out_err;
       }
     }
     else if (recv_len == 0) {
@@ -1481,7 +1539,12 @@ http_0_9:
       }
     }
     else if ((val = apr_table_get(worker->headers, "Transfer-Encoding"))) {
-      if ((status = worker_check_error(worker, transfer_enc_reader(sockreader, &buf, &len, val))) != APR_SUCCESS) {
+      if ((status = transfer_enc_reader(sockreader, &buf, &len, val)) == APR_SUCCESS) {
+        if (strcmp(val, "chunked") == 0) {
+          doreadtrailing = 1;
+        }
+      }
+      else if ((status = worker_check_error(worker, status)) != APR_SUCCESS) {
         goto out_err;
       }
     }
@@ -1512,6 +1575,13 @@ http_0_9:
     if (var) {
       store_set(worker->vars, var, buf);
     }
+    if (doreadtrailing) {
+      /* read trailing headers */
+      if ((status = worker_get_headers(worker, sockreader, pool)) != APR_SUCCESS) {
+        worker_log_error(worker, "Missing trailing empty header(s) after chunked encoded body");
+      }
+    }
+
     if (worker->flags & FLAGS_AUTO_CLOSE) {
       val = apr_table_get(worker->headers, "Connection");
       if (val && strcasecmp(val, "close") == 0) {
@@ -2296,9 +2366,9 @@ apr_status_t worker_file_to_http(worker_t *self, apr_file_t *file, int flags, ap
     }
     buf[len] = 0;
     apr_table_addn(self->cache, 
-		   apr_psprintf(self->pcache, "NOCRLF:%d", len), buf);
+		   apr_psprintf(self->pcache, "NOCRLF:%"APR_SIZE_T_FMT, len), buf);
     if (flags & FLAGS_CHUNKED) {
-      worker_log(self, LOG_DEBUG, "--- chunk size: %d", len);
+      worker_log(self, LOG_DEBUG, "--- chunk size: %"APR_SIZE_T_FMT, len);
       apr_table_add(self->cache, "CHUNKED", "CHUNKED");
       if ((status = worker_flush(self, ptmp)) != APR_SUCCESS) {
 	return status;
@@ -2472,33 +2542,35 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
                               char *data, apr_pool_t *ptmp) {
   char *copy;
-  char *last;
-  char *filename;
+  char **argv;
   apr_status_t status;
   int flags;
   apr_file_t *fp;
+  int i;
 
   COMMAND_NEED_ARG("Need a file name");
 
-  filename = apr_strtok(copy, " ", &last);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
   flags = worker->flags;
   worker->flags &= ~FLAGS_PIPE;
   worker->flags &= ~FLAGS_CHUNKED;
   
-  if ((status =
-       apr_file_open(&fp, filename, APR_READ, APR_OS_DEFAULT,
-		     ptmp)) != APR_SUCCESS) {
-    fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
-    return APR_ENOENT;
-  }
-  
-  if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
-                              != APR_SUCCESS) {
-    return status;
-  }
+  for (i = 0; argv[i]; i++) {
+    if ((status =
+         apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
+                       ptmp)) != APR_SUCCESS) {
+      fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
+      return APR_ENOENT;
+    }
+    
+    if ((status = worker_file_to_http(worker, fp, flags, ptmp)) 
+                                != APR_SUCCESS) {
+      return status;
+    }
 
-  apr_file_close(fp);
+    apr_file_close(fp);
+  }
 
   return APR_SUCCESS;
 }
@@ -3087,8 +3159,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data, 
                                 apr_pool_t *ptmp) {
   char *copy;
-  char *header;
-  char *value;
+  char **argv;
 
   COMMAND_NEED_ARG("<header> <value>");
 
@@ -3096,8 +3167,8 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data,
     worker->headers_add = apr_table_make(worker->pbody, 12);
   }
 
-  header = apr_strtok(copy, " ", &value);
-  apr_table_add(worker->headers_add, header, value);
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+  apr_table_add(worker->headers_add, argv[0], argv[1]);
 
   return APR_SUCCESS;
 }
@@ -3114,7 +3185,6 @@ apr_status_t command_ADD_HEADER(command_t *self, worker_t *worker, char *data,
 apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data, 
                             apr_pool_t *ptmp) {
   apr_status_t status;
-  apr_status_t rc;
   apr_threadattr_t *tattr;
   apr_thread_t *client_thread;
   apr_thread_t *backend_thread;
@@ -3195,11 +3265,11 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
     goto error2;
   }
 
-  rc = apr_thread_join(&status, client_thread);
+  apr_thread_join(&status, client_thread);
   if (status != APR_SUCCESS) {
     goto error2;
   }
-  rc = apr_thread_join(&status, backend_thread);
+  apr_thread_join(&status, backend_thread);
   if (status != APR_SUCCESS) {
     goto error2;
   }
@@ -4009,7 +4079,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
     }
 
     apr_table_set(self->cache, "Content-Length",
-                  apr_psprintf(self->pbody, "Content-Length: %d", len));
+                  apr_psprintf(self->pbody, "Content-Length: %"APR_SIZE_T_FMT, len));
 
     ct_len = len;
   }

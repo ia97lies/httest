@@ -8,7 +8,7 @@ httest_SOURCES = \
 	module.c transport.c store.c eval.c \
 	modules.c ssl_module.c tcp_module.c skeleton_module.c date_module.c \
 	coder_module.c math_module.c sys_module.c binary_module.c \
-	udp_module.c socks_module.c websocket_module.c
+	udp_module.c socks_module.c websocket_module.c dbg_module.c
 
 EXTRA_httest_SOURCES = \
 	lua_crypto.c lua_module.c 
@@ -29,15 +29,19 @@ htntlm_SOURCES = \
 noinst_HEADERS = \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
-	lua_crypto.h
+	lua_crypto.h httest.ext
 
      
-httest.1: httest$(EXEEXT)
-	help2man -N -n "test HTTP driven application" -i httest.ext --output=httest.1 ./httest$(EXEEXT)
-htproxy.1: htproxy$(EXEEXT)
+httest.1: httest.c $(top_srcdir)/configure.in
+	$(MAKE) $(AM_MAKEFLAGS) httest$(EXEEXT)
+	help2man -N -n "test HTTP driven application" -i $(top_srcdir)/src/httest.ext --output=httest.1 ./httest$(EXEEXT)
+htproxy.1: htproxy.c $(top_srcdir)/configure.in
+	$(MAKE) $(AM_MAKEFLAGS) htproxy$(EXEEXT)
 	help2man -N -n "record a HTTP session" --output=htproxy.1 ./htproxy$(EXEEXT)
-htntlm.1: htntlm$(EXEEXT)
+htntlm.1: htntlm.c $(top_srcdir)/configure.in
+	$(MAKE) $(AM_MAKEFLAGS) htntlm$(EXEEXT)
 	help2man -N -n "read/write NTLM message" --output=htntlm.1 ./htntlm$(EXEEXT)
-htremote.1: htremote$(EXEEXT)
+htremote.1: htremote.c $(top_srcdir)/configure.in
+	$(MAKE) $(AM_MAKEFLAGS) htremote$(EXEEXT)
 	help2man -N -n "record a HTTP session" --output=htremote.1 ./htremote$(EXEEXT)
 

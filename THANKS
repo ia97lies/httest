@@ -6,6 +6,7 @@ Thanks to Thomas Frauenknecht for
 Thanks to Pascal Buchbinder for 
 - the ntlm tool bugfixes.
 - the renegotiation command without client cert verify.
+- core developer
 
 Thanks to Michael Vogt for 
 - the help with htproxy.
@@ -20,10 +21,12 @@ Thanks to Eva Ramon for
 Thanks to Alain Stalder for
 - cleaning up the windows build enviroment
 - maintainer of Windows and Mac packages.
+- core developer, main focus on Win/Mac problems.
 
 Thanks to Marcel Schoen for
 - writing and maintain the user manual
 
 Thanks to Nicolas Perrenoud for
 - maintaining the gentoo ebuild and linked it into gentoos overlay system
+- various bugfixes.
 

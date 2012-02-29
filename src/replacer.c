@@ -128,7 +128,9 @@ once_again:
         goto once_again;
       }
     }
-    ++i;
+    else {
+      ++i;
+    }
   }
   return new_line;
 }

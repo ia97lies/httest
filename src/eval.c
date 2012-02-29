@@ -90,7 +90,7 @@ enum {
 struct math_eval_s {
   apr_pool_t *pool;
   const char *delimiter;
-  STACK_OF(int) *stack;
+  STACK_OF(long) *stack;
   const char *line;
   apr_size_t i;
   apr_size_t len;
@@ -530,7 +530,7 @@ static apr_status_t math_parse(math_eval_t * hook, long *val) {
 math_eval_t *math_eval_make(apr_pool_t * pool) {
   math_eval_t *hook = apr_pcalloc(pool, sizeof(*hook));
   hook->pool = pool; 
-  hook->stack = SKM_sk_new_null(char);
+  hook->stack = SKM_sk_new_null(long);
   hook->delimiter = apr_pstrdup(pool, "+-*/=<>!()");
 
   return hook;

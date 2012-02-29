@@ -1,0 +1,8 @@
+
+CLIENT
+  _SET ref=0
+  _LOOP 10000 i
+    _EXPECT VAR(i) "$ref"
+    _MATH:EVAL "$ref + 1" ref
+  _END
+END
