@@ -2521,6 +2521,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
   apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
 
+  apr_file_close(worker->proc.in);
   apr_file_close(worker->proc.out);
 
   if (exitcode != 0) {
