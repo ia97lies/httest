@@ -1,5 +1,13 @@
 INCLUDE $TOP/test/config.htb
 
+BLOCK doCallExec
+  _EXEC echo foo 
+  _EXEC date +%M
+END
+
 CLIENT 100
-_EXEC echo foo 
+_EXEC sleep 30
+_LOOP 10
+  doCallExec
+_END
 END
