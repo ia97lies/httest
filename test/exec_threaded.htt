@@ -7,7 +7,7 @@ BLOCK doCallExec
 END
 
 CLIENT 100
-_EXEC sleep 60 &
+_EXEC sleep 30 &
 _LOOP 10
   doCallExec
 _END
