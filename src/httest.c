@@ -1871,6 +1871,22 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 }
 
 /**
+ * cleanup files on exit
+ *
+ * @param data IN file name to remove
+ * @return APR_SUCCESS
+ */
+static apr_status_t worker_file_cleanup(void *data) {
+  const char *name = data;
+  apr_pool_t *pool;
+
+  apr_pool_create(&pool, NULL);
+  apr_file_remove(name, pool);
+  apr_pool_destroy(pool);
+  return APR_SUCCESS;
+}
+
+/**
  * Global CLIENT command
  *
  * @param self IN global object
@@ -1944,8 +1960,9 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
 	      my_status_str(global->pool, status), status);
       return status;
     }
-    apr_table_addn(global->files, global->worker->name, 
-	           (const char *)global->worker);
+
+    apr_pool_cleanup_register(global->pool, global->worker->name, 
+                              worker_file_cleanup, apr_pool_cleanup_null);
     global->state = GLOBAL_STATE_NONE;
     return APR_SUCCESS;
     break; 
@@ -2979,15 +2996,6 @@ exit:
 static void my_exit() {
   int i;
   worker_t *worker;
-
-  if (process_global) {
-    apr_table_entry_t *e = 
-      (apr_table_entry_t *) apr_table_elts(process_global->files)->elts;
-    for (i = 0; i < apr_table_elts(process_global->files)->nelts; i++) {
-      worker = (worker_t *)e[i].val;
-      apr_file_remove(worker->name, process_global->pool);
-    }
-  }
 
   if (!success) {
     fprintf(stderr, " FAILED\n");
