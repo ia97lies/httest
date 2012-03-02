@@ -1,4 +1,8 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.18
+  *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.
+
+
 Changes with httest 2.1.17
   *) httest: Read trailing headers after chunked body.
 
