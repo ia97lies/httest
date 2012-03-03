@@ -1372,6 +1372,8 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
+      /* dirty hack */
+      worker->file_and_line = e[worker->cmd].key;
       status = worker_check_error(parent, status);
     }
     else {
@@ -2994,9 +2996,6 @@ exit:
  * own exit func
  */
 static void my_exit() {
-  int i;
-  worker_t *worker;
-
   if (!success) {
     fprintf(stderr, " FAILED\n");
     fflush(stderr);

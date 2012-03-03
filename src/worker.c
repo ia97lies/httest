@@ -1189,7 +1189,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   store_t *locals;
 
   /** a pool for this call */
-  apr_pool_create(&call_pool, worker->pbody);
+  apr_pool_create(&call_pool, NULL);
 
   /** temporary tables for param, local vars and return vars */
   params = store_make(call_pool);
