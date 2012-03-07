@@ -11,6 +11,7 @@ httest
 - On abort print current line number
 - Print line number in output
 - Color coding in output
+- XML output
 - Show SSL handshake information on stdout, perhaps make it expectable. 
 - Need more information on ssl failure
 - Plain on SSL connection terminate with a clear error
