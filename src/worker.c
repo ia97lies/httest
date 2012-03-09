@@ -261,7 +261,7 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
     va_list va;
     apr_pool_t *pool;
 
-    apr_pool_create(&pool, self->pbody);
+    apr_pool_create(&pool, NULL);
     va_start(va, fmt);
     if (log_mode == LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
