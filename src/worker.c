@@ -256,13 +256,13 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
  * @param ... IN params for format strings
  */
 void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
-  char *tmp;
-  va_list va;
-  apr_pool_t *pool;
-
-  apr_pool_create(&pool, self->pbody);
-  va_start(va, fmt);
   if (self->log_mode >= log_mode) {
+    char *tmp;
+    va_list va;
+    apr_pool_t *pool;
+
+    apr_pool_create(&pool, self->pbody);
+    va_start(va, fmt);
     if (log_mode == LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
       fprintf(stderr, "\n%-88s", tmp);
@@ -273,9 +273,9 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
       vfprintf(stdout, fmt, va);
       fflush(stdout);
     }
+    va_end(va);
+    apr_pool_destroy(pool);
   }
-  va_end(va);
-  apr_pool_destroy(pool);
 }
 
 /**
@@ -286,20 +286,22 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
  * @param ... IN params for format strings
  */
 void worker_log_error(worker_t * self, char *fmt, ...) {
-  char *tmp;
-  va_list va;
-  apr_pool_t *pool;
 
-  apr_pool_create(&pool, self->pbody);
-  va_start(va, fmt);
   if (self->log_mode >= LOG_ERR) {
+    char *tmp;
+    va_list va;
+    apr_pool_t *pool;
+
+    apr_pool_create(&pool, NULL);
+    va_start(va, fmt);
     tmp = apr_pvsprintf(pool, fmt, va);
     tmp = apr_psprintf(pool, "%s: error: %s", self->file_and_line?self->file_and_line:"<none>",
-	               tmp);
+                       tmp);
     fprintf(stderr, "\n%-88s", tmp);
     fflush(stderr);
+    va_end(va);
+    apr_pool_destroy(pool);
   }
-  apr_pool_destroy(pool);
 }
 
 /**
@@ -316,20 +318,21 @@ void worker_log_error(worker_t * self, char *fmt, ...) {
  */
 void worker_log_buf(worker_t * self, int log_mode, const char *buf,
                     char *prefix, int len) {
-  int i;
-  char *null="<null>";
 
-  FILE *fd = stdout;
-
-  if (!buf) {
-    buf = null;
-    len = strlen(buf);
-  }
-  
-  if (log_mode == LOG_ERR) {
-    fd = stderr;
-  }
   if (self->log_mode >= log_mode) {
+    int i;
+    char *null="<null>";
+    FILE *fd = stdout;
+
+    if (!buf) {
+      buf = null;
+      len = strlen(buf);
+    }
+    
+    if (log_mode == LOG_ERR) {
+      fd = stderr;
+    }
+
     i = 0;
     if (prefix) {
       fprintf(fd, "\n%s%s", self->prefix, prefix);
@@ -344,6 +347,7 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
 	}
         i++;
       }
+      fflush(fd);
       while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
 	if (i != len -1) {
 	  if (buf[i] == '\n') {
