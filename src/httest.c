@@ -2738,6 +2738,7 @@ apr_getopt_option_t options[] = {
   { "debug-system", 'p', 0, "log level debug-system to log more details" },
   { "list-commands", 'L', 0, "List all available script commands" },
   { "help-command", 'C', 1, "Print help for specific command" },
+  { "duration", 't', 0, "Print test duration" },
   { "timestamp", 'T', 0, "Time stamp on every run" },
   { "shell", 'S', 0, "Shell mode" },
   { "shell", 'S', 0, "Shell mode" },
@@ -3031,6 +3032,7 @@ int main(int argc, const char *const argv[]) {
 #define MAIN_FLAGS_PRINT_TSTAMP 1
 #define MAIN_FLAGS_USE_STDIN 2
 #define MAIN_FLAGS_NO_OUTPUT 4
+#define MAIN_FLAGS_PRINT_DURATION 8
   int flags;
   apr_time_t time;
   char time_str[256];
@@ -3084,6 +3086,9 @@ int main(int argc, const char *const argv[]) {
       break;
     case 'd':
       log_mode = LOG_ALL_CMD;
+      break;
+    case 't':
+      flags |= MAIN_FLAGS_PRINT_DURATION; 
       break;
     case 'L':
       interpret(NULL, NULL, -1, pool, NULL);
@@ -3188,10 +3193,24 @@ int main(int argc, const char *const argv[]) {
       exit(1);
     }
 
+    if (flags & MAIN_FLAGS_PRINT_DURATION) {
+      time = apr_time_now();
+    }
     /* interpret current file */
     if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {
       success = 0;
       exit(1);
+    }
+
+    if (log_mode > LOG_WARN) {
+      fprintf(stdout, "\n");
+      fflush(stdout);
+    }
+
+    if (flags & MAIN_FLAGS_PRINT_DURATION) {
+      time = apr_time_now() - time;
+      fprintf(stdout, "%"APR_TIME_T_FMT , time);
+      fflush(stdout);
     }
 
     /* close current file */
