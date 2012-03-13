@@ -153,6 +153,8 @@ EXTRA_DIST= \
 	match.htt \
 	match_order.hte \
 	match_order.htt \
+	match_order_threaded.htt \
+	match_order.txt \
 	match.txt \
 	match_var.htt \
 	math.htt \

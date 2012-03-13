@@ -1,0 +1,32 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT 20
+_LOOP 10
+  _REQ $YOUR_HOST $YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: $YOUR_HOST 
+  __
+  _MATCH body "(Astroid)" first
+  _MATCH body "(Foobar)" second
+  _MATCH body "(Velo)" third 
+  _MATCH body "(Hallo)" forth 
+  _SEQUENCE first second third forth
+  _WAIT
+_END
+END
+
+SERVER $YOUR_PORT 20
+_LOOP 10
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __Connection: close
+  __
+  __Astroid
+  __Foobar
+  __Velo
+  __Hallo
+_END
+END
+

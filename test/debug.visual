@@ -1,4 +1,5 @@
 run debug.htt                                                                       	
 CLT0-0 start ...
 _LOG_LEVEL_GET FOO
-_LOG_LEVEL_SET 2 OK
+_LOG_LEVEL_SET 2
+ OK

@@ -841,9 +841,20 @@ apr_status_t worker_assert(worker_t * worker, apr_status_t status) {
   status = worker_assert_grep(worker, worker->grep.body, "GREP body", 
                               status);
   /* check if match sequence is empty */
+
   if (worker->match_seq && worker->match_seq[0] != 0) {
     worker_log(worker, LOG_ERR, "The following match sequence \"%s\" was not in correct order", worker->match_seq);
-    return APR_EINVAL;
+    status = APR_EINVAL;
+    goto exit;
+  }
+exit:
+  {
+    apr_pool_t *pool;
+    pool = module_get_config(worker->config, "MATCH_SEQ");
+    if (pool) {
+      module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), NULL);
+      apr_pool_destroy(pool);
+    }
   }
   return status;
 }
@@ -1888,6 +1899,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   if (!pool) {
     /* create a pool for match */
     apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
   }
   match = apr_pstrdup(pool, interm);
 
@@ -1947,9 +1959,6 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  /* set created pool for this match type */
-  module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
-
   return APR_SUCCESS;
 }
 
@@ -1992,6 +2001,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   if (!pool) {
     /* create a pool for match */
     apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
 
@@ -2058,9 +2068,6 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_ENOENT;
   }
 
-  /* set created pool for this match type */
-  module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
-
   return APR_SUCCESS;
 }
 
@@ -2103,6 +2110,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   if (!pool) {
     /* create a pool for match */
     apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
 
@@ -2166,9 +2174,6 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     worker_log(worker, LOG_ERR, "Grep type %s do not exist", type);
     return APR_ENOENT;
   }
-
-  /* set created pool for this match type */
-  module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
 
   return APR_SUCCESS;
 }
@@ -3411,8 +3416,17 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
 apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data, 
                                apr_pool_t *ptmp) {
   char *copy;
+  apr_pool_t *pool;
   COMMAND_NEED_ARG("<var-sequence>*");
-  worker->match_seq = copy;
+  
+  pool = module_get_config(worker->config, apr_pstrdup(ptmp, "MATCH_SEQ"));
+  if (!pool) {
+    /* create a pool for match */
+    apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), pool);
+  }
+
+  worker->match_seq = apr_pstrdup(pool, copy);
   return APR_SUCCESS;
 }
 

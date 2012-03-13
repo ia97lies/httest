@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.1.19
+  *) httest: Improve formatings on output
+
+  *) httest: Bugfix non working _SEQUENC command.
+
+
 Changes with httest 2.1.18
   *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.
 
