@@ -1759,6 +1759,10 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
                          char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   char *copy;
+  int ignore_monitors = 0;
+  char *cur;
+  char *last;
+  char *reasemble = NULL;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -1771,30 +1775,47 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
   }
 
   worker_get_socket(worker, "Default", "0");
+ 
+  cur = apr_strtok(copy, " ", &last);
+  while (cur) {
+    if (strcmp("IGNORE_MONITORS", cur) == 0) {
+      ignore_monitors = 1;
+    }
+    else {
+      reasemble = apr_pstrcat(ptmp, (reasemble ? reasemble : ""), (reasemble ? " " : ""), cur, NULL); 
+      fprintf(stderr, "\nXXX: %s\n", reasemble);
+      fflush(stderr);
+    }
+    cur = apr_strtok(NULL, " ", &last);
+  }
+  if (!reasemble) {
+    reasemble = apr_pstrdup(ptmp, "");
+  }
+
 
   while (worker->socket->socket_state == SOCKET_CLOSED) {
     tcp_accept(worker);
     
-    if ((status = htt_run_accept(worker, data)) != APR_SUCCESS) {
-      return status;
-    }
 
-    apr_collapse_spaces(copy, copy);
-    if (strcmp("IGNORE_MONITORS", copy) == 0) {
-      if (worker->sockreader == NULL) {
-        worker->socket->peeklen = 1;
-        if ((status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen)) != APR_SUCCESS &&
-            status != APR_EOF) {
-          return status;
-        }
-        else if (status == APR_SUCCESS) {
-          worker->socket->socket_state = SOCKET_CONNECTED;
-        }
+    if (ignore_monitors) {
+      int iseof = 0;
+      apr_sleep(1000);
+      if ((status = apr_socket_atreadeof(worker->socket->socket, &iseof)) != APR_SUCCESS) {
+        worker_log_error(worker, "Could not test if eof\n");
+        return status;
+      }
+      if (!iseof) {
+        worker->socket->socket_state = SOCKET_CONNECTED;
       }
     }
     else {
       worker->socket->socket_state = SOCKET_CONNECTED;
     }
+  }
+
+  if ((status = htt_run_accept(worker, reasemble)) != APR_SUCCESS) {
+    worker->socket->socket_state = SOCKET_CLOSED;
+    return status;
   }
 
   worker_test_reset(worker);
