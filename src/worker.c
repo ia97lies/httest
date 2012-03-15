@@ -1763,6 +1763,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
   char *cur;
   char *last;
   char *reasemble = NULL;
+  int done;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -1783,8 +1784,6 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
     }
     else {
       reasemble = apr_pstrcat(ptmp, (reasemble ? reasemble : ""), (reasemble ? " " : ""), cur, NULL); 
-      fprintf(stderr, "\nXXX: %s\n", reasemble);
-      fflush(stderr);
     }
     cur = apr_strtok(NULL, " ", &last);
   }
@@ -1792,10 +1791,9 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
     reasemble = apr_pstrdup(ptmp, "");
   }
 
-
-  while (worker->socket->socket_state == SOCKET_CLOSED) {
+  done = worker->socket->socket_state == SOCKET_CONNECTED;
+  while (!done) {
     tcp_accept(worker);
-    
 
     if (ignore_monitors) {
       int iseof = 0;
@@ -1805,18 +1803,20 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
         return status;
       }
       if (!iseof) {
-        worker->socket->socket_state = SOCKET_CONNECTED;
+        done = 1;
       }
     }
     else {
-      worker->socket->socket_state = SOCKET_CONNECTED;
+      done = 1;
     }
   }
 
+  if (worker->socket->socket_state != SOCKET_CONNECTED) {
   if ((status = htt_run_accept(worker, reasemble)) != APR_SUCCESS) {
-    worker->socket->socket_state = SOCKET_CLOSED;
     return status;
   }
+  }
+  worker->socket->socket_state = SOCKET_CONNECTED;
 
   worker_test_reset(worker);
 
