@@ -1791,32 +1791,39 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
     reasemble = apr_pstrdup(ptmp, "");
   }
 
-  done = worker->socket->socket_state == SOCKET_CONNECTED;
-  while (!done) {
-    tcp_accept(worker);
+  while (worker->socket->socket_state == SOCKET_CLOSED) {
+    int interim;
+
+    if ((status = tcp_accept(worker)) != APR_SUCCESS) {
+      worker_log_error(worker, "Accept TCP connection aborted");
+      return status;
+    }
+    
+    interim = htt_run_accept(worker, reasemble);
 
     if (ignore_monitors) {
-      int iseof = 0;
-      apr_sleep(1000);
-      if ((status = apr_socket_atreadeof(worker->socket->socket, &iseof)) != APR_SUCCESS) {
-        worker_log_error(worker, "Could not test if eof\n");
-        return status;
+      if (interim == APR_SUCCESS) {
+        worker->socket->peeklen = 1;
+        if ((status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen)) != APR_SUCCESS &&
+            status != APR_EOF) {
+          worker_log_error(worker, "Peek abort");
+          return status;
+        }
+        else if (status == APR_SUCCESS) {
+          worker->socket->socket_state = SOCKET_CONNECTED;
+        }
       }
-      if (!iseof) {
-        done = 1;
+      else {
+        worker_conn_close(worker, NULL);
       }
+    }
+    else if (status == APR_SUCCESS) {
+      worker->socket->socket_state = SOCKET_CONNECTED;
     }
     else {
-      done = 1;
+      return status;
     }
   }
-
-  if (worker->socket->socket_state != SOCKET_CONNECTED) {
-  if ((status = htt_run_accept(worker, reasemble)) != APR_SUCCESS) {
-    return status;
-  }
-  }
-  worker->socket->socket_state = SOCKET_CONNECTED;
 
   worker_test_reset(worker);
 
