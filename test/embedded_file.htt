@@ -1,4 +1,5 @@
 INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/test/shell.htb
 
 SET FOO=bla
 FILE testfile
@@ -13,7 +14,8 @@ _EXPECT EXEC "foo\n"
 _EXPECT EXEC "bar\n"
 _EXPECT EXEC "blafsel\n"
 _EXPECT EXEC "!YOUR_PORT"
-_EXEC cat testfile
+setShellCommandVars
+_EXEC $CAT testfile
 END
 
 FILE testfile2

@@ -30,10 +30,10 @@ __
 _PIPE
 _SH #!/bin/bash
 _SH echo foo
-_SH if test "$?" = "0"; then
-_SH   echo success
-_SH else
-_SH   echo failed
-_SH fi
+#_SH if test "$?" = "0"; then
+#_SH   echo success
+#_SH else
+#_SH   echo failed
+#_SH fi
 _SH END
 END
