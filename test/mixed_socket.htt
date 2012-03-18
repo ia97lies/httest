@@ -16,6 +16,7 @@ _WAIT
 
 _SLEEP 1000
 
+# "unix|windows"
 _EXPECT ERROR "Connection refused\([0-9]+\)|No connection could be made"
 _REQ $YOUR_HOST SSL:$YOUR_PORT
 

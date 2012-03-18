@@ -14,6 +14,7 @@ END
 
 SERVER $YOUR_PORT
 
+# "unix|windows"
 _ERROR "Broken pipe|established connection was aborted"
 _RES
 _WAIT

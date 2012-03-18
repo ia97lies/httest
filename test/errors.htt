@@ -15,6 +15,7 @@ END
 SERVER $YOUR_PORT
 
 _RES
+# "unix|windows"
 _EXPECT ERROR "Broken pipe|established connection was aborted"
 _WAIT
 _SLEEP 500
