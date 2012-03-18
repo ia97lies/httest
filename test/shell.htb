@@ -4,12 +4,14 @@ _IF "$USER" MATCH ".USER"
   _SET CAT=type
   _SET RM=del
   _SET LS=dir
+  _SET CP=copy
   _SET DEV_NULL=nul
 _ELSE
   # some unix
   _SET CAT=cat
   _SET RM=rm
   _SET LS=ls
+  _SET CP=cp
   _SET DEV_NULL=/dev/null
 _END
 END
