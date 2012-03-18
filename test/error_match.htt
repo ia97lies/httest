@@ -16,7 +16,7 @@ __GET /error HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
 __
-_EXPECT . "Error: Broken pipe\(32\)"
+_EXPECT . "Error: Broken pipe\(32\)|established connection was aborted"
 _WAIT
 
 END
