@@ -1,20 +1,33 @@
+INCLUDE $TOP/test/config.htb
 
 CLIENT
-_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar" DEC
-_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar"
-_EXEC echo $DEC
-
-_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar%F" DEC
-_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar%F"
-_EXEC echo $DEC
-
-_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar\xF" DEC
-_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2FfoobarxF"
-_EXEC echo $DEC
-
-_SET TEST=foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar\xF
-_URLDEC "$TEST" TEST2
-_EXPECT EXEC "foo\ bar\ blafasel\?blub/blib@foo.bar%2FfoobarxF"
-_EXEC echo $TEST2
-
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT body "DEC1:foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar"
+_EXPECT body "DEC2:foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar%F"
+_EXPECT body "DEC3:foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar\\\\xF"
+_EXPECT body "DEC4:foo\ bar\ blafasel\?blub/blib@foo.bar%2Ffoobar\\\\xF"
+_WAIT
 END
+
+SERVER $YOUR_PORT
+_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar" DEC1
+_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar%F" DEC2
+_URLDEC "foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar\xF" DEC3
+_SET TEST=foo+bar+blafasel%3Fblub%2Fblib%40foo\x2Ebar\x252Ffoobar\xF
+_URLDEC "$TEST" DEC4
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__DEC1:$DEC1
+__DEC2:$DEC2
+__DEC3:$DEC3
+__DEC4:$DEC4
+END
+
