@@ -1814,14 +1814,14 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
         }
       }
       else {
-        worker_conn_close(worker, NULL);
+        //worker_conn_close(worker, "TCP");
       }
     }
-    else if (status == APR_SUCCESS) {
+    else if (interim == APR_SUCCESS) {
       worker->socket->socket_state = SOCKET_CONNECTED;
     }
     else {
-      return status;
+      return interim;
     }
   }
 
