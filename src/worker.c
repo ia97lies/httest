@@ -3125,8 +3125,17 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
                         apr_pool_t *ptmp) {
   char *copy;
   apr_size_t len;
-  char *name;
   char *old;
+
+#ifdef _WINDOWS
+  char *name = apr_pstrdup(worker->pbody, "httXXXXXX.bat");
+  char *exec_prefix = "";
+  int has_apr_file_perms_set = 0;
+#else
+  char *name = apr_pstrdup(worker->pbody, "httXXXXXX");
+  char *exec_prefix = "./";
+  int has_apr_file_perms_set = 1;
+#endif
 
   apr_status_t status = APR_SUCCESS;
   
@@ -3135,11 +3144,11 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   if (strcasecmp(copy, "END")== 0) {
     if (worker->tmpf) {
       if ((status = apr_file_name_get((const char **)&name, worker->tmpf)) != APR_SUCCESS) {
-	return status;
+        return status;
       }
 
-      if ((status = apr_file_perms_set(name, 0x700)) != APR_SUCCESS) {
-	return status;
+      if (has_apr_file_perms_set && (status = apr_file_perms_set(name, 0x700)) != APR_SUCCESS) {
+        return status;
       }
 
       /* close file */
@@ -3148,8 +3157,8 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 
       /* exec file */
       old = self->name;
-      self->name = apr_pstrdup(ptmp, "_EXEC"); 
-      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, "./", name, NULL), ptmp);
+      self->name = apr_pstrdup(ptmp, "_EXEC");
+      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, exec_prefix, name, NULL), ptmp);
       self->name = old;
       
       apr_file_remove(name, ptmp);
@@ -3157,7 +3166,6 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   }
   else {
     if (!worker->tmpf) {
-      name = apr_pstrdup(worker->pbody, "httXXXXXX");
       if ((status = apr_file_mktemp(&worker->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, worker->pbody))

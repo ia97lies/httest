@@ -1,4 +1,5 @@
 INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/test/shell.htb
 
 CLIENT
 _REQ $YOUR_HOST $YOUR_PORT
@@ -7,11 +8,12 @@ __Host: $YOUR_HOST
 __User-Agent: mozilla
 __
 _EXPECT . "HTTP/1.1 200 OK"
+setShellCommandVars
 _SH #!/bin/bash
-_SH cat > temp
+_SH $CAT > temp
 _SH END|
 _WAIT
-_EXEC cat temp
+_EXEC $CAT temp
 END
 
 SERVER $YOUR_PORT

@@ -1,4 +1,5 @@
 INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/test/shell.htb
 
 CLIENT
 _REQ $YOUR_HOST $YOUR_PORT2
@@ -6,8 +7,9 @@ __POST / HTTP/1.1
 __Host: $YOUR_HOST
 __Content-Length: AUTO
 __
+setShellCommandVars
 _PIPE
-_EXEC cat main_functionality.htt
+_EXEC $CAT main_functionality.htt
 _EXPECT . "HTTP/1.1 200 Ok"
 _WAIT
 
