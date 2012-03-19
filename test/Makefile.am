@@ -214,6 +214,7 @@ EXTRA_DIST= \
 	server_ip_port.htt \
 	server.key.pem \
 	server_up_down.htt \
+	shell.htb \
 	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.hte \
