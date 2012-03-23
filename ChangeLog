@@ -5,7 +5,9 @@ Changes with httest 2.1.19
   *) httest: Bugfix non working _SEQUENCE command and add a test for verify
              even the bad case
 
-  *) plugins: Vim filetype.vim extented with omni file completion feature.
+  *) httest: Add _ASSERT "<expression>" command for arithmetical assertions,
+             cleaner and better readable than _IF ... _ELSE ... _END
+	     constructs.
 
 Changes with httest 2.1.18
   *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.
