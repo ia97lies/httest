@@ -1763,7 +1763,6 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
   char *cur;
   char *last;
   char *reasemble = NULL;
-  int done;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -1804,8 +1803,8 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
     if (ignore_monitors) {
       if (interim == APR_SUCCESS) {
         worker->socket->peeklen = 1;
-        if ((status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen)) != APR_SUCCESS &&
-            status != APR_EOF) {
+        status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen);
+        if (status != APR_SUCCESS && status != APR_EOF) {
           worker_log_error(worker, "Peek abort");
           return status;
         }
@@ -1814,7 +1813,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
         }
       }
       else {
-        //worker_conn_close(worker, "TCP");
+        worker_conn_close(worker, NULL);
       }
     }
     else if (interim == APR_SUCCESS) {
