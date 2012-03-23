@@ -18,7 +18,7 @@ httest_DEPENDENCIES = $(HTTEST_MODULES)
 
 htproxy_SOURCES = \
 	htproxy.c file.c socket.c regex.c util.c ssl.c replacer.c worker.c \
-	module.c conf.c transport.c store.c tcp_module.c 
+	module.c conf.c transport.c store.c tcp_module.c eval.c
 
 htremote_SOURCES = \
 	htremote.c util.c store.c

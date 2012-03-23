@@ -57,6 +57,7 @@
 #include "socket.h"
 #include "worker.h"
 #include "module.h"
+#include "eval.h"
 #include "tcp_module.h"
 
 
@@ -2200,6 +2201,52 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   else {
     worker_log(worker, LOG_ERR, "Grep type %s do not exist", type);
     return APR_ENOENT;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * assert command
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
+ * @param data IN expression
+ *
+ * @return an apr status
+ */
+apr_status_t command_ASSERT(command_t * self, worker_t * worker,
+                            char *data, apr_pool_t *ptmp) {
+  apr_status_t status;
+  char *copy;
+  char **argv;
+  apr_size_t len;
+  long val;
+  math_eval_t *math = math_eval_make(ptmp);
+
+  COMMAND_NEED_ARG("expression"); 
+
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+
+  if (!argv[0]) {
+    worker_log_error(worker, "Need an expression"); 
+    return APR_EINVAL;
+  }
+
+  len = strlen(argv[0]);
+  if (len < 1) {
+    worker_log_error(worker, "Empty expression");
+    return APR_EINVAL;
+  }
+
+  if ((status = math_evaluate(math, argv[0], &val)) != APR_SUCCESS) {
+    worker_log_error(worker, "Invalid expression");
+    return status;
+  }
+
+  if (!val) {
+    worker_log_error(worker, "Did expect \"%s\"", argv[0]);
+    return APR_EINVAL;
   }
 
   return APR_SUCCESS;
