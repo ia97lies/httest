@@ -8,6 +8,8 @@ htproxy
 
 httest
 ------
+- Need an assert command => _ASSERT 2 < $i
+- XSS, Slowloris, SQL injection, ... snipplets
 - On abort print current line number
 - Print line number in output
 - Color coding in output

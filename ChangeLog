@@ -5,8 +5,7 @@ Changes with httest 2.1.19
   *) httest: Bugfix non working _SEQUENCE command and add a test for verify
              even the bad case
 
-  *) httest: Bugfix swallow tcp pings (_RES IGNORE_MONITORS) for ssl
-             connections
+  *) plugins: Vim filetype.vim extented with omni file completion feature.
 
 Changes with httest 2.1.18
   *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.
