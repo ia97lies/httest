@@ -20,5 +20,3 @@ augroup END
 let &cpo = s:cpo_save
 unlet s:cpo_save
 
-set ofu=syntaxcomplete#Complete
-
