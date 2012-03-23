@@ -14,7 +14,8 @@ _WAIT
 END
 
 SERVER SSL:$YOUR_PORT
-_ERROR Socket operation on non-socket
+# "unix|windows"
+_ERROR "Socket operation on non-socket|Unknown error"
 _RES
 _WAIT
 _END ERROR
