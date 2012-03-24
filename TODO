@@ -8,26 +8,19 @@ htproxy
 
 httest
 ------
-- Need an assert command => _ASSERT 2 < $i
-- XSS, Slowloris, SQL injection, ... snipplets
-- On abort print current line number
+- debugger: break on error
+- Clean up unused EXPECT/MATCH after a _ERROR ... _END 
 - Print line number in output
 - Color coding in output
+- Stack trace on error is not highlighted. Do it the C way :)
 - XML output
-- Flush more at once use brigades
+- XSS, Slowloris, SQL injection, ... snipplets
 - Show SSL handshake information on stdout, perhaps make it expectable. 
 - Need more information on ssl failure
 - Plain on SSL connection terminate with a clear error
-- Clean up unused EXPECT/MATCH after a _ERROR ... _END 
 - Update user guide!
 - Transparent forward proxy support
-- Folded headers
 - Fix that problem with command lookup, _SET and _SETUP do conflicting
 - Nested lines like the one for lua with [[ ... ]]
-- Hash variable, btw. the variables are hold in hash :)
-  - Add/Remove elements in hash variables
-  - Print hash variables as query
-- Array variable
-- Stack trace on error is not highlighted. Do it the C way :)
 - Encrpyt the ntml type 3 message and extrakt user
 
