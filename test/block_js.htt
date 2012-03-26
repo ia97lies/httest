@@ -1,0 +1,15 @@
+
+INCLUDE $TOP/test/config.htb
+
+BLOCK:JS myVeryFirstJsScript
+  foo = bar;
+  foo1 = bar1;
+  foo2 = bar2;
+  foo3 = bar3;
+  foo4 = bar4;
+END
+
+CLIENT
+  myVeryFirstJsScript
+_JS:DUMMY bla
+END

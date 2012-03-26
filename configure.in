@@ -37,7 +37,8 @@ AC_ARG_ENABLE([use-static], AS_HELP_STRING(--enable-use-static,Try to use archiv
 AC_ARG_ENABLE([full-static], AS_HELP_STRING(--enable-full-static,Try to compile a statical linked executable))
 AC_ARG_ENABLE([iconv-support], AS_HELP_STRING(--enable-iconv-support,enable iconv support))
 AC_ARG_ENABLE([ssl-legacy-reneg], AS_HELP_STRING(--enable-ssl-legacy-reneg, enable unsafe legacy renegotation only needed for openssl 0.9.8l))
-AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add binary support to httest))
+AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add Lua support to httest))
+AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript support to httest))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -59,6 +60,9 @@ AC_ARG_WITH(pcre,AS_HELP_STRING(--with-pcre=PATH,path to pcre-config script),
 AC_ARG_WITH(lua,AS_HELP_STRING(--with-lua=PATH,path to lua source dir),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else LUA_LIB_PATH="-L${withval}"; LUA_INCLUDES="-I${withval}"; LUA_LIB="-llua"; fi],
         [LUA_LIB_PATH=""; if test -d /usr/include/lua5.1; then LUA_INCLUDES="-I/usr/include/lua5.1"; else LUA_INCLUDES=""; fi; if test -f /usr/lib/liblua5.1.a -o -f /usr/lib/liblua5.1.so; then LUA_LIB="-llua5.1"; else LUA_LIB="-llua"; fi])
+AC_ARG_WITH(spidermonkey,AS_HELP_STRING(--with-spidermonkey=PATH,path to js-config script),
+	[if test ! -x $withval/js-config; then AC_MSG_ERROR($withval/js-config do not exist or is not executable); else JS_CONFIG="$withval/js-config"; fi],
+	[JS_CONFIG="js-config"])
 AC_ARG_WITH(ssl,AS_HELP_STRING(--with-ssl=PATH,path to openssl source),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
 	[OPENSSL_LIB_PATH=""; OPENSSL_INCLUDES=""])
@@ -112,6 +116,18 @@ if test "$enable_lua_module" = "yes"; then
   HTTEST_MODULES="$HTTEST_MODULES lua_crypto.${OBJEXT} lua_module.${OBJEXT}"
   MODULES="$MODULES lua "
 fi
+if test "$enable_js_module" = "yes"; then
+  JS_VERSION=`$JS_CONFIG --version`
+  if test ! "$?" = "0"; then
+    echo "spidermonkey lib is missing"
+    exit -1
+  fi
+  CFLAGS="$CFLAGS `$JS_CONFIG --cflags`"
+  LIBS="$LIBS `$JS_CONFIG --libs`"
+  HTTEST_MODULES="$HTTEST_MODULES js_module.${OBJEXT}"
+  MODULES="$MODULES js "
+fi
+
 if test -f ./generate_modules_c.sh; then
   ./generate_modules_c.sh "${MODULES}"
 fi
