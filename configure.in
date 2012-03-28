@@ -123,7 +123,7 @@ if test "$enable_js_module" = "yes"; then
     exit -1
   fi
   CFLAGS="$CFLAGS `$JS_CONFIG --cflags`"
-  LIBS="$LIBS `$JS_CONFIG --libs`"
+  LIBS="$LIBS `$JS_CONFIG --libs` -lstdc++"
   HTTEST_MODULES="$HTTEST_MODULES js_module.${OBJEXT}"
   MODULES="$MODULES js "
 fi

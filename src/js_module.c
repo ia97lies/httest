@@ -141,7 +141,30 @@ static void js_set_variable_names(worker_t *worker, char *line) {
  */
 static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent, 
                                          apr_pool_t *ptmp) {
+  JSRuntime *rt;  
+  JSContext *cx;  
+  JSObject  *global;
   js_wconf_t *wconf = js_get_worker_config(worker);
+
+  if ((rt = JS_NewRuntime(8 * 1024 * 1024)) == NULL) {
+    worker_log_error(worker, "Could not create javascript runtime");
+    return APR_EGENERAL;
+  } 
+
+  if ((cx = JS_NewContext(rt, 8192)) == NULL) {
+    worker_log_error(worker, "Could not create javascript context");
+    return APR_EGENERAL;
+  }
+
+  JS_SetOptions(cx, JSOPTION_VAROBJFIX | JSOPTION_JIT | JSOPTION_METHODJIT);  
+  JS_SetVersion(cx, JSVERSION_LATEST);  
+  JS_SetErrorReporter(cx, js_log_error);
+
+  if ((global = JS_NewCompartmentAndGlobalObject(cx, &global_class, NULL)) == NULL) {
+    worker_log_error(worker, "Could not create javascript compartment");
+    return APR_EGENERAL;
+  }
+
 
   return APR_SUCCESS;
 }
