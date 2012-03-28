@@ -42,6 +42,7 @@ typedef struct js_wconf_s {
   int starting_line_nr; 
   apr_table_t *params;
   apr_table_t *retvars;
+  apr_size_t length;
   char *buffer;
 } js_wconf_t;
 
@@ -165,6 +166,26 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     return APR_EGENERAL;
   }
 
+  if (!JS_InitStandardClasses(cx, global)) {
+    worker_log_error(worker, "Could not initialize javascript standard classes");
+    return APR_EGENERAL;
+  } 
+
+  {
+    jsval rval;  
+    JSBool ok;  
+    JSString *str;
+    const char *filename = "noname";  
+    uintN lineno = 0;  
+
+    ok = JS_EvaluateScript(cx, global, wconf->buffer, wconf->length, filename, wconf->starting_line_nr, &rval);  
+    if (ok == JS_FALSE) {
+      return APR_EINVAL;
+    }
+    str = JS_ValueToString(cx, rval);  
+    printf("%s\n", JS_EncodeString(cx, str));  
+
+  }
 
   return APR_SUCCESS;
 }
@@ -241,8 +262,10 @@ static apr_status_t js_block_end(global_t *global) {
       *buf = '\n';
       ++buf;
     }
+    buf = 0;
+    wconf->length = gconf->length - 4;
 
-  fprintf(stderr, "\nYYY\n%s\nYYY\n", wconf->buffer);
+  fprintf(stderr, "\nYYY\n%sYYY\nYYY\n%d == %d\nYYY\n", wconf->buffer, wconf->length, strlen(wconf->buffer));
   fflush(stderr);
   }
   return APR_SUCCESS;
