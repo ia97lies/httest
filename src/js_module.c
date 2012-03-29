@@ -42,6 +42,7 @@ typedef struct js_wconf_s {
   int starting_line_nr; 
   apr_table_t *params;
   apr_table_t *retvars;
+  const char *filename;
   apr_size_t length;
   char *buffer;
 } js_wconf_t;
@@ -96,9 +97,10 @@ static js_wconf_t *js_get_worker_config(worker_t *worker) {
   
 /* The error reporter callback. */  
 static void js_log_error(JSContext *cx, const char *message, JSErrorReport *report) {  
-  fprintf(stderr, "%s:%u:%s\n",  
-          report->filename ? report->filename : "<no filename=\"filename\">",  
-          (unsigned int) report->lineno,  message);  
+  worker_t *worker = JS_GetContextPrivate(cx);
+  worker_log_error(worker, "%s:%d:%s", 
+                   report->filename ? report->filename : "<no filename=\"filename\">", 
+                   report->lineno,  message);  
 }  
 
 /**
@@ -159,6 +161,7 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
 
   JS_SetOptions(cx, JSOPTION_VAROBJFIX | JSOPTION_JIT | JSOPTION_METHODJIT);  
   JS_SetVersion(cx, JSVERSION_LATEST);  
+  JS_SetContextPrivate(cx, worker);
   JS_SetErrorReporter(cx, js_log_error);
 
   if ((global = JS_NewCompartmentAndGlobalObject(cx, &global_class, NULL)) == NULL) {
@@ -175,8 +178,7 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     jsval rval;  
     JSBool ok;  
     JSString *str;
-    const char *filename = "noname";  
-    uintN lineno = 0;  
+    const char *filename = wconf->filename;  
 
     ok = JS_EvaluateScript(cx, global, wconf->buffer, wconf->length, filename, wconf->starting_line_nr, &rval);  
     if (ok == JS_FALSE) {
@@ -186,6 +188,10 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     printf("%s\n", JS_EncodeString(cx, str));  
 
   }
+
+  JS_DestroyContext(cx);  
+  JS_DestroyRuntime(rt);  
+  JS_ShutDown();
 
   return APR_SUCCESS;
 }
@@ -213,7 +219,7 @@ static apr_status_t js_block_start(global_t *global, char **line) {
       js_wconf_t *wconf = js_get_worker_config(global->worker);
       js_gconf_t *gconf = js_get_global_config(global);
       gconf->do_read_line = 1;
-      wconf->starting_line_nr = global->line_nr;
+      wconf->starting_line_nr = global->line_nr + 1;
       js_set_variable_names(global->worker, *line);
       return APR_SUCCESS;
     }
@@ -248,6 +254,7 @@ static apr_status_t js_block_end(global_t *global) {
   js_gconf_t *gconf = js_get_global_config(global);
   js_wconf_t *wconf = js_get_worker_config(global->worker);
   gconf->do_read_line = 0;
+  wconf->filename = global->filename;
   if (gconf->length) {
     int i;
     apr_table_entry_t *e;
@@ -263,10 +270,8 @@ static apr_status_t js_block_end(global_t *global) {
       ++buf;
     }
     buf = 0;
+    /* ignore END which is also calling this hook */
     wconf->length = gconf->length - 4;
-
-  fprintf(stderr, "\nYYY\n%sYYY\nYYY\n%d == %d\nYYY\n", wconf->buffer, wconf->length, strlen(wconf->buffer));
-  fflush(stderr);
   }
   return APR_SUCCESS;
 }

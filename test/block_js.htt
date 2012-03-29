@@ -2,21 +2,12 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK:JS myVeryFirstJsScript
-  foo = 'bar';
-  foo = 'bar';
-  foo = 'bar';
-  foo = 'bar';
-  foo = 'bar';
+  // JavaScript
+  function justForFun() {
+    return 'Hallo' + 'World!'
+  }
 
-
-
-
-
-  foo = 'bar';
-  foo = 'bar';
-  foo = 'bar';
-
-  'Hallo' + 'World!'
+  justForFun();
 END
 
 CLIENT
