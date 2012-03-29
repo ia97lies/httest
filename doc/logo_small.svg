@@ -14,7 +14,10 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.2 r9819"
-   sodipodi:docname="logo_small.svg">
+   sodipodi:docname="logo_small.svg"
+   inkscape:export-filename="/home/christian/workspace/httest/doc/logo_small.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -96,27 +99,5 @@
        d="m 188.3929,400.59528 a 69.381622,69.381622 0 0 1 -69.25231,-69.623 l 69.3812,0.2415 z"
        sodipodi:start="1.572654"
        sodipodi:end="3.1450734" />
-    <text
-       xml:space="preserve"
-       style="font-size:20.19017601px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Birdman;-inkscape-font-specification:Birdman Bold"
-       x="212.10802"
-       y="312.30542"
-       id="text3023"
-       sodipodi:linespacing="125%"
-       transform="scale(0.89658718,1.1153405)"><tspan
-         sodipodi:role="line"
-         id="tspan3025"
-         x="212.10802"
-         y="312.30542">h<tspan
-   style="fill:#333333"
-   id="tspan2995">t</tspan><tspan
-   id="tspan3003"
-   style="fill:#666666">t</tspan><tspan
-   style="fill:#999999"
-   id="tspan2989">e</tspan><tspan
-   id="tspan3015"
-   style="fill:#cccccc">s</tspan><tspan
-   id="tspan3021"
-   style="fill:#ececec">t</tspan></tspan></text>
   </g>
 </svg>
