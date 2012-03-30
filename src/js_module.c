@@ -45,6 +45,7 @@ typedef struct js_wconf_s {
   const char *filename;
   apr_size_t length;
   char *buffer;
+  JSFunction *func;
 } js_wconf_t;
 
 /************************************************************************
@@ -174,6 +175,28 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     return APR_EGENERAL;
   } 
 
+  if (!wconf->func) {
+    wconf->func = JS_CompileFunction(cx, global, worker->name, 0, NULL, 
+                                          wconf->buffer, wconf->length, 
+                                          wconf->filename, 
+                                          wconf->starting_line_nr);
+    if (wconf->func == NULL) {
+      return APR_EINVAL;
+    }
+  }
+
+  {
+    jsval rval;  
+    JSString *str;
+    JSBool ok = JS_CallFunction(cx, global, wconf->func, 0, NULL, &rval);
+    if (ok == JS_FALSE) {
+      return APR_EINVAL;
+    }
+    str = JS_ValueToString(cx, rval);  
+    printf("%s\n", JS_EncodeString(cx, str));
+  }
+
+#if 0
   {
     jsval rval;  
     JSBool ok;  
@@ -188,6 +211,7 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     printf("%s\n", JS_EncodeString(cx, str));  
 
   }
+#endif
 
   JS_DestroyContext(cx);  
   JS_DestroyRuntime(rt);  

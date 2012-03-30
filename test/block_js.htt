@@ -4,10 +4,10 @@ INCLUDE $TOP/test/config.htb
 BLOCK:JS myVeryFirstJsScript
   // JavaScript
   function justForFun() {
-    return 'Hallo' + 'World!'
+    return 'Hallo' + 'World!';
   }
 
-  justForFun();
+  return justForFun();
 END
 
 CLIENT
