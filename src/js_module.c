@@ -183,12 +183,12 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
 
     if (argc) {
       argv = apr_pcalloc(worker->pbody, argc * sizeof(char*));
-      for (i = 0; i < argc; i++) {
-        argv[i] = e[i].key;
+      for (i = 1; i < argc; i++) {
+        argv[i-1] = e[i].key;
       }
     }
 
-    wconf->func = JS_CompileFunction(cx, global, worker->name, argc, argv, 
+    wconf->func = JS_CompileFunction(cx, global, worker->name, argc-1, argv, 
                                           wconf->buffer, wconf->length, 
                                           wconf->filename, 
                                           wconf->starting_line_nr);
@@ -203,15 +203,18 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     JSString *str;
     JSBool ok; 
     int argc = apr_table_elts(wconf->params)->nelts; 
+    jsval *jargv = apr_pcalloc(ptmp, argc * sizeof(jsval *)); 
     apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(wconf->params)->elts;
 
     for (i = 1; i < argc; i++) {
       const char *val = NULL;
       char *param = store_get_copy(worker->params, ptmp, e[i].key);
       val = worker_get_value_from_param(worker, param, ptmp);
+      str = JS_NewStringCopyZ(cx, val);
+      jargv[i-1] = STRING_TO_JSVAL(str); 
     }
 
-    ok = JS_CallFunction(cx, global, wconf->func, 0, NULL, &rval);
+    ok = JS_CallFunction(cx, global, wconf->func, argc-1, jargv, &rval);
     if (ok == JS_FALSE) {
       return APR_EINVAL;
     }

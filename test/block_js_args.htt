@@ -2,10 +2,10 @@
 INCLUDE $TOP/test/config.htb
 
 BLOCK:JS myVeryFirstJsScript arg1 arg2 : return
-  return arg1 + arg2;
+  return "XXX: " + arg1 + arg2;
 END
 
 CLIENT
   myVeryFirstJsScript "hallo" " welt" foo
-_JS:DUMMY bla
+_JS:DUMMY $foo
 END
