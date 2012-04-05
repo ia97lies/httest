@@ -1,6 +1,9 @@
 EXTRA_DIST= \
 	100cont_auto.htt \
 	100cont.htt \
+	assert.hte \
+	assert.htt \
+	assert.txt \
 	autoclose2.hte \
 	autoclose2.htt \
 	autoclose2.txt \
