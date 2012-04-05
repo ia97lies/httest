@@ -1,3 +1,5 @@
+REQUIRE lua_module
+
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyCertSubjectName : name b64

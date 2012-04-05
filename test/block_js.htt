@@ -1,4 +1,6 @@
 
+REQUIRE js_module
+
 INCLUDE $TOP/test/config.htb
 
 BLOCK:JS myVeryFirstJsScript
