@@ -1,7 +1,7 @@
 
 INCLUDE $TOP/test/config.htb
 
-BLOCK:JS myVeryFirstJsScript arg1 arg2 : return
+BLOCK:JS myVeryFirstJsScript arg1 arg2 : return return2
   return "Result is: '" + arg1 + arg2 + "'";
 END
 

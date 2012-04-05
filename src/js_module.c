@@ -108,8 +108,9 @@ static void js_log_error(JSContext *cx, const char *message, JSErrorReport *repo
  * Get variable names for in/out for mapping it to/from js 
  * @param worker IN callee
  * @param line IN command line
+ * @return APR_SUCCESS on success
  */
-static void js_set_variable_names(worker_t *worker, char *line) {
+static apr_status_t js_set_variable_names(worker_t *worker, char *line) {
   char *token;
   char *last;
 
@@ -125,15 +126,21 @@ static void js_set_variable_names(worker_t *worker, char *line) {
       input = 0;
     }
     else {
-      if (input) {
+      if (input == 1) {
         apr_table_setn(config->params, token, token);
       }
-      else {
+      else if (input == 0) {
         apr_table_setn(config->retvars, token, token);
+        input = -1;
+      }
+      else {
+        worker_log_error(worker, "Javascript BLOCKs support only one return value");
+        return APR_EGENERAL;
       }
     }
     token = apr_strtok(NULL, " ", &last);
   }
+  return APR_SUCCESS;
 }
 
 /**
@@ -220,7 +227,8 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     }
     if (JSVAL_IS_STRING(rval)) {
       str = JS_ValueToString(cx, rval);  
-      printf("%s\n", JS_EncodeString(cx, str));
+      apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(wconf->retvars)->elts;
+      store_set(worker->vars, store_get(worker->retvars, e[0].key), JS_EncodeString(cx, str));
     }
   }
 
@@ -255,8 +263,7 @@ static apr_status_t js_block_start(global_t *global, char **line) {
       js_gconf_t *gconf = js_get_global_config(global);
       gconf->do_read_line = 1;
       wconf->starting_line_nr = global->line_nr + 1;
-      js_set_variable_names(global->worker, *line);
-      return APR_SUCCESS;
+      return js_set_variable_names(global->worker, *line);
     }
   }
   return APR_ENOTIMPL;
