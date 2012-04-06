@@ -1,0 +1,6 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_HTML:PARSE "<html><body>hallo welt</body></html>"
+END
+
