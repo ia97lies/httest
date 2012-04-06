@@ -1,0 +1,18 @@
+
+REQUIRE js_module
+
+INCLUDE $TOP/test/config.htb
+
+BLOCK:JS myVeryFirstJsScript
+  // JavaScript
+  function justForFun() {
+    return 'Hallo' + 'World!';
+  }
+
+  return justForFun();
+END
+
+CLIENT
+  myVeryFirstJsScript
+_JS:DUMMY bla
+END

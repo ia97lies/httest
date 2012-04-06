@@ -1,3 +1,5 @@
+REQUIRE lua_module
+
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MySha1 p1 : hex b64
