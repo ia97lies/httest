@@ -329,7 +329,6 @@ static apr_status_t block_JS_DUMMY(worker_t *worker, worker_t *parent, apr_pool_
  * Module
  ***********************************************************************/
 apr_status_t js_module_init(global_t *global) {
-  apr_status_t status;
   module_command_new(global, "JS", "_MODULE", "", "", NULL);
   htt_hook_block_start(js_block_start, NULL, NULL, 0);
   htt_hook_read_line(js_read_line, NULL, NULL, 0);

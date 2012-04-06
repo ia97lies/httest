@@ -66,10 +66,9 @@ echo "  Build Configuration"
 
 echo
 echo "  Make Distribution"
-CFLAGS="-g -Wall -ansi" ./configure --enable-lua-module
+CFLAGS="-g -Wall -ansi" ./configure --enable-lua-module --enable-js-module --with-spidermonkey=$HOME/workspace/local/bin
 make clean all
 make distcheck DISTCHECK_CONFIGURE_FLAGS="--enable-lua-module --enable-js-module --with-spidermonkey=$HOME/workspace/local/bin"
-
 echo
 echo "  Build User Guide"
 cd doc/users-guide
