@@ -5,7 +5,7 @@ _EXEC ssh -ND localhost:${SOCKS_PORT} localhost & echo $! > /tmp/socks.pid
 END
 
 CLIENT
-_SLEEP 1000
+_SLEEP 2000
 _REQ $YOUR_HOST $SOCKS_PORT 
 _SOCKS:CONNECT $YOUR_HOST $YOUR_PORT
 __GET /your/path/to/your/resource?your=params HTTP/1.1
