@@ -2966,12 +2966,12 @@ static void show_command_help(apr_pool_t *p, global_t *global,
     block_name = apr_pstrcat(p, "_", last, NULL);
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
       fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
-      goto exit;
+      exit(1);
     }
     block_name = apr_pstrcat(p, "_", last, NULL);
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
       fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
-      goto exit;
+      exit(1);
     }
     else {
       char *help;
@@ -2990,6 +2990,7 @@ static void show_command_help(apr_pool_t *p, global_t *global,
   }
 
   fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+  exit(1);
 
 exit:
   fprintf(stdout, "\n");

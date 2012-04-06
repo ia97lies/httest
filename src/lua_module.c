@@ -551,6 +551,7 @@ static apr_status_t lua_block_end(global_t *global) {
  * Module
  ***********************************************************************/
 apr_status_t lua_module_init(global_t *global) {
+  module_command_new(global, "LUA", "_MODULE", "", "", NULL);
   htt_hook_block_start(lua_block_start, NULL, NULL, 0);
   htt_hook_read_line(lua_read_line, NULL, NULL, 0);
   htt_hook_block_end(lua_block_end, NULL, NULL, 0);

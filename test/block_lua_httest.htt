@@ -1,4 +1,4 @@
-REQUIRE lua_module
+REQUIRE _LUA:MODULE
 
 INCLUDE $TOP/test/config.htb
 
