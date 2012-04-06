@@ -225,7 +225,7 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     if (ok == JS_FALSE) {
       return APR_EINVAL;
     }
-    if (JSVAL_IS_STRING(rval)) {
+    if (apr_table_elts(wconf->retvars)->nelts && JSVAL_IS_STRING(rval)) {
       str = JS_ValueToString(cx, rval);  
       apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(wconf->retvars)->elts;
       store_set(worker->vars, store_get(worker->retvars, e[0].key), JS_EncodeString(cx, str));
