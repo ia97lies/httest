@@ -23,6 +23,12 @@ EXTRA_DIST= \
 	block.hte \
 	block.htt \
 	block_in_out_params.htt \
+	block_js_args.hte \
+	block_js_args.htt \
+	block_js_args.txt \
+	block_js.hte \
+	block_js.htt \
+	block_js.txt \
 	block_local_vars.htt \
 	block_lua_buf.htt \
 	block_lua_cert.htt \
