@@ -82,6 +82,8 @@ cd packages/gentoo
 mv *.ebuild ../../.
 cd ../..
 
+git checkout httest-2.0
+
 echo
 echo Release build SUCCESS 
 
