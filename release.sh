@@ -77,8 +77,8 @@ make all VERSION=$VERSION
 cd -
 
 echo
-echo Checkout master
-git checkout master
+echo Checkout branch httest-2.1
+git checkout httest-2.1 
 
 echo
 echo "Build Packages"
