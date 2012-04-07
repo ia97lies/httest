@@ -33,7 +33,8 @@
  ***********************************************************************/
 typedef struct html_wconf_s {
   htmlParserCtxtPtr parser_ctx;
-  htmlDocPtr doc_ptr;
+  htmlDocPtr doc;
+  xmlNodePtr root_node;
 } html_wconf_t;
 
 /************************************************************************
@@ -64,13 +65,38 @@ static html_wconf_t *html_get_worker_config(worker_t *worker) {
  * Commands 
  ***********************************************************************/
 static apr_status_t block_HTML_PARSE(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  const char *param;
   const xmlChar *html;
+  xmlNodePtr cur;
+  xmlNodePtr sib;
 
   html_wconf_t *wconf = html_get_worker_config(worker);
 
-  html = store_get(worker->params, "1");
-  wconf->doc_ptr = htmlCtxtReadDoc(wconf->parser_ctx, html, NULL, NULL, 0);
+  param = store_get(worker->params, "1");
+  if (!param) {
+    worker_log_error(worker, "Need a html document as parameter");
+    return APR_EINVAL;
+  }
+  html = worker_get_value_from_param(worker, param, ptmp);
 
+  wconf->doc = htmlCtxtReadDoc(wconf->parser_ctx, html, NULL, NULL, 0);
+  if (!wconf->doc) {
+    worker_log_error(worker, "Could not parse HTML");
+    return APR_EINVAL;
+  }
+  wconf->root_node = xmlDocGetRootElement(wconf->doc);
+  
+#if 0
+  cur = wconf->root_node;
+  while (cur) {
+    sib = cur;
+    while (sib) {
+      fprintf(stderr, "\nXXX: %s:%s\n", sib->name, sib->content);
+      sib = sib->next;
+    }
+    cur = cur->children;
+  }
+#endif
   return APR_SUCCESS;
 }
 

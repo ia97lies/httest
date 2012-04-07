@@ -1,6 +1,25 @@
 INCLUDE $TOP/test/config.htb
 
 CLIENT
-_HTML:PARSE "<html><body>hallo welt</body></html>"
+_REQ $YOUR_HOST $YOUR_PORT
+__GET / HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT BUF
+_HTML:PARSE VAR(BUF)
 END
 
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Content-Length: AUTO
+__
+__<html>
+__  <body>
+__    Hallo Welt <br>
+__    Du schnoed Welt <br>
+__  </body>
+__</html>
+END
