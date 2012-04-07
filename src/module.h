@@ -69,6 +69,9 @@
   /* windows has no netinet/in.h */
   #define HAVE_NO_NETINET
   #include <winsock.h>
+
+  /* for js */
+  #define XP_WIN
 #endif
 
 typedef apr_status_t (*module_init_f)(global_t *global);
