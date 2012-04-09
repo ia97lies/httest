@@ -62,6 +62,49 @@ static html_wconf_t *html_get_worker_config(worker_t *worker) {
   return config;
 }
 
+/**
+ * Convert an xpath object to string
+ * @param worker IN callee
+ * @param obj IN xpath object
+ * @param result IN resulting string for recursion
+ * @param pool IN pool
+ */
+static char *html_xobject_2_string(worker_t *worker, apr_pool_t *pool, 
+                                   xmlXPathObjectPtr obj) {
+  char *result = NULL;
+
+  if (obj != NULL) {
+    switch (obj->type) {
+      case XPATH_NODESET:
+        if (obj->nodesetval) {
+          int indx;
+          for (indx = 0; indx < obj->nodesetval->nodeNr; indx++) {
+            /*
+            html_xobject_2_string(worker, pool, obj->nodesetval->nodeTab[indx], result);
+            */
+          }
+        } 
+        else {
+          result = apr_psprintf(pool, "<empty>");
+        }
+        break;
+      case XPATH_BOOLEAN:
+        result = apr_psprintf(pool, "%s", obj->boolval?"true":"false");
+        break;
+      case XPATH_NUMBER:
+        result = apr_psprintf(pool, "%0g", obj->floatval);
+        break;
+      case XPATH_STRING:
+        result = apr_psprintf(pool, "%s", obj->stringval);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return result;
+}
+
 /************************************************************************
  * Commands 
  ***********************************************************************/
@@ -104,7 +147,7 @@ static apr_status_t block_HTML_PARSE(worker_t *worker, worker_t *parent, apr_poo
  */
 static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *param;
-  xmlXPathObjectPtr objs; 
+  xmlXPathObjectPtr obj; 
 
   html_wconf_t *wconf = html_get_worker_config(worker);
 
@@ -119,10 +162,12 @@ static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_poo
     return APR_EGENERAL;
   }
   
-  if ((objs = xmlXPathEval(param, wconf->xpath)) == NULL) {
+  if ((obj = xmlXPathEval((xmlChar *) param, wconf->xpath)) == NULL) {
     worker_log_error(worker, "Xpath error");
     return APR_EGENERAL;
   }
+
+  fprintf(stderr, "\nXXX: %d\n", obj->type);
 
   return APR_SUCCESS;
 }
