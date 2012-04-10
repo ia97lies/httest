@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.1
+  *) httest: New XPath command to query parts of the HTML document.
+
 Changes with httest 2.2.0
+  *) general: Forked from httest 2.1.19
+
   *) httest: Javascript BLOCK support
 
   *) httest: Improve formatings on output
