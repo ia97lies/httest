@@ -28,6 +28,7 @@
 #include "module.h"
 #include "libxml/HTMLparser.h"
 #include "libxml/xpath.h"
+#include "libxml/tree.h"
 
 /************************************************************************
  * Definitions 
@@ -66,40 +67,43 @@ static html_wconf_t *html_get_worker_config(worker_t *worker) {
  * Convert an xpath object to string
  * @param worker IN callee
  * @param obj IN xpath object
- * @param result IN resulting string for recursion
  * @param pool IN pool
+ * @return result or NULL
  */
-static char *html_xobject_2_string(worker_t *worker, apr_pool_t *pool, 
-                                   xmlXPathObjectPtr obj) {
+static char *html_node2str(worker_t *worker, xmlXPathObjectPtr obj,
+                           apr_pool_t *pool) {
   char *result = NULL;
 
-  if (obj != NULL) {
-    switch (obj->type) {
-      case XPATH_NODESET:
-        if (obj->nodesetval) {
-          int indx;
-          for (indx = 0; indx < obj->nodesetval->nodeNr; indx++) {
-            /*
-            html_xobject_2_string(worker, pool, obj->nodesetval->nodeTab[indx], result);
-            */
+  switch (obj->type) {
+    case XPATH_NODESET:
+      if (obj->nodesetval) {
+        int i;
+        xmlBufferPtr buf =  xmlBufferCreate();
+        for (i = 0; i < obj->nodesetval->nodeNr; i++) {
+          if (i != 0 ) {
+            xmlBufferWriteChar(buf, "\n");
           }
-        } 
-        else {
-          result = apr_psprintf(pool, "<empty>");
+          xmlNodeDump(buf, NULL, obj->nodesetval->nodeTab[i], 1, 0);
         }
-        break;
-      case XPATH_BOOLEAN:
-        result = apr_psprintf(pool, "%s", obj->boolval?"true":"false");
-        break;
-      case XPATH_NUMBER:
-        result = apr_psprintf(pool, "%0g", obj->floatval);
-        break;
-      case XPATH_STRING:
-        result = apr_psprintf(pool, "%s", obj->stringval);
-        break;
-      default:
-        break;
-    }
+        result = apr_pstrdup(pool, (char *)xmlBufferContent(buf));
+        xmlBufferFree(buf);
+      } 
+      else {
+        result = apr_psprintf(pool, "<empty>");
+      }
+      break;
+    case XPATH_BOOLEAN:
+      result = apr_psprintf(pool, "%s", obj->boolval?"true":"false");
+      break;
+    case XPATH_NUMBER:
+      result = apr_psprintf(pool, "%0g", obj->floatval);
+      break;
+    case XPATH_STRING:
+      result = apr_psprintf(pool, "%s", obj->stringval);
+      break;
+    default:
+      worker_log_error(worker, "Unknown node type");
+      break;
   }
 
   return result;
@@ -147,6 +151,8 @@ static apr_status_t block_HTML_PARSE(worker_t *worker, worker_t *parent, apr_poo
  */
 static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *param;
+  const char *var;
+  char *val;
   xmlXPathObjectPtr obj; 
 
   html_wconf_t *wconf = html_get_worker_config(worker);
@@ -154,6 +160,12 @@ static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_poo
   param = store_get(worker->params, "1");
   if (!param) {
     worker_log_error(worker, "Need a xpath query");
+    return APR_EINVAL;
+  }
+
+  var = store_get(worker->params, "2");
+  if (!var) {
+    worker_log_error(worker, "Need a variable to store the result");
     return APR_EINVAL;
   }
 
@@ -166,8 +178,11 @@ static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_poo
     worker_log_error(worker, "Xpath error");
     return APR_EGENERAL;
   }
-
-  fprintf(stderr, "\nXXX: %d\n", obj->type);
+  val = html_node2str(worker, obj, ptmp);
+  if (!val) {
+    return APR_EINVAL;
+  }
+  worker_var_set(parent, var, val);
 
   return APR_SUCCESS;
 }

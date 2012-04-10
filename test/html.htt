@@ -7,7 +7,19 @@ __Host: $YOUR_HOST:$YOUR_PORT
 __
 _WAIT BUF
 _HTML:PARSE VAR(BUF)
-_HTML:XPATH /html/body
+_HTML:XPATH /html/body/. R
+_EXPECT VAR(R) "!<html>"
+_EXPECT VAR(R) "!</html>"
+_EXPECT VAR(R) "<body>"
+_EXPECT VAR(R) "</body>"
+_EXPECT VAR(R) "Hallo Welt"
+_HTML:XPATH id(10) R
+_EXPECT VAR(R) "<input id=\"10\" type=\"text\" param=\"foo\" value=\"bla\"/>"
+_HTML:XPATH //a R
+_EXPECT VAR(R) "/he/ho.*he ho"
+_EXPECT VAR(R) "/foo/bar.*bla fasel"
+_HTML:XPATH //a[2] R
+_EXPECT VAR(R) "a href=\"/he/ho\">he ho</a>"
 END
 
 SERVER $YOUR_PORT
@@ -21,6 +33,14 @@ __<html>
 __  <body>
 __    Hallo Welt <br>
 __    Du schnoed Welt <br>
+__    <form action=/foo method=post>
+__      <input id=10 type=text param=foo value=bla>
+__      <input type=text param=foo value=bla>
+__      <input type=text param=foo value=bla>
+__      <input type=text param=bar value=bla>
+__    </form>
+__    <a href=/foo/bar>bla fasel</a>
+__    <a href=/he/ho>he ho</a>
 __  </body>
 __</html>
 END
