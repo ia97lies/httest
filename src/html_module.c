@@ -76,7 +76,7 @@ static char *html_node2str(worker_t *worker, xmlXPathObjectPtr obj,
 
   switch (obj->type) {
     case XPATH_NODESET:
-      if (obj->nodesetval) {
+      if (!xmlXPathNodeSetIsEmpty(obj->nodesetval)) {
         int i;
         xmlBufferPtr buf =  xmlBufferCreate();
         for (i = 0; i < obj->nodesetval->nodeNr; i++) {
@@ -89,7 +89,8 @@ static char *html_node2str(worker_t *worker, xmlXPathObjectPtr obj,
         xmlBufferFree(buf);
       } 
       else {
-        result = apr_psprintf(pool, "<empty>");
+        worker_log_error(worker, "Empty node set");
+        result = NULL;
       }
       break;
     case XPATH_BOOLEAN:
@@ -180,7 +181,7 @@ static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_poo
   }
   val = html_node2str(worker, obj, ptmp);
   if (!val) {
-    return APR_EINVAL;
+    return APR_ENOENT;
   }
   worker_var_set(parent, var, val);
 
