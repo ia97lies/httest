@@ -8,12 +8,12 @@ htproxy
 
 httest
 ------
+- DOM und XmlHttpRequest
+- Create blocks of any type on the fly with a received buffer
 - debugger: break on error
 - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
-- DOM und XmlHttpRequest
 - Conditions to skip or start a test
 - Need an assert command => _ASSERT 2 < $i
-- XSS, Slowloris, SQL injection, ... snipplets
 - On abort print current line number
 - Print line number in output
 - Color coding in output
