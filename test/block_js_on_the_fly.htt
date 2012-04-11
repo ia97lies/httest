@@ -1,0 +1,8 @@
+REQUIRE _JS:MODULE
+
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_JS:BLOCK_CREATE onTheFly ": ret" 'return "hello" + "world";' 
+onTheFly foo
+END

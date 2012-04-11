@@ -110,12 +110,12 @@ static void js_log_error(JSContext *cx, const char *message, JSErrorReport *repo
  * @param line IN command line
  * @return APR_SUCCESS on success
  */
-static apr_status_t js_set_variable_names(worker_t *worker, char *line) {
+static apr_status_t js_set_variable_names(worker_t *worker, const char *line) {
   char *token;
   char *last;
 
   int input = 1;
-  js_wconf_t *config = js_get_worker_config(worker);
+  js_wconf_t *wconf = js_get_worker_config(worker);
   char *data = apr_pstrdup(worker->pbody, line);
  
   /* Get params and returns variable names for later mapping from/to js */
@@ -127,10 +127,10 @@ static apr_status_t js_set_variable_names(worker_t *worker, char *line) {
     }
     else {
       if (input == 1) {
-        apr_table_setn(config->params, token, token);
+        apr_table_setn(wconf->params, token, token);
       }
       else if (input == 0) {
-        apr_table_setn(config->retvars, token, token);
+        apr_table_setn(wconf->retvars, token, token);
         input = -1;
       }
       else {
@@ -188,7 +188,7 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     int argc = apr_table_elts(wconf->params)->nelts; 
     apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(wconf->params)->elts;
 
-    if (argc) {
+    if (argc-1) {
       argv = apr_pcalloc(worker->pbody, argc * sizeof(char*));
       for (i = 1; i < argc; i++) {
         argv[i-1] = e[i].key;
@@ -322,7 +322,52 @@ static apr_status_t js_block_end(global_t *global) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_JS_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  const char *name;
+  const char *param;
+  const char *signature;
+  const char *buf;
+  worker_t *block;
+  js_wconf_t *wconf;
+  apr_status_t status;
+  global_t *global = worker->global;
+
+  name = store_get(worker->params, "1");
+  if (!name) {
+    worker_log_error(worker, "Need a block name");
+    return APR_EGENERAL;
+  }
+
+  signature = store_get(worker->params, "2");
+  if (!signature) {
+    worker_log_error(worker, "Need a signature");
+    return APR_EGENERAL;
+  }
+
+  param = store_get(worker->params, "3");
+  if (!param) {
+    worker_log_error(worker, "Need a script");
+    return APR_EGENERAL;
+  }
+
+  if ((status = worker_new(&block, "", "", global, block_js_interpreter)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = js_set_variable_names(block, signature)) != APR_SUCCESS) {
+    return status;
+  }
+
+  block->name = apr_pstrdup(block->pbody, name);
+  buf = worker_get_value_from_param(worker, param, block->pbody);
+  wconf = js_get_worker_config(block);
+  wconf->buffer = apr_pstrdup(block->pbody, buf);
+  wconf->length = strlen(buf);
+  wconf->filename = global->filename;
+  wconf->starting_line_nr = global->line_nr + 1;
+
+  apr_hash_set(global->blocks, block->name, APR_HASH_KEY_STRING, block);
   return APR_SUCCESS;
 }
 
@@ -330,7 +375,14 @@ static apr_status_t block_JS_DUMMY(worker_t *worker, worker_t *parent, apr_pool_
  * Module
  ***********************************************************************/
 apr_status_t js_module_init(global_t *global) {
+  apr_status_t status;
   module_command_new(global, "JS", "_MODULE", "", "", NULL);
+  if ((status = module_command_new(global, "JS", "_BLOCK_CREATE", "<block-name> <script>",
+				   "Create a javascript block on the fly",
+	                           block_JS_BLOCK_CREATE)) != APR_SUCCESS) {
+    return status;
+  }
+
   htt_hook_block_start(js_block_start, NULL, NULL, 0);
   htt_hook_read_line(js_read_line, NULL, NULL, 0);
   htt_hook_block_end(js_block_end, NULL, NULL, 0);

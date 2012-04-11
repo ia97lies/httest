@@ -9,7 +9,7 @@ htproxy
 httest
 ------
 - DOM und XmlHttpRequest
-- Create blocks of any type on the fly with a received buffer
+- Create js blocks on the fly with a received buffer
 - debugger: break on error
 - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
 - Conditions to skip or start a test
