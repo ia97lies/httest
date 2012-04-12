@@ -3120,7 +3120,7 @@ int main(int argc, const char *const argv[]) {
         else {
           fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
           fflush(stderr);
-          exit(-1);
+          exit(1);
         }
       }
       break;

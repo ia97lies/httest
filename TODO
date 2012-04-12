@@ -1,31 +1,37 @@
-htproxy
--------
-- Etag support
-- Title matcher
-- Link name matcher (the stuff between <a href..> and </a>)
-- Generic tag matcher
-- SSL support
+TODO List
+---------
 
-httest
-------
-- DOM und XmlHttpRequest
-- Create js blocks on the fly with a received buffer
-- debugger: break on error
-- Clean up unused EXPECT/MATCH after a _ERROR ... _END 
-- Conditions to skip or start a test
-- Need an assert command => _ASSERT 2 < $i
-- On abort print current line number
-- Print line number in output
-- Color coding in output
-- Stack trace on error is not highlighted. Do it the C way :)
-- XML output
-- XSS, Slowloris, SQL injection, ... snipplets
-- Show SSL handshake information on stdout, perhaps make it expectable. 
-- Need more information on ssl failure
-- Plain on SSL connection terminate with a clear error
-- Update user guide!
-- Transparent forward proxy support
-- Fix that problem with command lookup, _SET and _SETUP do conflicting
-- Nested lines like the one for lua with [[ ... ]]
-- Encrpyt the ntml type 3 message and extrakt user
++ HTML
+  - DOM, XmlHttpRequest and HTML interaction
+  - Fill formular and submit
 
++ SSL
+  - Show SSL handshake information on stdout, perhaps make it expectable. 
+  - Need more information on ssl failure
+
++ Debugger
+  - break on error
+
++ Output
+  - Print line number in output
+  - Color coding in output
+  - Stack trace on error is not highlighted. Do it the C way :)
+  - XML output
+
++ Scanning
+  - Parameterized scripts
+  - XSS, Slowloris, SQL injection, ... snipplets
+  - Detect http infrastructure like owa, sharepoint, twiki, ...
+
++ htproxy
+  - Etag support
+  - Title matcher
+  - Link name matcher (the stuff between <a href..> and </a>)
+  - Generic tag matcher
+  - SSL support
+
++ Other
+  - Update user guide!
+  - Transparent forward proxy support
+  - Encrpyt the ntml type 3 message and extrakt user
+  - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
