@@ -130,6 +130,8 @@ static apr_status_t global_EXEC(command_t *self, global_t *global,
 			       char *data, apr_pool_t *ptmp); 
 static apr_status_t global_SET(command_t *self, global_t *global, 
 			      char *data, apr_pool_t *ptmp); 
+static apr_status_t global_GLOBAL(command_t *self, global_t *global, 
+			          char *data, apr_pool_t *ptmp); 
 static apr_status_t global_PATH(command_t *self, global_t *global, 
 				char *data, apr_pool_t *ptmp); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, 
@@ -168,6 +170,9 @@ command_t global_commands[] = {
   COMMAND_FLAGS_NONE},
   {"SET", (command_f )global_SET, "<variable>=<value>", 
   "Store a value in a global variable",
+  COMMAND_FLAGS_NONE},
+  {"GLOBAL", (command_f )global_GLOBAL, "<variable-name>+", 
+  "Define the given variable as global, this is shared over all threads",
   COMMAND_FLAGS_NONE},
   {"PATH", (command_f )global_PATH, "<include paths colon separated>", 
   "Defines a set of path where INCLUDE looks first for there include files",
@@ -2255,6 +2260,44 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data,
   }
   else {
     store_set(global->vars, key, "");
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Global GLOBAL command
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN key=value
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_GLOBAL(command_t *self, global_t *global, char *data, 
+                                  apr_pool_t *ptmp) {
+  char *last;
+  char *var;
+  
+  int i = 0;
+  
+  while (data[i] == ' ') ++i;
+
+  if (!global->shared) {
+    global->shared = store_make(global->pool);
+  }
+
+  var = apr_strtok(&data[i], " ", &last);
+  while (var) {
+    for (i = 0; var[i] != 0 && strchr(VAR_ALLOWED_CHARS, var[i]); i++); 
+    if (var[i] != 0) {
+      fprintf(stderr, "\nChar '%c' is not allowed in \"%s\"", var[i], var);
+      success = 0;
+      return APR_EINVAL;
+    }
+
+    store_set(global->shared, var, "");
+    var = apr_strtok(NULL, " ", &last);
   }
 
   return APR_SUCCESS;
