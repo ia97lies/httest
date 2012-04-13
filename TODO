@@ -35,3 +35,5 @@ TODO List
   - Transparent forward proxy support
   - Encrpyt the ntml type 3 message and extrakt user
   - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
+  - Shared variables => SHARED <var-name-list>
+
