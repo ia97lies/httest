@@ -202,7 +202,11 @@ const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *
     }
   }
 
-  return worker_var_get(worker, name);
+  if (!val) {
+    val = worker_var_get(worker, name);
+  }
+
+  return val;
 }
 
 /**

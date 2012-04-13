@@ -28,6 +28,7 @@ EXTRA_DIST= \
 	block_js_args.txt \
 	block_js.hte \
 	block_js.htt \
+	block_js_on_the_fly.htt \
 	block_js.txt \
 	block_local_vars.htt \
 	block_lua_buf.htt \
@@ -122,6 +123,9 @@ EXTRA_DIST= \
 	grep.htt \
 	headers_allow.htt \
 	headers_filter.htt \
+	html.hte \
+	html.htt \
+	html.txt \
 	http_0_9.htt \
 	huge_page_chunked.htt \
 	huge_page.htt \
@@ -223,6 +227,7 @@ EXTRA_DIST= \
 	server_ip_port.htt \
 	server.key.pem \
 	server_up_down.htt \
+	shared.htt \
 	shell.htb \
 	skeleton.htt \
 	smtp_simple.htt \

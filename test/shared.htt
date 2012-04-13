@@ -1,0 +1,27 @@
+INCLUDE $TOP/test/config.htb
+
+GLOBAL myGlobal
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_MATCH body "(.*)" myGlobal
+_WAIT
+END
+
+CLIENT
+_SLEEP 2000
+_EXPECT VAR(myGlobal) "== AS1 =="
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__== AS1 ==
+END
+
