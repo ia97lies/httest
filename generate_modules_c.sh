@@ -2,7 +2,6 @@
 
 LIST=$1
 
-TEMPLATE=src/modules.c.tmpl
 TARGET=src/modules.c
 
 #init
@@ -27,6 +26,13 @@ cat > $TARGET << EOF
 extern module_t modules[];
 
 /* MODULES_DECLARATION */
+EOF
+
+for I in $LIST; do
+  echo "apr_status_t ${I}_module_init(global_t *global);" >> $TARGET
+done
+
+cat >> $TARGET << EOF
 apr_status_t dbg_module_init(global_t *global);
 apr_status_t sys_module_init(global_t *global);
 apr_status_t math_module_init(global_t *global);
@@ -41,6 +47,13 @@ apr_status_t ssl_module_init(global_t *global);
 
 module_t modules[] = {
   /* MODULES_REGISTRATION */
+EOF
+
+for I in $LIST; do
+  echo "  { ${I}_module_init }," >> $TARGET
+done
+
+cat >> $TARGET << EOF
   { dbg_module_init },
   { sys_module_init },
   { math_module_init },
@@ -54,15 +67,5 @@ module_t modules[] = {
   { ssl_module_init },
   { NULL }
 };
-
 EOF
-
-for I in $LIST; do
-  awk -v i=$I '
-    /.*/ { print $0 }
-    /MODULES_DECLARATION/ { printf("apr_status_t %s_module_init(global_t *global);\n", i); }
-    /MODULES_REGISTRATION/ { printf("  { %s_module_init },\n", i); }
-    ' < $TARGET >${TARGET}.tmp
-  mv ${TARGET}.tmp $TARGET 
-done
 
