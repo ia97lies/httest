@@ -2,6 +2,9 @@
 Changes with httest 2.2.1
   *) httest: New XPath command to query parts of the HTML document.
 
+  *) httest: New variable scope GLOBAL. This variable are shared among all
+             threads.
+
 Changes with httest 2.2.0
   *) general: Forked from httest 2.1.19
 

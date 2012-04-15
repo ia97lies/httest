@@ -168,6 +168,7 @@ struct global_s {
   const char *path;
   const char *filename;
   store_t *vars;
+  store_t *shared;
   apr_hash_t *modules;
   apr_hash_t *blocks;
   apr_table_t *files;

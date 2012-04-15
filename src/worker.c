@@ -106,19 +106,39 @@ typedef struct replacer_s {
  */
 void worker_var_set(worker_t * worker, const char *var, const char *val) {
   const char *ret;
+
+  /* do mapping from ret var to var */
   if ((ret = store_get(worker->retvars, var))) {
-    /* if retvar exist do mapping and store it in vars */
-    store_set(worker->vars, ret, val);  
+    store_set(worker->vars, ret, val);
+    return;
   }
-  else if (store_get(worker->locals, var)) {
+
+  /* if not test if local */
+  if (store_get(worker->locals, var)) {
     store_set(worker->locals, var, val);
+    return;
   }
-  else if (store_get(worker->params, var)) {
+
+  /* params can be shadowed by locals so this after locals */
+  if (store_get(worker->params, var)) {
     store_set(worker->params, var, val);
+    return;
   }
-  else {
-    store_set(worker->vars, var, val);
+
+  /* test if there are globals at all to avoid locking  */
+  if (worker->global->shared) {
+    /* test if this variable is a global one */
+    apr_thread_mutex_lock(worker->mutex);
+    if (store_get(worker->global->shared, var)) {
+      store_set(worker->global->shared, var, val);
+      apr_thread_mutex_unlock(worker->mutex);
+      return;
+    }
+    apr_thread_mutex_unlock(worker->mutex);
   }
+
+  /* if there is no var at all stored it in thread global vars */
+  store_set(worker->vars, var, val);
 }
 
 /**
@@ -130,16 +150,30 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
  * @return value
  */
 const char *worker_var_get(worker_t* worker, const char *var) {
-  const char *val;
+  const char *val = NULL;
+
+  /* first test locals */
   if ((val = store_get(worker->locals, var))) {
     return val;
   }
-  else if ((val = store_get(worker->params, var))) {
+  
+  /* next are params */
+  if ((val = store_get(worker->params, var))) {
     return val;
   }
-  else {
-    return store_get(worker->vars, var);
+
+  /* next are thread globals */
+  if ((val = store_get(worker->vars, var))) {
+    return val;
   }
+
+  /* last test globals */
+  if (worker->global->shared) {
+    apr_thread_mutex_lock(worker->mutex);
+    val = store_get(worker->global->shared, var);
+    apr_thread_mutex_unlock(worker->mutex);
+  }
+  return val;
 }
 
 /**
@@ -164,19 +198,14 @@ const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *
     command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
     /** call it */
     if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
-      val = store_get(worker->vars, "__INLINE_RET");
+      val = worker_var_get(worker, "__INLINE_RET");
     }
   }
 
   if (!val) {
-    val = store_get(worker->locals, name);
+    val = worker_var_get(worker, name);
   }
-  if (!val) {
-    val = store_get(worker->params, name);
-  }
-  if (!val) {
-    val = store_get(worker->vars, name);
-  }
+
   return val;
 }
 
@@ -1589,7 +1618,7 @@ http_0_9:
       sockreader_push_back(worker->recorder->sockreader, buf, len);
     }
     if (var) {
-      store_set(worker->vars, var, buf);
+      worker_var_set(worker, var, buf);
     }
     if (doreadtrailing) {
       /* read trailing headers */

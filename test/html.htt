@@ -1,3 +1,5 @@
+REQUIRE _HTML:MODULE
+
 INCLUDE $TOP/test/config.htb
 
 CLIENT
@@ -20,6 +22,8 @@ _EXPECT VAR(R) "/he/ho.*he ho"
 _EXPECT VAR(R) "/foo/bar.*bla fasel"
 _HTML:XPATH //a[2] R
 _EXPECT VAR(R) "a href=\"/he/ho\">he ho</a>"
+_HTML:XPATH id("myform") R
+_DEBUG $R
 END
 
 SERVER $YOUR_PORT
@@ -33,7 +37,7 @@ __<html>
 __  <body>
 __    Hallo Welt <br>
 __    Du schnoed Welt <br>
-__    <form action=/foo method=post>
+__    <form action=/foo method=post id=myform>
 __      <input id=10 type=text param=foo value=bla>
 __      <input type=text param=foo value=bla>
 __      <input type=text param=foo value=bla>

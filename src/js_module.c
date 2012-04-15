@@ -114,6 +114,7 @@ static apr_status_t js_set_variable_names(worker_t *worker, const char *line) {
   char *token;
   char *last;
 
+  int i = 0;
   int input = 1;
   js_wconf_t *wconf = js_get_worker_config(worker);
   char *data = apr_pstrdup(worker->pbody, line);
@@ -128,15 +129,18 @@ static apr_status_t js_set_variable_names(worker_t *worker, const char *line) {
     else {
       if (input == 1) {
         apr_table_setn(wconf->params, token, token);
+        store_set(worker->params, apr_itoa(worker->pbody, i), token);
       }
       else if (input == 0) {
         apr_table_setn(wconf->retvars, token, token);
+        store_set(worker->retvars, apr_itoa(worker->pbody, i), token);
         input = -1;
       }
       else {
         worker_log_error(worker, "Javascript BLOCKs support only one return value");
         return APR_EGENERAL;
       }
+      i++;
     }
     token = apr_strtok(NULL, " ", &last);
   }
@@ -323,7 +327,6 @@ static apr_status_t js_block_end(global_t *global) {
  * Commands 
  ***********************************************************************/
 static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *name;
   const char *param;
   const char *signature;
   const char *buf;
@@ -332,19 +335,13 @@ static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, ap
   apr_status_t status;
   global_t *global = worker->global;
 
-  name = store_get(worker->params, "1");
-  if (!name) {
-    worker_log_error(worker, "Need a block name");
-    return APR_EGENERAL;
-  }
-
-  signature = store_get(worker->params, "2");
+  signature = store_get(worker->params, "1");
   if (!signature) {
     worker_log_error(worker, "Need a signature");
     return APR_EGENERAL;
   }
 
-  param = store_get(worker->params, "3");
+  param = store_get(worker->params, "2");
   if (!param) {
     worker_log_error(worker, "Need a script");
     return APR_EGENERAL;
@@ -359,7 +356,7 @@ static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, ap
     return status;
   }
 
-  block->name = apr_pstrdup(block->pbody, name);
+  block->name = apr_pstrdup(block->pbody, store_get(block->params, "0"));
   buf = worker_get_value_from_param(worker, param, block->pbody);
   wconf = js_get_worker_config(block);
   wconf->buffer = apr_pstrdup(block->pbody, buf);

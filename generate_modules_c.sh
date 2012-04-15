@@ -58,7 +58,6 @@ module_t modules[] = {
 EOF
 
 for I in $LIST; do
-  echo $I
   awk -v i=$I '
     /.*/ { print $0 }
     /MODULES_DECLARATION/ { printf("apr_status_t %s_module_init(global_t *global);\n", i); }

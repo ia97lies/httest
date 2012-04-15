@@ -3,6 +3,25 @@ REQUIRE _JS:MODULE
 INCLUDE $TOP/test/config.htb
 
 CLIENT
-_JS:BLOCK_CREATE onTheFly ": ret" 'return "hello" + "world";' 
-onTheFly foo
+  _REQ $YOUR_HOST $YOUR_PORT
+  __GET / HTTP/1.1
+  __Host: $YOUR_HOST:$YOUR_PORT
+  __
+  _WAIT BUF
+
+  _JS:BLOCK_CREATE "onTheFly p1 p2 : return" VAR(BUF)
+
+  onTheFly foo "bal bla" val 
+  _EXPECT VAR(val) "foobal bla hello world"
 END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/javascript
+__Content-Length: AUTO
+__
+__return p1 + p2 + " hello" + " world";
+END
+
