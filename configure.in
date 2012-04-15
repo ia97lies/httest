@@ -37,9 +37,9 @@ AC_ARG_ENABLE([use-static], AS_HELP_STRING(--enable-use-static,Try to use archiv
 AC_ARG_ENABLE([full-static], AS_HELP_STRING(--enable-full-static,Try to compile a statical linked executable))
 AC_ARG_ENABLE([iconv-support], AS_HELP_STRING(--enable-iconv-support,enable iconv support))
 AC_ARG_ENABLE([ssl-legacy-reneg], AS_HELP_STRING(--enable-ssl-legacy-reneg, enable unsafe legacy renegotation only needed for openssl 0.9.8l))
-AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add Lua support to httest))
-AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript support to httest))
-AC_ARG_ENABLE([html-module], AS_HELP_STRING(--enable-html-module,Add html support to httest))
+AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add Lua support))
+AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript support))
+AC_ARG_ENABLE([html-module], AS_HELP_STRING(--enable-html-module,Add html support))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -112,13 +112,14 @@ if test "$enable_iconv_support" = "yes"; then
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
-MODULES=""
+MODULES="dbg sys math coder date binary websocket socks udp tcp ssl" 
+
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
   CFLAGS="$CFLAGS $LUA_INCLUDES"
   LIBS="$LIBS $LUA_LIB_PATH $LUA_LIB"
   HTTEST_MODULES="$HTTEST_MODULES lua_crypto.${OBJEXT} lua_module.${OBJEXT}"
-  MODULES="$MODULES lua "
+  MODULES=" lua $MODULES"
 fi
 if test "$enable_js_module" = "yes"; then
   JS_VERSION=`$JS_CONFIG --version`
@@ -129,7 +130,7 @@ if test "$enable_js_module" = "yes"; then
   CFLAGS="$CFLAGS `$JS_CONFIG --cflags`"
   LIBS="$LIBS `$JS_CONFIG --libs` -lstdc++"
   HTTEST_MODULES="$HTTEST_MODULES js_module.${OBJEXT}"
-  MODULES="$MODULES js "
+  MODULES=" js $MODULES "
 fi
 if test "$enable_html_module" = "yes"; then
   XML2_VERSION=`$XML2_CONFIG --version`
@@ -140,7 +141,7 @@ if test "$enable_html_module" = "yes"; then
   CFLAGS="$CFLAGS `$XML2_CONFIG --cflags`"
   LIBS="$LIBS `$XML2_CONFIG --libs`"
   HTTEST_MODULES="$HTTEST_MODULES html_module.${OBJEXT}"
-  MODULES="$MODULES html "
+  MODULES=" html $MODULES"
 fi
 
 if test -f ./generate_modules_c.sh; then
