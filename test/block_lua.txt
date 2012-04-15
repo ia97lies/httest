@@ -1,3 +1,3 @@
 
-block_lua.hte:19: error: Lua error: client:11: attempt to call global 'xpect' (a nil value)
-block_lua.hte:19: error: CLT0-0 Internal error(20014)                                    FAILED
+block_lua.hte:21: error: Lua error: client:13: attempt to call global 'xpect' (a nil value)
+block_lua.hte:21: error: CLT0-0 Internal error(20014)                                    FAILED

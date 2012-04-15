@@ -13,7 +13,6 @@ syn keyword httStorageClass     CLIENT SERVER DAEMON BLOCK END
 syn keyword httStorageClass     LUA
 syn keyword httStorageClass     SH
 syn keyword httInclude          INCLUDE
-syn keyword httStatement        SET GO EXEC TIMEOUT AUTO_CLOSE PROCESS FILE MODULE
 syn keyword httStatement        _-
 syn keyword httStatement        _ADD_HEADER
 syn keyword httStatement        _AUTO_CLOSE
@@ -34,6 +33,8 @@ syn keyword httStatement        _HEADER
 syn keyword httStatement        _IGNORE_BODY
 syn keyword httStatement        _LOCAL
 syn keyword httStatement        _LOG_LEVEL
+syn keyword httStatement        _LOG_LEVEL_GET
+syn keyword httStatement        _LOG_LEVEL_SET
 syn keyword httStatement        _MATCH
 syn keyword httStatement        _ONLY_PRINTABLE
 syn keyword httStatement        _PIPE
@@ -54,11 +55,11 @@ syn keyword httStatement        _SH
 syn keyword httStatement        _SOCKET
 syn keyword httStatement        _SOCKSTATE
 syn keyword httStatement        _TIMEOUT
-syn keyword httStatement        _TIMER
 syn keyword httStatement        _TUNNEL
 syn keyword httStatement        _UNSET
 syn keyword httStatement        _UP
 syn keyword httStatement        _USE
+syn keyword httStatement        _VERSION
 syn keyword httStatement        _WAIT
 syn keyword httStatement        __
 syn match httStatement          "\<_BINARY:RECV\>"
@@ -72,6 +73,7 @@ syn match httStatement          "\<_DATE:FORMAT\>"
 syn match httStatement          "\<_DATE:GET_TIME\>"
 syn match httStatement          "\<_DATE:SYNC\>"
 syn match httStatement          "\<_DATE:TIMER\>"
+syn match httStatement          "\<_DBG:BP\>"
 syn match httStatement          "\<_MATH:EVAL\>"
 syn match httStatement          "\<_MATH:OP\>"
 syn match httStatement          "\<_MATH:RAND\>"
@@ -95,9 +97,16 @@ syn match httStatement          "\<_SSL:SET_ENGINE\>"
 syn match httStatement          "\<_SSL:SET_LEGACY\>"
 syn match httStatement          "\<_SSL:SET_SESSION\>"
 syn match httStatement          "\<_SYS:SLEEP\>"
+syn match httStatement          "\<_TCP:ACCEPT\>"
+syn match httStatement          "\<_TCP:CLOSE\>"
+syn match httStatement          "\<_TCP:CONNECT\>"
+syn match httStatement          "\<_TCP:LISTEN\>"
 syn match httStatement          "\<_THREAD:GET_NUMBER\>"
 syn match httStatement          "\<_UDP:BIND\>"
 syn match httStatement          "\<_UDP:CONNECT\>"
+syn match httStatement          "\<_WS:RECV\>"
+syn match httStatement          "\<_WS:SEND\>"
+syn match httStatement          "\<_WS:VERSION\>"
 syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY _END
 syn keyword httConditional      _IF _ELSE _ERROR _END
 
@@ -113,7 +122,7 @@ syn match   httSpecial contained "\\\d\d\d\|\\."
 syn region  httString		  start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=basicSpecial,httIdentifier
 syn region httComment	        display oneline start="^ *#" end="$" contains=httTodo
 syn keyword httTodo             contained TODO FIXME XXX NOTE
-syn keyword httType             EXEC HEADERS BODY VAR exec headers body var Exec Headers Body Var
+syn keyword httType             EXEC HEADERS BODY VAR IGNORE_MONITORS exec headers body var Exec Headers Body Var
 
 runtime! syntax/lua.vim
 unlet b:current_syntax

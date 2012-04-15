@@ -1,8 +1,9 @@
-/* Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. 
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Copyright 2006 Christian Liesch
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -129,6 +130,8 @@ static apr_status_t global_EXEC(command_t *self, global_t *global,
 			       char *data, apr_pool_t *ptmp); 
 static apr_status_t global_SET(command_t *self, global_t *global, 
 			      char *data, apr_pool_t *ptmp); 
+static apr_status_t global_GLOBAL(command_t *self, global_t *global, 
+			          char *data, apr_pool_t *ptmp); 
 static apr_status_t global_PATH(command_t *self, global_t *global, 
 				char *data, apr_pool_t *ptmp); 
 static apr_status_t global_INCLUDE(command_t *self, global_t *global, 
@@ -167,6 +170,9 @@ command_t global_commands[] = {
   COMMAND_FLAGS_NONE},
   {"SET", (command_f )global_SET, "<variable>=<value>", 
   "Store a value in a global variable",
+  COMMAND_FLAGS_NONE},
+  {"GLOBAL", (command_f )global_GLOBAL, "<variable-name>+", 
+  "Define the given variable as global, this is shared over all threads",
   COMMAND_FLAGS_NONE},
   {"PATH", (command_f )global_PATH, "<include paths colon separated>", 
   "Defines a set of path where INCLUDE looks first for there include files",
@@ -254,6 +260,9 @@ command_t local_commands[] = {
   COMMAND_FLAGS_NONE},
   {"_GREP", (command_f )command_GREP, "(.|headers|body|error|exec|var()) \"|'<regex>\"|' <variable>", 
    "Define a regex with a match which should be stored in <variable> and do not fail if no match",
+  COMMAND_FLAGS_NONE},
+  {"_ASSERT", (command_f )command_ASSERT, "<expression>", 
+   "Check if expression is true fail otherwise",
   COMMAND_FLAGS_NONE},
   {"_SEQUENCE", (command_f )command_MATCH_SEQ, "<var-sequence>", 
    "Define a sequence of _MATCH variables which must apear in this order",
@@ -1371,6 +1380,8 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
+      /* dirty hack */
+      worker->file_and_line = e[worker->cmd].key;
       status = worker_check_error(parent, status);
     }
     else {
@@ -1870,6 +1881,22 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 }
 
 /**
+ * cleanup files on exit
+ *
+ * @param data IN file name to remove
+ * @return APR_SUCCESS
+ */
+static apr_status_t worker_file_cleanup(void *data) {
+  const char *name = data;
+  apr_pool_t *pool;
+
+  apr_pool_create(&pool, NULL);
+  apr_file_remove(name, pool);
+  apr_pool_destroy(pool);
+  return APR_SUCCESS;
+}
+
+/**
  * Global CLIENT command
  *
  * @param self IN global object
@@ -1943,8 +1970,9 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
 	      my_status_str(global->pool, status), status);
       return status;
     }
-    apr_table_addn(global->files, global->worker->name, 
-	           (const char *)global->worker);
+
+    apr_pool_cleanup_register(global->pool, global->worker->name, 
+                              worker_file_cleanup, apr_pool_cleanup_null);
     global->state = GLOBAL_STATE_NONE;
     return APR_SUCCESS;
     break; 
@@ -2232,6 +2260,44 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data,
   }
   else {
     store_set(global->vars, key, "");
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Global GLOBAL command
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN key=value
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_GLOBAL(command_t *self, global_t *global, char *data, 
+                                  apr_pool_t *ptmp) {
+  char *last;
+  char *var;
+  
+  int i = 0;
+  
+  while (data[i] == ' ') ++i;
+
+  if (!global->shared) {
+    global->shared = store_make(global->pool);
+  }
+
+  var = apr_strtok(&data[i], " ", &last);
+  while (var) {
+    for (i = 0; var[i] != 0 && strchr(VAR_ALLOWED_CHARS, var[i]); i++); 
+    if (var[i] != 0) {
+      fprintf(stderr, "\nChar '%c' is not allowed in \"%s\"", var[i], var);
+      success = 0;
+      return APR_EINVAL;
+    }
+
+    store_set(global->shared, var, "");
+    var = apr_strtok(NULL, " ", &last);
   }
 
   return APR_SUCCESS;
@@ -2718,6 +2784,7 @@ apr_getopt_option_t options[] = {
   { "debug-system", 'p', 0, "log level debug-system to log more details" },
   { "list-commands", 'L', 0, "List all available script commands" },
   { "help-command", 'C', 1, "Print help for specific command" },
+  { "duration", 't', 0, "Print test duration" },
   { "timestamp", 'T', 0, "Time stamp on every run" },
   { "shell", 'S', 0, "Shell mode" },
   { "shell", 'S', 0, "Shell mode" },
@@ -2942,12 +3009,12 @@ static void show_command_help(apr_pool_t *p, global_t *global,
     block_name = apr_pstrcat(p, "_", last, NULL);
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
       fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
-      goto exit;
+      exit(1);
     }
     block_name = apr_pstrcat(p, "_", last, NULL);
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
       fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
-      goto exit;
+      exit(1);
     }
     else {
       char *help;
@@ -2966,6 +3033,7 @@ static void show_command_help(apr_pool_t *p, global_t *global,
   }
 
   fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+  exit(1);
 
 exit:
   fprintf(stdout, "\n");
@@ -2976,18 +3044,6 @@ exit:
  * own exit func
  */
 static void my_exit() {
-  int i;
-  worker_t *worker;
-
-  if (process_global) {
-    apr_table_entry_t *e = 
-      (apr_table_entry_t *) apr_table_elts(process_global->files)->elts;
-    for (i = 0; i < apr_table_elts(process_global->files)->nelts; i++) {
-      worker = (worker_t *)e[i].val;
-      apr_file_remove(worker->name, process_global->pool);
-    }
-  }
-
   if (!success) {
     fprintf(stderr, " FAILED\n");
     fflush(stderr);
@@ -3023,6 +3079,7 @@ int main(int argc, const char *const argv[]) {
 #define MAIN_FLAGS_PRINT_TSTAMP 1
 #define MAIN_FLAGS_USE_STDIN 2
 #define MAIN_FLAGS_NO_OUTPUT 4
+#define MAIN_FLAGS_PRINT_DURATION 8
   int flags;
   apr_time_t time;
   char time_str[256];
@@ -3077,6 +3134,9 @@ int main(int argc, const char *const argv[]) {
     case 'd':
       log_mode = LOG_ALL_CMD;
       break;
+    case 't':
+      flags |= MAIN_FLAGS_PRINT_DURATION; 
+      break;
     case 'L':
       interpret(NULL, NULL, -1, pool, NULL);
       break;
@@ -3103,7 +3163,7 @@ int main(int argc, const char *const argv[]) {
         else {
           fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
           fflush(stderr);
-          exit(-1);
+          exit(1);
         }
       }
       break;
@@ -3180,10 +3240,24 @@ int main(int argc, const char *const argv[]) {
       exit(1);
     }
 
+    if (flags & MAIN_FLAGS_PRINT_DURATION) {
+      time = apr_time_now();
+    }
     /* interpret current file */
     if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {
       success = 0;
       exit(1);
+    }
+
+    if (log_mode > LOG_WARN) {
+      fprintf(stdout, "\n");
+      fflush(stdout);
+    }
+
+    if (flags & MAIN_FLAGS_PRINT_DURATION) {
+      time = apr_time_now() - time;
+      fprintf(stdout, "%"APR_TIME_T_FMT , time);
+      fflush(stdout);
     }
 
     /* close current file */

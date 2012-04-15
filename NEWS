@@ -1,3 +1,7 @@
+Version 2.2.0
+ - New      httest: Javascript support
+ - Planed   httest: HTML DOM access 
+
 Version 2.1.0
  - New      httest: Modules support for better capsulating commands and give
                     them namespaces.

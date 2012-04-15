@@ -13,7 +13,10 @@ _EXPECT . "AS1"
 _WAIT
 _CLOSE
 
-_EXPECT ERROR "Connection refused"
+_SLEEP 1000
+
+# "unix|windows"
+_EXPECT ERROR "Connection refused|No connection could be made because the target machine actively refused it"
 _REQ $YOUR_HOST $YOUR_PORT
 
 END

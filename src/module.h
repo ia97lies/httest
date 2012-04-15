@@ -1,8 +1,9 @@
-/* Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. 
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Copyright 2006 Christian Liesch
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -68,6 +69,9 @@
   /* windows has no netinet/in.h */
   #define HAVE_NO_NETINET
   #include <winsock.h>
+
+  /* for js */
+  #define XP_WIN
 #endif
 
 typedef apr_status_t (*module_init_f)(global_t *global);

@@ -11,14 +11,14 @@ httest_SOURCES = \
 	udp_module.c socks_module.c websocket_module.c dbg_module.c
 
 EXTRA_httest_SOURCES = \
-	lua_crypto.c lua_module.c 
+	lua_crypto.c lua_module.c js_module.c html_module.c
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)
 
 htproxy_SOURCES = \
 	htproxy.c file.c socket.c regex.c util.c ssl.c replacer.c worker.c \
-	module.c conf.c transport.c store.c tcp_module.c 
+	module.c conf.c transport.c store.c tcp_module.c eval.c
 
 htremote_SOURCES = \
 	htremote.c util.c store.c

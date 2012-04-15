@@ -25,3 +25,4 @@ ca
 ca2
 httest-*/
 *.1
+.DS_Store

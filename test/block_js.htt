@@ -1,0 +1,13 @@
+REQUIRE _JS:MODULE
+
+INCLUDE $TOP/test/config.htb
+
+BLOCK:JS myVeryFirstJsScript : ret
+  // JavaScript
+  return "Hello World";
+END
+
+CLIENT
+  myVeryFirstJsScript foo
+  _DEBUG $foo
+END

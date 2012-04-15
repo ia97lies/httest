@@ -1,8 +1,9 @@
-/* Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. 
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Copyright 2010 Christian Liesch
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -550,6 +551,7 @@ static apr_status_t lua_block_end(global_t *global) {
  * Module
  ***********************************************************************/
 apr_status_t lua_module_init(global_t *global) {
+  module_command_new(global, "LUA", "_MODULE", "", "", NULL);
   htt_hook_block_start(lua_block_start, NULL, NULL, 0);
   htt_hook_read_line(lua_read_line, NULL, NULL, 0);
   htt_hook_block_end(lua_block_end, NULL, NULL, 0);

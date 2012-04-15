@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.53)
-AC_INIT(httest, 2.1.17, ia97lies@sourceforge.net)
+AC_INIT(httest, snapshot, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 
@@ -37,7 +37,13 @@ AC_ARG_ENABLE([use-static], AS_HELP_STRING(--enable-use-static,Try to use archiv
 AC_ARG_ENABLE([full-static], AS_HELP_STRING(--enable-full-static,Try to compile a statical linked executable))
 AC_ARG_ENABLE([iconv-support], AS_HELP_STRING(--enable-iconv-support,enable iconv support))
 AC_ARG_ENABLE([ssl-legacy-reneg], AS_HELP_STRING(--enable-ssl-legacy-reneg, enable unsafe legacy renegotation only needed for openssl 0.9.8l))
+<<<<<<< HEAD
 AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add binary support to httest))
+=======
+AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add Lua support))
+AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript support))
+AC_ARG_ENABLE([html-module], AS_HELP_STRING(--enable-html-module,Add html support))
+>>>>>>> 4300a6e9fa9661ebdd1d3fecff59218189617e40
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -59,6 +65,15 @@ AC_ARG_WITH(pcre,AS_HELP_STRING(--with-pcre=PATH,path to pcre-config script),
 AC_ARG_WITH(lua,AS_HELP_STRING(--with-lua=PATH,path to lua source dir),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else LUA_LIB_PATH="-L${withval}"; LUA_INCLUDES="-I${withval}"; LUA_LIB="-llua"; fi],
         [LUA_LIB_PATH=""; if test -d /usr/include/lua5.1; then LUA_INCLUDES="-I/usr/include/lua5.1"; else LUA_INCLUDES=""; fi; if test -f /usr/lib/liblua5.1.a -o -f /usr/lib/liblua5.1.so; then LUA_LIB="-llua5.1"; else LUA_LIB="-llua"; fi])
+<<<<<<< HEAD
+=======
+AC_ARG_WITH(spidermonkey,AS_HELP_STRING(--with-spidermonkey=PATH,path to js-config script),
+	[if test ! -x $withval/js-config; then AC_MSG_ERROR($withval/js-config do not exist or is not executable); else JS_CONFIG="$withval/js-config"; fi],
+	[JS_CONFIG="js-config"])
+AC_ARG_WITH(libxml2,AS_HELP_STRING(--with-libxml2=PATH,path to xml2-config script),
+	[if test ! -x $withval/xml2-config; then AC_MSG_ERROR($withval/xml2-config do not exist or is not executable); else XML2_CONFIG="$withval/xml2-config"; fi],
+	[XML2_CONFIG="xml2-config"])
+>>>>>>> 4300a6e9fa9661ebdd1d3fecff59218189617e40
 AC_ARG_WITH(ssl,AS_HELP_STRING(--with-ssl=PATH,path to openssl source),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
 	[OPENSSL_LIB_PATH=""; OPENSSL_INCLUDES=""])
@@ -104,14 +119,47 @@ if test "$enable_iconv_support" = "yes"; then
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
+<<<<<<< HEAD
 MODULES=""
+=======
+MODULES="dbg sys math coder date binary websocket socks udp tcp ssl" 
+
+>>>>>>> 4300a6e9fa9661ebdd1d3fecff59218189617e40
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
   CFLAGS="$CFLAGS $LUA_INCLUDES"
   LIBS="$LIBS $LUA_LIB_PATH $LUA_LIB"
   HTTEST_MODULES="$HTTEST_MODULES lua_crypto.${OBJEXT} lua_module.${OBJEXT}"
+<<<<<<< HEAD
   MODULES="$MODULES lua "
 fi
+=======
+  MODULES=" lua $MODULES"
+fi
+if test "$enable_js_module" = "yes"; then
+  JS_VERSION=`$JS_CONFIG --version`
+  if test ! "$?" = "0"; then
+    echo "spidermonkey lib is missing"
+    exit -1
+  fi
+  CFLAGS="$CFLAGS `$JS_CONFIG --cflags`"
+  LIBS="$LIBS `$JS_CONFIG --libs` -lstdc++"
+  HTTEST_MODULES="$HTTEST_MODULES js_module.${OBJEXT}"
+  MODULES=" js $MODULES "
+fi
+if test "$enable_html_module" = "yes"; then
+  XML2_VERSION=`$XML2_CONFIG --version`
+  if test ! "$?" = "0"; then
+    echo "libxml2 is missing"
+    exit -1
+  fi
+  CFLAGS="$CFLAGS `$XML2_CONFIG --cflags`"
+  LIBS="$LIBS `$XML2_CONFIG --libs`"
+  HTTEST_MODULES="$HTTEST_MODULES html_module.${OBJEXT}"
+  MODULES=" html $MODULES"
+fi
+
+>>>>>>> 4300a6e9fa9661ebdd1d3fecff59218189617e40
 if test -f ./generate_modules_c.sh; then
   ./generate_modules_c.sh "${MODULES}"
 fi

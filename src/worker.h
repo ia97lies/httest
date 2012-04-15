@@ -1,8 +1,9 @@
-/* Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. 
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Copyright 2006 Christian Liesch
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -167,6 +168,7 @@ struct global_s {
   const char *path;
   const char *filename;
   store_t *vars;
+  store_t *shared;
   apr_hash_t *modules;
   apr_hash_t *blocks;
   apr_table_t *files;
@@ -344,6 +346,7 @@ apr_status_t command_CLOSE(command_t * self, worker_t * worker, char *data, apr_
 apr_status_t command_TIMEOUT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_MATCH(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_GREP(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_ASSERT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_SET(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_UNSET(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_DATA(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);

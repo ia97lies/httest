@@ -1,4 +1,28 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.1
+  *) httest: New XPath command to query parts of the HTML document.
+
+  *) httest: New variable scope GLOBAL. This variable are shared among all
+             threads.
+
+Changes with httest 2.2.0
+  *) general: Forked from httest 2.1.19
+
+  *) httest: Javascript BLOCK support
+
+  *) httest: Improve formatings on output
+
+  *) httest: Bugfix non working _SEQUENCE command and add a test for verify
+             even the bad case
+
+  *) httest: Add _ASSERT "<expression>" command for arithmetical assertions,
+             cleaner and better readable than _IF ... _ELSE ... _END
+	     constructs.
+
+Changes with httest 2.1.18
+  *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.
+
+
 Changes with httest 2.1.17
   *) httest: Read trailing headers after chunked body.
 

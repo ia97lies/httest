@@ -1,3 +1,5 @@
+REQUIRE _LUA:MODULE
+
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyLuaThing param1 param2 : ret1 ret2

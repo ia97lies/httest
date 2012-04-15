@@ -1,8 +1,9 @@
-/* Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. 
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Copyright 2006 Christian Liesch
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -56,6 +57,7 @@
 #include "socket.h"
 #include "worker.h"
 #include "module.h"
+#include "eval.h"
 #include "tcp_module.h"
 
 
@@ -104,19 +106,39 @@ typedef struct replacer_s {
  */
 void worker_var_set(worker_t * worker, const char *var, const char *val) {
   const char *ret;
+
+  /* do mapping from ret var to var */
   if ((ret = store_get(worker->retvars, var))) {
-    /* if retvar exist do mapping and store it in vars */
-    store_set(worker->vars, ret, val);  
+    store_set(worker->vars, ret, val);
+    return;
   }
-  else if (store_get(worker->locals, var)) {
+
+  /* if not test if local */
+  if (store_get(worker->locals, var)) {
     store_set(worker->locals, var, val);
+    return;
   }
-  else if (store_get(worker->params, var)) {
+
+  /* params can be shadowed by locals so this after locals */
+  if (store_get(worker->params, var)) {
     store_set(worker->params, var, val);
+    return;
   }
-  else {
-    store_set(worker->vars, var, val);
+
+  /* test if there are globals at all to avoid locking  */
+  if (worker->global->shared) {
+    /* test if this variable is a global one */
+    apr_thread_mutex_lock(worker->mutex);
+    if (store_get(worker->global->shared, var)) {
+      store_set(worker->global->shared, var, val);
+      apr_thread_mutex_unlock(worker->mutex);
+      return;
+    }
+    apr_thread_mutex_unlock(worker->mutex);
   }
+
+  /* if there is no var at all stored it in thread global vars */
+  store_set(worker->vars, var, val);
 }
 
 /**
@@ -128,16 +150,30 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
  * @return value
  */
 const char *worker_var_get(worker_t* worker, const char *var) {
-  const char *val;
+  const char *val = NULL;
+
+  /* first test locals */
   if ((val = store_get(worker->locals, var))) {
     return val;
   }
-  else if ((val = store_get(worker->params, var))) {
+  
+  /* next are params */
+  if ((val = store_get(worker->params, var))) {
     return val;
   }
-  else {
-    return store_get(worker->vars, var);
+
+  /* next are thread globals */
+  if ((val = store_get(worker->vars, var))) {
+    return val;
   }
+
+  /* last test globals */
+  if (worker->global->shared) {
+    apr_thread_mutex_lock(worker->mutex);
+    val = store_get(worker->global->shared, var);
+    apr_thread_mutex_unlock(worker->mutex);
+  }
+  return val;
 }
 
 /**
@@ -162,19 +198,14 @@ const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *
     command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
     /** call it */
     if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
-      val = store_get(worker->vars, "__INLINE_RET");
+      val = worker_var_get(worker, "__INLINE_RET");
     }
   }
 
   if (!val) {
-    val = store_get(worker->locals, name);
+    val = worker_var_get(worker, name);
   }
-  if (!val) {
-    val = store_get(worker->params, name);
-  }
-  if (!val) {
-    val = store_get(worker->vars, name);
-  }
+
   return val;
 }
 
@@ -255,13 +286,13 @@ char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
  * @param ... IN params for format strings
  */
 void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
-  char *tmp;
-  va_list va;
-  apr_pool_t *pool;
-
-  apr_pool_create(&pool, self->pbody);
-  va_start(va, fmt);
   if (self->log_mode >= log_mode) {
+    char *tmp;
+    va_list va;
+    apr_pool_t *pool;
+
+    apr_pool_create(&pool, NULL);
+    va_start(va, fmt);
     if (log_mode == LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
       fprintf(stderr, "\n%-88s", tmp);
@@ -272,9 +303,9 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
       vfprintf(stdout, fmt, va);
       fflush(stdout);
     }
+    va_end(va);
+    apr_pool_destroy(pool);
   }
-  va_end(va);
-  apr_pool_destroy(pool);
 }
 
 /**
@@ -285,20 +316,22 @@ void worker_log(worker_t * self, int log_mode, char *fmt, ...) {
  * @param ... IN params for format strings
  */
 void worker_log_error(worker_t * self, char *fmt, ...) {
-  char *tmp;
-  va_list va;
-  apr_pool_t *pool;
 
-  apr_pool_create(&pool, self->pbody);
-  va_start(va, fmt);
   if (self->log_mode >= LOG_ERR) {
+    char *tmp;
+    va_list va;
+    apr_pool_t *pool;
+
+    apr_pool_create(&pool, NULL);
+    va_start(va, fmt);
     tmp = apr_pvsprintf(pool, fmt, va);
     tmp = apr_psprintf(pool, "%s: error: %s", self->file_and_line?self->file_and_line:"<none>",
-	               tmp);
+                       tmp);
     fprintf(stderr, "\n%-88s", tmp);
     fflush(stderr);
+    va_end(va);
+    apr_pool_destroy(pool);
   }
-  apr_pool_destroy(pool);
 }
 
 /**
@@ -315,20 +348,21 @@ void worker_log_error(worker_t * self, char *fmt, ...) {
  */
 void worker_log_buf(worker_t * self, int log_mode, const char *buf,
                     char *prefix, int len) {
-  int i;
-  char *null="<null>";
 
-  FILE *fd = stdout;
-
-  if (!buf) {
-    buf = null;
-    len = strlen(buf);
-  }
-  
-  if (log_mode == LOG_ERR) {
-    fd = stderr;
-  }
   if (self->log_mode >= log_mode) {
+    int i;
+    char *null="<null>";
+    FILE *fd = stdout;
+
+    if (!buf) {
+      buf = null;
+      len = strlen(buf);
+    }
+    
+    if (log_mode == LOG_ERR) {
+      fd = stderr;
+    }
+
     i = 0;
     if (prefix) {
       fprintf(fd, "\n%s%s", self->prefix, prefix);
@@ -343,6 +377,7 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
 	}
         i++;
       }
+      fflush(fd);
       while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
 	if (i != len -1) {
 	  if (buf[i] == '\n') {
@@ -836,9 +871,20 @@ apr_status_t worker_assert(worker_t * worker, apr_status_t status) {
   status = worker_assert_grep(worker, worker->grep.body, "GREP body", 
                               status);
   /* check if match sequence is empty */
+
   if (worker->match_seq && worker->match_seq[0] != 0) {
     worker_log(worker, LOG_ERR, "The following match sequence \"%s\" was not in correct order", worker->match_seq);
-    return APR_EINVAL;
+    status = APR_EINVAL;
+    goto exit;
+  }
+exit:
+  {
+    apr_pool_t *pool;
+    pool = module_get_config(worker->config, "MATCH_SEQ");
+    if (pool) {
+      module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), NULL);
+      apr_pool_destroy(pool);
+    }
   }
   return status;
 }
@@ -1188,7 +1234,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   store_t *locals;
 
   /** a pool for this call */
-  apr_pool_create(&call_pool, worker->pbody);
+  apr_pool_create(&call_pool, NULL);
 
   /** temporary tables for param, local vars and return vars */
   params = store_make(call_pool);
@@ -1572,7 +1618,7 @@ http_0_9:
       sockreader_push_back(worker->recorder->sockreader, buf, len);
     }
     if (var) {
-      store_set(worker->vars, var, buf);
+      worker_var_set(worker, var, buf);
     }
     if (doreadtrailing) {
       /* read trailing headers */
@@ -1743,6 +1789,10 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
                          char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   char *copy;
+  int ignore_monitors = 0;
+  char *cur;
+  char *last;
+  char *reasemble = NULL;
 
   COMMAND_OPTIONAL_ARG;
 
@@ -1755,29 +1805,52 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
   }
 
   worker_get_socket(worker, "Default", "0");
+ 
+  cur = apr_strtok(copy, " ", &last);
+  while (cur) {
+    if (strcmp("IGNORE_MONITORS", cur) == 0) {
+      ignore_monitors = 1;
+    }
+    else {
+      reasemble = apr_pstrcat(ptmp, (reasemble ? reasemble : ""), (reasemble ? " " : ""), cur, NULL); 
+    }
+    cur = apr_strtok(NULL, " ", &last);
+  }
+  if (!reasemble) {
+    reasemble = apr_pstrdup(ptmp, "");
+  }
 
   while (worker->socket->socket_state == SOCKET_CLOSED) {
-    tcp_accept(worker);
-    
-    if ((status = htt_run_accept(worker, data)) != APR_SUCCESS) {
+    int interim;
+
+    if ((status = tcp_accept(worker)) != APR_SUCCESS) {
+      worker_log_error(worker, "Accept TCP connection aborted");
       return status;
     }
+    
+    interim = htt_run_accept(worker, reasemble);
 
-    apr_collapse_spaces(copy, copy);
-    if (strcmp("IGNORE_MONITORS", copy) == 0) {
-      if (worker->sockreader == NULL) {
+    if (ignore_monitors) {
+      if (interim == APR_SUCCESS) {
         worker->socket->peeklen = 1;
-        if ((status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen)) != APR_SUCCESS &&
-            status != APR_EOF) {
+        status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen);
+        if (status != APR_SUCCESS && status != APR_EOF) {
+          worker_log_error(worker, "Peek abort");
           return status;
         }
         else if (status == APR_SUCCESS) {
           worker->socket->socket_state = SOCKET_CONNECTED;
         }
       }
+      else {
+        worker_conn_close(worker, NULL);
+      }
+    }
+    else if (interim == APR_SUCCESS) {
+      worker->socket->socket_state = SOCKET_CONNECTED;
     }
     else {
-      worker->socket->socket_state = SOCKET_CONNECTED;
+      return interim;
     }
   }
 
@@ -1883,6 +1956,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   if (!pool) {
     /* create a pool for match */
     apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
   }
   match = apr_pstrdup(pool, interm);
 
@@ -1942,9 +2016,6 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  /* set created pool for this match type */
-  module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
-
   return APR_SUCCESS;
 }
 
@@ -1987,6 +2058,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   if (!pool) {
     /* create a pool for match */
     apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
 
@@ -2053,9 +2125,6 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_ENOENT;
   }
 
-  /* set created pool for this match type */
-  module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
-
   return APR_SUCCESS;
 }
 
@@ -2098,6 +2167,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   if (!pool) {
     /* create a pool for match */
     apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
 
@@ -2162,8 +2232,51 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     return APR_ENOENT;
   }
 
-  /* set created pool for this match type */
-  module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
+  return APR_SUCCESS;
+}
+
+/**
+ * assert command
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
+ * @param data IN expression
+ *
+ * @return an apr status
+ */
+apr_status_t command_ASSERT(command_t * self, worker_t * worker,
+                            char *data, apr_pool_t *ptmp) {
+  apr_status_t status;
+  char *copy;
+  char **argv;
+  apr_size_t len;
+  long val;
+  math_eval_t *math = math_eval_make(ptmp);
+
+  COMMAND_NEED_ARG("expression"); 
+
+  my_tokenize_to_argv(copy, &argv, ptmp, 0);
+
+  if (!argv[0]) {
+    worker_log_error(worker, "Need an expression"); 
+    return APR_EINVAL;
+  }
+
+  len = strlen(argv[0]);
+  if (len < 1) {
+    worker_log_error(worker, "Empty expression");
+    return APR_EINVAL;
+  }
+
+  if ((status = math_evaluate(math, argv[0], &val)) != APR_SUCCESS) {
+    worker_log_error(worker, "Invalid expression");
+    return status;
+  }
+
+  if (!val) {
+    worker_log_error(worker, "Did expect \"%s\"", argv[0]);
+    return APR_EINVAL;
+  }
 
   return APR_SUCCESS;
 }
@@ -2475,8 +2588,6 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
-  apr_pool_note_subprocess(worker->heartbeat, &worker->proc, APR_KILL_ALWAYS);
-
   if (flags & FLAGS_PIPE) {
     worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
     if ((status = worker_file_to_http(worker, worker->proc.out, flags, ptmp)) 
@@ -2520,6 +2631,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
   apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
 
+  apr_file_close(worker->proc.in);
   apr_file_close(worker->proc.out);
 
   if (exitcode != 0) {
@@ -3088,8 +3200,17 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
                         apr_pool_t *ptmp) {
   char *copy;
   apr_size_t len;
-  char *name;
   char *old;
+
+#ifdef _WINDOWS
+  char *name = apr_pstrdup(worker->pbody, "httXXXXXX.bat");
+  char *exec_prefix = "";
+  int has_apr_file_perms_set = 0;
+#else
+  char *name = apr_pstrdup(worker->pbody, "httXXXXXX");
+  char *exec_prefix = "./";
+  int has_apr_file_perms_set = 1;
+#endif
 
   apr_status_t status = APR_SUCCESS;
   
@@ -3098,11 +3219,11 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   if (strcasecmp(copy, "END")== 0) {
     if (worker->tmpf) {
       if ((status = apr_file_name_get((const char **)&name, worker->tmpf)) != APR_SUCCESS) {
-	return status;
+        return status;
       }
 
-      if ((status = apr_file_perms_set(name, 0x700)) != APR_SUCCESS) {
-	return status;
+      if (has_apr_file_perms_set && (status = apr_file_perms_set(name, 0x700)) != APR_SUCCESS) {
+        return status;
       }
 
       /* close file */
@@ -3111,8 +3232,8 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 
       /* exec file */
       old = self->name;
-      self->name = apr_pstrdup(ptmp, "_EXEC"); 
-      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, "./", name, NULL), ptmp);
+      self->name = apr_pstrdup(ptmp, "_EXEC");
+      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, exec_prefix, name, NULL), ptmp);
       self->name = old;
       
       apr_file_remove(name, ptmp);
@@ -3120,7 +3241,6 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   }
   else {
     if (!worker->tmpf) {
-      name = apr_pstrdup(worker->pbody, "httXXXXXX");
       if ((status = apr_file_mktemp(&worker->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, worker->pbody))
@@ -3407,8 +3527,17 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
 apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data, 
                                apr_pool_t *ptmp) {
   char *copy;
+  apr_pool_t *pool;
   COMMAND_NEED_ARG("<var-sequence>*");
-  worker->match_seq = copy;
+  
+  pool = module_get_config(worker->config, apr_pstrdup(ptmp, "MATCH_SEQ"));
+  if (!pool) {
+    /* create a pool for match */
+    apr_pool_create(&pool, worker->pbody);
+    module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), pool);
+  }
+
+  worker->match_seq = apr_pstrdup(pool, copy);
   return APR_SUCCESS;
 }
 

@@ -1,6 +1,9 @@
 EXTRA_DIST= \
 	100cont_auto.htt \
 	100cont.htt \
+	assert.hte \
+	assert.htt \
+	assert.txt \
 	autoclose2.hte \
 	autoclose2.htt \
 	autoclose2.txt \
@@ -20,6 +23,13 @@ EXTRA_DIST= \
 	block.hte \
 	block.htt \
 	block_in_out_params.htt \
+	block_js_args.hte \
+	block_js_args.htt \
+	block_js_args.txt \
+	block_js.hte \
+	block_js.htt \
+	block_js_on_the_fly.htt \
+	block_js.txt \
 	block_local_vars.htt \
 	block_lua_buf.htt \
 	block_lua_cert.htt \
@@ -113,6 +123,9 @@ EXTRA_DIST= \
 	grep.htt \
 	headers_allow.htt \
 	headers_filter.htt \
+	html.hte \
+	html.htt \
+	html.txt \
 	http_0_9.htt \
 	huge_page_chunked.htt \
 	huge_page.htt \
@@ -153,6 +166,8 @@ EXTRA_DIST= \
 	match.htt \
 	match_order.hte \
 	match_order.htt \
+	match_order_threaded.htt \
+	match_order.txt \
 	match.txt \
 	match_var.htt \
 	math.htt \
@@ -212,6 +227,8 @@ EXTRA_DIST= \
 	server_ip_port.htt \
 	server.key.pem \
 	server_up_down.htt \
+	shared.htt \
+	shell.htb \
 	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.hte \

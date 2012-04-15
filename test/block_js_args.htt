@@ -1,0 +1,12 @@
+REQUIRE _JS:MODULE
+
+INCLUDE $TOP/test/config.htb
+
+BLOCK:JS myVeryFirstJsScript arg1 arg2 : return
+  return "Result is: '" + arg1 + arg2 + "'";
+END
+
+CLIENT
+  myVeryFirstJsScript "hallo" " welt" foo
+  _EXPECT VAR(foo) "Result is: 'hallo welt'"
+END

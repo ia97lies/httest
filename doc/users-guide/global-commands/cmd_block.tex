@@ -8,22 +8,21 @@
 
 \paragraph{Syntax:}
 \subparagraph{}
-\texttt{BLOCK <name>}
+\texttt{BLOCK <name>} 
 
 \paragraph{Purpose:}
 \subparagraph{}
 Begins a body with scripting code that can be invoked from anywhere 
-else directly as a command. In earlier version command \texttt{\_CALL} was
-needed to invoke a block, you still can use this style, but is not 
-neccessary anymore.
+else directly, just like a command. In earlier versions, the command \texttt{\_CALL} was
+needed to invoke a block; this style is still supported, but not 
+necessary anymore.
 
 The \texttt{BLOCK} must be closed using the \texttt{END} command.
 
-\paragraph{Parameters and Return Values}
-\subparagraph{Block Signature}
-A block can define a parameter and return values signature. You can define 
-multiple parameters and return values. parameters and return values are 
-separated by a ":". Parameters and return value list are separated with spaces.
+\section{Parameters and Return Values}
+\subsection{Signature}
+A block can define one or multiple parameters, and also one or multiple return values. 
+Parameters and return values are separated by a ":". Parameters and return value list are separated with spaces.
 \begin{usplisting}
     # Block signature
     BLOCK myFunction myP mySecOne andThird : firstRet secOne
@@ -41,9 +40,11 @@ separated by a ":". Parameters and return value list are separated with spaces.
     END
 \end{usplisting}
 
-\subparagraph{No Block Signature}
-If there are no parameters and return values defined you can access parameters
-with \texttt{\$1..\$n} like a shell do access its parameters.
+\pagebreak 
+\subsection{No Block Signature}
+If there are no parameters and return values defined, parameters can be 
+accessed with \texttt{\$1..\$n}, similar to the way a shell script 
+accesses its parameters.
 \begin{usplisting}
     # No block signature
     BLOCK myFunction
@@ -61,11 +62,12 @@ with \texttt{\$1..\$n} like a shell do access its parameters.
     END
 \end{usplisting}
 
-\subparagraph{Spaces in Variables Value}
-Imagine a variable holding for example "Hello World" and keep in mind that 
-variable resolving is done before calling. You got it my variable with the 
-value "Hello World" are suddently two parameters, not what we want in this 
-case. Ok there is a simple solution with by quoting the the variable. 
+\subsection{Spaces in Variable Values}
+The httest engine resolves parameter variables \textit{before} the block 
+is actually invoked. Since parameters are separated by blanks, this means 
+that one single variable with a value like "\texttt{Hello World}" will be handed over 
+to the block as two separate parameters, "\texttt{Hello}" in \$1 and "\texttt{World}" in \$2. 
+To prevent this, the variable used for a parameter must be quoted, e.g.:
 \begin{usplisting}
     # Spaces in variable 'myStuff'
     BLOCK myFunction p1 p2 p3
@@ -80,12 +82,16 @@ case. Ok there is a simple solution with by quoting the the variable.
     END
 \end{usplisting}
 
-\subparagraph{Spaces and Quotes in Variables Value}
-Imagine if your variable contains quotes and further on you got this variable 
-filled up by a \texttt{\_MATCH} and no way to remove or escape this quotes.
-Of course even for this a solution exist. You can handover parameters with
-\texttt{VAR(<param name>)}. This will not be resolved before calling the function
-and therefor a complicated value will not messup your call stack.
+\pagebreak 
+\subsection{Spaces and Quotes in Variable Values}
+To complicate things further, a parameter variable may not only contain blanks, 
+it might even contain quotes; in such a case, simply quoting the parameter will 
+not work, since the quotes around the parameter will get in conflict with the 
+quotes from the resolved variable.
+
+\subparagraph{}
+For cases like that, there is a way to prevent variable resolution before 
+a block is invoked: by enclosing the parameter in \texttt{VAR(<param name>)}.
 \begin{usplisting}
     # Spaces and quotes in variable 'myStuff'
     BLOCK myFunction p1 p2 p3
@@ -95,13 +101,17 @@ and therefor a complicated value will not messup your call stack.
     END 
 
     CLIENT
-      _SET myStuff=Hello World "some quotes" messup your parameter's
+      _SET myStuff=Hello World "some quotes" messup your parameters
       myFunction VAR(myStuff) "next param" andStillNotEnoughParams
     END
 \end{usplisting}
 
+\subparagraph{}
+So, in all cases where values of parameters for blocks \textit{might} 
+contain blanks or quotes, it is generally a good idea and practice to use the 
+\texttt{VAR()} function.
 
-\subparagraph{Error Handler}
+\subsection{Error Handler}
 A special, reserved name for a \texttt{BLOCK} is \texttt{ON\_ERROR}. It 
 designates the block to be invoked if an unexpected error occurs during 
 a test. The block can then handle the error, output some information etc. 
@@ -117,7 +127,8 @@ a test. The block can then handle the error, output some information etc.
     END
 \end{usplisting}
 
-\subparagraph{Finally Handler}
+\pagebreak 
+\subsection{Finally Handler}
 A special, reserved name for a \texttt{BLOCK} is \texttt{FINALLY}. It 
 designates the block to be invoked on test termination.  The block can 
 then handle cleanup stuff like restarting a server, removing generated

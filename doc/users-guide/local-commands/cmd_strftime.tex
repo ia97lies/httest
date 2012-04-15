@@ -12,7 +12,6 @@
 
 \paragraph{Purpose:}
 \subparagraph{}
-Stores the given time (in milliseconds) as a string in $<$variable$>$. 
-The string is formatted as defined in $<$format-string$>$.
+Formats the given $<$time$>$ (usually a variable with a timestamp, created with the \texttt{\_TIME} command) as a string into $<$variable$>$. 
 
-% TODO: Format Definitionen wo? Was ist Local und GMT (default?)?
+The string is formatted as defined in $<$format-string$>$. The formatting rules are defined by the C-function "\texttt{strftime}" (see http://www.elook.org/programming/c/strftime.html).

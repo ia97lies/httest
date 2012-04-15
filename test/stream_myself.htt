@@ -1,4 +1,4 @@
-SET MAX_DURATION=5000
+SET MAX_DURATION=20000
 INCLUDE $TOP/test/config.htb
 
 # runs exactly one time
