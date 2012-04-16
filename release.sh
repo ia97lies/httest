@@ -7,9 +7,6 @@ set -u
 
 echo
 echo "Release httest-$VERSION"
-sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
-mv configure.in.tmp configure.in
-git commit -m"New release $VERSION" configure.in
 
 echo "Tag release $VERSION"
   git tag $VERSION
@@ -17,6 +14,9 @@ echo "Tag release $VERSION"
 echo "Checkout new tag"
   git checkout $VERSION
   git clean -f
+
+sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
+mv configure.in.tmp configure.in
 
 echo
 echo "  Check Version"
