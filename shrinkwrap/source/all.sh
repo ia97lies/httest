@@ -83,10 +83,17 @@ function get_lib {
     quit
 EOF
   fi
-  gzip -d -c "$LIB_FILE" > "$LIB_NAME-$LIB_VER.tar"
-  tar xf "$LIB_NAME-$LIB_VER.tar"
+  if [ "$OS" == "win" ]; then
+    unzip "$LIB_FILE" -d tmp
+	mv tmp/* "$LIB_NAME-$LIB_VER"
+	rmdir tmp
+  else
+    gzip -d -c "$LIB_FILE" > "$LIB_NAME-$LIB_VER.tar"
+    tar xf "$LIB_NAME-$LIB_VER.tar"
+    rm "$LIB_NAME-$LIB_VER.tar"
+  fi
   rm "$LIB_FILE"
-  rm "$LIB_NAME-$LIB_VER.tar"
+  [ -d "$LIB_NAME-$LIB_VER" ]
 }
 
 #
@@ -345,29 +352,29 @@ function do_unix_build_libxml2 {
 }
 
 #
-# unix: run buildconf.sh
+# unix/win: run buildconf.sh
 #
-function unix_buildconf {
+function buildconf {
   cd "$ROOT/.."
   ./buildconf.sh
   [ -f configure ]
 }
 
 #
-# unix: run buildconf.sh if not configure script, yet
+# unix/win: run buildconf.sh if not configure script, yet
 #
-function do_unix_buildconf {
+function do_buildconf {
   echo -n "building htt configuration ... "  
   if [ -f "$ROOT/../configure" ]; then
     print_ok_up_to_date
   else
-    unix_buildconf >>"$BUILDLOG" 2>>"$BUILDLOG"
+    buildconf >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
 
 #
-# unix: (re-(build httest binaries with all libraries listed below
+# unix: (re-)build httest binaries with all libraries listed below
 # statically linked (note "make clean all" which makes sure binaries
 # are always built that way here...)
 #
@@ -431,9 +438,325 @@ function do_unix_basic_tests_htt {
 }
 
 #
-# unix: "shrink-wrap", i.e. get binaries, create README and zip/tgz it
+# win: configure htt in order to get e.g. modules.c
 #
-function do_unix_shrinkwrap {
+function win_configure_htt {
+  # create dummy config scripts
+  DUMMYDIR="$ROOT/target/dummy-configs"
+  if [ ! -d  "$DUMMYDIR" ]; then
+    mkdir "$DUMMYDIR"
+  fi
+  PREFIXES="apr-1 apu-1 openssl pcre lua js xml2"
+  for PREFIX in $PREFIXES; do
+    FILE="$DUMMYDIR/$PREFIX-config"
+    echo "echo dummy" >> "$FILE"
+    chmod +x "$FILE"
+  done
+  
+  cd "$ROOT/.."
+  ./configure \
+    --with-apr="$DUMMYDIR" \
+    --with-apr-util="$DUMMYDIR" \
+    --with-pcre="$DUMMYDIR" \
+    --with-ssl="$DUMMYDIR" \
+    --with-lua="$DUMMYDIR" \
+    --enable-lua-module=yes \
+    --with-spidermonkey="$DUMMYDIR" \
+    --enable-js-module=yes \
+    --with-libxml2="$DUMMYDIR" \
+    --enable-html-module=yes
+  
+  [ -f "src/modules.c" ]
+}
+
+#
+# win: configure htt if not done, yet
+#
+function do_win_configure_htt {
+  echo -n "configuring htt ... "
+  if [ -f "$ROOT/../src/modules.c" ]; then
+    print_ok_up_to_date
+  else
+    win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+    print_ok
+  fi
+
+  # get and remember version for later
+  HTT_VER=`cat "$ROOT/../Makefile" | awk '/^VERSION/ { print $3 }'`
+
+  if [ "$HTT_VER" == "snapshot" ]; then
+    # violet bold
+    echo "VERSION: $(tput bold)$(tput setaf 5)$HTT_VER$(tput sgr 0)"
+  else
+    # blue bold
+    echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
+  fi
+}
+
+#
+# win: create visual studio solution
+#
+function win_create_sln {
+  WINSLN="$ROOT/target/solution"
+  rm -rf "$WINSLN"
+  mkdir "$WINSLN"
+  
+  # build settings, note that backslashes are escaped twice for sed further below
+  RELEASE_INCLUDES="..\\\\src"
+  RELEASE_DEFINES="HAVE_CONFIG_H;WIN32;NDEBUG;_CONSOLE;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_MBCS"
+  RELEASE_LIBS="Ws2_32.lib"
+  # TODO do more elegantly (loops, get libs from file system)
+  
+  # apr
+  NAME="$WIN_APR_NAME-$WIN_APR_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;libapr-1.lib"
+  RELEASE_LIBDIRS="..\\\\..\\\\$NAME\\\\lib"
+
+  # apr-util
+  NAME="$WIN_APR_UTIL_NAME-$WIN_APR_UTIL_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;libaprutil-1.lib"
+  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+
+  # openssl
+  NAME="$WIN_OPENSSL_NAME-$WIN_OPENSSL_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;libeay32.lib;ssleay32.lib"
+  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+
+  # pcre
+  NAME="$WIN_PCRE_NAME-$WIN_PCRE_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;pcre.lib"
+  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+
+  # lua
+  NAME="$WIN_LUA_NAME-$WIN_LUA_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;lua52.lib"
+  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+
+  # js
+  NAME="$WIN_JS_NAME-$WIN_JS_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;mozjs.lib"
+  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+
+  # libmxl2
+  NAME="$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER"
+  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+  RELEASE_LIBS="$RELEASE_LIBS;libxml2.lib"
+  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+
+  DEBUG_INCLUDES="$RELEASE_INCLUDES"
+  DEBUG_DEFINES="$RELEASE_DEFINES"
+  DEBUG_LIBS="$RELEASE_LIBS"
+  DEBUG_LIBDIRS="$RELEASE_LIBDIRS"
+  
+  WINSRC="$ROOT/source/win"
+  cp "$WINSRC/httest.sln" "$WINSLN"
+  
+  # get header file names
+  HTTEST="$ROOT/.."
+  cd "$HTTEST/src/"
+  H_FILES=`ls *.h | awk '
+    { printf("%s ", $0); }
+  '`
+  
+  # get project names and guids from solution
+  PROJECT_NAMES=`cat "$WINSRC/httest.sln" | awk '
+    /^Project.*= \"ht.*\"/ {
+      printf("%s ", substr($3, 2, length($3)-3));
+    }
+  '`
+  # note that $5 below ends with \r...
+  PROJECT_GUIDS=`cat "$WINSRC/httest.sln" | awk '
+    /^Project.*= \"ht.*\"/ {
+      printf("%s ", substr($5, 3, length($5)-5));
+    }
+  '`
+  # create ht* projects
+  for NAME in $PROJECT_NAMES; do
+    echo -n "$NAME : "
+    GUID=`echo $NAME | awk -v pnames="$PROJECT_NAMES" -v pguids="$PROJECT_GUIDS" '{
+      n = split(pnames, pname_arr, " ");
+      split(pguids, pguid_arr, " ");
+      for (i=1; i<=n; i++) {
+        if (pname_arr[i] == $0) { print pguid_arr[i]; }
+      }
+    }'`
+    echo "$GUID"
+
+    # create project file and replace variables with sed
+    mkdir "$WINSLN/$NAME"
+	WINPRJ="$WINSLN/$NAME/$NAME.vcxproj"
+    cp "$WINSRC/httest.vcxproj.in" "$WINPRJ"
+    sed -i.bak 's/##PROJECT_NAME##/'$NAME'/g' $WINPRJ
+    sed -i.bak 's/##PROJECT_GUID##/'$GUID'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_INCLUDES##/'$RELEASE_INCLUDES'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_DEFINES##/'$RELEASE_DEFINES'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_LIBS##/'$RELEASE_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_LIBDIRS##/'$RELEASE_LIBDIRS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_INCLUDES##/'$DEBUG_INCLUDES'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_DEFINES##/'$DEBUG_DEFINES'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_LIBS##/'$DEBUG_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_LIBDIRS##/'$DEBUG_LIBDIRS'/g' $WINPRJ
+    
+    # determine c files
+    C_FILES=`cat "$HTTEST/src/Makefile.am" "$HTTEST/tools/Makefile.am" | awk \
+      -v name="${NAME}_SOURCES" '
+      {
+        if (match($0,name)) {
+          process=1;
+          next;
+        } else if (process) {
+          n = NF -1 ;
+          if ($NF != "\134") {
+            n = NF;
+            process=0;
+          }
+          for (i=1; i<=n; i++) {
+            printf ("%s ", $(i));
+          }
+        }
+      }'`
+    
+    # insert references to headers and c files
+    mv "$WINPRJ" "$WINPRJ.bak"
+    cat "$WINPRJ.bak" | awk \
+      -v name="$NAME" -v hfiles="$H_FILES" -v cfiles="$C_FILES" '
+      /##H_FILES##/ {
+        split(hfiles, arr, " ");
+        for (i in arr) {
+          printf("    <ClInclude Include=\"..\\src\\%s\" />\r\n", arr[i]);
+        }
+        printf("    <ClInclude Include=\"..\\src\\config.h\" />\r\n");
+        next;
+      }
+      /##C_FILES##/ {
+        split(cfiles, arr, " ");
+        for (i in arr) {
+          printf("    <ClCompile Include=\"..\\src\\%s\" />\r\n", arr[i]);
+        }
+        printf("    <ClCompile Include=\"..\\src\\%s.c\" />\r\n", name);
+        next;
+      }
+      { print $0 }
+    ' > "$WINPRJ"
+    rm "$WINPRJ.bak"
+  done
+  echo
+  
+  # create sources
+  mkdir "$WINSLN/src"
+  cp "$HTTEST/src/"*.c "$WINSLN/src"
+  cp "$HTTEST/src/"*.h "$WINSLN/src"
+  cp "$HTTEST/tools/"*.c "$WINSLN/src"
+  echo -e "#define PACKAGE_VERSION \"$HTT_VER\"\n#define VERSION \"$HTT_VER\""\
+    >"$WINSLN/src/config.h"
+  
+  # create version resource
+  if [ "$HTT_VER" == "snapshot" ]; then
+    HTT_VER_COMMAS="0,0,0"
+  else
+    HTT_VER_COMMAS=`echo $HTT_VER | sed 's/\./\,/g'`
+  fi
+  WINRC="$WINSLN/src/version.rc"
+  echo "1 VERSIONINFO" >"$WINRC"
+  echo "FILEVERSION $HTT_VER_COMMAS" >>"$WINRC"
+  echo "BEGIN" >>"$WINRC"
+  echo "END" >>"$WINRC"
+
+  [ -f "$WINRC" ]
+}
+
+#
+# win: create visual studio solution if not done, yet
+#
+function do_win_create_sln {
+  echo -n "creating visual studio solution ... "
+  if [ -f "$ROOT/target/solution/src/version.rc" ]; then
+    print_ok_up_to_date
+  else
+    win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
+    print_ok
+  fi
+}
+
+#
+# win: (re-)build httest binaries
+#
+function win_build_htt {
+  WINSLN="$ROOT/target/solution"
+  #rm -rf "$WINSLN/Release"
+  
+  # TODO determine dynamically, find below /cygwin 
+  VCVARS="\"C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat\""
+  
+  cd "$WINSLN"
+  cat > "build.bat" << EOF
+  call $VCVARS
+  msbuild httest.sln /p:Configuration=Release
+  if %errorlevel% neq 0 (
+    exit 1
+  )
+EOF
+  cmd /c build.bat
+  
+  cp "$ROOT/target/$WIN_APR_NAME-$WIN_APR_VER/dll/"*.dll "$WINSLN/Release"
+  cp "$ROOT/target/$WIN_APR_UTIL_NAME-$WIN_APR_UTIL_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$ROOT/target/$WIN_OPENSSL_NAME-$WIN_OPENSSL_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$ROOT/target/$WIN_PCRE_NAME-$WIN_PCRE_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$ROOT/target/$WIN_LUA_NAME-$WIN_LUA_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$ROOT/target/$WIN_JS_NAME-$WIN_JS_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$ROOT/target/$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER/dll"/*.dll "$WINSLN/Release"
+
+  HTTEST="$ROOT/.."
+  rm -f "$HTTEST/src"/*.exe "$HTTEST/src/"*.dll
+  rm -f "$HTTEST/tools"/*.exe "$HTTEST/tools"/*.dll
+  cp "$WINSLN/Release/httest.exe" "$HTTEST/src"
+  cp "$WINSLN/Release/htntlm.exe" "$HTTEST/src"
+  cp "$WINSLN/Release/htproxy.exe" "$HTTEST/src"
+  cp "$WINSLN/Release/htremote.exe" "$HTTEST/src"
+  cp "$WINSLN/Release/"*.dll "$HTTEST/src"
+  cp "$WINSLN/Release/hturlext.exe" "$HTTEST/tools"
+  cp "$WINSLN/Release/htx2b.exe" "$HTTEST/tools"
+  cp "$WINSLN/Release"/*.dll "$HTTEST/tools"
+  
+  [ -f "$WINSLN/Release/httest.exe" ]  
+}
+
+#
+# win: build httest binaries (always)
+#
+function do_win_build_htt {
+  echo -n "building htt ... "
+  win_build_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+  print_ok
+}
+
+#
+# win: run some basic tests
+#
+function do_win_basic_tests_htt {
+  echo -n "running basic tests ... "  
+  [ `"$ROOT/../src/httest.exe" --version | grep "httest.exe $HTT_VER$" | wc -l` -eq 1 ]
+  [ `"$ROOT/../src/htntlm.exe" --version | grep "htntlm.exe $HTT_VER$" | wc -l` -eq 1 ]
+  [ `"$ROOT/../src/htproxy.exe" --version | grep "htproxy.exe $HTT_VER$" | wc -l` -eq 1 ]
+  [ `"$ROOT/../src/htremote.exe" --version | grep "htremote.exe $HTT_VER$" | wc -l` -eq 1 ]
+  [ `"$ROOT/../tools/hturlext.exe" --version | grep "hturlext $HTT_VER$" | wc -l` -eq 1 ]
+  [ `"$ROOT/../tools/htx2b.exe" --version | grep "htx2b.exe $HTT_VER$" | wc -l` -eq 1 ]
+ 
+ # TODO run some actual *.htt tests
+  
+  print_ok
+}
+
+#
+# unix/win: "shrink-wrap", i.e. get binaries, create README and zip/tgz it
+#
+function do_shrinkwrap {
   # determine name to use for file name
   SHORT_NAME="$OS-$ARCH-$BITS"
   if [ "$OS" == "mac" -a "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
@@ -446,6 +769,8 @@ function do_unix_shrinkwrap {
     elif [ "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
       SHORT_NAME="$OS-$BITS"
     fi
+  elif [ "$OS" == "win" -a "$ARCH" == "i686" -a "$BITS" == "32" ]; then
+    SHORT_NAME="$OS"
   fi
   NAME="httest-$HTT_VER-$SHORT_NAME"
   
@@ -461,15 +786,25 @@ function do_unix_shrinkwrap {
   mkdir "$DIR"
 
   # copy executables
-  cp "$ROOT/../src/httest" "$DIR"
-  cp "$ROOT/../src/htntlm" "$DIR"
-  cp "$ROOT/../src/htproxy" "$DIR"
-  cp "$ROOT/../src/htremote" "$DIR"
-  cp "$ROOT/../tools/hturlext" "$DIR"
-  cp "$ROOT/../tools/htx2b" "$DIR"
+  if [ "$OS" == "win" ]; then
+    cp "$ROOT/target/solution/Release/"*.exe "$DIR"
+    cp "$ROOT/target/solution/Release/"*.dll "$DIR"
+  else
+    cp "$ROOT/../src/httest" "$DIR"
+    cp "$ROOT/../src/htntlm" "$DIR"
+    cp "$ROOT/../src/htproxy" "$DIR"
+    cp "$ROOT/../src/htremote" "$DIR"
+    cp "$ROOT/../tools/hturlext" "$DIR"
+    cp "$ROOT/../tools/htx2b" "$DIR"
+  fi
   
   # create readme
-  cat > "$DIR/README" << EOF
+  if [ "$OS" == "win" ]; then
+    README="readme.txt"
+  else
+    README="README"
+  fi
+  cat > "$DIR/$README" << EOF
 httest binaries
 
 OS:      $OS
@@ -492,9 +827,16 @@ This is "provided as is", no warranty of any kind.
 $(date)
 
 EOF
+  if [ "$OS" == "win" ]; then
+    unix2dos "$DIR/$README" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  fi
 
   # everything there?
-  [ `ls "$DIR" | wc -w` -eq 7 ]
+  if [ "$OS" == "win" ]; then
+    [ `ls "$DIR" | wc -w` -eq 20 ]
+  else
+    [ `ls "$DIR" | wc -w` -eq 7 ]
+  fi
   
   # tgz
   cd "$DIR/.."
@@ -503,13 +845,14 @@ EOF
   [ -f $DIR.tar.gz ]
   
   # zip
-  if [ "$OS" == "mac" ]; then
+  if [ "$OS" == "mac" -o "$OS" == "win" ]; then
     zip -r "$NAME.zip" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
     [ -f $DIR.zip ]
   fi
   
   print_ok
 }
+
 
 #
 # start of "main"
@@ -545,10 +888,10 @@ if [ "$UNIX" == "1" ]; then
   do_unix_build_lua
   do_unix_build_js
   do_unix_build_libxml2
-  do_unix_buildconf
+  do_buildconf
   do_unix_build_htt
   do_unix_basic_tests_htt
-  do_unix_shrinkwrap
+  do_shrinkwrap
 else
   # windows
   . "$ROOT/source/win/libs.sh"
@@ -559,7 +902,12 @@ else
   do_get_lib "WIN" "LUA"
   do_get_lib "WIN" "JS"
   do_get_lib "WIN" "LIBXML2"
-  # TODO build win sln and build binaries
+  do_buildconf
+  do_win_configure_htt
+  do_win_create_sln
+  do_win_build_htt
+  do_win_basic_tests_htt
+  do_shrinkwrap
 fi
 
 # success
