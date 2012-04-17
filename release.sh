@@ -87,9 +87,6 @@ cp packages/gentoo/httest.ebuild packages/gentoo/overlays/net-analyzer/httest/ht
 git add packages/gentoo/overlays/net-analyzer/httest/httest-$VERSION.ebuild
 git commit -m"New release $VERSION"
 
-sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/"
-mv configure.in.tmp configure.in
-git commit -m"Prepare next release" configure.in
-
 echo
 echo Release build SUCCESS 
+
