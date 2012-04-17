@@ -1,2 +1,2 @@
 
-nosocket.hte:5: error: CLT0-0 No socket was provided and one was required.(20011)        FAILED
+nosocket.hte:5: error: CLT0-0 No socket was provided and one was required.(20011)

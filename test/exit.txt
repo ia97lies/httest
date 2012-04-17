@@ -1,2 +1,2 @@
 
-exit.hte:6: error: EXIT                                                                  FAILED
+exit.hte:6: error: EXIT

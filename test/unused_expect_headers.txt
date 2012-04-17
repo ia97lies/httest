@@ -1,2 +1,2 @@
 
-There are unused EXPECT headers                                                          FAILED
+There are unused EXPECT headers

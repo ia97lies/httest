@@ -1,2 +1,2 @@
 
-finally_on_failed.hte:10: error: CLT0-0 Internal error(20014)                            FAILED
+finally_on_failed.hte:10: error: CLT0-0 Internal error(20014)
