@@ -1,4 +1,4 @@
 
 autoclose2.hte:6: error: CLT0-0 Broken pipe(32)                                         
 autoclose2.hte:6: error: Error in loop with count = 1                                   
-autoclose2.hte:6: error: CLT0-0 Broken pipe(32)                                          FAILED
+autoclose2.hte:6: error: CLT0-0 Broken pipe(32)

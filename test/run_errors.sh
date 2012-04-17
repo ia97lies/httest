@@ -12,8 +12,10 @@ function run_single {
 
   B=`echo $E | sed -e 's/\(.*\)\.hte/\1/'`
   if [ -f $B.txt ]; then
-    ./run.sh -e $B.hte 2>/tmp/tmp.txt >/dev/null
-    diff -Bw /tmp/tmp.txt $B.txt >>$OUT
+    ./run.sh -n $B.hte 2>/tmp/tmp.txt >/dev/null
+    cat /tmp/tmp.txt | sort >/tmp/tmpA.txt
+    cat $B.txt | sort >/tmp/tmpB.txt
+    diff -Bw /tmp/tmpA.txt /tmp/tmpB.txt >>$OUT
   else
     printf "SKIP"
   fi

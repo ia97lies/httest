@@ -1,3 +1,3 @@
 
 The following match sequence "second forth " was not in correct order                   
-match_order.hte:13: error: CLT0-0 Invalid argument(22)                                   FAILED
+match_order.hte:13: error: CLT0-0 Invalid argument(22)
