@@ -21,6 +21,7 @@ win
 .out.txt
 3thrdparty
 *.exe
+*.dll
 ca
 ca2
 httest-*/
