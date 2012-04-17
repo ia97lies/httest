@@ -710,6 +710,7 @@ EOF
   cp "$SW/target/$WIN_LUA_NAME-$WIN_LUA_VER/dll"/*.dll "$WINSLN/Release"
   cp "$SW/target/$WIN_JS_NAME-$WIN_JS_VER/dll"/*.dll "$WINSLN/Release"
   cp "$SW/target/$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER/dll"/*.dll "$WINSLN/Release"
+  chmod 755 "$WINSLN/Release"/*.dll
 
   rm -f "$TOP/src"/*.exe "$TOP/src/"*.dll
   rm -f "$TOP/tools"/*.exe "$TOP/tools"/*.dll
