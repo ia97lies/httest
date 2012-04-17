@@ -73,7 +73,7 @@ static udp_socket_config_t *udp_get_socket_config(worker_t *worker) {
  */
 apr_status_t udp_transport_os_desc_get(void *data, int *desc) {
   worker_t *worker = data;
-  if (!worker->socket->socket) {
+  if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
   return apr_os_sock_get(desc, worker->socket->socket);
@@ -88,7 +88,7 @@ apr_status_t udp_transport_os_desc_get(void *data, int *desc) {
  */
 apr_status_t udp_transport_set_timeout(void *data, apr_interval_time_t t) {
   worker_t *worker = data;
-  if (!worker->socket->socket) {
+  if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
   return apr_socket_timeout_set(worker->socket->socket, t);
@@ -103,7 +103,7 @@ apr_status_t udp_transport_set_timeout(void *data, apr_interval_time_t t) {
  */
 apr_status_t udp_transport_get_timeout(void *data, apr_interval_time_t *t) {
   worker_t *worker = data;
-  if (!worker->socket->socket) {
+  if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
   return apr_socket_timeout_get(worker->socket->socket, t);
@@ -127,7 +127,7 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
   }
   config = udp_get_socket_config(worker);
   if (!config->recvfrom) {
-    return APR_ENOSOCKET;
+    return APR_EINVALSOCK;
   }
 
   if ((status = apr_socket_recvfrom(config->recvfrom, worker->socket->socket, 0, buf, size)) != APR_SUCCESS) {
@@ -148,16 +148,17 @@ apr_status_t udp_transport_read(void *data, char *buf, apr_size_t *size) {
 apr_status_t udp_transport_write(void *data, const char *buf, apr_size_t size) {
   apr_status_t status;
   worker_t *worker = data;
-  udp_socket_config_t *config = udp_get_socket_config(worker);
+  udp_socket_config_t *config;
   apr_size_t total = size;
   apr_size_t count = 0;
   apr_size_t len;
 
-  if (!worker->socket->socket) {
+  if (!worker->socket || !worker->socket->socket) {
     return APR_ENOSOCKET;
   }
+  config = udp_get_socket_config(worker);
   if (!config->sendto) {
-    return APR_ENOSOCKET;
+    return APR_EINVALSOCK;
   }
 
   while (total != count) {
