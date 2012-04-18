@@ -4,8 +4,8 @@ VERSION=$1
 
 set -u
 
-trap "git checkout master; \
-      git tag -d $VERSION; \
+trap "git checkout master 2>/dev/null >/dev/null; \
+      git tag -d $VERSION 2>/dev/null >/dev/null;\
       sed < configure.in > configure.in.tmp -e \"s/$VERSION/snapshot/\"; \
       mv configure.in.tmp configure.in; \
       echo \"Release build FAILED\"" EXIT
@@ -14,7 +14,15 @@ echo
 echo "Release httest-$VERSION"
 sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
 mv configure.in.tmp configure.in
-git commit -m"new release" .
+git commit -m"new release $VERSION" configure.in
+
+echo
+echo "Check repository"
+git status | grep modified
+if [ $? -eq 0 ]; then
+  echo "Please commit first all changes"
+  exit 1
+fi
 
 echo "Tag release $VERSION"
   git tag $VERSION
