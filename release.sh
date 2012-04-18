@@ -6,9 +6,17 @@ set -u
 
 trap "git checkout master; \
       git tag -d $VERSION; \
-      sed < configure.in > configure.in.tmp -e \"s/$VERSION/snapshot\"; \
+      sed < configure.in > configure.in.tmp -e \"s/$VERSION/snapshot/\"; \
       mv configure.in.tmp configure.in; \
       echo \"Release Build FAILED\"" EXIT
+
+onexit() {
+  git checkout master;
+  git tag -d $VERSION;
+  sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/";
+  mv configure.in.tmp configure.in;
+  echo "Release Build FAILED"
+}
 
 echo
 echo "Release httest-$VERSION"
