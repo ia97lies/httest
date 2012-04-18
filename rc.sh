@@ -4,11 +4,13 @@ VERSION=$1
 
 set -u
 
-trap "git checkout master 2>/dev/null >/dev/null; \
-      git tag -d $VERSION 2>/dev/null >/dev/null;\
-      sed < configure.in > configure.in.tmp -e \"s/$VERSION/snapshot/\"; \
-      mv configure.in.tmp configure.in; \
-      echo \"Release build FAILED\"" EXIT
+trap onexit 1 2 3 15 ERR
+
+function onexit() {
+  git checkout configure.in
+  echo "Release build FAILED"
+  exit 1
+}
 
 echo
 echo "Release httest-$VERSION"
@@ -81,4 +83,3 @@ mv configure.in.tmp configure.in
 echo
 echo Release build SUCCESS 
 
-trap - EXIT
