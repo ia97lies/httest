@@ -667,18 +667,21 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
   char *tmp;
   apr_table_t *vtbl;
   int n;
+  apr_pool_t *pool;
+  apr_status_t status = APR_SUCCESS;
 
   if (!data) {
     return APR_SUCCESS;
   }
 
-  vtbl = apr_table_make(worker->pbody, 2);
+  apr_pool_create(&pool, NULL);
+  vtbl = apr_table_make(pool, 2);
   
   e = (apr_table_entry_t *) apr_table_elts(regexs)->elts;
   for (i = 0; i < apr_table_elts(regexs)->nelts; ++i) {
     /* prepare vars if multiple */
     apr_table_clear(vtbl);
-    tmp = apr_pstrdup(worker->pbody, e[i].key);
+    tmp = apr_pstrdup(pool, e[i].key);
     var = apr_strtok(tmp, " ", &last);
     while (var) {
       apr_table_set(vtbl, var, var);
@@ -688,7 +691,8 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
     n = apr_table_elts(vtbl)->nelts;
     if (n > 10) {
       worker_log(worker, LOG_ERR, "Too many vars defined for _MATCH statement, max 10 vars allowed");
-      return APR_EINVAL;
+      status = APR_EINVAL;
+      goto error;
     }
     
     if (e[i].val
@@ -697,7 +701,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
       v = (apr_table_entry_t *) apr_table_elts(vtbl)->elts;
       for (j = 0; j < n; j++) {
 	val =
-	  apr_pstrndup(worker->pbody, &data[regmatch[j + 1].rm_so],
+	  apr_pstrndup(pool, &data[regmatch[j + 1].rm_so],
 		       regmatch[j + 1].rm_eo - regmatch[j + 1].rm_so);
 	worker_var_set(worker, v[j].key, val);
 	if (worker->match_seq) {
@@ -715,7 +719,9 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
     }
   }
 
-  return APR_SUCCESS;
+error:
+  apr_pool_destroy(pool);
+  return status;
 }
 
 /**
