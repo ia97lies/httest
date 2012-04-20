@@ -50,6 +50,7 @@ typedef struct ssl_config_s {
   const char *certfile;
   const char *keyfile;
   const char *cafile;
+  const char *cipher_suite;
 #define SSL_CONFIG_FLAGS_NONE 0
 #define SSL_CONFIG_FLAGS_CERT_SET 1
   int flags;
@@ -383,6 +384,11 @@ static apr_status_t worker_ssl_accept(worker_t * worker) {
 	status = APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(sconfig->ssl, config->meth);
+      if (config->cipher_suite != NULL) {
+    	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
+    		  return APR_EINVAL;
+    	  }
+      }
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -565,6 +571,12 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
 				return APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(sconfig->ssl, config->meth);
+      if (config->cipher_suite != NULL) {
+    	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
+    		  return APR_EINVAL;
+    	  }
+      }
+
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -961,6 +973,25 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
 }
 
 /**
+ * SSL_CIPHER_SUITE command
+ *
+ * See http://www.openssl.org/docs/apps/ciphers.html
+ *
+ * @param worker IN thread data object
+ * @param data IN
+ *
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker,
+                                                     worker_t *parent, apr_pool_t *ptmp) {
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  const char *val = store_get(worker->params, "1");
+  char *copy = apr_pstrdup(worker->pbody, val);
+  config->cipher_suite = copy;
+  return APR_SUCCESS;
+}
+
+/**
  * SSL_LEGACY command
  *
  * @param worker IN thread data object
@@ -1241,6 +1272,11 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
       return APR_EGENERAL;
     }
     SSL_set_ssl_method(sconfig->ssl, config->meth);
+    if (config->cipher_suite != NULL) {
+  	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
+  		  return APR_EINVAL;
+  	  }
+    }
     ssl_rand_seed();
     apr_os_sock_get(&fd, worker->socket->socket);
     bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -1470,6 +1506,12 @@ apr_status_t ssl_module_init(global_t *global) {
   if ((status = module_command_new(global, "SSL", "_SECURE_RENEG_SUPPORTED", "",
 				   "Test if remote peer do support secure renegotiation",
 	                           block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "SSL", "_SET_CIPHER_SUITE", "<ciphers>",
+				   "Set an opnessl cipher suite to be used",
+	                           block_SSL_CIPHER_SUITE)) != APR_SUCCESS) {
     return status;
   }
 
