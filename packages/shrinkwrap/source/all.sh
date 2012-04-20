@@ -793,10 +793,14 @@ function do_shrinkwrap {
     README="readme.txt"
     LIBINF="are included"
     PRE="WIN_"
+	INFO1="In addition, a Visual C++ 2008 Runtime is required, e.g.:"
+    INFO2="http://www.microsoft.com/download/en/details.aspx?id=5582"
   else
     README="README"
     LIBINF="have been statically linked"
     PRE="UNIX_"
+	INFO1=""
+	INFO2=""
   fi
   eval APR_VER="\$${PRE}APR_VER"
   eval APR_UTIL_VER="\$${PRE}APR_UTIL_VER"
@@ -822,6 +826,9 @@ The following libraries $LIBINF:
 - lua       $LUA_VER
 - js        $JS_VER
 - libxml2   $LIBXML2_VER
+
+$INFO1
+$INFO2
 
 This is "provided as is", no warranty of any kind.
 
