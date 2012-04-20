@@ -1,0 +1,10 @@
+CLIENT
+_REQ dev.etoa.net 443
+_SSL:SET_CIPHER_SUITE "EDH-RSA-DES-CBC-SHA"
+_SSL:CONNECT SSL
+__GET / HTTP/1.1
+__Host: dev.etoa.net
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_WAIT
+END

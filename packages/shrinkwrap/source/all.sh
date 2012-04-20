@@ -470,16 +470,12 @@ function win_configure_htt {
 }
 
 #
-# win: configure htt if not done, yet
+# win: configure htt (always)
 #
 function do_win_configure_htt {
   echo -n "configuring htt ... "
-  if [ -f "$TOP/src/modules.c" ]; then
-    print_ok_up_to_date
-  else
-    win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-    print_ok
-  fi
+  win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+  print_ok
 
   # get and remember version for later
   HTT_VER=`cat "$TOP/Makefile" | awk '/^VERSION/ { print $3 }'`
@@ -671,16 +667,11 @@ function win_create_sln {
 }
 
 #
-# win: create visual studio solution if not done, yet
+# win: create visual studio solution (always)
 #
 function do_win_create_sln {
-  echo -n "creating visual studio solution ... "
-  if [ -f "$SW/target/solution/src/version.rc" ]; then
-    print_ok_up_to_date
-  else
-    win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
-    print_ok
-  fi
+  win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
+  print_ok
 }
 
 #
@@ -800,9 +791,24 @@ function do_shrinkwrap {
   # create readme
   if [ "$OS" == "win" ]; then
     README="readme.txt"
+    LIBINF="are included"
+    PRE="WIN_"
+	INFO1="In addition, a Visual C++ 2008 Runtime is required, e.g.:"
+    INFO2="http://www.microsoft.com/download/en/details.aspx?id=5582"
   else
     README="README"
+    LIBINF="have been statically linked"
+    PRE="UNIX_"
+	INFO1=""
+	INFO2=""
   fi
+  eval APR_VER="\$${PRE}APR_VER"
+  eval APR_UTIL_VER="\$${PRE}APR_UTIL_VER"
+  eval PCRE_VER="\$${PRE}PCRE_VER"
+  eval OPENSSL_VER="\$${PRE}OPENSSL_VER"
+  eval LUA_VER="\$${PRE}LUA_VER"
+  eval JS_VER="\$${PRE}JS_VER"
+  eval LIBXML2_VER="\$${PRE}LIBXML2_VER"
   cat > "$DIR/$README" << EOF
 httest binaries
 
@@ -811,15 +817,18 @@ VERSION: $HTT_VER
 ARCH:    $ARCH
 BITS:    $BITS
 
-The following libraries have been statically linked:
+The following libraries $LIBINF:
 
-- apr       $UNIX_APR_VER
-- apr-util  $UNIX_APR_UTIL_VER
-- pcre      $UNIX_PCRE_VER
-- openssl   $UNIX_OPENSSL_VER
-- lua       $UNIX_LUA_VER
-- js        $UNIX_JS_VER
-- libxml2   $UNIX_LIBXML2_VER
+- apr       $APR_VER
+- apr-util  $APR_UTIL_VER
+- pcre      $PCRE_VER
+- openssl   $OPENSSL_VER
+- lua       $LUA_VER
+- js        $JS_VER
+- libxml2   $LIBXML2_VER
+
+$INFO1
+$INFO2
 
 This is "provided as is", no warranty of any kind.
 
