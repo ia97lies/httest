@@ -1365,6 +1365,32 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
 }
 
 /**
+ * SSL_DUMP_START command
+ *
+ * @param worker IN thread data object
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SSL_DUMP_START(worker_t * worker, worker_t *parent, 
+                                         apr_pool_t *ptmp) {
+  return APR_ENOTIMPL;
+}
+
+/**
+ * SSL_DUMP_STOP command
+ *
+ * @param worker IN thread data object
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SSL_DUMP_STOP(worker_t * worker, worker_t *parent, 
+                                        apr_pool_t *ptmp) {
+  return APR_ENOTIMPL;
+}
+
+/**
  * clone worker
  *
  * @param worker IN
@@ -1732,6 +1758,16 @@ apr_status_t ssl_module_init(global_t *global) {
   if ((status = module_command_new(global, "SSL", "_SECURE_RENEG_SUPPORTED", "",
 				   "Test if remote peer do support secure renegotiation",
 	                           block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_DUMP_START", "",
+				   "Start SSL debug session"
+	                           block_SSL_DUMP_START)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_DUMP_STOP", "<variable>",
+				   "Stop SSL debug session and store it to <variable>"
+	                           block_SSL_DUMP_STOP)) != APR_SUCCESS) {
     return status;
   }
 
