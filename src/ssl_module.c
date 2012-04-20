@@ -1797,12 +1797,12 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_DUMP_START", "",
-				   "Start SSL debug session"
+				   "Start SSL debug session",
 	                           block_SSL_DUMP_START)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_DUMP_STOP", "<variable>",
-				   "Stop SSL debug session and store it to <variable>"
+				   "Stop SSL debug session and store it to <variable>",
 	                           block_SSL_DUMP_STOP)) != APR_SUCCESS) {
     return status;
   }
