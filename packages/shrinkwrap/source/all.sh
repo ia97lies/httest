@@ -470,7 +470,7 @@ function win_configure_htt {
 }
 
 #
-# win: configure htt if not done, yet
+# win: configure htt (always)
 #
 function do_win_configure_htt {
   echo -n "configuring htt ... "
@@ -667,16 +667,11 @@ function win_create_sln {
 }
 
 #
-# win: create visual studio solution if not done, yet
+# win: create visual studio solution (always)
 #
 function do_win_create_sln {
-  echo -n "creating visual studio solution ... "
-  if [ -f "$SW/target/solution/src/version.rc" ]; then
-    print_ok_up_to_date
-  else
-    win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
-    print_ok
-  fi
+  win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
+  print_ok
 }
 
 #
