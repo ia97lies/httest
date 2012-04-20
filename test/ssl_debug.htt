@@ -3,16 +3,17 @@ INCLUDE $TOP/test/config.htb
 # runs exactly one time
 CLIENT
 
-#_SSL:DUMP_START
+_SSL:TRACE
 # also test if we could load cert and key in a client
 _REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
 __
+_EXPECT headers "ClientHello"
 _EXPECT . "HTTP/1.1 200 OK"
 _WAIT
-#_SSL:DUMP_STOP info
+#_SSL:TRACE info
 #_EXPECT Var(info) "Handshake, HelloServer"
 
 _REQ $YOUR_HOST SSL:$YOUR_PORT

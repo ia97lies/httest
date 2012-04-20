@@ -44,7 +44,7 @@ typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
-  SSL_METHOD *meth;
+  const SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
   const char *certfile;
@@ -53,7 +53,10 @@ typedef struct ssl_config_s {
   const char *cipher_suite;
 #define SSL_CONFIG_FLAGS_NONE 0
 #define SSL_CONFIG_FLAGS_CERT_SET 1
+#define SSL_CONFIG_FLAGS_TRACE 2
   int flags;
+  apr_pool_t *msg_pool;
+  apr_table_t *msgs;
 } ssl_config_t;
 
 typedef struct ssl_socket_config_s {
@@ -203,14 +206,16 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
 /**
  * Message call back for debugging
  */
-static void msg_cb(int write_dir, int version, int content_type, 
-                   const void *buf, size_t len, SSL *ssl, void *arg) {
+static void ssl_message_trace(int write_dir, int version, int content_type, 
+                              const void *buf, size_t len, SSL *ssl, void *arg) {
   worker_t *worker = arg;
   const char *prefix;
   const char *version_string;
   const char *content_type_string = "";
   const char *details1 = "";
   const char *details2= "";
+  char *entry;
+  ssl_config_t *config = ssl_get_worker_config(worker);
 
   prefix = write_dir ? ">" : "<";
 
@@ -452,8 +457,10 @@ static void msg_cb(int write_dir, int version, int content_type,
     }
   }
 
-  worker_log(worker, LOG_INFO, "%s%s: %s%s%s", prefix, 
-             version_string, content_type_string, details1, details2);
+  entry = apr_psprintf(config->msg_pool, "%s%s: %s%s%s", prefix, 
+                   version_string, content_type_string, details1, details2);
+  apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
+  worker_log(worker, LOG_INFO, "%s", entry);
 }
 
 /**
@@ -640,8 +647,10 @@ static apr_status_t worker_ssl_accept(worker_t * worker) {
 	status = APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(sconfig->ssl, config->meth);
-      SSL_set_msg_callback(sconfig->ssl, msg_cb);
-      SSL_set_msg_callback_arg(sconfig->ssl, worker);
+      if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+        SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
+        SSL_set_msg_callback_arg(sconfig->ssl, worker);
+      }
       if (config->cipher_suite != NULL) {
     	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
     		  return APR_EINVAL;
@@ -829,8 +838,10 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
         return APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(sconfig->ssl, config->meth);
-      SSL_set_msg_callback(sconfig->ssl, msg_cb);
-      SSL_set_msg_callback_arg(sconfig->ssl, worker);
+      if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+        SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
+        SSL_set_msg_callback_arg(sconfig->ssl, worker);
+      }
       if (config->cipher_suite != NULL) {
     	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
     		  return APR_EINVAL;
@@ -1396,29 +1407,22 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
 }
 
 /**
- * SSL_DUMP_START command
+ * SSL_TRACE_START command
  *
  * @param worker IN thread data object
  * @param data IN 
  *
  * @return APR_SUCCESS or apr error code
  */
-static apr_status_t block_SSL_DUMP_START(worker_t * worker, worker_t *parent, 
-                                         apr_pool_t *ptmp) {
-  return APR_ENOTIMPL;
-}
-
-/**
- * SSL_DUMP_STOP command
- *
- * @param worker IN thread data object
- * @param data IN 
- *
- * @return APR_SUCCESS or apr error code
- */
-static apr_status_t block_SSL_DUMP_STOP(worker_t * worker, worker_t *parent, 
-                                        apr_pool_t *ptmp) {
-  return APR_ENOTIMPL;
+static apr_status_t block_SSL_TRACE(worker_t * worker, worker_t *parent, 
+                                    apr_pool_t *ptmp) {
+  apr_pool_t *pool;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  config->flags |= SSL_CONFIG_FLAGS_TRACE;
+  apr_pool_create(&pool, NULL);
+  config->msg_pool = pool;
+  config->msgs = apr_table_make(pool, 5);
+  return APR_SUCCESS;
 }
 
 /**
@@ -1558,8 +1562,10 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
       return APR_EGENERAL;
     }
     SSL_set_ssl_method(sconfig->ssl, config->meth);
-    SSL_set_msg_callback(sconfig->ssl, msg_cb);
-    SSL_set_msg_callback_arg(sconfig->ssl, worker);
+    if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+      SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
+      SSL_set_msg_callback_arg(sconfig->ssl, worker);
+    }
     if (config->cipher_suite != NULL) {
   	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
   		  return APR_EINVAL;
@@ -1681,6 +1687,34 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
   return APR_SUCCESS;
 }
 
+/**
+ * expect/grep/match SSL handshake
+ *
+ * @param worker IN
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_hook_read_pre_headers(worker_t *worker) {
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  if (config->msgs) {
+    int i;
+    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(config->msgs)->elts;
+    for (i = 0; i < apr_table_elts(config->msgs)->nelts; i++) {
+      worker_match(worker, worker->match.dot, e[i].val, strlen(e[i].val));
+      worker_match(worker, worker->match.headers, e[i].val, strlen(e[i].val));
+      worker_match(worker, worker->grep.dot, e[i].val, strlen(e[i].val));
+      worker_match(worker, worker->grep.headers, e[i].val, strlen(e[i].val));
+      worker_expect(worker, worker->expect.dot, e[i].val, strlen(e[i].val));
+      worker_expect(worker, worker->expect.headers, e[i].val, strlen(e[i].val));
+    }
+    apr_table_clear(config->msgs);
+    apr_pool_destroy(config->msg_pool);
+    apr_pool_create(&config->msg_pool, NULL);
+    config->msgs = apr_table_make(config->msg_pool, 5);
+  }
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Module 
  ***********************************************************************/
@@ -1796,14 +1830,9 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
     return status;
   }
-  if ((status = module_command_new(global, "SSL", "_DUMP_START", "",
-				   "Start SSL debug session"
-	                           block_SSL_DUMP_START)) != APR_SUCCESS) {
-    return status;
-  }
-  if ((status = module_command_new(global, "SSL", "_DUMP_STOP", "<variable>",
-				   "Stop SSL debug session and store it to <variable>"
-	                           block_SSL_DUMP_STOP)) != APR_SUCCESS) {
+  if ((status = module_command_new(global, "SSL", "_TRACE", "",
+				   "Start SSL debug session",
+	                           block_SSL_TRACE)) != APR_SUCCESS) {
     return status;
   }
 
@@ -1819,6 +1848,7 @@ apr_status_t ssl_module_init(global_t *global) {
   htt_hook_connect(ssl_hook_connect, NULL, NULL, 0);
   htt_hook_accept(ssl_hook_accept, NULL, NULL, 0);
   htt_hook_close(ssl_hook_close, NULL, NULL, 0);
+  htt_hook_read_pre_headers(ssl_hook_read_pre_headers, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

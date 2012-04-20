@@ -1524,6 +1524,13 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     apr_table_clear(worker->headers_add);
   }
 
+  /**
+   * Give modules the possibility to expect/grep/match there own stuff
+   */
+  if ((status = htt_run_read_pre_headers(worker)) != APR_SUCCESS) {
+    return status;
+  }
+
   /** Status line, make that a little fuzzy in reading trailing empty lines of last
    *  request */
   while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
@@ -4416,6 +4423,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(connect)
   APR_HOOK_LINK(accept)
   APR_HOOK_LINK(close)
+  APR_HOOK_LINK(read_pre_headers)
   APR_HOOK_LINK(read_status_line)
   APR_HOOK_LINK(read_header)
   APR_HOOK_LINK(read_buf)
@@ -4446,6 +4454,10 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
                                       (worker_t *worker, char *info, char **new_info), 
 				      (worker, info, new_info), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_pre_headers, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_status_line, 
                                       (worker_t *worker, char *line), 
