@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO loops over libs and ht* binaries, simplify libs.sh, streamline
+
 #
 # print "OK"
 #
@@ -93,7 +95,10 @@ EOF
     rm "$LIB_NAME-$LIB_VER.tar"
   fi
   rm "$LIB_FILE"
+  
+  echo -n "checking that directory $LIB_NAME-$LIB_VER exists ... "
   [ -d "$LIB_NAME-$LIB_VER" ]
+  echo "ok"
 }
 
 #
@@ -124,7 +129,10 @@ function unix_build_apr {
   cd "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
   ./configure
   make
+  
+  echo -n "checking that apr lib has been built ... "
   [ -f .libs/libapr-1.a ]
+  echo "ok"
 }
 
 #
@@ -147,7 +155,10 @@ function unix_build_apr_util {
   cd "$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER"
   ./configure --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
   make
+
+  echo -n "checking that apr-util lib has been built ... "
   [ -f .libs/libaprutil-1.a ]
+  echo "ok"
 }
 
 #
@@ -209,7 +220,10 @@ function unix_build_pcre {
   make
   create_custom_config $UNIX_PCRE_NAME $UNIX_PCRE_VER \
     "-I\${DIR}" "-L\${DIR}/.libs -lpcre"
-  [ -f .libs/libpcre.a ]
+	
+  echo -n "checking that pcre lib has been built ... "
+  [ -f .libs/libpcre.a ]$
+  echo "ok"
 }
 
 #
@@ -236,7 +250,10 @@ function unix_build_openssl {
     ./config
   fi
   make
+
+  echo -n "checking that openssl lib has been built ... "
   [ -f libssl.a ]
+  echo "ok"
 }
 
 #
@@ -263,7 +280,10 @@ function unix_build_lua {
     make linux
   fi
   make test
+  
+  echo -n "checking that lua lib has been built ... "
   [ -f src/liblua.a ]
+  echo "ok"
 }
 
 #
@@ -310,7 +330,10 @@ function unix_build_js {
   ./configure --disable-shared-js
   make
   create_custom_config $UNIX_JS_NAME $UNIX_JS_VER "-I\${DIR}" "-L\${DIR} -ljs_static"
+
+  echo -n "checking that js lib has been built ... "
   [ -f libjs_static.a ]
+  echo "ok"
 }
 
 #
@@ -335,7 +358,10 @@ function unix_build_libxml2 {
   make
   create_custom_config "xml2" $UNIX_LIBXML2_VER \
     "-I\${DIR}/include" "-L\${DIR} -lxml2"
+	
+  echo -n "checking that libxml2 lib has been built ... "
   [ -f .libs/libxml2.a ]
+  echo "ok"
 }
 
 #
@@ -356,8 +382,12 @@ function do_unix_build_libxml2 {
 #
 function buildconf {
   cd "$TOP"
+  rm -f configure
   ./buildconf.sh
+
+  echo -n "checking that configure file has been built ... "
   [ -f configure ]
+  echo "ok"
 }
 
 #
@@ -393,7 +423,10 @@ function unix_build_htt {
     --enable-html-module=yes \
     enable_use_static=yes
   make clean all
+
+  echo -n "checking that httest has been built ... "
   [ -f src/httest ]
+  echo "ok"
   
   # get and remember version for later
   HTT_VER=`cat Makefile | awk '/^VERSION/ { print $3 }'`
@@ -422,13 +455,21 @@ function do_unix_build_htt {
 # and httest has been built with all required modules
 #
 function do_unix_basic_tests_htt {
-  echo -n "running basic tests ... "  
+  echo -n "running basic tests: "
+  echo -n "httest "
   [ `"$TOP/src/httest" --version | grep "^httest $HTT_VER$" | wc -l` -eq 1 ]
+  echo -n "htntlm "
   [ `"$TOP/src/htntlm" --version | grep "^htntlm $HTT_VER$" | wc -l` -eq 1 ]
+  echo -n "htproxy "
   [ `"$TOP/src/htproxy" --version | grep "^htproxy $HTT_VER$" | wc -l` -eq 1 ]
+  echo -n "htremote "
   [ `"$TOP/src/htremote" --version | grep "^htremote $HTT_VER$" | wc -l` -eq 1 ]
+  echo -n "hturlext "
   [ `"$TOP/tools/hturlext" --version | grep "^hturlext $HTT_VER$" | wc -l` -eq 1 ]
+  echo -n "htx2b "
   [ `"$TOP/tools/htx2b" --version | grep "htx2b $HTT_VER$" | wc -l` -eq 1 ]
+  echo "ok"
+  
   cd "$TOP/test"
   ./run.sh block.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   ./run.sh block_lua.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -466,7 +507,9 @@ function win_configure_htt {
     --with-libxml2="$DUMMYDIR" \
     --enable-html-module=yes
   
+  echo -n "checking that httest has been configured ... "
   [ -f "src/modules.c" ]
+  echo "ok"
 }
 
 #
@@ -501,7 +544,6 @@ function win_create_sln {
   RELEASE_INCLUDES="..\\\\src"
   RELEASE_DEFINES="HAVE_CONFIG_H;WIN32;NDEBUG;_CONSOLE;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_MBCS"
   RELEASE_LIBS="Ws2_32.lib"
-  # TODO do more elegantly (loops, get libs from file system)
   
   # apr
   NAME="$WIN_APR_NAME-$WIN_APR_VER"
@@ -663,13 +705,16 @@ function win_create_sln {
   echo "BEGIN" >>"$WINRC"
   echo "END" >>"$WINRC"
 
+  echo -n "checking that visual studio solution has been created ... "  
   [ -f "$WINRC" ]
+  echo "ok"
 }
 
 #
 # win: create visual studio solution (always)
 #
 function do_win_create_sln {
+  echo -n "creating visual studio solution ... "
   win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
@@ -681,12 +726,23 @@ function win_build_htt {
   WINSLN="$SW/target/solution"
   #rm -rf "$WINSLN/Release"
   
-  # TODO determine dynamically, find below /cygwin 
-  VCVARS="\"C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat\""
+  # find visual c++ 2010
+  PAT="Microsoft Visual Studio 10.0/VC/bin/vcvars32.bat"
+  # search drive c first, don't want to scan all drives unless necessary
+  VCVARS=`find /cygdrive/c | grep "$PAT" & true` 
+  if [ "$VCVARS" == "" ];  then
+    VCVARS=`find /cygdrive | grep "$PAT" & true`
+  fi
+  if [ "$VCVARS" == "" ];  then
+    echo "visual c++ 2010 not found"
+  fi
+  # convert to windows path with backslashes
+  VCVARS=`cygpath -aw "$VCVARS"`
+  echo "using '$VCVARS'"
   
   cd "$WINSLN"
   cat > "build.bat" << EOF
-  call $VCVARS
+  call "$VCVARS"
   msbuild httest.sln /p:Configuration=Release
   if %errorlevel% neq 0 (
     exit 1
@@ -713,8 +769,10 @@ EOF
   cp "$WINSLN/Release/hturlext.exe" "$TOP/tools"
   cp "$WINSLN/Release/htx2b.exe" "$TOP/tools"
   cp "$WINSLN/Release"/*.dll "$TOP/tools"
-  
-  [ -f "$WINSLN/Release/httest.exe" ]  
+
+  echo -n "checking that httest has been built ... "
+  [ -f "$WINSLN/Release/httest.exe" ]
+  echo "ok"
 }
 
 #
@@ -729,17 +787,33 @@ function do_win_build_htt {
 #
 # win: run some basic tests
 #
-function do_win_basic_tests_htt {
-  echo -n "running basic tests ... "  
+function win_basic_tests_htt {
+  echo "httest"  
   [ `"$TOP/src/httest.exe" --version | grep "httest.exe $HTT_VER$" | wc -l` -eq 1 ]
+  echo "htntlm"
   [ `"$TOP/src/htntlm.exe" --version | grep "htntlm.exe $HTT_VER$" | wc -l` -eq 1 ]
+  echo "htproxy"
   [ `"$TOP/src/htproxy.exe" --version | grep "htproxy.exe $HTT_VER$" | wc -l` -eq 1 ]
+  echo "htremote"
   [ `"$TOP/src/htremote.exe" --version | grep "htremote.exe $HTT_VER$" | wc -l` -eq 1 ]
+  echo "hturlext"
   [ `"$TOP/tools/hturlext.exe" --version | grep "hturlext $HTT_VER$" | wc -l` -eq 1 ]
+  echo "htx2b"
   [ `"$TOP/tools/htx2b.exe" --version | grep "htx2b.exe $HTT_VER$" | wc -l` -eq 1 ]
- 
- # TODO run some actual *.htt tests
-  
+
+  cd "$TOP/test"
+  ./run.bat block.htt
+  ./run.bat block_lua.htt
+  ./run.bat block_js.htt
+  ./run.bat html.htt
+}
+
+#
+# win: run some basic tests (always)
+#
+function do_win_basic_tests_htt {
+  echo -n "running basic tests ... "
+  win_basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
@@ -839,23 +913,29 @@ EOF
     unix2dos "$DIR/$README" >>"$BUILDLOG" 2>>"$BUILDLOG"
   fi
 
-  # everything there?
   if [ "$OS" == "win" ]; then
-    [ `ls "$DIR" | wc -w` -eq 20 ]
+    NFILES=20
   else
-    [ `ls "$DIR" | wc -w` -eq 7 ]
+    NFILES=7
   fi
+  echo -n "checking that $NFILES files are in release ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
+  [ `ls "$DIR" | wc -w` -eq $NFILES ]
+  echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
   
   # tgz
   cd "$DIR/.."
   # ignore "file changed as we read it" on linux
   tar cvzfh "$NAME.tar.gz" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG" && true
+  echo -n "checking that tar.gz has been created ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
   [ -f $DIR.tar.gz ]
+  echo "ok"
   
   # zip
   if [ "$OS" == "mac" -o "$OS" == "win" ]; then
     zip -r "$NAME.zip" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
+	echo -n "checking that zip has been created ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
     [ -f $DIR.zip ]
+	echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
   fi
   
   print_ok
@@ -879,7 +959,11 @@ TOP="$SW/../.."
 
 do_determine_os
 do_create_target
-BUILDLOG="$SW/target/build.log"
+
+BUILDLOG="target/build.log"
+# blue bold
+echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
+BUILDLOG="$SW/$BUILDLOG"
 echo "" >"$BUILDLOG"
 
 if [ "$UNIX" == "1" ]; then
