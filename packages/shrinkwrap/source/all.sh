@@ -222,7 +222,7 @@ function unix_build_pcre {
     "-I\${DIR}" "-L\${DIR}/.libs -lpcre"
 	
   echo -n "checking that pcre lib has been built ... "
-  [ -f .libs/libpcre.a ]$
+  [ -f .libs/libpcre.a ]
   echo "ok"
 }
 
@@ -454,27 +454,33 @@ function do_unix_build_htt {
 # just to make sure that all binaries have been built
 # and httest has been built with all required modules
 #
-function do_unix_basic_tests_htt {
-  echo -n "running basic tests: "
-  echo -n "httest "
+function unix_basic_tests_htt {
+  echo "httest"
   [ `"$TOP/src/httest" --version | grep "^httest $HTT_VER$" | wc -l` -eq 1 ]
-  echo -n "htntlm "
+  echo "htntlm"
   [ `"$TOP/src/htntlm" --version | grep "^htntlm $HTT_VER$" | wc -l` -eq 1 ]
-  echo -n "htproxy "
+  echo "htproxy"
   [ `"$TOP/src/htproxy" --version | grep "^htproxy $HTT_VER$" | wc -l` -eq 1 ]
-  echo -n "htremote "
+  echo "htremote"
   [ `"$TOP/src/htremote" --version | grep "^htremote $HTT_VER$" | wc -l` -eq 1 ]
-  echo -n "hturlext "
+  echo "hturlext"
   [ `"$TOP/tools/hturlext" --version | grep "^hturlext $HTT_VER$" | wc -l` -eq 1 ]
-  echo -n "htx2b "
+  echo "htx2b"
   [ `"$TOP/tools/htx2b" --version | grep "htx2b $HTT_VER$" | wc -l` -eq 1 ]
-  echo "ok"
   
   cd "$TOP/test"
   ./run.sh block.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   ./run.sh block_lua.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   ./run.sh block_js.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   ./run.sh html.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+}
+
+#
+# unix: run some basic tests (always)
+#
+function do_unix_basic_tests_htt {
+  echo -n "running basic tests ... "
+  unix_basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
