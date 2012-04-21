@@ -21,7 +21,7 @@ function print_ok_up_to_date {
 #
 function print_failed {
   # bold red
-  echo "$(tput bold)$(tput setaf 1)FAILED$(tput sgr 0) $(tput setaf 7)(see target/build.log for details)$(tput sgr 0)"
+  echo "$(tput bold)$(tput setaf 1)FAILED$(tput sgr 0)"
 }
 
 #
@@ -89,7 +89,7 @@ EOF
 	rmdir tmp
   else
     gzip -d -c "$LIB_FILE" > "$LIB_NAME-$LIB_VER.tar"
-    tar xf "$LIB_NAME-$LIB_VER.tar"
+    tar vxf "$LIB_NAME-$LIB_VER.tar"
     rm "$LIB_NAME-$LIB_VER.tar"
   fi
   rm "$LIB_FILE"
@@ -838,53 +838,44 @@ function do_shrinkwrap {
   
   # create readme
   if [ "$OS" == "win" ]; then
-    README="readme.txt"
+    README="$DIR/readme.txt"
     LIBINF="are included"
-    PRE="WIN_"
-	INFO1="In addition, a Visual C++ 2008 Runtime is required, e.g.:"
-    INFO2="http://www.microsoft.com/download/en/details.aspx?id=5582"
+    SYS="WIN"
   else
-    README="README"
+    README="$DIR/README"
     LIBINF="have been statically linked"
-    PRE="UNIX_"
-	INFO1=""
-	INFO2=""
+    SYS="UNIX"
   fi
-  eval APR_VER="\$${PRE}APR_VER"
-  eval APU_VER="\$${PRE}APU_VER"
-  eval PCRE_VER="\$${PRE}PCRE_VER"
-  eval SSL_VER="\$${PRE}SSL_VER"
-  eval LUA_VER="\$${PRE}LUA_VER"
-  eval JS_VER="\$${PRE}JS_VER"
-  eval XML2_VER="\$${PRE}XML2_VER"
-  cat > "$DIR/$README" << EOF
+  cat >"$README" <<EOF
 httest binaries
 
-OS:      $OS
-VERSION: $HTT_VER
-ARCH:    $ARCH
-BITS:    $BITS
+OS:       $OS
+VERSION:  $HTT_VER
+ARCH:     $ARCH
+BITS:     $BITS
 
 The following libraries $LIBINF:
 
-- apr       $APR_VER
-- apr-util  $APU_VER
-- pcre      $PCRE_VER
-- openssl   $SSL_VER
-- lua       $LUA_VER
-- js        $JS_VER
-- libxml2   $XML2_VER
-
-$INFO1
-$INFO2
+EOF
+  for LIBVAR in $LIBVARS; do
+    eval LIBNAME="\$${SYS}_${LIBVAR}_NAME"
+	eval LIBVER="\$${SYS}_${LIBVAR}_VER"
+	printf "%-11s %s\n" "- $LIBNAME" "$LIBVER" >>"$README"
+  done
+  if [ "$OS" == "win" ]; then
+    echo >>"$README"
+	echo "In addition, a Visual C++ 2008 Runtime is required, e.g.:" >>"$README"
+    echo "http://www.microsoft.com/download/en/details.aspx?id=5582" >>"$README"
+  fi
+  cat >>"$README" <<EOF
 
 This is "provided as is", no warranty of any kind.
 
-$(date)
+$(date "+%Y-%M-%d %H:%M:%S %Z")
 
 EOF
   if [ "$OS" == "win" ]; then
-    unix2dos "$DIR/$README" >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix2dos "$README" >>"$BUILDLOG" 2>>"$BUILDLOG"
   fi
 
   if [ "$OS" == "win" ]; then
@@ -899,7 +890,8 @@ EOF
   # tgz
   cd "$DIR/.."
   # ignore "file changed as we read it" on linux
-  tar cvzfh "$NAME.tar.gz" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG" && true
+  tar cvzf "$NAME.tar.gz" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  # && true
   echo -n "checking that tar.gz has been created ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
   [ -f $DIR.tar.gz ]
   echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
