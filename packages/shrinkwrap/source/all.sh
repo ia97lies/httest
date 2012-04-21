@@ -23,11 +23,24 @@ function main {
   echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
   BUILDLOG="$SW/$BUILDLOG"
   echo "" >"$BUILDLOG"
+   
+  # get name and dir of all htt binaries
+  HTBIN_PATHS="src tools"
+  HTBINS=""
+  for HTBIN_PATH in $HTBIN_PATHS; do
+    BINS=`cat "$TOP/$HTBIN_PATH/Makefile.am" | awk \
+      '/bin_PROGRAMS =/ {
+        for (i=3; i<=NF; i++) {
+          printf("%s ", $(i));
+        }
+      }'`
+    for BIN in $BINS; do
+      HTBINS="$HTBINS $HTBIN_PATH/$BIN"
+    done
+  done
+  echo "$HTBINS" >>"$BUILDLOG"
 
   LIBVARS="APR APU SSL PCRE LUA JS XML2"
-  # TODO get from makefile.am after building it
-  HTBINS="src/httest src/htntlm src/htproxy src/htremote tools/hturlext tools/htx2b"
-  HTBIN_PATHS="src tools"
 
   if [ "$UNIX" == "1" ]; then
     # unix
