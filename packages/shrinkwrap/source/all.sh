@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO loops over libs and ht* binaries, simplify libs.sh, streamline
-
 #
 # print "OK"
 #
@@ -125,7 +123,7 @@ function do_get_lib {
 #
 # unix: build apr
 #
-function unix_build_apr {
+function unix_build_APR {
   cd "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
   ./configure
   make
@@ -138,12 +136,12 @@ function unix_build_apr {
 #
 # unix: build apr if no lib, yet
 #
-function do_unix_build_apr {
+function do_unix_build_APR {
   echo -n "building apr ... "  
   if [ -f "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER/.libs/libapr-1.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_apr >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_APR >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -151,8 +149,8 @@ function do_unix_build_apr {
 #
 # unix: build apr-util
 #
-function unix_build_apr_util {
-  cd "$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER"
+function unix_build_APU {
+  cd "$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER"
   ./configure --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
   make
 
@@ -164,12 +162,12 @@ function unix_build_apr_util {
 #
 # unix: build apr-util if no lib, yet
 #
-function do_unix_build_apr_util {
+function do_unix_build_APU {
   echo -n "building apr-util ... "  
-  if [ -f "$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER/.libs/libaprutil-1.a" ]; then
+  if [ -f "$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER/.libs/libaprutil-1.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_apr_util >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_APU >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -214,7 +212,7 @@ EOF
 #
 # inxi: build pcre
 #
-function unix_build_pcre {
+function unix_build_PCRE {
   cd "$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER"
   ./configure
   make
@@ -229,12 +227,12 @@ function unix_build_pcre {
 #
 # unix: build pcre if no lib, yet
 #
-function do_unix_build_pcre {
+function do_unix_build_PCRE {
   echo -n "building pcre ... "  
   if [ -f "$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER/.libs/libpcre.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_pcre >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_PCRE >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -242,8 +240,8 @@ function do_unix_build_pcre {
 #
 # unix: build openssl
 #
-function unix_build_openssl {
-  cd "$SW/target/$UNIX_OPENSSL_NAME-$UNIX_OPENSSL_VER"
+function unix_build_SSL {
+  cd "$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER"
   if [ "$OS" = "mac" ]; then
     ./Configure darwin64-x86_64-cc
   else
@@ -259,12 +257,12 @@ function unix_build_openssl {
 #
 # unix: build openssl if no lib, yet
 #
-function do_unix_build_openssl {
+function do_unix_build_SSL {
   echo -n "building openssl ... "  
-  if [ -f "$SW/target/$UNIX_OPENSSL_NAME-$UNIX_OPENSSL_VER/libssl.a" ]; then
+  if [ -f "$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER/libssl.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_openssl >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_SSL >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -272,7 +270,7 @@ function do_unix_build_openssl {
 #
 # unix: build lua if no lib, yet
 #
-function unix_build_lua {
+function unix_build_LUA {
   cd "$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER"
   if [ "$OS" = "mac" ]; then
     make macosx
@@ -289,12 +287,12 @@ function unix_build_lua {
 #
 # unix: build lua if no lib, yet
 #
-function do_unix_build_lua {
+function do_unix_build_LUA {
   echo -n "building lua ... "  
   if [ -f "$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER/src/liblua.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_lua >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_LUA >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -302,7 +300,7 @@ function do_unix_build_lua {
 #
 # unix: build js
 #
-function unix_build_js {
+function unix_build_JS {
   cd "$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER"
   cd js/src
   if [ "$OS" = "mac" ]; then
@@ -339,12 +337,12 @@ function unix_build_js {
 #
 # unix: build js if no lib, yet
 #
-function do_unix_build_js {
+function do_unix_build_JS {
   echo -n "building js ... "  
   if [ -f "$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER/js/src/libjs_static.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_js >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_JS >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -352,11 +350,11 @@ function do_unix_build_js {
 #
 # unix: build libmlx2
 #
-function unix_build_libxml2 {
-  cd "$SW/target/$UNIX_LIBXML2_NAME-$UNIX_LIBXML2_VER"
+function unix_build_XML2 {
+  cd "$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER"
   ./configure
   make
-  create_custom_config "xml2" $UNIX_LIBXML2_VER \
+  create_custom_config "xml2" $UNIX_XML2_VER \
     "-I\${DIR}/include" "-L\${DIR} -lxml2"
 	
   echo -n "checking that libxml2 lib has been built ... "
@@ -367,12 +365,12 @@ function unix_build_libxml2 {
 #
 # unix: build libmlx2 if no lib, yet
 #
-function do_unix_build_libxml2 {
+function do_unix_build_XML2 {
   echo -n "building libxml2 ... "  
-  if [ -f "$SW/target/$UNIX_LIBXML2_NAME-$UNIX_LIBXML2_VER/.libs/libxml2.a" ]; then
+  if [ -f "$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER/.libs/libxml2.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_libxml2 >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_XML2 >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -391,7 +389,7 @@ function buildconf {
 }
 
 #
-# unix/win: run buildconf.sh if not configure script, yet
+# unix/win: run buildconf.sh if no configure script, yet
 #
 function do_buildconf {
   echo -n "building htt configuration ... "  
@@ -412,14 +410,14 @@ function unix_build_htt {
   cd "$TOP"
   ./configure \
     --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER" \
-    --with-apr-util="$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER" \
+    --with-apr-util="$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER" \
     --with-pcre="$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER" \
-    --with-ssl="$SW/target/$UNIX_OPENSSL_NAME-$UNIX_OPENSSL_VER" \
+    --with-ssl="$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER" \
     --with-lua="$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER/src" \
     --enable-lua-module=yes \
     --with-spidermonkey="$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER/js/src" \
     --enable-js-module=yes \
-    --with-libxml2="$SW/target/$UNIX_LIBXML2_NAME-$UNIX_LIBXML2_VER" \
+    --with-libxml2="$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER" \
     --enable-html-module=yes \
     enable_use_static=yes
   make clean all
@@ -547,56 +545,26 @@ function win_create_sln {
   mkdir "$WINSLN"
   
   # build settings, note that backslashes are escaped twice for sed further below
-  RELEASE_INCLUDES="..\\\\src"
   RELEASE_DEFINES="HAVE_CONFIG_H;WIN32;NDEBUG;_CONSOLE;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_MBCS"
+  RELEASE_INCLUDES="..\\\\src"
+  RELEASE_LIBDIRS=""
   RELEASE_LIBS="Ws2_32.lib"
   
-  # apr
-  NAME="$WIN_APR_NAME-$WIN_APR_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libapr-1.lib"
-  RELEASE_LIBDIRS="..\\\\..\\\\$NAME\\\\lib"
+  for LIBVAR in $LIBVARS; do
+    eval NAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
+	echo "name: $NAME"
+    RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+    RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+	cd "$SW/target/$NAME/lib"
+	for LIB in `ls *.lib`; do
+      RELEASE_LIBS="$RELEASE_LIBS;$LIB"
+	done
+  done
 
-  # apr-util
-  NAME="$WIN_APR_UTIL_NAME-$WIN_APR_UTIL_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libaprutil-1.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # openssl
-  NAME="$WIN_OPENSSL_NAME-$WIN_OPENSSL_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libeay32.lib;ssleay32.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # pcre
-  NAME="$WIN_PCRE_NAME-$WIN_PCRE_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;pcre.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # lua
-  NAME="$WIN_LUA_NAME-$WIN_LUA_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;lua52.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # js
-  NAME="$WIN_JS_NAME-$WIN_JS_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;mozjs.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # libmxl2
-  NAME="$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libxml2.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  DEBUG_INCLUDES="$RELEASE_INCLUDES"
   DEBUG_DEFINES="$RELEASE_DEFINES"
-  DEBUG_LIBS="$RELEASE_LIBS"
+  DEBUG_INCLUDES="$RELEASE_INCLUDES"
   DEBUG_LIBDIRS="$RELEASE_LIBDIRS"
+  DEBUG_LIBS="$RELEASE_LIBS"
   
   WINSRC="$SW/source/win"
   cp "$WINSRC/httest.sln" "$WINSLN"
@@ -637,14 +605,14 @@ function win_create_sln {
     cp "$WINSRC/httest.vcxproj.in" "$WINPRJ"
     sed -i.bak 's/##PROJECT_NAME##/'$NAME'/g' $WINPRJ
     sed -i.bak 's/##PROJECT_GUID##/'$GUID'/g' $WINPRJ
-    sed -i.bak 's/##RELEASE_INCLUDES##/'$RELEASE_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##RELEASE_DEFINES##/'$RELEASE_DEFINES'/g' $WINPRJ
-    sed -i.bak 's/##RELEASE_LIBS##/'$RELEASE_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_INCLUDES##/'$RELEASE_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##RELEASE_LIBDIRS##/'$RELEASE_LIBDIRS'/g' $WINPRJ
-    sed -i.bak 's/##DEBUG_INCLUDES##/'$DEBUG_INCLUDES'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_LIBS##/'$RELEASE_LIBS'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_DEFINES##/'$DEBUG_DEFINES'/g' $WINPRJ
-    sed -i.bak 's/##DEBUG_LIBS##/'$DEBUG_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_INCLUDES##/'$DEBUG_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_LIBDIRS##/'$DEBUG_LIBDIRS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_LIBS##/'$DEBUG_LIBS'/g' $WINPRJ
     
     # determine c files
     C_FILES=`cat "$TOP/src/Makefile.am" "$TOP/tools/Makefile.am" | awk \
@@ -757,12 +725,12 @@ EOF
   cmd /c build.bat
   
   cp "$SW/target/$WIN_APR_NAME-$WIN_APR_VER/dll/"*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_APR_UTIL_NAME-$WIN_APR_UTIL_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_OPENSSL_NAME-$WIN_OPENSSL_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$SW/target/$WIN_APU_NAME-$WIN_APU_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$SW/target/$WIN_SSL_NAME-$WIN_SSL_VER/dll"/*.dll "$WINSLN/Release"
   cp "$SW/target/$WIN_PCRE_NAME-$WIN_PCRE_VER/dll"/*.dll "$WINSLN/Release"
   cp "$SW/target/$WIN_LUA_NAME-$WIN_LUA_VER/dll"/*.dll "$WINSLN/Release"
   cp "$SW/target/$WIN_JS_NAME-$WIN_JS_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER/dll"/*.dll "$WINSLN/Release"
+  cp "$SW/target/$WIN_XML2_NAME-$WIN_XML2_VER/dll"/*.dll "$WINSLN/Release"
   chmod 755 "$WINSLN/Release"/*.dll
 
   rm -f "$TOP/src"/*.exe "$TOP/src/"*.dll
@@ -883,12 +851,12 @@ function do_shrinkwrap {
 	INFO2=""
   fi
   eval APR_VER="\$${PRE}APR_VER"
-  eval APR_UTIL_VER="\$${PRE}APR_UTIL_VER"
+  eval APU_VER="\$${PRE}APU_VER"
   eval PCRE_VER="\$${PRE}PCRE_VER"
-  eval OPENSSL_VER="\$${PRE}OPENSSL_VER"
+  eval SSL_VER="\$${PRE}SSL_VER"
   eval LUA_VER="\$${PRE}LUA_VER"
   eval JS_VER="\$${PRE}JS_VER"
-  eval LIBXML2_VER="\$${PRE}LIBXML2_VER"
+  eval XML2_VER="\$${PRE}XML2_VER"
   cat > "$DIR/$README" << EOF
 httest binaries
 
@@ -900,12 +868,12 @@ BITS:    $BITS
 The following libraries $LIBINF:
 
 - apr       $APR_VER
-- apr-util  $APR_UTIL_VER
+- apr-util  $APU_VER
 - pcre      $PCRE_VER
-- openssl   $OPENSSL_VER
+- openssl   $SSL_VER
 - lua       $LUA_VER
 - js        $JS_VER
-- libxml2   $LIBXML2_VER
+- libxml2   $XML2_VER
 
 $INFO1
 $INFO2
@@ -934,7 +902,7 @@ EOF
   tar cvzfh "$NAME.tar.gz" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG" && true
   echo -n "checking that tar.gz has been created ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
   [ -f $DIR.tar.gz ]
-  echo "ok"
+  echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
   
   # zip
   if [ "$OS" == "mac" -o "$OS" == "win" ]; then
@@ -972,23 +940,17 @@ echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
 BUILDLOG="$SW/$BUILDLOG"
 echo "" >"$BUILDLOG"
 
+LIBVARS="APR APU SSL PCRE LUA JS XML2"
+
 if [ "$UNIX" == "1" ]; then
   # unix
   . "$SW/source/unix/libs.sh"
-  do_get_lib "UNIX" "APR"
-  do_get_lib "UNIX" "APR_UTIL"
-  do_get_lib "UNIX" "OPENSSL"
-  do_get_lib "UNIX" "PCRE"
-  do_get_lib "UNIX" "LUA"
-  do_get_lib "UNIX" "JS"
-  do_get_lib "UNIX" "LIBXML2"
-  do_unix_build_apr
-  do_unix_build_apr_util
-  do_unix_build_pcre
-  do_unix_build_openssl
-  do_unix_build_lua
-  do_unix_build_js
-  do_unix_build_libxml2
+  for LIBVAR in $LIBVARS; do
+    do_get_lib "UNIX" "$LIBVAR"
+  done
+  for LIBVAR in $LIBVARS; do
+    do_unix_build_$LIBVAR
+  done
   do_buildconf
   do_unix_build_htt
   do_unix_basic_tests_htt
@@ -996,13 +958,9 @@ if [ "$UNIX" == "1" ]; then
 else
   # windows
   . "$SW/source/win/libs.sh"
-  do_get_lib "WIN" "APR"
-  do_get_lib "WIN" "APR_UTIL"
-  do_get_lib "WIN" "OPENSSL"
-  do_get_lib "WIN" "PCRE"
-  do_get_lib "WIN" "LUA"
-  do_get_lib "WIN" "JS"
-  do_get_lib "WIN" "LIBXML2"
+  for LIBVAR in $LIBVARS; do
+    do_get_lib "WIN" "$LIBVAR"
+  done
   do_buildconf
   do_win_configure_htt
   do_win_create_sln

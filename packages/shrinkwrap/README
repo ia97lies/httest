@@ -11,7 +11,7 @@ resulting binaries:
 idea:
 
 - distributable binaries that work "out of the box"
-- used e.g. in the httestbody java editor/gui for htt
+- used e.g. in the httestbuddy java editor/gui for htt
 
 what the build script does on mac/unix:
 
@@ -36,7 +36,7 @@ on mac/unix you need:
 on win you need:
 
 - cygwin with usual developer tools installed*
-- visual c++ 2010 express
+- visual c++ express 2010
 
 * if the build fails, just add what is missing ;)
 
