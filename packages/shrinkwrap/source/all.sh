@@ -1,6 +1,79 @@
 #!/bin/bash
 
 #
+# main function, called when this script is run
+#
+function main {
+  # stop at errors
+  set -e
+  trap "echo; print_failed" EXIT
+
+  # cd to parent dir of this script
+  cd "${0%/*}/.."
+  SW=`pwd`
+
+  # httest directory
+  TOP="$SW/../.."
+
+  do_determine_os
+  do_create_target
+
+  BUILDLOG="target/build.log"
+  # blue bold
+  echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
+  BUILDLOG="$SW/$BUILDLOG"
+  echo "" >"$BUILDLOG"
+   
+  # get name and dir of all htt binaries
+  HTBIN_PATHS="src tools"
+  HTBINS=""
+  for HTBIN_PATH in $HTBIN_PATHS; do
+    BINS=`cat "$TOP/$HTBIN_PATH/Makefile.am" | awk \
+      '/bin_PROGRAMS =/ {
+        for (i=3; i<=NF; i++) {
+          printf("%s ", $(i));
+        }
+      }'`
+    for BIN in $BINS; do
+      HTBINS="$HTBINS $HTBIN_PATH/$BIN"
+    done
+  done
+  echo "$HTBINS" >>"$BUILDLOG"
+
+  LIBVARS="APR APU SSL PCRE LUA JS XML2"
+
+  if [ "$UNIX" == "1" ]; then
+    # unix
+    . "$SW/source/unix/libs.sh"
+    for LIBVAR in $LIBVARS; do
+      do_get_lib "UNIX" "$LIBVAR"
+    done
+    for LIBVAR in $LIBVARS; do
+      do_unix_build_$LIBVAR
+    done
+    do_buildconf
+    do_unix_build_htt
+    do_basic_tests_htt
+    do_shrinkwrap
+  else
+    # windows
+    . "$SW/source/win/libs.sh"
+    for LIBVAR in $LIBVARS; do
+      do_get_lib "WIN" "$LIBVAR"
+    done
+    do_buildconf
+    do_win_configure_htt
+    do_win_create_sln
+    do_win_build_htt
+    do_basic_tests_htt
+    do_shrinkwrap
+  fi
+
+  # success
+  trap "echo; print_ok" EXIT
+}
+
+#
 # print "OK"
 #
 function print_ok {
@@ -21,7 +94,7 @@ function print_ok_up_to_date {
 #
 function print_failed {
   # bold red
-  echo "$(tput bold)$(tput setaf 1)FAILED$(tput sgr 0) $(tput setaf 7)(see target/build.log for details)$(tput sgr 0)"
+  echo "$(tput bold)$(tput setaf 1)FAILED$(tput sgr 0)"
 }
 
 #
@@ -89,11 +162,14 @@ EOF
 	rmdir tmp
   else
     gzip -d -c "$LIB_FILE" > "$LIB_NAME-$LIB_VER.tar"
-    tar xf "$LIB_NAME-$LIB_VER.tar"
+    tar vxf "$LIB_NAME-$LIB_VER.tar"
     rm "$LIB_NAME-$LIB_VER.tar"
   fi
   rm "$LIB_FILE"
+  
+  echo -n "checking that directory $LIB_NAME-$LIB_VER exists ... "
   [ -d "$LIB_NAME-$LIB_VER" ]
+  echo "ok"
 }
 
 #
@@ -120,22 +196,25 @@ function do_get_lib {
 #
 # unix: build apr
 #
-function unix_build_apr {
+function unix_build_APR {
   cd "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
   ./configure
   make
+  
+  echo -n "checking that apr lib has been built ... "
   [ -f .libs/libapr-1.a ]
+  echo "ok"
 }
 
 #
 # unix: build apr if no lib, yet
 #
-function do_unix_build_apr {
+function do_unix_build_APR {
   echo -n "building apr ... "  
   if [ -f "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER/.libs/libapr-1.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_apr >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_APR >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -143,22 +222,25 @@ function do_unix_build_apr {
 #
 # unix: build apr-util
 #
-function unix_build_apr_util {
-  cd "$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER"
+function unix_build_APU {
+  cd "$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER"
   ./configure --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
   make
+
+  echo -n "checking that apr-util lib has been built ... "
   [ -f .libs/libaprutil-1.a ]
+  echo "ok"
 }
 
 #
 # unix: build apr-util if no lib, yet
 #
-function do_unix_build_apr_util {
+function do_unix_build_APU {
   echo -n "building apr-util ... "  
-  if [ -f "$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER/.libs/libaprutil-1.a" ]; then
+  if [ -f "$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER/.libs/libaprutil-1.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_apr_util >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_APU >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -203,24 +285,27 @@ EOF
 #
 # inxi: build pcre
 #
-function unix_build_pcre {
+function unix_build_PCRE {
   cd "$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER"
   ./configure
   make
   create_custom_config $UNIX_PCRE_NAME $UNIX_PCRE_VER \
     "-I\${DIR}" "-L\${DIR}/.libs -lpcre"
+	
+  echo -n "checking that pcre lib has been built ... "
   [ -f .libs/libpcre.a ]
+  echo "ok"
 }
 
 #
 # unix: build pcre if no lib, yet
 #
-function do_unix_build_pcre {
+function do_unix_build_PCRE {
   echo -n "building pcre ... "  
   if [ -f "$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER/.libs/libpcre.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_pcre >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_PCRE >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -228,26 +313,29 @@ function do_unix_build_pcre {
 #
 # unix: build openssl
 #
-function unix_build_openssl {
-  cd "$SW/target/$UNIX_OPENSSL_NAME-$UNIX_OPENSSL_VER"
+function unix_build_SSL {
+  cd "$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER"
   if [ "$OS" = "mac" ]; then
     ./Configure darwin64-x86_64-cc
   else
     ./config
   fi
   make
+
+  echo -n "checking that openssl lib has been built ... "
   [ -f libssl.a ]
+  echo "ok"
 }
 
 #
 # unix: build openssl if no lib, yet
 #
-function do_unix_build_openssl {
+function do_unix_build_SSL {
   echo -n "building openssl ... "  
-  if [ -f "$SW/target/$UNIX_OPENSSL_NAME-$UNIX_OPENSSL_VER/libssl.a" ]; then
+  if [ -f "$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER/libssl.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_openssl >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_SSL >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -255,7 +343,7 @@ function do_unix_build_openssl {
 #
 # unix: build lua if no lib, yet
 #
-function unix_build_lua {
+function unix_build_LUA {
   cd "$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER"
   if [ "$OS" = "mac" ]; then
     make macosx
@@ -263,18 +351,21 @@ function unix_build_lua {
     make linux
   fi
   make test
+  
+  echo -n "checking that lua lib has been built ... "
   [ -f src/liblua.a ]
+  echo "ok"
 }
 
 #
 # unix: build lua if no lib, yet
 #
-function do_unix_build_lua {
+function do_unix_build_LUA {
   echo -n "building lua ... "  
   if [ -f "$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER/src/liblua.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_lua >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_LUA >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -282,7 +373,7 @@ function do_unix_build_lua {
 #
 # unix: build js
 #
-function unix_build_js {
+function unix_build_JS {
   cd "$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER"
   cd js/src
   if [ "$OS" = "mac" ]; then
@@ -310,18 +401,21 @@ function unix_build_js {
   ./configure --disable-shared-js
   make
   create_custom_config $UNIX_JS_NAME $UNIX_JS_VER "-I\${DIR}" "-L\${DIR} -ljs_static"
+
+  echo -n "checking that js lib has been built ... "
   [ -f libjs_static.a ]
+  echo "ok"
 }
 
 #
 # unix: build js if no lib, yet
 #
-function do_unix_build_js {
+function do_unix_build_JS {
   echo -n "building js ... "  
   if [ -f "$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER/js/src/libjs_static.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_js >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_JS >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -329,24 +423,27 @@ function do_unix_build_js {
 #
 # unix: build libmlx2
 #
-function unix_build_libxml2 {
-  cd "$SW/target/$UNIX_LIBXML2_NAME-$UNIX_LIBXML2_VER"
+function unix_build_XML2 {
+  cd "$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER"
   ./configure
   make
-  create_custom_config "xml2" $UNIX_LIBXML2_VER \
+  create_custom_config "xml2" $UNIX_XML2_VER \
     "-I\${DIR}/include" "-L\${DIR} -lxml2"
+	
+  echo -n "checking that libxml2 lib has been built ... "
   [ -f .libs/libxml2.a ]
+  echo "ok"
 }
 
 #
 # unix: build libmlx2 if no lib, yet
 #
-function do_unix_build_libxml2 {
+function do_unix_build_XML2 {
   echo -n "building libxml2 ... "  
-  if [ -f "$SW/target/$UNIX_LIBXML2_NAME-$UNIX_LIBXML2_VER/.libs/libxml2.a" ]; then
+  if [ -f "$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER/.libs/libxml2.a" ]; then
     print_ok_up_to_date
   else
-    unix_build_libxml2 >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix_build_XML2 >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
@@ -356,12 +453,16 @@ function do_unix_build_libxml2 {
 #
 function buildconf {
   cd "$TOP"
+  rm -f configure
   ./buildconf.sh
+
+  echo -n "checking that configure file has been built ... "
   [ -f configure ]
+  echo "ok"
 }
 
 #
-# unix/win: run buildconf.sh if not configure script, yet
+# unix/win: run buildconf.sh if no configure script, yet
 #
 function do_buildconf {
   echo -n "building htt configuration ... "  
@@ -382,21 +483,25 @@ function unix_build_htt {
   cd "$TOP"
   ./configure \
     --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER" \
-    --with-apr-util="$SW/target/$UNIX_APR_UTIL_NAME-$UNIX_APR_UTIL_VER" \
+    --with-apr-util="$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER" \
     --with-pcre="$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER" \
-    --with-ssl="$SW/target/$UNIX_OPENSSL_NAME-$UNIX_OPENSSL_VER" \
+    --with-ssl="$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER" \
     --with-lua="$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER/src" \
     --enable-lua-module=yes \
     --with-spidermonkey="$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER/js/src" \
     --enable-js-module=yes \
-    --with-libxml2="$SW/target/$UNIX_LIBXML2_NAME-$UNIX_LIBXML2_VER" \
+    --with-libxml2="$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER" \
     --enable-html-module=yes \
     enable_use_static=yes
   make clean all
+
+  echo -n "checking that httest has been built ... "
   [ -f src/httest ]
+  echo "ok"
   
   # get and remember version for later
   HTT_VER=`cat Makefile | awk '/^VERSION/ { print $3 }'`
+  HTT_NBIN=6
 }
 
 #
@@ -413,28 +518,6 @@ function do_unix_build_htt {
     # blue bold
     echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
   fi
-}
-
-#
-# unix: run some basic tests
-#
-# just to make sure that all binaries have been built
-# and httest has been built with all required modules
-#
-function do_unix_basic_tests_htt {
-  echo -n "running basic tests ... "  
-  [ `"$TOP/src/httest" --version | grep "^httest $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/src/htntlm" --version | grep "^htntlm $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/src/htproxy" --version | grep "^htproxy $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/src/htremote" --version | grep "^htremote $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/tools/hturlext" --version | grep "^hturlext $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/tools/htx2b" --version | grep "htx2b $HTT_VER$" | wc -l` -eq 1 ]
-  cd "$TOP/test"
-  ./run.sh block.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  ./run.sh block_lua.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  ./run.sh block_js.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  ./run.sh html.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  print_ok
 }
 
 #
@@ -466,21 +549,25 @@ function win_configure_htt {
     --with-libxml2="$DUMMYDIR" \
     --enable-html-module=yes
   
+  echo -n "checking that httest has been configured ... "
   [ -f "src/modules.c" ]
+  echo "ok"
 }
 
 #
-# win: configure htt if not done, yet
+# win: configure htt (always)
 #
 function do_win_configure_htt {
   echo -n "configuring htt ... "
-  if [ -f "$TOP/src/modules.c" ]; then
+  if [ -f "$SW/target/win.configured" ]; then
+    # configure is very slow on cygwin, so only do once automatically
     print_ok_up_to_date
   else
     win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+	touch "$SW/target/win.configured"
     print_ok
   fi
-
+  
   # get and remember version for later
   HTT_VER=`cat "$TOP/Makefile" | awk '/^VERSION/ { print $3 }'`
 
@@ -502,60 +589,73 @@ function win_create_sln {
   mkdir "$WINSLN"
   
   # build settings, note that backslashes are escaped twice for sed further below
-  RELEASE_INCLUDES="..\\\\src"
   RELEASE_DEFINES="HAVE_CONFIG_H;WIN32;NDEBUG;_CONSOLE;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_MBCS"
+  RELEASE_INCLUDES="..\\\\src"
+  RELEASE_LIBDIRS=""
   RELEASE_LIBS="Ws2_32.lib"
-  # TODO do more elegantly (loops, get libs from file system)
   
-  # apr
-  NAME="$WIN_APR_NAME-$WIN_APR_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libapr-1.lib"
-  RELEASE_LIBDIRS="..\\\\..\\\\$NAME\\\\lib"
+  for LIBVAR in $LIBVARS; do
+    eval NAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
+	echo "name: $NAME"
+    RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
+    RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
+	cd "$SW/target/$NAME/lib"
+	for LIB in `ls *.lib`; do
+      RELEASE_LIBS="$RELEASE_LIBS;$LIB"
+	done
+  done
 
-  # apr-util
-  NAME="$WIN_APR_UTIL_NAME-$WIN_APR_UTIL_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libaprutil-1.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # openssl
-  NAME="$WIN_OPENSSL_NAME-$WIN_OPENSSL_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libeay32.lib;ssleay32.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # pcre
-  NAME="$WIN_PCRE_NAME-$WIN_PCRE_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;pcre.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # lua
-  NAME="$WIN_LUA_NAME-$WIN_LUA_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;lua52.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # js
-  NAME="$WIN_JS_NAME-$WIN_JS_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;mozjs.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  # libmxl2
-  NAME="$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER"
-  RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-  RELEASE_LIBS="$RELEASE_LIBS;libxml2.lib"
-  RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-
-  DEBUG_INCLUDES="$RELEASE_INCLUDES"
   DEBUG_DEFINES="$RELEASE_DEFINES"
-  DEBUG_LIBS="$RELEASE_LIBS"
+  DEBUG_INCLUDES="$RELEASE_INCLUDES"
   DEBUG_LIBDIRS="$RELEASE_LIBDIRS"
+  DEBUG_LIBS="$RELEASE_LIBS"
   
   WINSRC="$SW/source/win"
-  cp "$WINSRC/httest.sln" "$WINSLN"
+  
+  # create visual studio solution
+  SLN="$WINSLN/httest.sln"
+  GUID_PRE="8BC9CEB8-8B4A-11D0-8D11-00A0C91BC94"
+  SLN_GUID="${GUID_PRE}0"
+  cat >"$SLN" <<EOF
+
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+EOF
+  N=0
+  PROJECTS=""
+  for HTBIN in $HTBINS; do
+    NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+	N=`expr $N + 1`
+	GUID="$GUID_PRE$N"
+	PROJECTS="$PROJECTS $NAME:$GUID"
+    echo "Project(\"{$SLN_GUID}\") = \"$NAME\", \"$NAME\\$NAME.vcxproj\", \"{$GUID}\"" >>"$SLN"
+	echo "EndProject" >>"$SLN"
+  done
+  cat >>"$SLN" <<EOF
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+EOF
+  N=0
+  for HTBIN in $HTBINS; do
+    BINNAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+	N=`expr $N + 1`
+	PROJ_GUID="$GUID_PRE$N"
+    echo "		{$PROJ_GUID}.Debug|Win32.ActiveCfg = Debug|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Debug|Win32.Build.0 = Debug|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Release|Win32.ActiveCfg = Release|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Release|Win32.Build.0 = Release|Win32" >>"$SLN"
+  done
+  cat >>"$SLN" <<EOF
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
+EOF
   
   # get header file names
   cd "$TOP/src/"
@@ -563,29 +663,11 @@ function win_create_sln {
     { printf("%s ", $0); }
   '`
   
-  # get project names and guids from solution
-  PROJECT_NAMES=`cat "$WINSRC/httest.sln" | awk '
-    /^Project.*= \"ht.*\"/ {
-      printf("%s ", substr($3, 2, length($3)-3));
-    }
-  '`
-  # note that $5 below ends with \r...
-  PROJECT_GUIDS=`cat "$WINSRC/httest.sln" | awk '
-    /^Project.*= \"ht.*\"/ {
-      printf("%s ", substr($5, 3, length($5)-5));
-    }
-  '`
   # create ht* projects
-  for NAME in $PROJECT_NAMES; do
-    echo -n "$NAME : "
-    GUID=`echo $NAME | awk -v pnames="$PROJECT_NAMES" -v pguids="$PROJECT_GUIDS" '{
-      n = split(pnames, pname_arr, " ");
-      split(pguids, pguid_arr, " ");
-      for (i=1; i<=n; i++) {
-        if (pname_arr[i] == $0) { print pguid_arr[i]; }
-      }
-    }'`
-    echo "$GUID"
+  for PROJECT in $PROJECTS; do
+    NAME=`echo $PROJECT | awk ' BEGIN { FS=":" } { print $1 }'`
+    GUID=`echo $PROJECT | awk ' BEGIN { FS=":" } { print $2 }'`
+    echo "$NAME : $GUID"
 
     # create project file and replace variables with sed
     mkdir "$WINSLN/$NAME"
@@ -593,14 +675,14 @@ function win_create_sln {
     cp "$WINSRC/httest.vcxproj.in" "$WINPRJ"
     sed -i.bak 's/##PROJECT_NAME##/'$NAME'/g' $WINPRJ
     sed -i.bak 's/##PROJECT_GUID##/'$GUID'/g' $WINPRJ
-    sed -i.bak 's/##RELEASE_INCLUDES##/'$RELEASE_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##RELEASE_DEFINES##/'$RELEASE_DEFINES'/g' $WINPRJ
-    sed -i.bak 's/##RELEASE_LIBS##/'$RELEASE_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_INCLUDES##/'$RELEASE_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##RELEASE_LIBDIRS##/'$RELEASE_LIBDIRS'/g' $WINPRJ
-    sed -i.bak 's/##DEBUG_INCLUDES##/'$DEBUG_INCLUDES'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_LIBS##/'$RELEASE_LIBS'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_DEFINES##/'$DEBUG_DEFINES'/g' $WINPRJ
-    sed -i.bak 's/##DEBUG_LIBS##/'$DEBUG_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_INCLUDES##/'$DEBUG_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_LIBDIRS##/'$DEBUG_LIBDIRS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_LIBS##/'$DEBUG_LIBS'/g' $WINPRJ
     
     # determine c files
     C_FILES=`cat "$TOP/src/Makefile.am" "$TOP/tools/Makefile.am" | awk \
@@ -667,20 +749,18 @@ function win_create_sln {
   echo "BEGIN" >>"$WINRC"
   echo "END" >>"$WINRC"
 
+  echo -n "checking that visual studio solution has been created ... "  
   [ -f "$WINRC" ]
+  echo "ok"
 }
 
 #
-# win: create visual studio solution if not done, yet
+# win: create visual studio solution (always)
 #
 function do_win_create_sln {
   echo -n "creating visual studio solution ... "
-  if [ -f "$SW/target/solution/src/version.rc" ]; then
-    print_ok_up_to_date
-  else
-    win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
-    print_ok
-  fi
+  win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
+  print_ok
 }
 
 #
@@ -690,12 +770,23 @@ function win_build_htt {
   WINSLN="$SW/target/solution"
   #rm -rf "$WINSLN/Release"
   
-  # TODO determine dynamically, find below /cygwin 
-  VCVARS="\"C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat\""
+  # find visual c++ 2010
+  PAT="Microsoft Visual Studio 10.0/VC/bin/vcvars32.bat"
+  # search drive c first, don't want to scan all drives unless necessary
+  VCVARS=`find /cygdrive/c | grep "$PAT" & true` 
+  if [ "$VCVARS" == "" ];  then
+    VCVARS=`find /cygdrive | grep "$PAT" & true`
+  fi
+  if [ "$VCVARS" == "" ];  then
+    echo "visual c++ 2010 not found"
+  fi
+  # convert to windows path with backslashes
+  VCVARS=`cygpath -aw "$VCVARS"`
+  echo "using '$VCVARS'"
   
   cd "$WINSLN"
   cat > "build.bat" << EOF
-  call $VCVARS
+  call "$VCVARS"
   msbuild httest.sln /p:Configuration=Release
   if %errorlevel% neq 0 (
     exit 1
@@ -703,27 +794,27 @@ function win_build_htt {
 EOF
   cmd /c build.bat
   
-  cp "$SW/target/$WIN_APR_NAME-$WIN_APR_VER/dll/"*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_APR_UTIL_NAME-$WIN_APR_UTIL_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_OPENSSL_NAME-$WIN_OPENSSL_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_PCRE_NAME-$WIN_PCRE_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_LUA_NAME-$WIN_LUA_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_JS_NAME-$WIN_JS_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_LIBXML2_NAME-$WIN_LIBXML2_VER/dll"/*.dll "$WINSLN/Release"
+  for LIBVAR in $LIBVARS; do
+    eval DIRNAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
+	cp "$SW/target/$DIRNAME/dll/"*.dll "$WINSLN/Release"
+  done
   chmod 755 "$WINSLN/Release"/*.dll
+  HTT_NBIN=`ls -l "$WINSLN/Release"/*.dll | wc -l`
 
-  rm -f "$TOP/src"/*.exe "$TOP/src/"*.dll
-  rm -f "$TOP/tools"/*.exe "$TOP/tools"/*.dll
-  cp "$WINSLN/Release/httest.exe" "$TOP/src"
-  cp "$WINSLN/Release/htntlm.exe" "$TOP/src"
-  cp "$WINSLN/Release/htproxy.exe" "$TOP/src"
-  cp "$WINSLN/Release/htremote.exe" "$TOP/src"
-  cp "$WINSLN/Release/"*.dll "$TOP/src"
-  cp "$WINSLN/Release/hturlext.exe" "$TOP/tools"
-  cp "$WINSLN/Release/htx2b.exe" "$TOP/tools"
-  cp "$WINSLN/Release"/*.dll "$TOP/tools"
-  
-  [ -f "$WINSLN/Release/httest.exe" ]  
+  for HTBIN_PATH in $HTBIN_PATHS; do
+    rm -f "$TOP/$HTBIN_PATH"/*.exe "$TOP/$HTBIN_PATH/"*.dll
+	cp "$WINSLN/Release/"*.dll "$TOP/$HTBIN_PATH"
+  done
+  for HTBIN in $HTBINS; do
+    BINDIR=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $1 }'`
+    BINNAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+    cp "$WINSLN/Release/$BINNAME.exe" "$TOP/$BINDIR"
+	HTT_NBIN=`expr $HTT_NBIN + 1`
+  done
+
+  echo -n "checking that httest has been built ... "
+  [ -f "$WINSLN/Release/httest.exe" ]
+  echo "ok"
 }
 
 #
@@ -736,24 +827,131 @@ function do_win_build_htt {
 }
 
 #
-# win: run some basic tests
+# unix/win: run some basic tests
 #
-function do_win_basic_tests_htt {
-  echo -n "running basic tests ... "  
-  [ `"$TOP/src/httest.exe" --version | grep "httest.exe $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/src/htntlm.exe" --version | grep "htntlm.exe $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/src/htproxy.exe" --version | grep "htproxy.exe $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/src/htremote.exe" --version | grep "htremote.exe $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/tools/hturlext.exe" --version | grep "hturlext $HTT_VER$" | wc -l` -eq 1 ]
-  [ `"$TOP/tools/htx2b.exe" --version | grep "htx2b.exe $HTT_VER$" | wc -l` -eq 1 ]
- 
- # TODO run some actual *.htt tests
+function basic_tests_htt {
+  if [ "$OS" == "win" ]; then
+    EXE_EXT=".exe"
+	SH_EXT=".bat"
+  else
+    EXE_EXT=""
+	SH_EXT=".sh"
+  fi
   
+  for HTBIN in $HTBINS; do
+    NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+	echo "NAME=$NAME"
+    CALL="$TOP/$HTBIN$EXE_EXT"
+	echo "CALL=$CALL"
+    "$CALL" --version | grep "$NAME"
+	[ `"$CALL" --version | grep "$NAME.* $HTT_VER" | wc -l` -eq 1 ]
+  done
+
+  cd "$TOP/test"
+  TESTS="block.htt block_lua.htt block_js.htt html.htt"
+  for TEST in $TESTS; do
+    ./run$SH_EXT $TEST
+  done
+}
+
+#
+# unix/win: run some basic tests (always)
+#
+function do_basic_tests_htt {
+  echo -n "running basic tests ... "
+  basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
 #
-# unix/win: "shrink-wrap", i.e. get binaries, create README and zip/tgz it
+# unix/win: "shrink-wrap"
+#
+function shrinkwrap {
+  NAME=$1
+  
+  # clean
+  DIR="$SW/target/$NAME"
+  rm -rf "$DIR"
+  rm -f "$DIR.tar.gz"
+  rm -f "$DIR.zip"
+  
+  mkdir "$DIR"
+
+  # copy executables
+  if [ "$OS" == "win" ]; then
+    cp "$SW/target/solution/Release/"*.exe "$DIR"
+    cp "$SW/target/solution/Release/"*.dll "$DIR"
+  else
+    for HTBIN in $HTBINS; do
+      cp "$TOP/$HTBIN" "$DIR"
+    done
+  fi
+  
+  # create readme
+  if [ "$OS" == "win" ]; then
+    README="$DIR/readme.txt"
+    LIBINF="are included"
+    SYS="WIN"
+  else
+    README="$DIR/README"
+    LIBINF="have been statically linked"
+    SYS="UNIX"
+  fi
+  cat >"$README" <<EOF
+httest binaries
+
+OS:       $OS
+VERSION:  $HTT_VER
+ARCH:     $ARCH
+BITS:     $BITS
+
+The following libraries $LIBINF:
+
+EOF
+  for LIBVAR in $LIBVARS; do
+    eval LIBNAME="\$${SYS}_${LIBVAR}_NAME"
+	eval LIBVER="\$${SYS}_${LIBVAR}_VER"
+	printf "%-11s %s\n" "- $LIBNAME" "$LIBVER" >>"$README"
+  done
+  if [ "$OS" == "win" ]; then
+    echo >>"$README"
+	echo "In addition, a Visual C++ 2008 Runtime is required, e.g.:" >>"$README"
+    echo "http://www.microsoft.com/download/en/details.aspx?id=5582" >>"$README"
+  fi
+  cat >>"$README" <<EOF
+
+This is "provided as is", no warranty of any kind.
+
+$(date -u "+%Y-%m-%d %H:%M:%S %Z")
+
+EOF
+  if [ "$OS" == "win" ]; then
+    unix2dos "$README"
+  fi
+
+  NEXPECTED=`expr $HTT_NBIN + 1`
+  echo -n "checking that $NEXPECTED files are in release ... "
+  [ `ls "$DIR" | wc -w` -eq $NEXPECTED ]
+  echo "ok"
+  
+  # tgz
+  cd "$DIR/.."
+  tar cvzf "$NAME.tar.gz" "$NAME"
+  echo -n "checking that tar.gz has been created ... "
+  [ -f $DIR.tar.gz ]
+  echo "ok"
+  
+  # zip
+  if [ "$OS" == "mac" -o "$OS" == "win" ]; then
+    zip -r "$NAME.zip" "$NAME"
+	echo -n "checking that zip has been created ... "
+    [ -f $DIR.zip ]
+	echo "ok"
+  fi
+}
+
+#
+# unix/win: "shrink-wrap", i.e. get binaries, create README and zip/tgz it (always)
 #
 function do_shrinkwrap {
   # determine name to use for file name
@@ -775,142 +973,8 @@ function do_shrinkwrap {
   
   echo "NAME: $NAME"
   echo -n "shrink-wrap ... "
-  
-  # clean
-  DIR="$SW/target/$NAME"
-  rm -rf "$DIR"
-  rm -f "$DIR.tar.gz"
-  rm -f "$DIR.zip"
-  
-  mkdir "$DIR"
-
-  # copy executables
-  if [ "$OS" == "win" ]; then
-    cp "$SW/target/solution/Release/"*.exe "$DIR"
-    cp "$SW/target/solution/Release/"*.dll "$DIR"
-  else
-    cp "$TOP/src/httest" "$DIR"
-    cp "$TOP/src/htntlm" "$DIR"
-    cp "$TOP/src/htproxy" "$DIR"
-    cp "$TOP/src/htremote" "$DIR"
-    cp "$TOP/tools/hturlext" "$DIR"
-    cp "$TOP/tools/htx2b" "$DIR"
-  fi
-  
-  # create readme
-  if [ "$OS" == "win" ]; then
-    README="readme.txt"
-  else
-    README="README"
-  fi
-  cat > "$DIR/$README" << EOF
-httest binaries
-
-OS:      $OS
-VERSION: $HTT_VER
-ARCH:    $ARCH
-BITS:    $BITS
-
-The following libraries have been statically linked:
-
-- apr       $UNIX_APR_VER
-- apr-util  $UNIX_APR_UTIL_VER
-- pcre      $UNIX_PCRE_VER
-- openssl   $UNIX_OPENSSL_VER
-- lua       $UNIX_LUA_VER
-- js        $UNIX_JS_VER
-- libxml2   $UNIX_LIBXML2_VER
-
-This is "provided as is", no warranty of any kind.
-
-$(date)
-
-EOF
-  if [ "$OS" == "win" ]; then
-    unix2dos "$DIR/$README" >>"$BUILDLOG" 2>>"$BUILDLOG"
-  fi
-
-  # everything there?
-  if [ "$OS" == "win" ]; then
-    [ `ls "$DIR" | wc -w` -eq 20 ]
-  else
-    [ `ls "$DIR" | wc -w` -eq 7 ]
-  fi
-  
-  # tgz
-  cd "$DIR/.."
-  # ignore "file changed as we read it" on linux
-  tar cvzfh "$NAME.tar.gz" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG" && true
-  [ -f $DIR.tar.gz ]
-  
-  # zip
-  if [ "$OS" == "mac" -o "$OS" == "win" ]; then
-    zip -r "$NAME.zip" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
-    [ -f $DIR.zip ]
-  fi
-  
+  shrinkwrap "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
-
-#
-# start of "main"
-#
-
-# stop at errors
-set -e
-trap "echo; print_failed" EXIT
-
-# cd to parent dir of this script
-cd "${0%/*}/.."
-SW=`pwd`
-
-# httest directory
-TOP="$SW/../.."
-
-do_determine_os
-do_create_target
-BUILDLOG="$SW/target/build.log"
-echo "" >"$BUILDLOG"
-
-if [ "$UNIX" == "1" ]; then
-  # unix
-  . "$SW/source/unix/libs.sh"
-  do_get_lib "UNIX" "APR"
-  do_get_lib "UNIX" "APR_UTIL"
-  do_get_lib "UNIX" "OPENSSL"
-  do_get_lib "UNIX" "PCRE"
-  do_get_lib "UNIX" "LUA"
-  do_get_lib "UNIX" "JS"
-  do_get_lib "UNIX" "LIBXML2"
-  do_unix_build_apr
-  do_unix_build_apr_util
-  do_unix_build_pcre
-  do_unix_build_openssl
-  do_unix_build_lua
-  do_unix_build_js
-  do_unix_build_libxml2
-  do_buildconf
-  do_unix_build_htt
-  do_unix_basic_tests_htt
-  do_shrinkwrap
-else
-  # windows
-  . "$SW/source/win/libs.sh"
-  do_get_lib "WIN" "APR"
-  do_get_lib "WIN" "APR_UTIL"
-  do_get_lib "WIN" "OPENSSL"
-  do_get_lib "WIN" "PCRE"
-  do_get_lib "WIN" "LUA"
-  do_get_lib "WIN" "JS"
-  do_get_lib "WIN" "LIBXML2"
-  do_buildconf
-  do_win_configure_htt
-  do_win_create_sln
-  do_win_build_htt
-  do_win_basic_tests_htt
-  do_shrinkwrap
-fi
-
-# success
-trap "echo; print_ok" EXIT
+main

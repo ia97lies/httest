@@ -2,6 +2,16 @@ TOP=`pwd`
 
 VERSION=$1
 
+set -u
+
+trap onexit 1 2 3 15 ERR
+
+function onexit() {
+  git checkout configure.in
+  echo "Release build FAILED"
+  exit 1
+}
+
 echo
 echo "Release httest-$VERSION"
 sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
@@ -49,13 +59,15 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
+set -e
+
 echo
 echo "  Build Configuration"
 ./buildconf.sh
 
 echo
 echo "  Make Distribution"
-CONFIG="--enable-lua-module --enable-js-module --enable-html-module --with-spidermonkey=/home/cli/workspace/local/bin --with-libxml2=/home/cli/workspace/local/bin"
+CONFIG="--enable-lua-module --enable-js-module --enable-html-module --with-spidermonkey=$HOME/workspace/local/bin --with-libxml2=$HOME/workspace/local/bin"
 CFLAGS="-g -Wall -ansi" ./configure $CONFIG
 make clean all
 make distcheck DISTCHECK_CONFIGURE_FLAGS="$CONFIG"
@@ -70,3 +82,4 @@ mv configure.in.tmp configure.in
 
 echo
 echo Release build SUCCESS 
+

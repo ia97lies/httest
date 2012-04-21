@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.2
+  *) httest: New SSL command to set cipher suite.
+
+  *) httest: Expect/match/grep SSL handshake messages.
+
 Changes with httest 2.2.1
   *) httest: New XPath command to query parts of the HTML document.
 

@@ -309,6 +309,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
                           (worker_t *worker, char *rest_of_line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
                           (worker_t *worker, char *info, char **new_info));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_pre_headers,
+                          (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_status_line,
                           (worker_t *worker, char *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_header,

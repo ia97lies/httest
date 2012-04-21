@@ -44,15 +44,19 @@ typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
-  SSL_METHOD *meth;
+  const SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
   const char *certfile;
   const char *keyfile;
   const char *cafile;
+  const char *cipher_suite;
 #define SSL_CONFIG_FLAGS_NONE 0
 #define SSL_CONFIG_FLAGS_CERT_SET 1
+#define SSL_CONFIG_FLAGS_TRACE 2
   int flags;
+  apr_pool_t *msg_pool;
+  apr_table_t *msgs;
 } ssl_config_t;
 
 typedef struct ssl_socket_config_s {
@@ -197,6 +201,266 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
   }
 
   return APR_SUCCESS;
+}
+
+/**
+ * Message call back for debugging
+ */
+static void ssl_message_trace(int write_dir, int version, int content_type, 
+                              const void *buf, size_t len, SSL *ssl, void *arg) {
+  worker_t *worker = arg;
+  const char *prefix;
+  const char *version_string;
+  const char *content_type_string = "";
+  const char *details1 = "";
+  const char *details2= "";
+  char *entry;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+
+  prefix = write_dir ? ">" : "<";
+
+  switch (version)
+  {
+    case SSL2_VERSION:
+      version_string = "SSL 2.0";
+      break;
+    case SSL3_VERSION:
+      version_string = "SSL 3.0";
+      break;
+    case TLS1_VERSION:
+      version_string = "TLS 1.0";
+      break;
+    default:
+      version_string = "???";
+    case DTLS1_VERSION:
+      version_string = "DTLS 1.0";
+      break;
+    case DTLS1_BAD_VER:
+      version_string = "DTLS 1.0 (bad)";
+      break;
+  }
+
+  if (version == SSL2_VERSION)
+  {
+    details1 = "???";
+
+    if (len > 0)
+    {
+      switch (((const unsigned char*)buf)[0])
+      {
+        case 0:
+          details1 = ", ERROR:";
+          details2 = " ???";
+          if (len >= 3)
+          {
+            unsigned err = (((const unsigned char*)buf)[1]<<8) + ((const unsigned char*)buf)[2];
+
+            switch (err)
+            {
+              case 0x0001:
+                details2 = " NO-CIPHER-ERROR";
+                break;
+              case 0x0002:
+                details2 = " NO-CERTIFICATE-ERROR";
+                break;
+              case 0x0004:
+                details2 = " BAD-CERTIFICATE-ERROR";
+                break;
+              case 0x0006:
+                details2 = " UNSUPPORTED-CERTIFICATE-TYPE-ERROR";
+                break;
+            }
+          }
+
+          break;
+        case 1:
+          details1 = ", CLIENT-HELLO";
+          break;
+        case 2:
+          details1 = ", CLIENT-MASTER-KEY";
+          break;
+        case 3:
+          details1 = ", CLIENT-FINISHED";
+          break;
+        case 4:
+          details1 = ", SERVER-HELLO";
+          break;
+        case 5:
+          details1 = ", SERVER-VERIFY";
+          break;
+        case 6:
+          details1 = ", SERVER-FINISHED";
+          break;
+        case 7:
+          details1 = ", REQUEST-CERTIFICATE";
+          break;
+        case 8:
+          details1 = ", CLIENT-CERTIFICATE";
+          break;
+      }
+    }
+  }
+
+  if (version == SSL3_VERSION ||
+      version == TLS1_VERSION ||
+      version == DTLS1_VERSION ||
+      version == DTLS1_BAD_VER)
+  {
+    switch (content_type)
+    {
+      case 20:
+        content_type_string = "ChangeCipherSpec";
+        break;
+      case 21:
+        content_type_string = "Alert";
+        break;
+      case 22:
+        content_type_string = "Handshake";
+        break;
+    }
+
+    if (content_type == 21) /* Alert */
+    {
+      details1 = ", ???";
+
+      if (len == 2)
+      {
+        switch (((const unsigned char*)buf)[0])
+        {
+          case 1:
+            details1 = ", warning";
+            break;
+          case 2:
+            details1 = ", fatal";
+            break;
+        }
+
+        details2 = " ???";
+        switch (((const unsigned char*)buf)[1])
+        {
+          case 0:
+            details2 = " close_notify";
+            break;
+          case 10:
+            details2 = " unexpected_message";
+            break;
+          case 20:
+            details2 = " bad_record_mac";
+            break;
+          case 21:
+            details2 = " decryption_failed";
+            break;
+          case 22:
+            details2 = " record_overflow";
+            break;
+          case 30:
+            details2 = " decompression_failure";
+            break;
+          case 40:
+            details2 = " handshake_failure";
+            break;
+          case 42:
+            details2 = " bad_certificate";
+            break;
+          case 43:
+            details2 = " unsupported_certificate";
+            break;
+          case 44:
+            details2 = " certificate_revoked";
+            break;
+          case 45:
+            details2 = " certificate_expired";
+            break;
+          case 46:
+            details2 = " certificate_unknown";
+            break;
+          case 47:
+            details2 = " illegal_parameter";
+            break;
+          case 48:
+            details2 = " unknown_ca";
+            break;
+          case 49:
+            details2 = " access_denied";
+            break;
+          case 50:
+            details2 = " decode_error";
+            break;
+          case 51:
+            details2 = " decrypt_error";
+            break;
+          case 60:
+            details2 = " export_restriction";
+            break;
+          case 70:
+            details2 = " protocol_version";
+            break;
+          case 71:
+            details2 = " insufficient_security";
+            break;
+          case 80:
+            details2 = " internal_error";
+            break;
+          case 90:
+            details2 = " user_canceled";
+            break;
+          case 100:
+            details2 = " no_renegotiation";
+            break;
+        }
+      }
+    }
+
+    if (content_type == 22) /* Handshake */
+    {
+      details1 = "???";
+
+      if (len > 0)
+      {
+        switch (((const unsigned char*)buf)[0])
+        {
+          case 0:
+            details1 = ", HelloRequest";
+            break;
+          case 1:
+            details1 = ", ClientHello";
+            break;
+          case 2:
+            details1 = ", ServerHello";
+            break;
+          case 11:
+            details1 = ", Certificate";
+            break;
+          case 12:
+            details1 = ", ServerKeyExchange";
+            break;
+          case 13:
+            details1 = ", CertificateRequest";
+            break;
+          case 14:
+            details1 = ", ServerHelloDone";
+            break;
+          case 15:
+            details1 = ", CertificateVerify";
+            break;
+          case 3:
+            details1 = ", HelloVerifyRequest";
+            break;
+          case 16:
+            details1 = ", ClientKeyExchange";
+            break;
+          case 20:
+            details1 = ", Finished";
+            break;
+        }
+      }
+    }
+  }
+
+  entry = apr_psprintf(config->msg_pool, "%s%s: %s%s%s", prefix, 
+                   version_string, content_type_string, details1, details2);
+  apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
+  worker_log(worker, LOG_INFO, "%s", entry);
 }
 
 /**
@@ -383,6 +647,15 @@ static apr_status_t worker_ssl_accept(worker_t * worker) {
 	status = APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(sconfig->ssl, config->meth);
+      if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+        SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
+        SSL_set_msg_callback_arg(sconfig->ssl, worker);
+      }
+      if (config->cipher_suite != NULL) {
+    	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
+    		  return APR_EINVAL;
+    	  }
+      }
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -561,10 +834,20 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       }
 
       if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {
-				worker_log(worker, LOG_ERR, "SSL_new failed.");
-				return APR_ECONNREFUSED;
+        worker_log(worker, LOG_ERR, "SSL_new failed.");
+        return APR_ECONNREFUSED;
       }
       SSL_set_ssl_method(sconfig->ssl, config->meth);
+      if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+        SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
+        SSL_set_msg_callback_arg(sconfig->ssl, worker);
+      }
+      if (config->cipher_suite != NULL) {
+    	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
+    		  return APR_EINVAL;
+    	  }
+      }
+
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -961,6 +1244,25 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
 }
 
 /**
+ * SSL_CIPHER_SUITE command
+ *
+ * See http://www.openssl.org/docs/apps/ciphers.html
+ *
+ * @param worker IN thread data object
+ * @param data IN
+ *
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker,
+                                                     worker_t *parent, apr_pool_t *ptmp) {
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  const char *val = store_get(worker->params, "1");
+  char *copy = apr_pstrdup(worker->pbody, val);
+  config->cipher_suite = copy;
+  return APR_SUCCESS;
+}
+
+/**
  * SSL_LEGACY command
  *
  * @param worker IN thread data object
@@ -1105,6 +1407,25 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
 }
 
 /**
+ * SSL_TRACE_START command
+ *
+ * @param worker IN thread data object
+ * @param data IN 
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t block_SSL_TRACE(worker_t * worker, worker_t *parent, 
+                                    apr_pool_t *ptmp) {
+  apr_pool_t *pool;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  config->flags |= SSL_CONFIG_FLAGS_TRACE;
+  apr_pool_create(&pool, NULL);
+  config->msg_pool = pool;
+  config->msgs = apr_table_make(pool, 5);
+  return APR_SUCCESS;
+}
+
+/**
  * clone worker
  *
  * @param worker IN
@@ -1241,6 +1562,15 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
       return APR_EGENERAL;
     }
     SSL_set_ssl_method(sconfig->ssl, config->meth);
+    if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+      SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
+      SSL_set_msg_callback_arg(sconfig->ssl, worker);
+    }
+    if (config->cipher_suite != NULL) {
+  	  if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {
+  		  return APR_EINVAL;
+  	  }
+    }
     ssl_rand_seed();
     apr_os_sock_get(&fd, worker->socket->socket);
     bio = BIO_new_socket(fd, BIO_NOCLOSE);
@@ -1353,6 +1683,34 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
     *new_info = NULL;
     /* work is done break hook chain here! */
     return APR_EINTR;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * expect/grep/match SSL handshake
+ *
+ * @param worker IN
+ *
+ * @return APR_SUCCESS or apr error
+ */
+static apr_status_t ssl_hook_read_pre_headers(worker_t *worker) {
+  ssl_config_t *config = ssl_get_worker_config(worker);
+  if (config->msgs) {
+    int i;
+    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(config->msgs)->elts;
+    for (i = 0; i < apr_table_elts(config->msgs)->nelts; i++) {
+      worker_match(worker, worker->match.dot, e[i].val, strlen(e[i].val));
+      worker_match(worker, worker->match.headers, e[i].val, strlen(e[i].val));
+      worker_match(worker, worker->grep.dot, e[i].val, strlen(e[i].val));
+      worker_match(worker, worker->grep.headers, e[i].val, strlen(e[i].val));
+      worker_expect(worker, worker->expect.dot, e[i].val, strlen(e[i].val));
+      worker_expect(worker, worker->expect.headers, e[i].val, strlen(e[i].val));
+    }
+    apr_table_clear(config->msgs);
+    apr_pool_destroy(config->msg_pool);
+    apr_pool_create(&config->msg_pool, NULL);
+    config->msgs = apr_table_make(config->msg_pool, 5);
   }
   return APR_SUCCESS;
 }
@@ -1472,6 +1830,17 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
     return status;
   }
+  if ((status = module_command_new(global, "SSL", "_TRACE", "",
+				   "Start SSL debug session",
+	                           block_SSL_TRACE)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "SSL", "_SET_CIPHER_SUITE", "<ciphers>",
+				   "Set an opnessl cipher suite to be used",
+	                           block_SSL_CIPHER_SUITE)) != APR_SUCCESS) {
+    return status;
+  }
 
   htt_hook_worker_clone(ssl_worker_clone, NULL, NULL, 0);
   htt_hook_client_port_args(ssl_client_port_args, NULL, NULL, 0);
@@ -1479,6 +1848,7 @@ apr_status_t ssl_module_init(global_t *global) {
   htt_hook_connect(ssl_hook_connect, NULL, NULL, 0);
   htt_hook_accept(ssl_hook_accept, NULL, NULL, 0);
   htt_hook_close(ssl_hook_close, NULL, NULL, 0);
+  htt_hook_read_pre_headers(ssl_hook_read_pre_headers, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
