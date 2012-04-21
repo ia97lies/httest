@@ -611,7 +611,51 @@ function win_create_sln {
   DEBUG_LIBS="$RELEASE_LIBS"
   
   WINSRC="$SW/source/win"
-  cp "$WINSRC/httest.sln" "$WINSLN"
+  
+  # create visual studio solution
+  SLN="$WINSLN/httest.sln"
+  GUID_PRE="8BC9CEB8-8B4A-11D0-8D11-00A0C91BC94"
+  SLN_GUID="${GUID_PRE}0"
+  cat >"$SLN" <<EOF
+
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+EOF
+  N=0
+  PROJECTS=""
+  for HTBIN in $HTBINS; do
+    NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+	N=`expr $N + 1`
+	GUID="$GUID_PRE$N"
+	PROJECTS="$PROJECTS $NAME:$GUID"
+    echo "Project(\"{$SLN_GUID}\") = \"$NAME\", \"$NAME\\$NAME.vcxproj\", \"{$GUID}\"" >>"$SLN"
+	echo "EndProject" >>"$SLN"
+  done
+  cat >>"$SLN" <<EOF
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+EOF
+  N=0
+  for HTBIN in $HTBINS; do
+    BINNAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+	N=`expr $N + 1`
+	PROJ_GUID="$GUID_PRE$N"
+    echo "		{$PROJ_GUID}.Debug|Win32.ActiveCfg = Debug|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Debug|Win32.Build.0 = Debug|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Release|Win32.ActiveCfg = Release|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Release|Win32.Build.0 = Release|Win32" >>"$SLN"
+  done
+  cat >>"$SLN" <<EOF
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
+EOF
   
   # get header file names
   cd "$TOP/src/"
@@ -619,29 +663,11 @@ function win_create_sln {
     { printf("%s ", $0); }
   '`
   
-  # get project names and guids from solution
-  PROJECT_NAMES=`cat "$WINSRC/httest.sln" | awk '
-    /^Project.*= \"ht.*\"/ {
-      printf("%s ", substr($3, 2, length($3)-3));
-    }
-  '`
-  # note that $5 below ends with \r...
-  PROJECT_GUIDS=`cat "$WINSRC/httest.sln" | awk '
-    /^Project.*= \"ht.*\"/ {
-      printf("%s ", substr($5, 3, length($5)-5));
-    }
-  '`
   # create ht* projects
-  for NAME in $PROJECT_NAMES; do
-    echo -n "$NAME : "
-    GUID=`echo $NAME | awk -v pnames="$PROJECT_NAMES" -v pguids="$PROJECT_GUIDS" '{
-      n = split(pnames, pname_arr, " ");
-      split(pguids, pguid_arr, " ");
-      for (i=1; i<=n; i++) {
-        if (pname_arr[i] == $0) { print pguid_arr[i]; }
-      }
-    }'`
-    echo "$GUID"
+  for PROJECT in $PROJECTS; do
+    NAME=`echo $PROJECT | awk ' BEGIN { FS=":" } { print $1 }'`
+    GUID=`echo $PROJECT | awk ' BEGIN { FS=":" } { print $2 }'`
+    echo "$NAME : $GUID"
 
     # create project file and replace variables with sed
     mkdir "$WINSLN/$NAME"
