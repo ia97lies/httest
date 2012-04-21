@@ -1,6 +1,66 @@
 #!/bin/bash
 
 #
+# main function, called when this script is run
+#
+function main {
+  # stop at errors
+  set -e
+  trap "echo; print_failed" EXIT
+
+  # cd to parent dir of this script
+  cd "${0%/*}/.."
+  SW=`pwd`
+
+  # httest directory
+  TOP="$SW/../.."
+
+  do_determine_os
+  do_create_target
+
+  BUILDLOG="target/build.log"
+  # blue bold
+  echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
+  BUILDLOG="$SW/$BUILDLOG"
+  echo "" >"$BUILDLOG"
+
+  LIBVARS="APR APU SSL PCRE LUA JS XML2"
+  # TODO get from makefile.am after building it
+  HTBINS="src/httest src/htntlm src/htproxy src/htremote tools/hturlext tools/htx2b"
+  HTBIN_PATHS="src tools"
+
+  if [ "$UNIX" == "1" ]; then
+    # unix
+    . "$SW/source/unix/libs.sh"
+    for LIBVAR in $LIBVARS; do
+      do_get_lib "UNIX" "$LIBVAR"
+    done
+    for LIBVAR in $LIBVARS; do
+      do_unix_build_$LIBVAR
+    done
+    do_buildconf
+    do_unix_build_htt
+    do_basic_tests_htt
+    do_shrinkwrap
+  else
+    # windows
+    . "$SW/source/win/libs.sh"
+    for LIBVAR in $LIBVARS; do
+      do_get_lib "WIN" "$LIBVAR"
+    done
+    do_buildconf
+    do_win_configure_htt
+    do_win_create_sln
+    do_win_build_htt
+    do_basic_tests_htt
+    do_shrinkwrap
+  fi
+
+  # success
+  trap "echo; print_ok" EXIT
+}
+
+#
 # print "OK"
 #
 function print_ok {
@@ -428,6 +488,7 @@ function unix_build_htt {
   
   # get and remember version for later
   HTT_VER=`cat Makefile | awk '/^VERSION/ { print $3 }'`
+  HTT_NBIN=6
 }
 
 #
@@ -444,42 +505,6 @@ function do_unix_build_htt {
     # blue bold
     echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
   fi
-}
-
-#
-# unix: run some basic tests
-#
-# just to make sure that all binaries have been built
-# and httest has been built with all required modules
-#
-function unix_basic_tests_htt {
-  echo "httest"
-  [ `"$TOP/src/httest" --version | grep "^httest $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htntlm"
-  [ `"$TOP/src/htntlm" --version | grep "^htntlm $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htproxy"
-  [ `"$TOP/src/htproxy" --version | grep "^htproxy $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htremote"
-  [ `"$TOP/src/htremote" --version | grep "^htremote $HTT_VER$" | wc -l` -eq 1 ]
-  echo "hturlext"
-  [ `"$TOP/tools/hturlext" --version | grep "^hturlext $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htx2b"
-  [ `"$TOP/tools/htx2b" --version | grep "htx2b $HTT_VER$" | wc -l` -eq 1 ]
-  
-  cd "$TOP/test"
-  ./run.sh block.htt
-  ./run.sh block_lua.htt
-  ./run.sh block_js.htt
-  ./run.sh html.htt
-}
-
-#
-# unix: run some basic tests (always)
-#
-function do_unix_basic_tests_htt {
-  echo -n "running basic tests ... "
-  unix_basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  print_ok
 }
 
 #
@@ -521,9 +546,15 @@ function win_configure_htt {
 #
 function do_win_configure_htt {
   echo -n "configuring htt ... "
-  win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  print_ok
-
+  if [ -f "$SW/target/win.configured" ]; then
+    # configure is very slow on cygwin, so only do once automatically
+    print_ok_up_to_date
+  else
+    win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+	touch "$SW/target/win.configured"
+    print_ok
+  fi
+  
   # get and remember version for later
   HTT_VER=`cat "$TOP/Makefile" | awk '/^VERSION/ { print $3 }'`
 
@@ -724,25 +755,23 @@ function win_build_htt {
 EOF
   cmd /c build.bat
   
-  cp "$SW/target/$WIN_APR_NAME-$WIN_APR_VER/dll/"*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_APU_NAME-$WIN_APU_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_SSL_NAME-$WIN_SSL_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_PCRE_NAME-$WIN_PCRE_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_LUA_NAME-$WIN_LUA_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_JS_NAME-$WIN_JS_VER/dll"/*.dll "$WINSLN/Release"
-  cp "$SW/target/$WIN_XML2_NAME-$WIN_XML2_VER/dll"/*.dll "$WINSLN/Release"
+  for LIBVAR in $LIBVARS; do
+    eval DIRNAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
+	cp "$SW/target/$DIRNAME/dll/"*.dll "$WINSLN/Release"
+  done
   chmod 755 "$WINSLN/Release"/*.dll
+  HTT_NBIN=`ls -l "$WINSLN/Release"/*.dll | wc -l`
 
-  rm -f "$TOP/src"/*.exe "$TOP/src/"*.dll
-  rm -f "$TOP/tools"/*.exe "$TOP/tools"/*.dll
-  cp "$WINSLN/Release/httest.exe" "$TOP/src"
-  cp "$WINSLN/Release/htntlm.exe" "$TOP/src"
-  cp "$WINSLN/Release/htproxy.exe" "$TOP/src"
-  cp "$WINSLN/Release/htremote.exe" "$TOP/src"
-  cp "$WINSLN/Release/"*.dll "$TOP/src"
-  cp "$WINSLN/Release/hturlext.exe" "$TOP/tools"
-  cp "$WINSLN/Release/htx2b.exe" "$TOP/tools"
-  cp "$WINSLN/Release"/*.dll "$TOP/tools"
+  for HTBIN_PATH in $HTBIN_PATHS; do
+    rm -f "$TOP/$HTBIN_PATH"/*.exe "$TOP/$HTBIN_PATH/"*.dll
+	cp "$WINSLN/Release/"*.dll "$TOP/$HTBIN_PATH"
+  done
+  for HTBIN in $HTBINS; do
+    BINDIR=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $1 }'`
+    BINNAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+    cp "$WINSLN/Release/$BINNAME.exe" "$TOP/$BINDIR"
+	HTT_NBIN=`expr $HTT_NBIN + 1`
+  done
 
   echo -n "checking that httest has been built ... "
   [ -f "$WINSLN/Release/httest.exe" ]
@@ -759,61 +788,47 @@ function do_win_build_htt {
 }
 
 #
-# win: run some basic tests
+# unix/win: run some basic tests
 #
-function win_basic_tests_htt {
-  echo "httest"  
-  [ `"$TOP/src/httest.exe" --version | grep "httest.exe $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htntlm"
-  [ `"$TOP/src/htntlm.exe" --version | grep "htntlm.exe $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htproxy"
-  [ `"$TOP/src/htproxy.exe" --version | grep "htproxy.exe $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htremote"
-  [ `"$TOP/src/htremote.exe" --version | grep "htremote.exe $HTT_VER$" | wc -l` -eq 1 ]
-  echo "hturlext"
-  [ `"$TOP/tools/hturlext.exe" --version | grep "hturlext $HTT_VER$" | wc -l` -eq 1 ]
-  echo "htx2b"
-  [ `"$TOP/tools/htx2b.exe" --version | grep "htx2b.exe $HTT_VER$" | wc -l` -eq 1 ]
+function basic_tests_htt {
+  if [ "$OS" == "win" ]; then
+    EXE_EXT=".exe"
+	SH_EXT=".bat"
+  else
+    EXE_EXT=""
+	SH_EXT=".sh"
+  fi
+  
+  for HTBIN in $HTBINS; do
+    NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+	echo "NAME=$NAME"
+    CALL="$TOP/$HTBIN$EXE_EXT"
+	echo "CALL=$CALL"
+    "$CALL" --version | grep "$NAME"
+	[ `"$CALL" --version | grep "$NAME.* $HTT_VER" | wc -l` -eq 1 ]
+  done
 
   cd "$TOP/test"
-  ./run.bat block.htt
-  ./run.bat block_lua.htt
-  ./run.bat block_js.htt
-  ./run.bat html.htt
+  TESTS="block.htt block_lua.htt block_js.htt html.htt"
+  for TEST in $TESTS; do
+    ./run$SH_EXT $TEST
+  done
 }
 
 #
-# win: run some basic tests (always)
+# unix/win: run some basic tests (always)
 #
-function do_win_basic_tests_htt {
+function do_basic_tests_htt {
   echo -n "running basic tests ... "
-  win_basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+  basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
 #
-# unix/win: "shrink-wrap", i.e. get binaries, create README and zip/tgz it
+# unix/win: "shrink-wrap"
 #
-function do_shrinkwrap {
-  # determine name to use for file name
-  SHORT_NAME="$OS-$ARCH-$BITS"
-  if [ "$OS" == "mac" -a "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
-    # intel 64 bit like almost every mac today
-    SHORT_NAME="$OS"
-  elif [ "$OS" == "linux" ]; then
-    # omit architeture if intel
-    if [ "$ARCH" == "i686" -a "$BITS" == "32" ]; then
-      SHORT_NAME="$OS-$BITS"
-    elif [ "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
-      SHORT_NAME="$OS-$BITS"
-    fi
-  elif [ "$OS" == "win" -a "$ARCH" == "i686" -a "$BITS" == "32" ]; then
-    SHORT_NAME="$OS"
-  fi
-  NAME="httest-$HTT_VER-$SHORT_NAME"
-  
-  echo "NAME: $NAME"
-  echo -n "shrink-wrap ... "
+function shrinkwrap {
+  NAME=$1
   
   # clean
   DIR="$SW/target/$NAME"
@@ -828,12 +843,9 @@ function do_shrinkwrap {
     cp "$SW/target/solution/Release/"*.exe "$DIR"
     cp "$SW/target/solution/Release/"*.dll "$DIR"
   else
-    cp "$TOP/src/httest" "$DIR"
-    cp "$TOP/src/htntlm" "$DIR"
-    cp "$TOP/src/htproxy" "$DIR"
-    cp "$TOP/src/htremote" "$DIR"
-    cp "$TOP/tools/hturlext" "$DIR"
-    cp "$TOP/tools/htx2b" "$DIR"
+    for HTBIN in $HTBINS; do
+      cp "$TOP/$HTBIN" "$DIR"
+    done
   fi
   
   # create readme
@@ -871,95 +883,59 @@ EOF
 
 This is "provided as is", no warranty of any kind.
 
-$(date "+%Y-%M-%d %H:%M:%S %Z")
+$(date -u "+%Y-%m-%d %H:%M:%S %Z")
 
 EOF
   if [ "$OS" == "win" ]; then
-    unix2dos "$README" >>"$BUILDLOG" 2>>"$BUILDLOG"
+    unix2dos "$README"
   fi
 
-  if [ "$OS" == "win" ]; then
-    NFILES=20
-  else
-    NFILES=7
-  fi
-  echo -n "checking that $NFILES files are in release ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
-  [ `ls "$DIR" | wc -w` -eq $NFILES ]
-  echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  NEXPECTED=`expr $HTT_NBIN + 1`
+  echo -n "checking that $NEXPECTED files are in release ... "
+  [ `ls "$DIR" | wc -w` -eq $NEXPECTED ]
+  echo "ok"
   
   # tgz
   cd "$DIR/.."
-  # ignore "file changed as we read it" on linux
-  tar cvzf "$NAME.tar.gz" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
-  # && true
-  echo -n "checking that tar.gz has been created ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
+  tar cvzf "$NAME.tar.gz" "$NAME"
+  echo -n "checking that tar.gz has been created ... "
   [ -f $DIR.tar.gz ]
-  echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  echo "ok"
   
   # zip
   if [ "$OS" == "mac" -o "$OS" == "win" ]; then
-    zip -r "$NAME.zip" "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
-	echo -n "checking that zip has been created ... " >>"$BUILDLOG" 2>>"$BUILDLOG"
+    zip -r "$NAME.zip" "$NAME"
+	echo -n "checking that zip has been created ... "
     [ -f $DIR.zip ]
-	echo "ok" >>"$BUILDLOG" 2>>"$BUILDLOG"
+	echo "ok"
   fi
+}
+
+#
+# unix/win: "shrink-wrap", i.e. get binaries, create README and zip/tgz it (always)
+#
+function do_shrinkwrap {
+  # determine name to use for file name
+  SHORT_NAME="$OS-$ARCH-$BITS"
+  if [ "$OS" == "mac" -a "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
+    # intel 64 bit like almost every mac today
+    SHORT_NAME="$OS"
+  elif [ "$OS" == "linux" ]; then
+    # omit architeture if intel
+    if [ "$ARCH" == "i686" -a "$BITS" == "32" ]; then
+      SHORT_NAME="$OS-$BITS"
+    elif [ "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
+      SHORT_NAME="$OS-$BITS"
+    fi
+  elif [ "$OS" == "win" -a "$ARCH" == "i686" -a "$BITS" == "32" ]; then
+    SHORT_NAME="$OS"
+  fi
+  NAME="httest-$HTT_VER-$SHORT_NAME"
   
+  echo "NAME: $NAME"
+  echo -n "shrink-wrap ... "
+  shrinkwrap "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
-
-#
-# start of "main"
-#
-
-# stop at errors
-set -e
-trap "echo; print_failed" EXIT
-
-# cd to parent dir of this script
-cd "${0%/*}/.."
-SW=`pwd`
-
-# httest directory
-TOP="$SW/../.."
-
-do_determine_os
-do_create_target
-
-BUILDLOG="target/build.log"
-# blue bold
-echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
-BUILDLOG="$SW/$BUILDLOG"
-echo "" >"$BUILDLOG"
-
-LIBVARS="APR APU SSL PCRE LUA JS XML2"
-
-if [ "$UNIX" == "1" ]; then
-  # unix
-  . "$SW/source/unix/libs.sh"
-  for LIBVAR in $LIBVARS; do
-    do_get_lib "UNIX" "$LIBVAR"
-  done
-  for LIBVAR in $LIBVARS; do
-    do_unix_build_$LIBVAR
-  done
-  do_buildconf
-  do_unix_build_htt
-  do_unix_basic_tests_htt
-  do_shrinkwrap
-else
-  # windows
-  . "$SW/source/win/libs.sh"
-  for LIBVAR in $LIBVARS; do
-    do_get_lib "WIN" "$LIBVAR"
-  done
-  do_buildconf
-  do_win_configure_htt
-  do_win_create_sln
-  do_win_build_htt
-  do_win_basic_tests_htt
-  do_shrinkwrap
-fi
-
-# success
-trap "echo; print_ok" EXIT
+main
