@@ -11,40 +11,33 @@ function main {
   # cd to parent dir of this script
   cd "${0%/*}/.."
   SW=`pwd`
+  TARGET="$SW/target"
 
   # httest directory
   TOP="$SW/../.."
+  
+  # create target dir if it does not exist, yet
+  if [ ! -d "$TARGET" ]; then
+    mkdir "$TARGET"
+  fi
 
+  echo
   do_determine_os
-  do_create_target
-
+  do_determine_version
+  do_determine_binaries
+  do_determine_libs
+  echo
+  
+  # build log
   BUILDLOG="target/build.log"
   # blue bold
-  echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log"
+  echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log ..."
+  echo
   BUILDLOG="$SW/$BUILDLOG"
   echo "" >"$BUILDLOG"
-   
-  # get name and dir of all htt binaries
-  HTBIN_PATHS="src tools"
-  HTBINS=""
-  for HTBIN_PATH in $HTBIN_PATHS; do
-    BINS=`cat "$TOP/$HTBIN_PATH/Makefile.am" | awk \
-      '/bin_PROGRAMS =/ {
-        for (i=3; i<=NF; i++) {
-          printf("%s ", $(i));
-        }
-      }'`
-    for BIN in $BINS; do
-      HTBINS="$HTBINS $HTBIN_PATH/$BIN"
-    done
-  done
-  echo "$HTBINS" >>"$BUILDLOG"
 
-  LIBVARS="APR APU SSL PCRE LUA JS XML2"
-
-  if [ "$UNIX" == "1" ]; then
+  if [ "$OS" != "win" ]; then
     # unix
-    . "$SW/source/unix/libs.sh"
     for LIBVAR in $LIBVARS; do
       do_get_lib "UNIX" "$LIBVAR"
     done
@@ -57,7 +50,6 @@ function main {
     do_shrinkwrap
   else
     # windows
-    . "$SW/source/win/libs.sh"
     for LIBVAR in $LIBVARS; do
       do_get_lib "WIN" "$LIBVAR"
     done
@@ -113,29 +105,69 @@ function do_determine_os {
   elif [ `uname -s` == "Darwin" ]; then
     OS="mac"
   fi
-  echo "OS:   $OS"
+  echo "OS:      $OS"
   if [ "$OS" == "unknown" ]; then
     # yellow bold
     echo "$(tput bold)$(tput setaf 3)WARNING:$(tput sgr 0) unknown os, treating like linux"
   fi
   
   ARCH=`uname -m`
-  echo "ARCH: $ARCH"
+  echo "ARCH:    $ARCH"
   BITS=`getconf LONG_BIT`
-  echo "BITS: $BITS"  
+  echo "BITS:    $BITS"  
 }
 
 #
-# create target dir if it does not exist, yet
+# determine httest version
 #
-function do_create_target {
-  echo -n "creating target dir ... "
-  if [ -d "$SW/target" ]; then
-    print_ok_up_to_date
+function do_determine_version {
+  HTT_VER=`cat "$TOP/configure.in" | awk ' BEGIN { FS="," } /AC_INIT.httest/ { print $2 }'`
+  HTT_VER=`echo $HTT_VER`
+  NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
+  if [ "$HTT_VER" == "snapshot" ]; then
+    # violet bold
+    echo "VERSION: $(tput bold)$(tput setaf 5)$HTT_VER$(tput sgr 0)"
   else
-    mkdir "$SW/target"
-    print_ok
+    # blue bold
+    echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
   fi
+}
+
+#
+# determine name and dir of all htt binaries
+#
+function do_determine_binaries {
+  echo -n "BINS:    "
+  HTBIN_PATHS="src tools"
+  HTBINS=""
+  for HTBIN_PATH in $HTBIN_PATHS; do
+    BINS=`cat "$TOP/$HTBIN_PATH/Makefile.am" | awk \
+      '/bin_PROGRAMS =/ {
+        for (i=3; i<=NF; i++) {
+          printf("%s ", $(i));
+        }
+      }'`
+    for BIN in $BINS; do
+      echo -n "$BIN "
+      HTBINS="$HTBINS $HTBIN_PATH/$BIN"
+    done
+  done
+  echo
+}
+
+#
+# determine libraries
+#
+function do_determine_libs {
+  echo -n "LIBS:    "
+  LIBVARS="APR APU SSL PCRE LUA JS XML2"
+  . "$SW/source/unix/libs.sh"
+  . "$SW/source/win/libs.sh"
+  for LIBVAR in $LIBVARS; do
+    eval NAME="\$UNIX_${LIBVAR}_NAME"
+    echo -n "$NAME "
+  done
+  echo
 }
 
 #
@@ -183,7 +215,7 @@ function do_get_lib {
   eval LIB_HOST="\$${PRE}HOST"
   eval LIB_PATH="\$${PRE}PATH"
   eval LIB_FILE="\$${PRE}FILE"
-  cd "$SW/target"
+  cd "$TARGET"
   echo -n "getting lib $LIB_NAME $LIB_VER ... "
   if [ -d "$LIB_NAME-$LIB_VER" ]; then
     print_ok_up_to_date
@@ -197,7 +229,7 @@ function do_get_lib {
 # unix: build apr
 #
 function unix_build_APR {
-  cd "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
+  cd "$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER"
   ./configure
   make
   
@@ -211,7 +243,7 @@ function unix_build_APR {
 #
 function do_unix_build_APR {
   echo -n "building apr ... "  
-  if [ -f "$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER/.libs/libapr-1.a" ]; then
+  if [ -f "$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER/.libs/libapr-1.a" ]; then
     print_ok_up_to_date
   else
     unix_build_APR >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -223,8 +255,8 @@ function do_unix_build_APR {
 # unix: build apr-util
 #
 function unix_build_APU {
-  cd "$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER"
-  ./configure --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER"
+  cd "$TARGET/$UNIX_APU_NAME-$UNIX_APU_VER"
+  ./configure --with-apr="$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER"
   make
 
   echo -n "checking that apr-util lib has been built ... "
@@ -237,7 +269,7 @@ function unix_build_APU {
 #
 function do_unix_build_APU {
   echo -n "building apr-util ... "  
-  if [ -f "$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER/.libs/libaprutil-1.a" ]; then
+  if [ -f "$TARGET/$UNIX_APU_NAME-$UNIX_APU_VER/.libs/libaprutil-1.a" ]; then
     print_ok_up_to_date
   else
     unix_build_APU >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -286,7 +318,7 @@ EOF
 # inxi: build pcre
 #
 function unix_build_PCRE {
-  cd "$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER"
+  cd "$TARGET/$UNIX_PCRE_NAME-$UNIX_PCRE_VER"
   ./configure
   make
   create_custom_config $UNIX_PCRE_NAME $UNIX_PCRE_VER \
@@ -302,7 +334,7 @@ function unix_build_PCRE {
 #
 function do_unix_build_PCRE {
   echo -n "building pcre ... "  
-  if [ -f "$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER/.libs/libpcre.a" ]; then
+  if [ -f "$TARGET/$UNIX_PCRE_NAME-$UNIX_PCRE_VER/.libs/libpcre.a" ]; then
     print_ok_up_to_date
   else
     unix_build_PCRE >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -314,7 +346,7 @@ function do_unix_build_PCRE {
 # unix: build openssl
 #
 function unix_build_SSL {
-  cd "$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER"
+  cd "$TARGET/$UNIX_SSL_NAME-$UNIX_SSL_VER"
   if [ "$OS" = "mac" ]; then
     ./Configure darwin64-x86_64-cc
   else
@@ -332,7 +364,7 @@ function unix_build_SSL {
 #
 function do_unix_build_SSL {
   echo -n "building openssl ... "  
-  if [ -f "$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER/libssl.a" ]; then
+  if [ -f "$TARGET/$UNIX_SSL_NAME-$UNIX_SSL_VER/libssl.a" ]; then
     print_ok_up_to_date
   else
     unix_build_SSL >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -344,7 +376,7 @@ function do_unix_build_SSL {
 # unix: build lua if no lib, yet
 #
 function unix_build_LUA {
-  cd "$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER"
+  cd "$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER"
   if [ "$OS" = "mac" ]; then
     make macosx
   else
@@ -362,7 +394,7 @@ function unix_build_LUA {
 #
 function do_unix_build_LUA {
   echo -n "building lua ... "  
-  if [ -f "$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER/src/liblua.a" ]; then
+  if [ -f "$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER/src/liblua.a" ]; then
     print_ok_up_to_date
   else
     unix_build_LUA >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -374,7 +406,7 @@ function do_unix_build_LUA {
 # unix: build js
 #
 function unix_build_JS {
-  cd "$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER"
+  cd "$TARGET/$UNIX_JS_NAME-$UNIX_JS_VER"
   cd js/src
   if [ "$OS" = "mac" ]; then
     mv configure configure.orig
@@ -412,7 +444,7 @@ function unix_build_JS {
 #
 function do_unix_build_JS {
   echo -n "building js ... "  
-  if [ -f "$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER/js/src/libjs_static.a" ]; then
+  if [ -f "$TARGET/$UNIX_JS_NAME-$UNIX_JS_VER/js/src/libjs_static.a" ]; then
     print_ok_up_to_date
   else
     unix_build_JS >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -424,7 +456,7 @@ function do_unix_build_JS {
 # unix: build libmlx2
 #
 function unix_build_XML2 {
-  cd "$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER"
+  cd "$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER"
   ./configure
   make
   create_custom_config "xml2" $UNIX_XML2_VER \
@@ -440,7 +472,7 @@ function unix_build_XML2 {
 #
 function do_unix_build_XML2 {
   echo -n "building libxml2 ... "  
-  if [ -f "$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER/.libs/libxml2.a" ]; then
+  if [ -f "$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER/.libs/libxml2.a" ]; then
     print_ok_up_to_date
   else
     unix_build_XML2 >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -482,15 +514,15 @@ function do_buildconf {
 function unix_build_htt {
   cd "$TOP"
   ./configure \
-    --with-apr="$SW/target/$UNIX_APR_NAME-$UNIX_APR_VER" \
-    --with-apr-util="$SW/target/$UNIX_APU_NAME-$UNIX_APU_VER" \
-    --with-pcre="$SW/target/$UNIX_PCRE_NAME-$UNIX_PCRE_VER" \
-    --with-ssl="$SW/target/$UNIX_SSL_NAME-$UNIX_SSL_VER" \
-    --with-lua="$SW/target/$UNIX_LUA_NAME-$UNIX_LUA_VER/src" \
+    --with-apr="$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER" \
+    --with-apr-util="$TARGET/$UNIX_APU_NAME-$UNIX_APU_VER" \
+    --with-pcre="$TARGET/$UNIX_PCRE_NAME-$UNIX_PCRE_VER" \
+    --with-ssl="$TARGET/$UNIX_SSL_NAME-$UNIX_SSL_VER" \
+    --with-lua="$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER/src" \
     --enable-lua-module=yes \
-    --with-spidermonkey="$SW/target/$UNIX_JS_NAME-$UNIX_JS_VER/js/src" \
+    --with-spidermonkey="$TARGET/$UNIX_JS_NAME-$UNIX_JS_VER/js/src" \
     --enable-js-module=yes \
-    --with-libxml2="$SW/target/$UNIX_XML2_NAME-$UNIX_XML2_VER" \
+    --with-libxml2="$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER" \
     --enable-html-module=yes \
     enable_use_static=yes
   make clean all
@@ -499,9 +531,8 @@ function unix_build_htt {
   [ -f src/httest ]
   echo "ok"
   
-  # get and remember version for later
-  HTT_VER=`cat Makefile | awk '/^VERSION/ { print $3 }'`
-  HTT_NBIN=6
+  # number of binaries for later
+  HTT_NBIN=`echo $HTBINS | wc -w`
 }
 
 #
@@ -511,13 +542,6 @@ function do_unix_build_htt {
   echo -n "building htt ... "
   unix_build_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
-  if [ "$HTT_VER" == "snapshot" ]; then
-    # violet bold
-    echo "VERSION: $(tput bold)$(tput setaf 5)$HTT_VER$(tput sgr 0)"
-  else
-    # blue bold
-    echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
-  fi
 }
 
 #
@@ -525,7 +549,7 @@ function do_unix_build_htt {
 #
 function win_configure_htt {
   # create dummy config scripts
-  DUMMYDIR="$SW/target/dummy-configs"
+  DUMMYDIR="$TARGET/dummy-configs"
   if [ ! -d  "$DUMMYDIR" ]; then
     mkdir "$DUMMYDIR"
   fi
@@ -559,24 +583,13 @@ function win_configure_htt {
 #
 function do_win_configure_htt {
   echo -n "configuring htt ... "
-  if [ -f "$SW/target/win.configured" ]; then
+  if [ -f "$TARGET/win.configured" ]; then
     # configure is very slow on cygwin, so only do once automatically
     print_ok_up_to_date
   else
     win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-	touch "$SW/target/win.configured"
+	touch "$TARGET/win.configured"
     print_ok
-  fi
-  
-  # get and remember version for later
-  HTT_VER=`cat "$TOP/Makefile" | awk '/^VERSION/ { print $3 }'`
-
-  if [ "$HTT_VER" == "snapshot" ]; then
-    # violet bold
-    echo "VERSION: $(tput bold)$(tput setaf 5)$HTT_VER$(tput sgr 0)"
-  else
-    # blue bold
-    echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
   fi
 }
 
@@ -584,7 +597,7 @@ function do_win_configure_htt {
 # win: create visual studio solution
 #
 function win_create_sln {
-  WINSLN="$SW/target/solution"
+  WINSLN="$TARGET/solution"
   rm -rf "$WINSLN"
   mkdir "$WINSLN"
   
@@ -599,7 +612,7 @@ function win_create_sln {
 	echo "name: $NAME"
     RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
     RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-	cd "$SW/target/$NAME/lib"
+	cd "$TARGET/$NAME/lib"
 	for LIB in `ls *.lib`; do
       RELEASE_LIBS="$RELEASE_LIBS;$LIB"
 	done
@@ -767,7 +780,7 @@ function do_win_create_sln {
 # win: (re-)build httest binaries
 #
 function win_build_htt {
-  WINSLN="$SW/target/solution"
+  WINSLN="$TARGET/solution"
   #rm -rf "$WINSLN/Release"
   
   # find visual c++ 2010
@@ -796,10 +809,11 @@ EOF
   
   for LIBVAR in $LIBVARS; do
     eval DIRNAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
-	cp "$SW/target/$DIRNAME/dll/"*.dll "$WINSLN/Release"
+	cp "$TARGET/$DIRNAME/dll/"*.dll "$WINSLN/Release"
   done
   chmod 755 "$WINSLN/Release"/*.dll
-  HTT_NBIN=`ls -l "$WINSLN/Release"/*.dll | wc -l`
+  # count DLLs for later checks
+  HTT_NDLL=`ls -l "$WINSLN/Release"/*.dll | wc -l`
 
   for HTBIN_PATH in $HTBIN_PATHS; do
     rm -f "$TOP/$HTBIN_PATH"/*.exe "$TOP/$HTBIN_PATH/"*.dll
@@ -809,7 +823,6 @@ EOF
     BINDIR=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $1 }'`
     BINNAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
     cp "$WINSLN/Release/$BINNAME.exe" "$TOP/$BINDIR"
-	HTT_NBIN=`expr $HTT_NBIN + 1`
   done
 
   echo -n "checking that httest has been built ... "
@@ -840,9 +853,7 @@ function basic_tests_htt {
   
   for HTBIN in $HTBINS; do
     NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
-	echo "NAME=$NAME"
     CALL="$TOP/$HTBIN$EXE_EXT"
-	echo "CALL=$CALL"
     "$CALL" --version | grep "$NAME"
 	[ `"$CALL" --version | grep "$NAME.* $HTT_VER" | wc -l` -eq 1 ]
   done
@@ -850,7 +861,9 @@ function basic_tests_htt {
   cd "$TOP/test"
   TESTS="block.htt block_lua.htt block_js.htt html.htt"
   for TEST in $TESTS; do
-    ./run$SH_EXT $TEST
+    echo -n "running $TEST ... "
+    ./run$SH_EXT $TEST >"$TARGET/$TEST.out" 2>&1
+    echo "ok"
   done
 }
 
@@ -870,7 +883,7 @@ function shrinkwrap {
   NAME=$1
   
   # clean
-  DIR="$SW/target/$NAME"
+  DIR="$TARGET/$NAME"
   rm -rf "$DIR"
   rm -f "$DIR.tar.gz"
   rm -f "$DIR.zip"
@@ -879,8 +892,8 @@ function shrinkwrap {
 
   # copy executables
   if [ "$OS" == "win" ]; then
-    cp "$SW/target/solution/Release/"*.exe "$DIR"
-    cp "$SW/target/solution/Release/"*.dll "$DIR"
+    cp "$TARGET/solution/Release/"*.exe "$DIR"
+    cp "$TARGET/solution/Release/"*.dll "$DIR"
   else
     for HTBIN in $HTBINS; do
       cp "$TOP/$HTBIN" "$DIR"
@@ -929,7 +942,13 @@ EOF
     unix2dos "$README"
   fi
 
-  NEXPECTED=`expr $HTT_NBIN + 1`
+  # check that correct number of files in release
+  NEXPECTED=`echo "$HTBINS" | wc -w`
+  echo "$NEXPECTED"
+  if [ "$OS" == "win" ]; then
+    NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
+  fi
+  NEXPECTED=`expr $NEXPECTED + 1`
   echo -n "checking that $NEXPECTED files are in release ... "
   [ `ls "$DIR" | wc -w` -eq $NEXPECTED ]
   echo "ok"
@@ -948,6 +967,7 @@ EOF
     [ -f $DIR.zip ]
 	echo "ok"
   fi
+  print_ok
 }
 
 #
@@ -971,10 +991,10 @@ function do_shrinkwrap {
   fi
   NAME="httest-$HTT_VER-$SHORT_NAME"
   
-  echo "NAME: $NAME"
-  echo -n "shrink-wrap ... "
+  echo -n "shrink-wrap $NAME ... "
   shrinkwrap "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
+  
 }
 
 main
