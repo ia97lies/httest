@@ -5,7 +5,7 @@ CLIENT
 
 _SSL:TRACE
 # also test if we could load cert and key in a client
-_REQ $YOUR_HOST SSL:$YOUR_PORT client.cert.pem client.key.pem
+_REQ $YOUR_HOST SSL3:$YOUR_PORT client.cert.pem client.key.pem
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
@@ -16,7 +16,7 @@ _WAIT
 #_SSL:TRACE info
 #_EXPECT Var(info) "Handshake, HelloServer"
 
-_REQ $YOUR_HOST SSL:$YOUR_PORT
+_REQ $YOUR_HOST SSL3:$YOUR_PORT
 __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
