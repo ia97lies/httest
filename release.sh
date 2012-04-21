@@ -2,11 +2,27 @@ TOP=`pwd`
 
 VERSION=$1
 
-set -e
 set -u
+
+trap "git checkout master 2>/dev/null >/dev/null; \
+      git tag -d $VERSION 2>/dev/null >/dev/null;\
+      sed < configure.in > configure.in.tmp -e \"s/$VERSION/snapshot/\"; \
+      mv configure.in.tmp configure.in; \
+      echo \"Release build FAILED\"" EXIT
 
 echo
 echo "Release httest-$VERSION"
+sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
+mv configure.in.tmp configure.in
+git commit -m"new release $VERSION" configure.in
+
+echo
+echo "Check repository"
+git status | grep modified
+if [ $? -eq 0 ]; then
+  echo "Please commit first all changes"
+  exit 1
+fi
 
 echo "Tag release $VERSION"
   git tag $VERSION
@@ -14,9 +30,6 @@ echo "Tag release $VERSION"
 echo "Checkout new tag"
   git checkout $VERSION
   git clean -f
-
-sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
-mv configure.in.tmp configure.in
 
 echo
 echo "  Check Version"
@@ -60,6 +73,8 @@ if [ $? -ne 0 ]; then
 fi
 cd ..
 
+set -e
+
 echo
 echo "  Build Configuration"
 ./buildconf.sh
@@ -90,3 +105,4 @@ git commit -m"New release $VERSION"
 echo
 echo Release build SUCCESS 
 
+trap - EXIT
