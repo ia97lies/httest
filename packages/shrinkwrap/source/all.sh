@@ -469,10 +469,10 @@ function unix_basic_tests_htt {
   [ `"$TOP/tools/htx2b" --version | grep "htx2b $HTT_VER$" | wc -l` -eq 1 ]
   
   cd "$TOP/test"
-  ./run.sh block.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  ./run.sh block_lua.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  ./run.sh block_js.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-  ./run.sh html.htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+  ./run.sh block.htt
+  ./run.sh block_lua.htt
+  ./run.sh block_js.htt
+  ./run.sh html.htt
 }
 
 #
