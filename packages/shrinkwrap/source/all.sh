@@ -36,8 +36,16 @@ function main {
   BUILDLOG="$SW/$BUILDLOG"
   echo "" >"$BUILDLOG"
 
-  if [ "$OS" != "win" ]; then
-    # unix
+  if [ "$1" == "sln" ]; then
+    # just visual studio solution on unix or win
+    for LIBVAR in $LIBVARS; do
+      do_get_lib "WIN" "$LIBVAR"
+    done
+    do_buildconf
+    do_dummy_configure_htt
+    do_create_sln	
+  elif [ "$OS" != "win" ]; then
+    # all unix targets on unix
     for LIBVAR in $LIBVARS; do
       do_get_lib "UNIX" "$LIBVAR"
     done
@@ -49,13 +57,13 @@ function main {
     do_basic_tests_htt
     do_shrinkwrap
   else
-    # windows
+    # all win targets on win
     for LIBVAR in $LIBVARS; do
       do_get_lib "WIN" "$LIBVAR"
     done
     do_buildconf
-    do_win_configure_htt
-    do_win_create_sln
+    do_dummy_configure_htt
+    do_create_sln
     do_win_build_htt
     do_basic_tests_htt
     do_shrinkwrap
@@ -188,19 +196,19 @@ function get_lib {
     quit
 EOF
   fi
-  if [ "$OS" == "win" ]; then
+  if [ "$LIB_OS" == "WIN" ]; then
     unzip "$LIB_FILE" -d tmp
-	mv tmp/* "$LIB_NAME-$LIB_VER"
+	mv tmp/* "$LIB_DIRNAME"
 	rmdir tmp
   else
-    gzip -d -c "$LIB_FILE" > "$LIB_NAME-$LIB_VER.tar"
-    tar vxf "$LIB_NAME-$LIB_VER.tar"
-    rm "$LIB_NAME-$LIB_VER.tar"
+    gzip -d -c "$LIB_FILE" > "$LIB_DIRNAME.tar"
+    tar vxf "$LIB_DIRNAME.tar"
+    rm "$LIB_DIRNAME.tar"
   fi
   rm "$LIB_FILE"
   
-  echo -n "checking that directory $LIB_NAME-$LIB_VER exists ... "
-  [ -d "$LIB_NAME-$LIB_VER" ]
+  echo -n "checking that directory $LIB_DIRNAME exists ... "
+  [ -d "$LIB_DIRNAME" ]
   echo "ok"
 }
 
@@ -208,16 +216,25 @@ EOF
 # download and unpack lib if not already there
 #
 function do_get_lib {
-  PRE="$1_$2_"
+  LIB_OS="$1"
+  LIB_VAR="$2"
+  PRE="${LIB_OS}_${LIB_VAR}_"
   eval LIB_NAME="\$${PRE}NAME"
   eval LIB_VER="\$${PRE}VER"
   eval LIB_PROT="\$${PRE}PROT"
   eval LIB_HOST="\$${PRE}HOST"
   eval LIB_PATH="\$${PRE}PATH"
   eval LIB_FILE="\$${PRE}FILE"
+  LIB_DIRNAME="$LIB_NAME-$LIB_VER"
+  INFo=""
+  if [ "$LIB_OS" == "WIN" ]; then
+    LIB_DIRNAME="win-$LIB_DIRNAME"
+    INFO=" win"
+  fi
+
   cd "$TARGET"
-  echo -n "getting lib $LIB_NAME $LIB_VER ... "
-  if [ -d "$LIB_NAME-$LIB_VER" ]; then
+  echo -n "getting$INFO lib $LIB_NAME $LIB_VER ... "
+  if [ -d "$LIB_DIRNAME" ]; then
     print_ok_up_to_date
   else
     get_lib >>"$BUILDLOG" 2>>"$BUILDLOG"
@@ -545,9 +562,9 @@ function do_unix_build_htt {
 }
 
 #
-# win: configure htt in order to get e.g. modules.c
+# unix/win: configure htt in order to get e.g. modules.c
 #
-function win_configure_htt {
+function dummy_configure_htt {
   # create dummy config scripts
   DUMMYDIR="$TARGET/dummy-configs"
   if [ ! -d  "$DUMMYDIR" ]; then
@@ -579,25 +596,31 @@ function win_configure_htt {
 }
 
 #
-# win: configure htt (always)
+# unix/win: dummy configure htt (always)
 #
-function do_win_configure_htt {
-  echo -n "configuring htt ... "
-  if [ -f "$TARGET/win.configured" ]; then
+function do_dummy_configure_htt {
+  echo -n "dummy configuring htt ... "
+  if [ "$OS" == "win" ]; then
     # configure is very slow on cygwin, so only do once automatically
-    print_ok_up_to_date
+    if [ -f "$TARGET/win.configured" ]; then
+      print_ok_up_to_date
+    else
+      dummy_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
+	  touch "$TARGET/win.configured"
+      print_ok
+    fi
   else
-    win_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
-	touch "$TARGET/win.configured"
+    dummy_configure_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
     print_ok
   fi
 }
 
 #
-# win: create visual studio solution
+# unix/win: create visual studio solution
 #
-function win_create_sln {
-  WINSLN="$TARGET/solution"
+function create_sln {
+  SLN="httest-$HTT_VER-win-sln"
+  WINSLN="$TARGET/$SLN"
   rm -rf "$WINSLN"
   mkdir "$WINSLN"
   
@@ -618,11 +641,11 @@ function win_create_sln {
     eval VER="\$WIN_${LIBVAR}_VER"
 	echo "$NAME $VER" >>"$WINSLN/versions.txt"
 	mkdir "$WINSLN/include/$NAME"
-	cp -r "$TARGET/$NAME-$VER/include"/* "$WINSLN/include/$NAME"
+	cp -r "$TARGET/win-$NAME-$VER/include"/* "$WINSLN/include/$NAME"
 	mkdir "$WINSLN/lib/$NAME"
-	cp -r "$TARGET/$NAME-$VER/lib"/* "$WINSLN/lib/$NAME"
+	cp -r "$TARGET/win-$NAME-$VER/lib"/* "$WINSLN/lib/$NAME"
 	mkdir "$WINSLN/dll/$NAME"
-	cp -r "$TARGET/$NAME-$VER/dll"/* "$WINSLN/dll/$NAME"
+	cp -r "$TARGET/win-$NAME-$VER/dll"/* "$WINSLN/dll/$NAME"
 	# make sure DLLs can be loaded on win
     chmod 755 "$WINSLN/dll/$NAME"/*.dll
     RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\include\\\\$NAME"
@@ -645,10 +668,10 @@ function win_create_sln {
   WINSRC="$SW/source/win"
   
   # create visual studio solution
-  SLN="$WINSLN/httest.sln"
+  HTTSLN="$WINSLN/httest.sln"
   GUID_PRE="8BC9CEB8-8B4A-11D0-8D11-00A0C91BC94"
   SLN_GUID="${GUID_PRE}0"
-  cat >"$SLN" <<EOF
+  cat >"$HTTSLN" <<EOF
 
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual C++ Express 2010
@@ -660,10 +683,10 @@ EOF
 	N=`expr $N + 1`
 	GUID="$GUID_PRE$N"
 	PROJECTS="$PROJECTS $NAME:$GUID"
-    echo "Project(\"{$SLN_GUID}\") = \"$NAME\", \"$NAME\\$NAME.vcxproj\", \"{$GUID}\"" >>"$SLN"
-	echo "EndProject" >>"$SLN"
+    echo "Project(\"{$SLN_GUID}\") = \"$NAME\", \"$NAME\\$NAME.vcxproj\", \"{$GUID}\"" >>"$HTTSLN"
+	echo "EndProject" >>"$HTTSLN"
   done
-  cat >>"$SLN" <<EOF
+  cat >>"$HTTSLN" <<EOF
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -676,12 +699,12 @@ EOF
     BINNAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
 	N=`expr $N + 1`
 	PROJ_GUID="$GUID_PRE$N"
-    echo "		{$PROJ_GUID}.Debug|Win32.ActiveCfg = Debug|Win32" >>"$SLN"
-    echo "		{$PROJ_GUID}.Debug|Win32.Build.0 = Debug|Win32" >>"$SLN"
-    echo "		{$PROJ_GUID}.Release|Win32.ActiveCfg = Release|Win32" >>"$SLN"
-    echo "		{$PROJ_GUID}.Release|Win32.Build.0 = Release|Win32" >>"$SLN"
+    echo "		{$PROJ_GUID}.Debug|Win32.ActiveCfg = Debug|Win32" >>"$HTTSLN"
+    echo "		{$PROJ_GUID}.Debug|Win32.Build.0 = Debug|Win32" >>"$HTTSLN"
+    echo "		{$PROJ_GUID}.Release|Win32.ActiveCfg = Release|Win32" >>"$HTTSLN"
+    echo "		{$PROJ_GUID}.Release|Win32.Build.0 = Release|Win32" >>"$HTTSLN"
   done
-  cat >>"$SLN" <<EOF
+  cat >>"$HTTSLN" <<EOF
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -783,25 +806,21 @@ EOF
   echo "FILEVERSION $HTT_VER_COMMAS" >>"$WINRC"
   echo "BEGIN" >>"$WINRC"
   echo "END" >>"$WINRC"
-
-  echo -n "checking that visual studio solution has been created ... "  
-  [ -f "$WINRC" ]
-  echo "ok"
   
-  # zip solution if zip is installed
-  if [ `which zip` != "" ]; then
-    cd "$TARGET"
-    zip -r solution.zip solution
-  fi
-
+  # zip solution
+  cd "$TARGET"
+  zip -r "$SLN.zip" "$SLN"
+  echo -n "checking that visual studio solution has been created ... "  
+  [ -f "$SLN.zip" ]
+  echo "ok"
 }
 
 #
-# win: create visual studio solution (always)
+# unix/win: create visual studio solution (always)
 #
-function do_win_create_sln {
+function do_create_sln {
   echo -n "creating visual studio solution ... "
-  win_create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
+  create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
 
@@ -809,8 +828,9 @@ function do_win_create_sln {
 # win: (re-)build httest binaries
 #
 function win_build_htt {
-  WINSLN="$TARGET/solution"
-  #rm -rf "$WINSLN/Release"
+  SLN="httest-$HTT_VER-win-sln"
+  WINSLN="$TARGET/$SLN"
+  rm -rf "$WINSLN/Release"
   
   # find visual c++ 2010
   PAT="Microsoft Visual Studio 10.0/VC/bin/vcvars32.bat"
@@ -916,8 +936,8 @@ function shrinkwrap {
 
   # copy executables
   if [ "$OS" == "win" ]; then
-    cp "$TARGET/solution/Release/"*.exe "$DIR"
-    cp "$TARGET/solution/Release/"*.dll "$DIR"
+    cp "$WINSLN/Release/"*.exe "$DIR"
+    cp "$WINSLN/Release/"*.dll "$DIR"
   else
     for HTBIN in $HTBINS; do
       cp "$TOP/$HTBIN" "$DIR"
@@ -1020,4 +1040,4 @@ function do_shrinkwrap {
   
 }
 
-main
+main $@
