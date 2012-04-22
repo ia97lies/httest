@@ -42,10 +42,13 @@ on win you need:
 
 how to build:
 
-- make.sh (clean|all)*
+- make.sh (clean|all|sln)*
 - default target is all
+- clean: cleans target dir
+- all:   builds binaries on same platform
+- sln:   creates a visual c++ solution (on win and unix)
 - see target/build.log for details if something fails
-- binaries go to target/httest-<version>[.tar.gz|.zip]
+- binaries go to target/httest-<version>-<x>[.tar.gz|.zip]
 
 built binaries:
 
