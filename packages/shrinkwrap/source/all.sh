@@ -606,22 +606,41 @@ function win_create_sln {
   RELEASE_INCLUDES="..\\\\src"
   RELEASE_LIBDIRS=""
   RELEASE_LIBS="Ws2_32.lib"
+  RELEASE_POSTBUILD=""
   
+  # copy libs and add to build settings
+  mkdir "$WINSLN/include"
+  mkdir "$WINSLN/lib"
+  mkdir "$WINSLN/dll"
+  echo "httest $HTT_VER" >"$WINSLN/versions.txt"
   for LIBVAR in $LIBVARS; do
-    eval NAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
-	echo "name: $NAME"
-    RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\..\\\\$NAME\\\\include"
-    RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\..\\\\$NAME\\\\lib"
-	cd "$TARGET/$NAME/lib"
+    eval NAME="\$WIN_${LIBVAR}_NAME"
+    eval VER="\$WIN_${LIBVAR}_VER"
+	echo "$NAME $VER" >>"$WINSLN/versions.txt"
+	mkdir "$WINSLN/include/$NAME"
+	cp -r "$TARGET/$NAME-$VER/include"/* "$WINSLN/include/$NAME"
+	mkdir "$WINSLN/lib/$NAME"
+	cp -r "$TARGET/$NAME-$VER/lib"/* "$WINSLN/lib/$NAME"
+	mkdir "$WINSLN/dll/$NAME"
+	cp -r "$TARGET/$NAME-$VER/dll"/* "$WINSLN/dll/$NAME"
+	# make sure DLLs can be loaded on win
+    chmod 755 "$WINSLN/dll/$NAME"/*.dll
+    RELEASE_INCLUDES="$RELEASE_INCLUDES;..\\\\include\\\\$NAME"
+    RELEASE_LIBDIRS="$RELEASE_LIBDIRS;..\\\\lib\\\\$NAME"
+	cd "$WINSLN/lib/$NAME"
 	for LIB in `ls *.lib`; do
       RELEASE_LIBS="$RELEASE_LIBS;$LIB"
 	done
+	# note how spaces are escaped
+	RELEASE_POSTBUILD="${RELEASE_POSTBUILD}copy##SP##\"\$(SolutionDir)dll\\\\$NAME\\\\*.dll\"##SP##\"\$(OutDir)\"##SP##\&amp;##SP##"
   done
-
+  
+  # debug build settings
   DEBUG_DEFINES="$RELEASE_DEFINES"
   DEBUG_INCLUDES="$RELEASE_INCLUDES"
   DEBUG_LIBDIRS="$RELEASE_LIBDIRS"
   DEBUG_LIBS="$RELEASE_LIBS"
+  DEBUG_POSTBUILD="$RELEASE_POSTBUILD"
   
   WINSRC="$SW/source/win"
   
@@ -692,10 +711,13 @@ EOF
     sed -i.bak 's/##RELEASE_INCLUDES##/'$RELEASE_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##RELEASE_LIBDIRS##/'$RELEASE_LIBDIRS'/g' $WINPRJ
     sed -i.bak 's/##RELEASE_LIBS##/'$RELEASE_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##RELEASE_POSTBUILD##/'$RELEASE_POSTBUILD'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_DEFINES##/'$DEBUG_DEFINES'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_INCLUDES##/'$DEBUG_INCLUDES'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_LIBDIRS##/'$DEBUG_LIBDIRS'/g' $WINPRJ
     sed -i.bak 's/##DEBUG_LIBS##/'$DEBUG_LIBS'/g' $WINPRJ
+    sed -i.bak 's/##DEBUG_POSTBUILD##/'$DEBUG_POSTBUILD'/g' $WINPRJ
+    sed -i.bak 's/##SP##/ /g' $WINPRJ
     
     # determine c files
     C_FILES=`cat "$TOP/src/Makefile.am" "$TOP/tools/Makefile.am" | awk \
@@ -765,6 +787,13 @@ EOF
   echo -n "checking that visual studio solution has been created ... "  
   [ -f "$WINRC" ]
   echo "ok"
+  
+  # zip solution if zip is installed
+  if [ `which zip` != "" ]; then
+    cd "$TARGET"
+    zip -r solution.zip solution
+  fi
+
 }
 
 #
@@ -807,11 +836,6 @@ function win_build_htt {
 EOF
   cmd /c build.bat
   
-  for LIBVAR in $LIBVARS; do
-    eval DIRNAME="\$WIN_${LIBVAR}_NAME-\$WIN_${LIBVAR}_VER"
-	cp "$TARGET/$DIRNAME/dll/"*.dll "$WINSLN/Release"
-  done
-  chmod 755 "$WINSLN/Release"/*.dll
   # count DLLs for later checks
   HTT_NDLL=`ls -l "$WINSLN/Release"/*.dll | wc -l`
 
@@ -944,7 +968,6 @@ EOF
 
   # check that correct number of files in release
   NEXPECTED=`echo "$HTBINS" | wc -w`
-  echo "$NEXPECTED"
   if [ "$OS" == "win" ]; then
     NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
   fi
