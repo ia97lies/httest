@@ -4,7 +4,7 @@ VERSION=$1
 
 set -u
 
-trap onexit 1 2 3 15 ERR
+trap onexit 1 2 3 15
 
 function onexit() {
   git checkout master 2>/dev/null >/dev/null;
