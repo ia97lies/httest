@@ -895,6 +895,17 @@ function basic_tests_htt {
 	SH_EXT=".sh"
   fi
   
+  if [ "$OS" == "win" -a ! -f "$TOP/test/run$SH_EXT" ]; then
+    cat >"$TOP/test/run$SH_EXT" <<EOF
+
+set TOP=..
+set HTTEST=..\src\httest.exe
+
+%HTTEST% %*
+EOF
+  chmod +x "$TOP/test/run$SH_EXT"
+  fi
+  
   for HTBIN in $HTBINS; do
     NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
     CALL="$TOP/$HTBIN$EXE_EXT"
