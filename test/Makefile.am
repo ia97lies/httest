@@ -149,6 +149,7 @@ EXTRA_DIST= \
 	include.txt \
 	incomplete.htt \
 	inline.htt \
+	join.htt \
 	late_var_replace.htt \
 	leftovertmpf.htt \
 	listen_to_ip_port.htt \

@@ -2602,6 +2602,22 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
     apr_table_addn(global->threads, worker->name, (char *) thread);
   }
   apr_table_clear(global->clients);
+  
+  /* wait on thermination of all started threads */
+  e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
+  for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
+    apr_status_t retstat;
+    thread = (apr_thread_t *) e[i].val;
+    if ((retstat = apr_thread_join(&status, thread))) {
+      fprintf(stderr, "\nCould not join thread: %d", retstat);
+      return retstat;
+    }
+    if (status != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not join thread: %d", status);
+      return status;
+    }
+  }
+  apr_table_clear(global->threads);
 
   return APR_SUCCESS;
 }
@@ -2712,11 +2728,8 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 static apr_status_t interpret(apr_file_t * fp, store_t * vars,
                               int log_mode, apr_pool_t * p, char *additional) {
   apr_status_t status;
-  apr_status_t retstat = APR_SUCCESS;
-  apr_table_entry_t *e;
   int i;
   global_t *global;
-  apr_thread_t *thread;
 
   if ((status = global_new(&global, vars, log_mode, p)) 
       != APR_SUCCESS) {
@@ -2753,23 +2766,9 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars,
     return status;
   }
 
-  global_GO(&global_commands[1], global, NULL, NULL);
-  
-  /* wait on thermination of all started threads */
-  e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
-  for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
-    thread = (apr_thread_t *) e[i].val;
-    if ((retstat = apr_thread_join(&status, thread))) {
-      fprintf(stderr, "\nCould not join thread: %d", retstat);
-      return retstat;
-    }
-    if (status != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not join thread: %d", status);
-      return status;
-    }
-  }
+  status = global_GO(&global_commands[1], global, NULL, NULL);
 
-  return retstat;
+  return status;
 }
 
 apr_getopt_option_t options[] = {
