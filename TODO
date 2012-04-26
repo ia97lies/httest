@@ -6,8 +6,8 @@ TODO List
   - Fill formular and submit
 
 + SSL
-  - Show SSL handshake information on stdout, perhaps make it expectable. 
   - Need more information on ssl failure
+  - Integrate OpenSSL 1.0.0 and 1.0.1 and extend _SSL:TRACE
 
 + Debugger
   - break on error
