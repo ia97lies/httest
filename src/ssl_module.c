@@ -204,6 +204,82 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
 }
 
 /**
+ * tls ext call back for debugging
+ * @param ssl IN ssl instance
+ * @param client_server IN
+ * @param type IN
+ * @param data IN 
+ * @param len IN 
+ * @param arg IN void pointer to worker
+ */
+static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char *data, int len, void *arg) {
+  worker_t *worker = arg;
+  char *extname;
+  char *entry;
+  ssl_config_t *config = ssl_get_worker_config(worker);
+
+  switch(type) {
+    case TLSEXT_TYPE_server_name:
+      extname = "server name";
+      break;
+
+    case TLSEXT_TYPE_max_fragment_length:
+      extname = "max fragment length";
+      break;
+
+    case TLSEXT_TYPE_client_certificate_url:
+      extname = "client certificate URL";
+      break;
+
+    case TLSEXT_TYPE_trusted_ca_keys:
+      extname = "trusted CA keys";
+      break;
+
+    case TLSEXT_TYPE_truncated_hmac:
+      extname = "truncated HMAC";
+      break;
+
+    case TLSEXT_TYPE_status_request:
+      extname = "status request";
+      break;
+
+    case TLSEXT_TYPE_elliptic_curves:
+      extname = "elliptic curves";
+      break;
+
+    case TLSEXT_TYPE_ec_point_formats:
+      extname = "EC point formats";
+      break;
+
+    case TLSEXT_TYPE_session_ticket:
+      extname = "server ticket";
+      break;
+
+    case TLSEXT_TYPE_renegotiate:
+      extname = "renegotiate";
+      break;
+
+#ifdef TLSEXT_TYPE_opaque_prf_input
+    case TLSEXT_TYPE_opaque_prf_input:
+      extname = "opaque PRF input";
+      break;
+#endif
+
+    default:
+      extname = "unknown";
+      break;
+
+  }
+
+  entry = apr_psprintf(config->msg_pool, "+TLS %s extension, %s, id=%d", 
+                       client_server ? "server": "client",
+                       extname, type);
+  apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
+  worker_log(worker, LOG_INFO, "%s", entry);
+
+}
+
+/**
  * Message call back for debugging
  * @param write_p IN write/read
  * @param version IN SSL version
@@ -213,7 +289,7 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
  * @param ssl IN ssl instance
  * @param arg IN void pointer to worker
  */
-void ssl_message_trace(int write_p, int version, int content_type, const void *buf, size_t len, SSL *ssl, void *arg)
+static void ssl_message_trace(int write_p, int version, int content_type, const void *buf, size_t len, SSL *ssl, void *arg)
 {
   worker_t *worker = arg;
   char *entry;
@@ -644,6 +720,10 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
   }
   SSL_set_ssl_method(sconfig->ssl, config->meth);
   if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
+#ifndef OPENSSL_NO_TLSEXT
+    SSL_set_tlsext_debug_callback(sconfig->ssl, ssl_tlsext_trace);
+    SSL_set_tlsext_debug_arg(sconfig->ssl, worker);
+#endif
     SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
     SSL_set_msg_callback_arg(sconfig->ssl, worker);
   }
