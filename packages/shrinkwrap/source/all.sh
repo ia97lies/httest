@@ -182,10 +182,12 @@ function do_determine_libs {
 # download und unpack lib according to LIB_* variables
 #
 function get_lib {
+  URL="$LIB_PROT://$LIB_HOST$LIB_PATH/$LIB_FILE"
+  echo -n "getting $URL ... "
   if [ "$OS" == "mac" ]; then
-    ftp "$LIB_PROT://$LIB_HOST$LIB_PATH/$LIB_FILE"
+    ftp "$URL"
   elif [ "$LIB_PROT" == "http" ]; then
-    wget "$LIB_PROT://$LIB_HOST$LIB_PATH/$LIB_FILE"
+    wget -q "$URL"
   else
     ftp -n $LIB_HOST <<EOF
     quote USER anonymous
@@ -196,16 +198,20 @@ function get_lib {
     quit
 EOF
   fi
+  echo "ok"
+  
+  echo -n "unpacking $LIB_FILE ... "
   if [ "$LIB_OS" == "WIN" ]; then
-    unzip "$LIB_FILE" -d tmp
+    unzip -q "$LIB_FILE" -d tmp
 	mv tmp/* "$LIB_DIRNAME"
 	rmdir tmp
   else
     gzip -d -c "$LIB_FILE" > "$LIB_DIRNAME.tar"
-    tar vxf "$LIB_DIRNAME.tar"
+    tar xf "$LIB_DIRNAME.tar"
     rm "$LIB_DIRNAME.tar"
   fi
   rm "$LIB_FILE"
+  echo "ok"
   
   echo -n "checking that directory $LIB_DIRNAME exists ... "
   [ -d "$LIB_DIRNAME" ]
