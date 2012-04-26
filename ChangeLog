@@ -1,4 +1,7 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.3
+  *) httest: Bugfixed global command GO which can be used now to join threads.
+
 Changes with httest 2.2.2
   *) httest: New SSL command to set cipher suite.
 
