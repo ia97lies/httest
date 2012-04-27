@@ -642,7 +642,7 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
  * Get client method 
  *
  * @param worker IN thread object data
- * @param sslstr IN SSL|SSL2|SSL3|TLS1
+ * @param sslstr IN SSL|SSL2|SSL3|TLS1|DTLS1
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
@@ -668,6 +668,16 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = TLSv1_client_method();
   }
+#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+  else if (strcasecmp(sslstr, "TLS1.2") == 0) {
+    is_ssl = 1;
+    config->meth = TLSv1_2_client_method();
+  }
+#endif
+  else if (strcasecmp(sslstr, "DTLS1") == 0) {
+    is_ssl = 1;
+    config->meth = DTLSv1_client_method();
+  }
   return is_ssl;
 }
 
@@ -675,7 +685,7 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
  * Get server method 
  *
  * @param worker IN thread object data
- * @param sslstr IN SSL|SSL2|SSL3|TLS1
+ * @param sslstr IN SSL|SSL2|SSL3|TLS1|DTLS1
  *
  * @return APR_SUCCESS or APR_ECONNABORTED
  */
@@ -700,6 +710,10 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
     config->meth = TLSv1_server_method();
+  }
+  else if (strcasecmp(sslstr, "DTLS1") == 0) {
+    is_ssl = 1;
+    config->meth = DTLSv1_server_method();
   }
   return is_ssl;
 }
@@ -755,6 +769,12 @@ static apr_status_t worker_ssl_accept(worker_t * worker) {
       if ((status = ssl_new_instance(worker)) != APR_SUCCESS) {
         return status;
       }
+
+      /**
+       * openssl 1.0.1b want this ...
+       * Have to understand this first, before I do add it
+      SSL_set_session_id_context(sconfig->ssl, "foobar", strlen("foobar"));
+       */
 
       ssl_rand_seed();
       apr_os_sock_get(&fd, worker->socket->socket);
@@ -1814,14 +1834,14 @@ apr_status_t ssl_module_init(global_t *global) {
   ssl_util_thread_setup(global->pool);
 
   if ((status = module_command_new(global, "SSL", "_CONNECT",
-	                           "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
+	                           "SSL|SSL2|SSL3|TLS1|TLS1.2|DTLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to establish a ssl "
 				   "connection on it.",
 	                           block_SSL_CONNECT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_ACCEPT",
-	                           "SSL|SSL2|SSL3|TLS1 [<cert-file> <key-file>]",
+	                           "SSL|SSL2|SSL3|TLS1|TLS1.2|DTLS1 [<cert-file> <key-file>]",
 	                           "Needs a connected socket to accept a ssl "
 				   "connection on it.",
 	                           block_SSL_ACCEPT)) != APR_SUCCESS) {
