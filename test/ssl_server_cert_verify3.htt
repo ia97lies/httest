@@ -2,9 +2,9 @@ INCLUDE $TOP/test/config.htb
 
 # runs exactly one time
 CLIENT
-_SSL:SET_CA ca.cert.pem
 # also test if we could load cert and key in a client
-_REQ $YOUR_HOST SSL:$YOUR_PORT
+_REQ $YOUR_HOST $YOUR_PORT
+_SSL:CONNECT SSL ca.cert.pem
 _RENEG verify
 _SSL:GET_CERT_VALUE M_VERSION version 
 _SSL:GET_CERT_VALUE S_DN dn

@@ -50,6 +50,7 @@ typedef struct ssl_config_s {
   const char *certfile;
   const char *keyfile;
   const char *cafile;
+  const char *set_ca;
   const char *cipher_suite;
 #define SSL_CONFIG_FLAGS_NONE 0
 #define SSL_CONFIG_FLAGS_CERT_SET 1
@@ -557,6 +558,15 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
 
   if (config->flags & SSL_CONFIG_FLAGS_CERT_SET) {
     return APR_SUCCESS;
+  }
+
+  if (certfile && !keyfile && !ca) {
+    ca = certfile;
+    certfile = NULL;
+  }
+
+  if (config->set_ca && !ca) {
+    ca = config->set_ca;
   }
 
   /* test if there are the same cert, key ca files or no certs at all */
@@ -1493,6 +1503,26 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
 }
 
 /**
+ * SSL_SET_CA command
+ *
+ * @param worker IN thread data object
+ * @param data IN ssl variable and a variable name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t block_SSL_SET_CA(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
+  ssl_config_t *config = ssl_get_worker_config(worker);
+
+  /* check if we have parameters */
+  if (store_get_size(worker->params)) {
+    config->set_ca = store_get(worker->params, "1");
+    return  APR_SUCCESS;
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
  * SSL_SECURE_RENEG_SUPPORTED command
  *
  * @param worker IN thread data object
@@ -1886,6 +1916,11 @@ apr_status_t ssl_module_init(global_t *global) {
 	                           "set cert either from file <cert> <key> <ca> "
 				   "or got with _SSL:RENEG_CERT or _SSL:LOAD_CERT/_SSL:LOAD_KEY",
 	                           block_SSL_SET_CERT)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "SSL", "_SET_CA", "<ca>",
+	                           "set <ca> cert",
+	                           block_SSL_SET_CA)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_LOAD_KEY", "<pem-key>",
