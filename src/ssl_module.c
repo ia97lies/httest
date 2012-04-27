@@ -1271,13 +1271,13 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
     }
   }
   else {
-    if (copy && strcasecmp(copy, "verify") == 0) {
-      config->cert = SSL_get_peer_certificate(sconfig->ssl);
-      if (!config->cert) {
-	worker_log(worker, LOG_ERR, "No peer certificate");
-	return APR_EACCES;
-      }
+    config->cert = SSL_get_peer_certificate(sconfig->ssl);
+    if (!config->cert) {
+      worker_log(worker, LOG_ERR, "No peer certificate");
+      return APR_EACCES;
+    }
 
+    if (copy && strcasecmp(copy, "verify") == 0) {
       if((rc = SSL_get_verify_result(sconfig->ssl)) != X509_V_OK) {
 	worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
 	X509_verify_cert_error_string(rc), rc);

@@ -4,6 +4,9 @@ Changes with httest 2.2.3
 
   *) httest: Expect/match/grep TLS extention messages
 
+  *) httest: Get server cert also on "_SSL:RENEG_CERT" and do verification of
+  this cert only on "_SSL:RENEG_CERT verify" 
+
 Changes with httest 2.2.2
   *) httest: New SSL command to set cipher suite.
 
