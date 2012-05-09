@@ -99,12 +99,12 @@ fi
 
 # if link static
 if test "$enable_full_static" = "yes"; then
-  LDFLAGS="-all-static"
+  LDFLAGS="-all-static $LDFLAGS"
 fi
 
 # if link static
 if test "$enable_use_static" = "yes"; then
-  LDFLAGS="-static"
+  LDFLAGS="-static $LDFLAGS"
 fi
 
 if test "$enable_iconv_support" = "yes"; then
