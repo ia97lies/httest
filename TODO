@@ -1,5 +1,8 @@
 TODO List
 ---------
++ Distributed
+  - Start a listening httest and send script over TCP/SSL
+  - Send script to a listening httest
 
 + HTML
   - DOM, XmlHttpRequest and HTML interaction
@@ -17,6 +20,7 @@ TODO List
   - Color coding in output
   - Stack trace on error is not highlighted. Do it the C way :)
   - XML output
+  - Statistic output at the end.
 
 + Scanning
   - Parameterized scripts
