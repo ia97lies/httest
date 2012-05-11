@@ -30,15 +30,149 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+typedef struct stat_gconf_s {
+  int on;
+} stat_gconf_t;
+
+typedef struct stat_time_s {
+  apr_time_t min;
+  apr_time_t avr;
+  apr_time_t max;
+} stat_time_t;
+
+typedef struct stat_wconf_s {
+  apr_time_t total_time;
+  apr_time_t start_time;
+  apr_size_t recv_bytes;
+  apr_size_t sent_bytes;
+  stat_time_t recv_time;
+  stat_time_t sent_time;
+  int sent_reqs;
+  int recv_resps;
+} stat_wconf_t;
 
 /************************************************************************
  * Globals 
  ***********************************************************************/
+const char * stat_module = "stat_module";
 
 /************************************************************************
  * Local 
  ***********************************************************************/
 
+/**
+ * Get stat config from global 
+ *
+ * @param global IN 
+ * @return stat config
+ */
+static stat_gconf_t *stat_get_global_config(global_t *global) {
+  stat_gconf_t *config = module_get_config(global->config, stat_module);
+  if (config == NULL) {
+    config = apr_pcalloc(global->pool, sizeof(*config));
+    module_set_config(global->config, apr_pstrdup(global->pool, stat_module), config);
+  }
+  return config;
+}
+
+/**
+ * Get stat config from worker
+ *
+ * @param worker IN worker
+ * @return stat config
+ */
+static stat_wconf_t *stat_get_worker_config(worker_t *worker) {
+  stat_wconf_t *config = module_get_config(worker->config, stat_module);
+  if (config == NULL) {
+    config = apr_pcalloc(worker->pbody, sizeof(*config));
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, stat_module), config);
+  }
+  return config;
+}
+
+/**
+ * Test if statistic is turned on 
+ * @param global IN global config
+ * @param line IN read line
+ */
+static apr_status_t stat_read_line(global_t *global, char **line) {
+  if (strncmp(*line, "STAT:ON", 7) == 0) {
+    stat_gconf_t *gconf = stat_get_global_config(global);
+    gconf->on = 1;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Is called after line is sent
+ * @param worker IN callee
+ * @param line IN line sent
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on) {
+    if (wconf->start_time == 0) {
+      wconf->start_time = apr_time_now();
+    }
+    wconf->sent_bytes += line->len;
+    if (strncmp(line->info, "NOCRLF", 6) != 0) {
+      wconf->sent_bytes += 2;
+    }
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Is before request receive
+ * @param worker IN callee
+ * @param line IN line sent
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_read_pre_headers(worker_t *worker) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    apr_time_t now = apr_time_now();
+    apr_time_t duration = now - wconf->start_time;
+    wconf->start_time = now;
+    wconf->total_time += duration;
+    ++wconf->sent_reqs;
+    if (duration > wconf->sent_time.max) {
+      wconf->sent_time.max = duration;
+    }
+    if (duration < wconf->sent_time.min) {
+      wconf->sent_time.min = duration;
+    }
+    wconf->sent_time.avr = wconf->total_time / wconf->sent_reqs;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Get status line to count 200, 302, 400 and 500 errors 
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_read_status_line(worker_t *worker, char *status_line) {
+  return APR_SUCCESS;
+}
+
+/**
+ * Measure response time
+ * @param worker IN callee
+ * @param status IN apr status
+ * @return received status 
+ */
+static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
+  return status;
+}
 /************************************************************************
  * Commands 
  ***********************************************************************/
@@ -55,14 +189,18 @@ apr_status_t stat_module_init(global_t *global) {
 	                           "<foo>",
 	                           "Bla bla bla.",
 	                           block_STAT_DUMMY)) != APR_SUCCESS) {
-    /** htt_hook_read_line: GLOBAL commands */
-    /** htt_hook_read_pre_headers */
-    /** htt_hook_read_status_line */
-    /** htt_hook_read_header */
-    /** htt_hook_read_buf */
-    /** htt_hook_WAIT_end */
     return status;
   }
+  /** htt_hook_read_line: GLOBAL commands */
+  /** htt_hook_read_pre_headers */
+  /** htt_hook_read_status_line */
+  /** htt_hook_read_header */
+  /** htt_hook_read_buf */
+  /** htt_hook_WAIT_end */
+  htt_hook_WAIT_end(stat_WAIT_end, NULL, NULL, 0);
+  htt_hook_read_status_line(stat_read_status_line, NULL, NULL, 0);
+  htt_hook_read_pre_headers(stat_read_pre_headers, NULL, NULL, 0);
+  htt_hook_read_line(stat_read_line, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

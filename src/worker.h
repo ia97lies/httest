@@ -297,6 +297,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_get_length,
                           (worker_t *worker, line_t *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_flush,
                           (worker_t *worker, line_t *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_sent,
+                          (worker_t *worker, line_t *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
                           (worker_t *worker, char *portinfo, 
 			   char **new_portinfo, char *rest_of_line));
