@@ -1483,6 +1483,7 @@ void worker_finally(worker_t *worker, apr_status_t status) {
     exit(1);
   }
 exodus:
+  htt_run_worker_finally(worker); 
   worker_conn_close_all(worker);
   apr_thread_exit(worker->mythread, APR_SUCCESS);
 }
@@ -3278,6 +3279,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(block_end)
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
+  APR_HOOK_LINK(worker_finally)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args, 
@@ -3300,3 +3302,6 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_end,
                                       (global_t *global), 
                                       (global), APR_SUCCESS);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_finally, 
+                                      (worker_t *worker), 
+                                      (worker), APR_SUCCESS);

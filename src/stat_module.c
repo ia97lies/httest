@@ -171,8 +171,37 @@ static apr_status_t stat_read_status_line(worker_t *worker, char *status_line) {
  * @return received status 
  */
 static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    apr_time_t now = apr_time_now();
+    apr_time_t duration = now - wconf->start_time;
+    wconf->start_time = 0;
+    wconf->total_time += duration;
+    ++wconf->sent_reqs;
+    if (duration > wconf->recv_time.max) {
+      wconf->recv_time.max = duration;
+    }
+    if (duration < wconf->recv_time.min) {
+      wconf->recv_time.min = duration;
+    }
+    wconf->recv_time.avr = wconf->total_time / wconf->sent_reqs;
+  }
   return status;
 }
+
+/**
+ * Collect all data and store it in global
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_worker_finally(worker_t *worker) {
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Commands 
  ***********************************************************************/
@@ -191,12 +220,7 @@ apr_status_t stat_module_init(global_t *global) {
 	                           block_STAT_DUMMY)) != APR_SUCCESS) {
     return status;
   }
-  /** htt_hook_read_line: GLOBAL commands */
-  /** htt_hook_read_pre_headers */
-  /** htt_hook_read_status_line */
-  /** htt_hook_read_header */
-  /** htt_hook_read_buf */
-  /** htt_hook_WAIT_end */
+  htt_hook_worker_finally(stat_worker_finally, NULL, NULL, 0);
   htt_hook_WAIT_end(stat_WAIT_end, NULL, NULL, 0);
   htt_hook_read_status_line(stat_read_status_line, NULL, NULL, 0);
   htt_hook_read_pre_headers(stat_read_pre_headers, NULL, NULL, 0);
