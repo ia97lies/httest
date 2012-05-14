@@ -2620,6 +2620,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   }
   apr_table_clear(global->threads);
 
+  htt_run_worker_joined(global);
   return APR_SUCCESS;
 }
 
@@ -3280,6 +3281,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
   APR_HOOK_LINK(worker_finally)
+  APR_HOOK_LINK(worker_joined)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args, 
@@ -3305,3 +3307,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_end,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_finally, 
                                       (worker_t *worker), 
                                       (worker), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_joined, 
+                                      (global_t *global), 
+                                      (global), APR_SUCCESS);

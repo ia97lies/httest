@@ -331,6 +331,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, block_end,
                           (global_t *global));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_finally,
                           (worker_t *worker));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_joined,
+                          (global_t *global));
 
 apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);

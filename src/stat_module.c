@@ -30,26 +30,31 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-typedef struct stat_gconf_s {
-  int on;
-} stat_gconf_t;
-
 typedef struct stat_time_s {
   apr_time_t min;
   apr_time_t avr;
   apr_time_t max;
+  apr_time_t total;
 } stat_time_t;
 
-typedef struct stat_wconf_s {
-  apr_time_t total_time;
-  apr_time_t start_time;
+typedef struct stat_s {
+  int sent_reqs;
   apr_size_t recv_bytes;
   apr_size_t sent_bytes;
   stat_time_t recv_time;
   stat_time_t sent_time;
-  int sent_reqs;
-  int recv_resps;
+  apr_time_t sent_time_total;
+} stat_t;
+
+typedef struct stat_wconf_s {
+  apr_time_t start_time;
+  stat_t stat;
 } stat_wconf_t;
+
+typedef struct stat_gconf_s {
+  int on;
+  stat_t stat;
+} stat_gconf_t;
 
 /************************************************************************
  * Globals 
@@ -118,9 +123,9 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
     if (wconf->start_time == 0) {
       wconf->start_time = apr_time_now();
     }
-    wconf->sent_bytes += line->len;
+    wconf->stat.sent_bytes += line->len;
     if (strncmp(line->info, "NOCRLF", 6) != 0) {
-      wconf->sent_bytes += 2;
+      wconf->stat.sent_bytes += 2;
     }
   }
   return APR_SUCCESS;
@@ -141,15 +146,14 @@ static apr_status_t stat_read_pre_headers(worker_t *worker) {
     apr_time_t now = apr_time_now();
     apr_time_t duration = now - wconf->start_time;
     wconf->start_time = now;
-    wconf->total_time += duration;
-    ++wconf->sent_reqs;
-    if (duration > wconf->sent_time.max) {
-      wconf->sent_time.max = duration;
+    wconf->stat.sent_time_total += duration;
+    ++wconf->stat.sent_reqs;
+    if (duration > wconf->stat.sent_time.max) {
+      wconf->stat.sent_time.max = duration;
     }
-    if (duration < wconf->sent_time.min) {
-      wconf->sent_time.min = duration;
+    if (duration < wconf->stat.sent_time.min) {
+      wconf->stat.sent_time.min = duration;
     }
-    wconf->sent_time.avr = wconf->total_time / wconf->sent_reqs;
   }
   return APR_SUCCESS;
 }
@@ -179,15 +183,14 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
     apr_time_t now = apr_time_now();
     apr_time_t duration = now - wconf->start_time;
     wconf->start_time = 0;
-    wconf->total_time += duration;
-    ++wconf->sent_reqs;
-    if (duration > wconf->recv_time.max) {
-      wconf->recv_time.max = duration;
+    wconf->stat.recv_time.total += duration;
+    ++wconf->stat.sent_reqs;
+    if (duration > wconf->stat.recv_time.max) {
+      wconf->stat.recv_time.max = duration;
     }
-    if (duration < wconf->recv_time.min) {
-      wconf->recv_time.min = duration;
+    if (duration < wconf->stat.recv_time.min) {
+      wconf->stat.recv_time.min = duration;
     }
-    wconf->recv_time.avr = wconf->total_time / wconf->sent_reqs;
   }
   return status;
 }
@@ -199,6 +202,42 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
  * @return APR_SUCCESS
  */
 static apr_status_t stat_worker_finally(worker_t *worker) {
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(worker->global);
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    apr_thread_mutex_lock(worker->mutex);
+    if (wconf->stat.sent_time.max > gconf->stat.sent_time.max) {
+      gconf->stat.sent_time.max = wconf->stat.sent_time.max;
+    }
+    if (wconf->stat.recv_time.max > gconf->stat.recv_time.max) {
+      gconf->stat.recv_time.max = wconf->stat.recv_time.max;
+    }
+    if (wconf->stat.sent_time.min < gconf->stat.sent_time.min) {
+      gconf->stat.sent_time.min = wconf->stat.sent_time.min;
+    }
+    if (wconf->stat.recv_time.min < gconf->stat.recv_time.min) {
+      gconf->stat.recv_time.min = wconf->stat.recv_time.min;
+    }
+    gconf->stat.sent_time_total += wconf->stat.sent_time_total;
+    gconf->stat.recv_time.total += wconf->stat.recv_time.total;
+    gconf->stat.sent_reqs += wconf->stat.sent_reqs;
+    apr_thread_mutex_unlock(worker->mutex);
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Display collected data
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_worker_joined(global_t *global) {
+  stat_gconf_t *gconf = stat_get_global_config(global);
+  if (gconf->on) {
+    gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.sent_reqs;
+    gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.sent_reqs;
+  }
   return APR_SUCCESS;
 }
 
@@ -220,6 +259,7 @@ apr_status_t stat_module_init(global_t *global) {
 	                           block_STAT_DUMMY)) != APR_SUCCESS) {
     return status;
   }
+  htt_hook_worker_joined(stat_worker_joined, NULL, NULL, 0);
   htt_hook_worker_finally(stat_worker_finally, NULL, NULL, 0);
   htt_hook_WAIT_end(stat_WAIT_end, NULL, NULL, 0);
   htt_hook_read_status_line(stat_read_status_line, NULL, NULL, 0);
