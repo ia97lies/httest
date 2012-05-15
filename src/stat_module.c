@@ -237,13 +237,13 @@ static apr_status_t stat_worker_joined(global_t *global) {
   if (gconf->on) {
     gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.sent_reqs;
     gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.sent_reqs;
+    fprintf(stdout, "\nno reqs: %d\n", gconf->stat.sent_reqs);
+    fprintf(stdout, "sent min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+            gconf->stat.sent_time.min, gconf->stat.sent_time.max, gconf->stat.sent_time.avr);
+    fprintf(stdout, "recv min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+            gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
+    fflush(stdout);
   }
-  fprintf(stdout, "\nno reqs: %d\n", gconf->stat.sent_reqs);
-  fprintf(stdout, "sent min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
-          gconf->stat.sent_time.min, gconf->stat.sent_time.max, gconf->stat.sent_time.avr);
-  fprintf(stdout, "recv min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
-          gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
-  fflush(stdout);
   return APR_SUCCESS;
 }
 
