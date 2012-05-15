@@ -119,7 +119,7 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on) {
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
     if (wconf->start_time == 0) {
       wconf->start_time = apr_time_now();
     }
@@ -151,7 +151,7 @@ static apr_status_t stat_read_pre_headers(worker_t *worker) {
     if (duration > wconf->stat.sent_time.max) {
       wconf->stat.sent_time.max = duration;
     }
-    if (duration < wconf->stat.sent_time.min) {
+    if (duration < wconf->stat.sent_time.min || wconf->stat.sent_time.min == 0) {
       wconf->stat.sent_time.min = duration;
     }
   }
@@ -188,7 +188,7 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
     if (duration > wconf->stat.recv_time.max) {
       wconf->stat.recv_time.max = duration;
     }
-    if (duration < wconf->stat.recv_time.min) {
+    if (duration < wconf->stat.recv_time.min || wconf->stat.recv_time.min == 0) {
       wconf->stat.recv_time.min = duration;
     }
   }
@@ -212,10 +212,10 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
     if (wconf->stat.recv_time.max > gconf->stat.recv_time.max) {
       gconf->stat.recv_time.max = wconf->stat.recv_time.max;
     }
-    if (wconf->stat.sent_time.min < gconf->stat.sent_time.min) {
+    if (wconf->stat.sent_time.min < gconf->stat.sent_time.min || gconf->stat.sent_time.min == 0) {
       gconf->stat.sent_time.min = wconf->stat.sent_time.min;
     }
-    if (wconf->stat.recv_time.min < gconf->stat.recv_time.min) {
+    if (wconf->stat.recv_time.min < gconf->stat.recv_time.min || gconf->stat.recv_time.min == 0) {
       gconf->stat.recv_time.min = wconf->stat.recv_time.min;
     }
     gconf->stat.sent_time_total += wconf->stat.sent_time_total;
@@ -238,6 +238,12 @@ static apr_status_t stat_worker_joined(global_t *global) {
     gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.sent_reqs;
     gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.sent_reqs;
   }
+  fprintf(stdout, "\nno reqs: %d\n", gconf->stat.sent_reqs);
+  fprintf(stdout, "sent min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+          gconf->stat.sent_time.min, gconf->stat.sent_time.max, gconf->stat.sent_time.avr);
+  fprintf(stdout, "recv min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+          gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
+  fflush(stdout);
   return APR_SUCCESS;
 }
 
