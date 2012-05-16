@@ -31,14 +31,21 @@
  * Definitions 
  ***********************************************************************/
 typedef struct stat_time_s {
+  apr_time_t cur;
   apr_time_t min;
   apr_time_t avr;
   apr_time_t max;
   apr_time_t total;
 } stat_time_t;
 
+typedef struct stat_count_s {
+  int reqs;
+  int less[10];
+  int error[600];
+} stat_count_t;
+
 typedef struct stat_s {
-  int sent_reqs;
+  stat_count_t count;
   apr_size_t recv_bytes;
   apr_size_t sent_bytes;
   stat_time_t recv_time;
@@ -121,6 +128,7 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
 
   if (gconf->on && worker->flags & FLAGS_CLIENT) {
     if (wconf->start_time == 0) {
+      ++wconf->stat.count.reqs;
       wconf->start_time = apr_time_now();
     }
     wconf->stat.sent_bytes += line->len;
@@ -146,8 +154,8 @@ static apr_status_t stat_read_pre_headers(worker_t *worker) {
     apr_time_t now = apr_time_now();
     apr_time_t duration = now - wconf->start_time;
     wconf->start_time = now;
+    wconf->stat.sent_time.cur = duration;
     wconf->stat.sent_time_total += duration;
-    ++wconf->stat.sent_reqs;
     if (duration > wconf->stat.sent_time.max) {
       wconf->stat.sent_time.max = duration;
     }
@@ -159,12 +167,53 @@ static apr_status_t stat_read_pre_headers(worker_t *worker) {
 }
 
 /**
- * Get status line to count 200, 302, 400 and 500 errors 
+ * Get status line length and count 200, 302, 400 and 500 errors 
  * @param worker IN callee
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_read_status_line(worker_t *worker, char *status_line) {
+static apr_status_t stat_read_status_line(worker_t *worker, char *line) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    wconf->stat.recv_bytes += strlen(line) + 2;
+  }   
+  return APR_SUCCESS;
+}
+
+/**
+ * Get line length
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_read_header(worker_t *worker, char *line) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    wconf->stat.recv_bytes += strlen(line) + 2;
+  }   
+  return APR_SUCCESS;
+}
+
+/**
+ * Get buf length
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_read_buf(worker_t *worker, char *buf, apr_size_t len) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    wconf->stat.recv_bytes += len + 2;
+  }   
   return APR_SUCCESS;
 }
 
@@ -180,16 +229,25 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
   stat_gconf_t *gconf = stat_get_global_config(global);
 
   if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    int i;
+    apr_time_t compare;
     apr_time_t now = apr_time_now();
     apr_time_t duration = now - wconf->start_time;
     wconf->start_time = 0;
+    wconf->stat.recv_time.cur = duration;
     wconf->stat.recv_time.total += duration;
-    ++wconf->stat.sent_reqs;
     if (duration > wconf->stat.recv_time.max) {
       wconf->stat.recv_time.max = duration;
     }
     if (duration < wconf->stat.recv_time.min || wconf->stat.recv_time.min == 0) {
       wconf->stat.recv_time.min = duration;
+    }
+    for (i = 0, compare = 1; i < 10; i++, compare *= 2) {
+      apr_time_t t = apr_time_sec(wconf->stat.sent_time.cur + wconf->stat.recv_time.cur);
+      if (t < compare) {
+        ++wconf->stat.count.less[i];
+        break;
+      }
     }
   }
   return status;
@@ -205,6 +263,7 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(worker->global);
   if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    int i;
     apr_thread_mutex_lock(worker->mutex);
     if (wconf->stat.sent_time.max > gconf->stat.sent_time.max) {
       gconf->stat.sent_time.max = wconf->stat.sent_time.max;
@@ -218,9 +277,14 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
     if (wconf->stat.recv_time.min < gconf->stat.recv_time.min || gconf->stat.recv_time.min == 0) {
       gconf->stat.recv_time.min = wconf->stat.recv_time.min;
     }
+    gconf->stat.sent_bytes += wconf->stat.sent_bytes;
+    gconf->stat.recv_bytes += wconf->stat.recv_bytes;
     gconf->stat.sent_time_total += wconf->stat.sent_time_total;
     gconf->stat.recv_time.total += wconf->stat.recv_time.total;
-    gconf->stat.sent_reqs += wconf->stat.sent_reqs;
+    gconf->stat.count.reqs += wconf->stat.count.reqs;
+    for (i = 0; i < 10; i++) {
+      gconf->stat.count.less[i] += wconf->stat.count.less[i];
+    }
     apr_thread_mutex_unlock(worker->mutex);
   }
   return APR_SUCCESS;
@@ -235,12 +299,22 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
 static apr_status_t stat_worker_joined(global_t *global) {
   stat_gconf_t *gconf = stat_get_global_config(global);
   if (gconf->on) {
-    gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.sent_reqs;
-    gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.sent_reqs;
-    fprintf(stdout, "\nno reqs: %d\n", gconf->stat.sent_reqs);
-    fprintf(stdout, "sent min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+    int i; 
+    apr_time_t time;
+    gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.count.reqs;
+    gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.count.reqs;
+    fprintf(stdout, "\nno reqs: %d\n", gconf->stat.count.reqs);
+    fprintf(stdout, "send bytes: %d\n", gconf->stat.sent_bytes);
+    fprintf(stdout, "received bytes: %d\n", gconf->stat.recv_bytes);
+    for (i = 0, time = 1; i < 10; i++, time *= 2) {
+      if (gconf->stat.count.less[i]) {
+        fprintf(stdout, "%d request%s less than %"APR_TIME_T_FMT"seconds\n", 
+                gconf->stat.count.less[i], gconf->stat.count.less[i]>1?"s":"", time);
+      }
+    }
+    fprintf(stdout, "\nsent min: %"APR_TIME_T_FMT" max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
             gconf->stat.sent_time.min, gconf->stat.sent_time.max, gconf->stat.sent_time.avr);
-    fprintf(stdout, "recv min: %"APR_TIME_T_FMT " max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+    fprintf(stdout, "recv min: %"APR_TIME_T_FMT" max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
             gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
     fflush(stdout);
   }
@@ -270,6 +344,9 @@ apr_status_t stat_module_init(global_t *global) {
   htt_hook_WAIT_end(stat_WAIT_end, NULL, NULL, 0);
   htt_hook_read_status_line(stat_read_status_line, NULL, NULL, 0);
   htt_hook_read_pre_headers(stat_read_pre_headers, NULL, NULL, 0);
+  htt_hook_read_header(stat_read_header, NULL, NULL, 0);
+  htt_hook_read_buf(stat_read_buf, NULL, NULL, 0);
+  htt_hook_line_sent(stat_line_sent, NULL, NULL, 0);
   htt_hook_read_line(stat_read_line, NULL, NULL, 0);
   return APR_SUCCESS;
 }
