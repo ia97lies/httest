@@ -40,14 +40,16 @@ typedef struct stat_time_s {
 
 typedef struct stat_count_s {
   int reqs;
+  int conns;
   int less[10];
-  int error[600];
+  int status[600];
 } stat_count_t;
 
 typedef struct stat_s {
   stat_count_t count;
   apr_size_t recv_bytes;
   apr_size_t sent_bytes;
+  stat_time_t conn_time;
   stat_time_t recv_time;
   stat_time_t sent_time;
   apr_time_t sent_time_total;
@@ -178,7 +180,15 @@ static apr_status_t stat_read_status_line(worker_t *worker, char *line) {
   stat_gconf_t *gconf = stat_get_global_config(global);
 
   if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    char *cur;
     wconf->stat.recv_bytes += strlen(line) + 2;
+    if ((cur = strstr(line, " "))) {
+      int status;
+      ++cur;
+      status = apr_atoi64(cur);
+      ++wconf->stat.count.status[status];
+    }
+
   }   
   return APR_SUCCESS;
 }
@@ -254,6 +264,50 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
 }
 
 /**
+ * Start connect timer
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_pre_connect(worker_t *worker) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    wconf->stat.conn_time.cur = apr_time_now();
+    ++wconf->stat.count.conns;
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Stop connect timer and measure connection time
+ * @param worker IN callee
+ * @param line IN received status line
+ * @return APR_SUCCESS
+ */
+static apr_status_t stat_post_connect(worker_t *worker) {
+  global_t *global = worker->global;
+  stat_wconf_t *wconf = stat_get_worker_config(worker);
+  stat_gconf_t *gconf = stat_get_global_config(global);
+
+  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+    apr_time_t duration = apr_time_now() - wconf->stat.conn_time.cur;
+    wconf->stat.conn_time.cur = duration;
+    wconf->stat.conn_time.total += duration;
+    if (duration > wconf->stat.conn_time.max) {
+      wconf->stat.conn_time.max = duration;
+    }
+    if (duration < wconf->stat.conn_time.min || wconf->stat.conn_time.min == 0) {
+      wconf->stat.conn_time.min = duration;
+    }
+
+  }
+  return APR_SUCCESS;
+}
+
+/**
  * Collect all data and store it in global
  * @param worker IN callee
  * @param line IN received status line
@@ -271,19 +325,30 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
     if (wconf->stat.recv_time.max > gconf->stat.recv_time.max) {
       gconf->stat.recv_time.max = wconf->stat.recv_time.max;
     }
+    if (wconf->stat.conn_time.max > gconf->stat.conn_time.max) {
+      gconf->stat.conn_time.max = wconf->stat.conn_time.max;
+    }
     if (wconf->stat.sent_time.min < gconf->stat.sent_time.min || gconf->stat.sent_time.min == 0) {
       gconf->stat.sent_time.min = wconf->stat.sent_time.min;
     }
     if (wconf->stat.recv_time.min < gconf->stat.recv_time.min || gconf->stat.recv_time.min == 0) {
       gconf->stat.recv_time.min = wconf->stat.recv_time.min;
     }
+    if (wconf->stat.conn_time.min < gconf->stat.conn_time.min || gconf->stat.conn_time.min == 0) {
+      gconf->stat.conn_time.min = wconf->stat.conn_time.min;
+    }
     gconf->stat.sent_bytes += wconf->stat.sent_bytes;
     gconf->stat.recv_bytes += wconf->stat.recv_bytes;
     gconf->stat.sent_time_total += wconf->stat.sent_time_total;
     gconf->stat.recv_time.total += wconf->stat.recv_time.total;
+    gconf->stat.conn_time.total += wconf->stat.conn_time.total;
     gconf->stat.count.reqs += wconf->stat.count.reqs;
+    gconf->stat.count.conns += wconf->stat.count.conns;
     for (i = 0; i < 10; i++) {
       gconf->stat.count.less[i] += wconf->stat.count.less[i];
+    }
+    for (i = 0; i < 600; i++) {
+      gconf->stat.count.status[i] += wconf->stat.count.status[i];
     }
     apr_thread_mutex_unlock(worker->mutex);
   }
@@ -301,18 +366,27 @@ static apr_status_t stat_worker_joined(global_t *global) {
   if (gconf->on) {
     int i; 
     apr_time_t time;
-    gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.count.reqs;
     gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.count.reqs;
-    fprintf(stdout, "\nno reqs: %d\n", gconf->stat.count.reqs);
+    gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.count.reqs;
+    gconf->stat.conn_time.avr = gconf->stat.conn_time.total/gconf->stat.count.conns;
+    fprintf(stdout, "\ntotal reqs: %d\n", gconf->stat.count.reqs);
+    fprintf(stdout, "total conns: %d\n", gconf->stat.count.conns);
     fprintf(stdout, "send bytes: %d\n", gconf->stat.sent_bytes);
     fprintf(stdout, "received bytes: %d\n", gconf->stat.recv_bytes);
     for (i = 0, time = 1; i < 10; i++, time *= 2) {
       if (gconf->stat.count.less[i]) {
-        fprintf(stdout, "%d request%s less than %"APR_TIME_T_FMT"seconds\n", 
+        fprintf(stdout, "%d request%s less than %"APR_TIME_T_FMT" seconds\n", 
                 gconf->stat.count.less[i], gconf->stat.count.less[i]>1?"s":"", time);
       }
     }
-    fprintf(stdout, "\nsent min: %"APR_TIME_T_FMT" max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+    for (i = 0; i < 600; i++) {
+      if (gconf->stat.count.status[i]) {
+        fprintf(stdout, "status %d: %d\n", i, gconf->stat.count.status[i]);
+      }
+    }
+    fprintf(stdout, "\nconn min: %"APR_TIME_T_FMT" max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
+            gconf->stat.conn_time.min, gconf->stat.conn_time.max, gconf->stat.conn_time.avr);
+    fprintf(stdout, "sent min: %"APR_TIME_T_FMT" max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
             gconf->stat.sent_time.min, gconf->stat.sent_time.max, gconf->stat.sent_time.avr);
     fprintf(stdout, "recv min: %"APR_TIME_T_FMT" max: %"APR_TIME_T_FMT " avr: %"APR_TIME_T_FMT "\n", 
             gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
@@ -348,6 +422,8 @@ apr_status_t stat_module_init(global_t *global) {
   htt_hook_read_buf(stat_read_buf, NULL, NULL, 0);
   htt_hook_line_sent(stat_line_sent, NULL, NULL, 0);
   htt_hook_read_line(stat_read_line, NULL, NULL, 0);
+  htt_hook_pre_connect(stat_pre_connect, NULL, NULL, 0);
+  htt_hook_post_connect(stat_post_connect, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

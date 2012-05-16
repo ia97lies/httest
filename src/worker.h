@@ -305,7 +305,11 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, server_port_args,
                           (worker_t *worker, char *portinfo, 
 			   char **new_portinfo, char *rest_of_line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, pre_connect,
+                          (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, connect,
+                          (worker_t *worker));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, post_connect,
                           (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
                           (worker_t *worker, char *rest_of_line));

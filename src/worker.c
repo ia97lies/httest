@@ -1781,11 +1781,16 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
   }
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
+    if ((status = htt_run_pre_connect(worker)) != APR_SUCCESS) {
+      return status;
+    }
     if ((status = tcp_connect(worker, hostname, portname)) != APR_SUCCESS) {
       return status;
     }
-
     if ((status = htt_run_connect(worker)) != APR_SUCCESS) {
+      return status;
+    }
+    if ((status = htt_run_post_connect(worker)) != APR_SUCCESS) {
       return status;
     }
     worker->socket->socket_state = SOCKET_CONNECTED;
@@ -4431,7 +4436,9 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(line_flush)
   APR_HOOK_LINK(line_sent)
   APR_HOOK_LINK(client_port_args)
+  APR_HOOK_LINK(pre_connect)
   APR_HOOK_LINK(connect)
+  APR_HOOK_LINK(post_connect)
   APR_HOOK_LINK(accept)
   APR_HOOK_LINK(close)
   APR_HOOK_LINK(read_pre_headers)
@@ -4459,7 +4466,15 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_port_args,
 				       char **new_portinfo, char *rest_of_line), 
 				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, pre_connect, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
+
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, connect, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, post_connect, 
                                       (worker_t *worker), 
 				      (worker), APR_SUCCESS);
 
