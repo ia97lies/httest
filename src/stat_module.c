@@ -57,6 +57,8 @@ typedef struct stat_s {
 
 typedef struct stat_wconf_s {
   apr_time_t start_time;
+  int cur_status;
+  const char *request_line;
   stat_t stat;
 } stat_wconf_t;
 
@@ -162,6 +164,7 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
     if (wconf->start_time == 0) {
       ++wconf->stat.count.reqs;
       wconf->start_time = apr_time_now();
+      wconf->request_line = line->buf;
     }
     wconf->stat.sent_bytes += line->len;
     if (strncmp(line->info, "NOCRLF", 6) != 0) {
@@ -217,6 +220,7 @@ static apr_status_t stat_read_status_line(worker_t *worker, char *line) {
       ++cur;
       status = apr_atoi64(cur);
       ++wconf->stat.count.status[status];
+      wconf->cur_status = status;
     }
 
   }   
@@ -291,8 +295,16 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
     }
   }
   if (gconf->on & STAT_GCONF_LOG && worker->flags & FLAGS_CLIENT) {
-    apr_file_printf(gconf->log_file, "%"APR_TIME_T_FMT" %"APR_TIME_T_FMT"\n", 
+    apr_pool_t *pool;
+    char *date_str;
+
+    apr_pool_create(&pool, NULL);
+    date_str = apr_palloc(pool, APR_RFC822_DATE_LEN);
+    apr_rfc822_date(date_str, apr_time_now());
+    apr_file_printf(gconf->log_file, "[%s] \"%s\" %d %"APR_TIME_T_FMT" %"APR_TIME_T_FMT"\n", 
+                    date_str,  wconf->request_line, wconf->cur_status, 
                     wconf->stat.sent_time.cur, wconf->stat.recv_time.cur);
+    apr_pool_destroy(pool);
   }
   return status;
 }
