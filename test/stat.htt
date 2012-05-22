@@ -1,0 +1,42 @@
+SET MAX_DURATION=300000
+INCLUDE $TOP/test/config.htb
+STAT:ON
+STAT:LOG tmp.log
+SET CONCURRENT=15
+SET COUNT=10
+
+CLIENT $CONCURRENT
+_LOOP $COUNT 
+  _REQ $YOUR_HOST $YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: $YOUR_HOST 
+  __User-Agent: mozilla
+  __
+  _WAIT
+  _CLOSE
+_END LOOP
+END
+
+SERVER $YOUR_PORT $CONCURRENT
+_LOOP $COUNT 
+_RAND 1 10000000 RAND_DATA
+_RAND 1 5000 T
+_RES
+_WAIT
+_IF $RAND_DATA LT 5000000
+  __HTTP/1.1 200 OK
+_ELSE
+  __HTTP/1.1 500 Internal Server Error 
+_END
+__Content-Length: AUTO 
+__Content-Type: text/html
+__Set-Data: DATA=1234567890abcdefghijklmnopqrstuvwxyz$RAND_DATA
+__
+__$1K$1K$1K$1K$1K$1K$1K$1K
+__==AS1 - 0==
+__
+_SLEEP $T
+_CLOSE
+_END LOOP
+END
+
