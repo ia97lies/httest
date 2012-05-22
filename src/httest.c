@@ -150,7 +150,7 @@ command_t global_commands[] = {
   "Close CLIENT|SERVER body",
   COMMAND_FLAGS_NONE},
   {"GO", (command_f )global_GO, "", 
-  "Starts all so far defined clients, servers and daemons",
+  "Starts all defined clients, servers and daemons. All started client and servers will be joined",
   COMMAND_FLAGS_NONE},
   {"CLIENT", (command_f )global_CLIENT, "[<number of concurrent clients>]", 
   "Client body start, close it with END and a newline",

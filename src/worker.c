@@ -1486,6 +1486,13 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     worker->sockreader = worker->recorder->sockreader;
   }
 
+  /**
+   * Give modules a chance to setup stuff before _WAIT read from network
+   */
+  if ((status = htt_run_WAIT_begin(worker)) != APR_SUCCESS) {
+    return status;
+  }
+
   if (worker->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
@@ -1662,7 +1669,7 @@ out_err:
     ++worker->req_cnt;
   }
   /**
-   * Give modules to cleanup stuff after _WAIT
+   * Give modules a chance to cleanup stuff after _WAIT
    */
   if ((status = htt_run_WAIT_end(worker, status)) != APR_SUCCESS) {
     return status;
@@ -4441,6 +4448,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(post_connect)
   APR_HOOK_LINK(accept)
   APR_HOOK_LINK(close)
+  APR_HOOK_LINK(WAIT_begin)
   APR_HOOK_LINK(read_pre_headers)
   APR_HOOK_LINK(read_status_line)
   APR_HOOK_LINK(read_header)
@@ -4485,6 +4493,10 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
                                       (worker_t *worker, char *info, char **new_info), 
 				      (worker, info, new_info), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, WAIT_begin, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_pre_headers, 
                                       (worker_t *worker), 

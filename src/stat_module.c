@@ -62,6 +62,10 @@ typedef struct stat_wconf_s {
 
 typedef struct stat_gconf_s {
   int on;
+#define STAT_GCONF_OFF 0
+#define STAT_GCONF_ON  1
+#define STAT_GCONF_LOG 2 
+  apr_file_t *log_file;
   stat_t stat;
 } stat_gconf_t;
 
@@ -110,9 +114,35 @@ static stat_wconf_t *stat_get_worker_config(worker_t *worker) {
  * @param line IN read line
  */
 static apr_status_t stat_read_line(global_t *global, char **line) {
-  if (strncmp(*line, "STAT:ON", 7) == 0) {
-    stat_gconf_t *gconf = stat_get_global_config(global);
-    gconf->on = 1;
+
+  if (strncmp(*line, "STAT:", 5) == 0) {
+    char *cur;
+    char *last;
+
+    apr_strtok(*line, ":", &last);
+    cur = apr_strtok(NULL, ":", &last);
+    if (strcmp(cur, "ON") == 0) {
+      stat_gconf_t *gconf = stat_get_global_config(global);
+      gconf->on = STAT_GCONF_ON;
+    }
+    else if (strcmp(cur, "OFF") == 0) {
+      stat_gconf_t *gconf = stat_get_global_config(global);
+      gconf->on |= STAT_GCONF_OFF;
+    }
+    else if (strncmp(cur, "LOG ", 4) == 0) {
+      apr_status_t status;
+      char *filename;
+      stat_gconf_t *gconf = stat_get_global_config(global);
+      gconf->on |= STAT_GCONF_LOG;
+      apr_strtok(cur, " ", &last);
+      filename = apr_strtok(NULL, " ", &last);
+      if ((status = apr_file_open(&gconf->log_file, filename, 
+                                  APR_READ|APR_WRITE|APR_CREATE|APR_APPEND|APR_XTHREAD, 
+                                  APR_OS_DEFAULT, global->pool)) != APR_SUCCESS) {
+        fprintf(stderr, "Could not open log file \"%s\"", filename);
+        return status;
+      }
+    }
   }
   return APR_SUCCESS;
 }
@@ -128,7 +158,7 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     if (wconf->start_time == 0) {
       ++wconf->stat.count.reqs;
       wconf->start_time = apr_time_now();
@@ -147,12 +177,12 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
  * @param line IN line sent
  * @return APR_SUCCESS
  */
-static apr_status_t stat_read_pre_headers(worker_t *worker) {
+static apr_status_t stat_WAIT_begin(worker_t *worker) {
   global_t *global = worker->global;
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     apr_time_t now = apr_time_now();
     apr_time_t duration = now - wconf->start_time;
     wconf->start_time = now;
@@ -179,7 +209,7 @@ static apr_status_t stat_read_status_line(worker_t *worker, char *line) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     char *cur;
     wconf->stat.recv_bytes += strlen(line) + 2;
     if ((cur = strstr(line, " "))) {
@@ -204,7 +234,7 @@ static apr_status_t stat_read_header(worker_t *worker, char *line) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     wconf->stat.recv_bytes += strlen(line) + 2;
   }   
   return APR_SUCCESS;
@@ -221,7 +251,7 @@ static apr_status_t stat_read_buf(worker_t *worker, char *buf, apr_size_t len) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     wconf->stat.recv_bytes += len + 2;
   }   
   return APR_SUCCESS;
@@ -238,7 +268,7 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     int i;
     apr_time_t compare;
     apr_time_t now = apr_time_now();
@@ -260,6 +290,10 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
       }
     }
   }
+  if (gconf->on & STAT_GCONF_LOG && worker->flags & FLAGS_CLIENT) {
+    apr_file_printf(gconf->log_file, "%"APR_TIME_T_FMT" %"APR_TIME_T_FMT"\n", 
+                    wconf->stat.sent_time.cur, wconf->stat.recv_time.cur);
+  }
   return status;
 }
 
@@ -274,7 +308,7 @@ static apr_status_t stat_pre_connect(worker_t *worker) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     wconf->stat.conn_time.cur = apr_time_now();
     ++wconf->stat.count.conns;
   }
@@ -292,7 +326,7 @@ static apr_status_t stat_post_connect(worker_t *worker) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(global);
 
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     apr_time_t duration = apr_time_now() - wconf->stat.conn_time.cur;
     wconf->stat.conn_time.cur = duration;
     wconf->stat.conn_time.total += duration;
@@ -316,7 +350,7 @@ static apr_status_t stat_post_connect(worker_t *worker) {
 static apr_status_t stat_worker_finally(worker_t *worker) {
   stat_wconf_t *wconf = stat_get_worker_config(worker);
   stat_gconf_t *gconf = stat_get_global_config(worker->global);
-  if (gconf->on && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     int i;
     apr_thread_mutex_lock(worker->mutex);
     if (wconf->stat.sent_time.max > gconf->stat.sent_time.max) {
@@ -363,7 +397,7 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
  */
 static apr_status_t stat_worker_joined(global_t *global) {
   stat_gconf_t *gconf = stat_get_global_config(global);
-  if (gconf->on) {
+  if (gconf->on & STAT_GCONF_ON) {
     int i; 
     apr_time_t time;
     gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.count.reqs;
@@ -392,13 +426,24 @@ static apr_status_t stat_worker_joined(global_t *global) {
             gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
     fflush(stdout);
   }
+  if (gconf->on & STAT_GCONF_ON) {
+    apr_file_close(gconf->log_file);
+  }
   return APR_SUCCESS;
 }
 
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_STAT_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+/**
+ * Do log every request to a file.
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temp pool
+ */
+static apr_status_t block_STAT_LOG(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  /* first param is format */
+  /* second param is file */
   return APR_SUCCESS;
 }
 
@@ -407,17 +452,17 @@ static apr_status_t block_STAT_DUMMY(worker_t *worker, worker_t *parent, apr_poo
  ***********************************************************************/
 apr_status_t stat_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "STAT", "_DUMMY",
+  if ((status = module_command_new(global, "STAT", "_LOG",
 	                           "<foo>",
 	                           "Bla bla bla.",
-	                           block_STAT_DUMMY)) != APR_SUCCESS) {
+	                           block_STAT_LOG)) != APR_SUCCESS) {
     return status;
   }
   htt_hook_worker_joined(stat_worker_joined, NULL, NULL, 0);
   htt_hook_worker_finally(stat_worker_finally, NULL, NULL, 0);
   htt_hook_WAIT_end(stat_WAIT_end, NULL, NULL, 0);
   htt_hook_read_status_line(stat_read_status_line, NULL, NULL, 0);
-  htt_hook_read_pre_headers(stat_read_pre_headers, NULL, NULL, 0);
+  htt_hook_WAIT_begin(stat_WAIT_begin, NULL, NULL, 0);
   htt_hook_read_header(stat_read_header, NULL, NULL, 0);
   htt_hook_read_buf(stat_read_buf, NULL, NULL, 0);
   htt_hook_line_sent(stat_line_sent, NULL, NULL, 0);
