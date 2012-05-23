@@ -679,6 +679,10 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     config->meth = TLSv1_client_method();
   }
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+  else if (strcasecmp(sslstr, "TLS1.1") == 0) {
+    is_ssl = 1;
+    config->meth = TLSv1_1_client_method();
+  }
   else if (strcasecmp(sslstr, "TLS1.2") == 0) {
     is_ssl = 1;
     config->meth = TLSv1_2_client_method();
@@ -721,6 +725,16 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = TLSv1_server_method();
   }
+#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+  else if (strcasecmp(sslstr, "TLS1.1") == 0) {
+    is_ssl = 1;
+    config->meth = TLSv1_1_server_method();
+  }
+  else if (strcasecmp(sslstr, "TLS1.2") == 0) {
+    is_ssl = 1;
+    config->meth = TLSv1_2_server_method();
+  }
+#endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
     config->meth = DTLSv1_server_method();
@@ -1253,6 +1267,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
                      SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                      skip_verify_callback);
     }
+    SSL_set_session_id_context(sconfig->ssl, ssl_module, strlen(ssl_module));
 
     if (worker->flags & FLAGS_SSL_LEGACY) {
 #if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
