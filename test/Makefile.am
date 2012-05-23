@@ -230,6 +230,7 @@ EXTRA_DIST= \
 	server_up_down.htt \
 	shared.htt \
 	shell.htb \
+	simple_stat.htt \
 	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.hte \
@@ -254,6 +255,11 @@ EXTRA_DIST= \
 	ssl_mutual.txt \
 	ssl_mutual_verify.htt \
 	ssl_plain_first.htt \
+	ssl_server_cert_verify2.htt \
+	ssl_server_cert_verify3.htt \
+	ssl_server_cert_verify.hte \
+	ssl_server_cert_verify.htt \
+	ssl_server_cert_verify.txt \
 	ssl_session_reuse.htt \
 	ssl_simple2.htt \
 	ssl_simple.htt \
@@ -263,6 +269,7 @@ EXTRA_DIST= \
 	ssl_stream_myself.htt \
 	ssl_threaded_server.htt \
 	ssl_timeout.htt \
+	stat.htt \
 	store.htt \
 	stream_myself.htt \
 	sync.htt \
@@ -290,9 +297,6 @@ EXTRA_DIST= \
 	trace_on_failure.hte \
 	trace_on_failure.txt \
 	tunnel.htt \
-	udp.hte \
-	udp.htt \
-	udp.txt \
 	unicode.ntlm \
 	unset.htt \
 	unused_expect_body.hte \
