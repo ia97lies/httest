@@ -1890,9 +1890,9 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_ACCEPT",
-	                           "SSL|SSL2|SSL3|TLS1|DTLS1"
+	                           "SSL|SSL2|SSL3|TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-                                   "|TLS1.1|TLS1.2"
+                                   "|TLS1.1|TLS1.2|DTLS1"
 #endif
                                    " [<cert-file> <key-file>]",
 	                           "Needs a connected socket to accept a ssl "
