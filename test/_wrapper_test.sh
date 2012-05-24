@@ -32,6 +32,7 @@ rm -f tmp.txt
 
 if [ $COPY -ne 0 ]; then
   rm -f .out.txt
+  rm -f *.log
   rm -f *.txt
   rm -f *.ntlm
   rm -f *.visual

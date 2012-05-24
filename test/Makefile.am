@@ -297,9 +297,6 @@ EXTRA_DIST= \
 	trace_on_failure.hte \
 	trace_on_failure.txt \
 	tunnel.htt \
-	udp.hte \
-	udp.htt \
-	udp.txt \
 	unicode.ntlm \
 	unset.htt \
 	unused_expect_body.hte \
