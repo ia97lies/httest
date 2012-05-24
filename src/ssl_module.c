@@ -304,16 +304,22 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
       str_version = "SSL 2.0";
       break;
     case SSL3_VERSION:
-      str_version = "SSL 3.0 ";
+      str_version = "SSL 3.0";
       break;
     case TLS1_VERSION:
-      str_version = "TLS 1.0 ";
+      str_version = "TLS 1.0";
+      break;
+    case TLS1_1_VERSION:
+      str_version = "TLS 1.1";
+      break;
+    case TLS1_2_VERSION:
+      str_version = "TLS 1.2";
       break;
     case DTLS1_VERSION:
-      str_version = "DTLS 1.0 ";
+      str_version = "DTLS 1.0";
       break;
     case DTLS1_BAD_VER:
-      str_version = "DTLS 1.0 (bad) ";
+      str_version = "DTLS 1.0 (bad)";
       break;
     default:
       str_version = "???";
@@ -377,6 +383,8 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 
   if (version == SSL3_VERSION ||
       version == TLS1_VERSION ||
+      version == TLS1_2_VERSION ||
+      version == TLS1_1_VERSION ||
       version == DTLS1_VERSION ||
       version == DTLS1_BAD_VER) {
     switch (content_type) {
@@ -491,6 +499,9 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
           case 114:
             str_details2 = " bad_certificate_hash_value";
             break;
+          case 115:
+            str_details2 = " unknown_psk_identity";
+            break;
         }
       }
     }
@@ -536,6 +547,23 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
         }
       }
     }
+
+#ifndef OPENSSL_NO_HEARTBEATS
+    if (content_type == 24) /* Heartbeat */ {
+      str_details1 = ", Heartbeat";
+
+      if (len > 0) {
+        switch (((const unsigned char*)buf)[0]) {
+          case 1:
+            str_details1 = ", HeartbeatRequest";
+            break;
+          case 2:
+            str_details1 = ", HeartbeatResponse";
+            break;
+        }
+      }
+    }
+#endif
   }
 
   entry = apr_psprintf(config->msg_pool, "%s%s: %s%s%s", str_write_p, 
