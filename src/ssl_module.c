@@ -44,7 +44,7 @@ typedef struct ssl_config_s {
   X509 *cert;
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
-  const SSL_METHOD *meth;
+  SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
   const char *certfile;
@@ -309,12 +309,14 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
     case TLS1_VERSION:
       str_version = "TLS 1.0";
       break;
+#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
     case TLS1_1_VERSION:
       str_version = "TLS 1.1";
       break;
     case TLS1_2_VERSION:
       str_version = "TLS 1.2";
       break;
+#endif
     case DTLS1_VERSION:
       str_version = "DTLS 1.0";
       break;
@@ -383,8 +385,10 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 
   if (version == SSL3_VERSION ||
       version == TLS1_VERSION ||
+#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
       version == TLS1_2_VERSION ||
       version == TLS1_1_VERSION ||
+#endif
       version == DTLS1_VERSION ||
       version == DTLS1_BAD_VER) {
     switch (content_type) {
@@ -715,11 +719,11 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = TLSv1_2_client_method();
   }
+#endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
     config->meth = DTLSv1_client_method();
   }
-#endif
   return is_ssl;
 }
 
@@ -762,11 +766,11 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = TLSv1_2_server_method();
   }
+#endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
     config->meth = DTLSv1_server_method();
   }
-#endif
   return is_ssl;
 }
 
@@ -798,6 +802,7 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
       return APR_EINVAL;
     }
   }
+  return APR_SUCCESS;
 }
 
 /**
@@ -810,7 +815,6 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
 static apr_status_t worker_ssl_accept(worker_t * worker) {
   apr_status_t status;
   char *error;
-  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
@@ -973,7 +977,6 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
   int is_ssl;
   BIO *bio;
   apr_os_sock_t fd;
-  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   sslstr = store_get(worker->params, "1");
@@ -1295,7 +1298,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
                      SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                      skip_verify_callback);
     }
-    SSL_set_session_id_context(sconfig->ssl, ssl_module, strlen(ssl_module));
+    SSL_set_session_id_context(sconfig->ssl, (void *)ssl_module, strlen(ssl_module));
 
     if (worker->flags & FLAGS_SSL_LEGACY) {
 #if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
@@ -1730,7 +1733,6 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
  */
 static apr_status_t ssl_hook_connect(worker_t *worker) {
   apr_status_t status;
-  ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
@@ -1907,9 +1909,9 @@ apr_status_t ssl_module_init(global_t *global) {
   ssl_util_thread_setup(global->pool);
 
   if ((status = module_command_new(global, "SSL", "_CONNECT",
-	                           "SSL|SSL2|SSL3|TLS1"
+	                           "SSL|SSL2|SSL3|DTLS1|TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-                                   "|TLS1.1|TLS1.2|DTLS1"
+                                   "|TLS1.1|TLS1.2"
 #endif
                                    " [<cert-file> <key-file>]",
 	                           "Needs a connected socket to establish a ssl "
@@ -1918,9 +1920,9 @@ apr_status_t ssl_module_init(global_t *global) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_ACCEPT",
-	                           "SSL|SSL2|SSL3|TLS1"
+	                           "SSL|SSL2|SSL3|DTLS|TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-                                   "|TLS1.1|TLS1.2|DTLS1"
+                                   "|TLS1.1|TLS1.2"
 #endif
                                    " [<cert-file> <key-file>]",
 	                           "Needs a connected socket to accept a ssl "

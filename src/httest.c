@@ -159,9 +159,9 @@ command_t global_commands[] = {
   "Server body start, close it with END and a newline,\n"
   "Do load server.cert.pem and server.key.pem if found in local directory,\n"
   "number of concurrent servers, -1 for unlimited,\n"
-  "<SSL>: SSL, SSL2, SSL3, TLS1"
+  "<SSL>: SSL, SSL2, SSL3, DTLS1, TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-  ", TLS1.1, TLS1.2, DTLS1"
+  ", TLS1.1, TLS1.2"
 #endif
   "\n"
   "<addr_port>: 8080                (just the port number)\n"
@@ -234,9 +234,9 @@ command_t local_commands[] = {
   {"_REQ", (command_f )command_REQ, "<host> [<SSL>:]<port>[:<tag>] [<cert-file> <key-file> [<ca-cert-file>]]", 
   "Open connection to defined host:port, with SSL support.\n"
   "If connection exist no connect will be performed\n"
-  "<SSL>: SSL, SSL2, SSL3, TLS1"
+  "<SSL>: SSL, SSL2, SSL3, DTLS1, TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-  ", TLS1.1, TLS1.2, DTLS1"
+  ", TLS1.1, TLS1.2"
 #endif
   "\n"
   "<host>: host name or IPv4/IPv6 address (IPv6 address must be surrounded\n"
@@ -375,9 +375,9 @@ command_t local_commands[] = {
   {"_TUNNEL", (command_f )command_TUNNEL, "<host> [<SSL>:]<port>[:<tag>] [<cert-file> <key-file> [<ca-cert-file>]]", 
   "Open tunnel to defined host:port, with SSL support.\n"
   "If connection exist no connect will be performed\n"
-  "<SSL>: SSL, SSL2, SSL3, TLS1"
+  "<SSL>: SSL, SSL2, SSL3, DTLS1, TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-  ", TLS1.1, TLS1.2, DTLS1"
+  ", TLS1.1, TLS1.2"
 #endif
   "\n"
   "<tag>:Additional tag info do support multiple connection to one target\n"
