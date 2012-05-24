@@ -1,5 +1,7 @@
                                                          -*- coding: utf-8 -*-
 Changes with httest 2.2.3
+  *) httest: Openssl 1.0.1 support.
+
   *) httest: Bugfixed global command GO which can be used now to join threads.
 
   *) httest: Expect/match/grep TLS extention messages
