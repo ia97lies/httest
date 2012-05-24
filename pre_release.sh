@@ -1,17 +1,12 @@
 TOP=`pwd`
 
 VERSION=$1
-OPTION=$2
 
 set -u
 
 trap error 1 2 3 15 ERR
 
 function error() {
-  if [ ! $OPTION = "try" ]; then
-    git checkout master 2>/dev/null >/dev/null;
-    git tag -d $VERSION 2>/dev/null >/dev/null;
-  fi 
   sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/"
   mv configure.in.tmp configure.in
   echo "Release build FAILED"
@@ -22,27 +17,13 @@ echo
 echo "Release httest-$VERSION"
 sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
 mv configure.in.tmp configure.in
-if [ ! $OPTION = "try" ]; then
-  git commit -m"new release $VERSION" configure.in
-fi
 
 echo
 echo "Check repository"
 git status | grep modified
 if [ $? -eq 0 ]; then
   echo "Please commit first all changes"
-  error 1
-fi
-
-if [ ! $OPTION = "try" ]; then
-  echo "Tag release $VERSION"
-  git tag $VERSION
-fi
-
-if [ ! $OPTION = "try" ]; then
-  echo "Checkout new tag"
-  git checkout $VERSION
-  git clean -f
+  error 
 fi
 
 echo
@@ -51,14 +32,14 @@ echo "    configure.in"
 grep "AC_INIT(httest, $VERSION, ia97lies@sourceforge.net)" configure.in >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
   echo Version specified in configure.in is not $VERSION
-  error 1
+  error 
 fi
 
 echo "    ChangeLog"
 grep `grep "\<AC_INIT\>" configure.in | awk 'BEGIN { FS=","} { print $2 }'` ChangeLog >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
   echo No ChangeLog Entry for version $VERSION 
-  error 1
+  error 
 fi
 
 echo "    NEWS"
@@ -66,14 +47,14 @@ MAINT=`grep "\<AC_INIT\>" configure.in | awk 'BEGIN { FS=","} { print $2 }' | aw
 grep `echo $MAINT` NEWS >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
   echo No NEWS Entry for version $MAINT
-  error 1
+  error 
 fi
 
 echo "    XXX"
 ./check_XXX.sh
 if [ $? -ne 0 ]; then
   echo There are still XXX marks in the code of version $VERSION
-  error 1
+  error 
 fi
 
 echo
@@ -104,19 +85,6 @@ echo "  Build User Guide"
 cd doc/users-guide
 make all VERSION=$VERSION
 cd -
-
-if [ ! $OPTION = "try" ]; then
-  echo
-  echo Checkout master
-  git checkout master
-
-  echo
-  echo "Build Packages"
-  echo "  Gentoo"
-  cp packages/gentoo/httest.ebuild packages/gentoo/overlays/net-analyzer/httest/httest-$VERSION.ebuild
-  git add packages/gentoo/overlays/net-analyzer/httest/httest-$VERSION.ebuild
-  git commit -m"New release $VERSION"
-fi
 
 echo
 echo Release build SUCCESS 
