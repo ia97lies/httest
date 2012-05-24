@@ -161,7 +161,7 @@ command_t global_commands[] = {
   "number of concurrent servers, -1 for unlimited,\n"
   "<SSL>: SSL, SSL2, SSL3, TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-  ", TLS1.1, TLS1.2"
+  ", TLS1.1, TLS1.2, DTLS1"
 #endif
   "\n"
   "<addr_port>: 8080                (just the port number)\n"
@@ -236,7 +236,7 @@ command_t local_commands[] = {
   "If connection exist no connect will be performed\n"
   "<SSL>: SSL, SSL2, SSL3, TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-  ", TLS1.1, TLS1.2"
+  ", TLS1.1, TLS1.2, DTLS1"
 #endif
   "\n"
   "<host>: host name or IPv4/IPv6 address (IPv6 address must be surrounded\n"
@@ -377,7 +377,7 @@ command_t local_commands[] = {
   "If connection exist no connect will be performed\n"
   "<SSL>: SSL, SSL2, SSL3, TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
-  ", TLS1.1, TLS1.2"
+  ", TLS1.1, TLS1.2, DTLS1"
 #endif
   "\n"
   "<tag>:Additional tag info do support multiple connection to one target\n"
