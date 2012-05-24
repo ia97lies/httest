@@ -5,9 +5,12 @@ OPTION=$2
 
 set -u
 
+CUR=`pwd`
+
 trap error 1 2 3 15 ERR
 
 function error() {
+  cd $CUR
   if [ ! $OPTION = "try" ]; then
     git checkout master 2>/dev/null >/dev/null;
     git tag -d $VERSION 2>/dev/null >/dev/null;
@@ -26,12 +29,14 @@ if [ ! $OPTION = "try" ]; then
   git commit -m"new release $VERSION" configure.in
 fi
 
-echo
-echo "Check repository"
-git status | grep modified
-if [ $? -eq 0 ]; then
-  echo "Please commit first all changes"
-  error 1
+if [ ! $OPTION = "try" ]; then
+  echo
+  echo "Check repository"
+  git status | grep modified
+  if [ $? -eq 0 ]; then
+    echo "Please commit first all changes"
+    error 1
+  fi
 fi
 
 if [ ! $OPTION = "try" ]; then
