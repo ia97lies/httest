@@ -17,7 +17,7 @@ WIN_APU_PATH="/htt/lib"
 WIN_APU_FILE="winlib-$WIN_APU_NAME-$WIN_APU_VER.zip"
 
 WIN_SSL_NAME="openssl"
-WIN_SSL_VER="1.0.0g"
+WIN_SSL_VER="1.0.1c"
 WIN_SSL_PROT="http"
 WIN_SSL_HOST="www.jexler.net"
 WIN_SSL_PATH="/htt/lib"
