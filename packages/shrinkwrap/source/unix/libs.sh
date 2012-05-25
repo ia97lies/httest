@@ -17,7 +17,7 @@ UNIX_APU_PATH="/mirror/apache/dist/apr"
 UNIX_APU_FILE="$UNIX_APU_NAME-$UNIX_APU_VER.tar.gz"
 
 UNIX_SSL_NAME="openssl"
-UNIX_SSL_VER="1.0.0g"
+UNIX_SSL_VER="1.0.1c"
 UNIX_SSL_PROT="http"
 UNIX_SSL_HOST="www.openssl.org"
 UNIX_SSL_PATH="/source"
