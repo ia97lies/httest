@@ -63,6 +63,7 @@ typedef struct perf_wconf_s {
 } perf_wconf_t;
 
 typedef struct perf_host_s {
+  char *name;
   int max_threads;
   int no_threads;
 } perf_host_t;
@@ -165,8 +166,8 @@ static apr_status_t perf_read_line(global_t *global, char **line) {
     cur = apr_strtok(NULL, " ", &last);
     
     host->max_threads = apr_atoi64(cur); 
-    cur = apr_strtok(NULL, " ", &last);
-    apr_hash_set(gconf->host_and_ports, host, APR_HASH_KEY_STRING, cur);
+    host->name = apr_strtok(NULL, " ", &last);
+    apr_hash_set(gconf->host_and_ports, host, APR_HASH_KEY_STRING, host->name);
   }
   return APR_SUCCESS;
 }
@@ -479,13 +480,15 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
   
   if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
     if (!gconf->cur_host || gconf->cur_host->no_threads >= gconf->cur_host->max_threads) {
+      void *val;
       if (!gconf->cur_host_i) {
         gconf->cur_host_i = apr_hash_first(global->pool, gconf->host_and_ports);
       }
       else {
         gconf->cur_host_i = apr_hash_next(gconf->cur_host_i);
       }
-      gconf->cur_host = apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
+      apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
+      gconf->cur_host = val;
     }
   }
 
