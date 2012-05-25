@@ -1,8 +1,8 @@
 INCLUDE $TOP/test/config.htb
 
 CLIENT
-
 # "unix|windows"
+_SSL:TRACE
 _ERROR "The timeout specified has expired|Unknown error"
 _TIMEOUT 2000
 _REQ $YOUR_HOST SSL:$YOUR_PORT

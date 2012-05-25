@@ -1671,9 +1671,7 @@ out_err:
   /**
    * Give modules a chance to cleanup stuff after _WAIT
    */
-  if ((status = htt_run_WAIT_end(worker, status)) != APR_SUCCESS) {
-    return status;
-  }
+  htt_run_WAIT_end(worker, status);
   status = worker_assert(worker, status);
   /** measure request end */
 

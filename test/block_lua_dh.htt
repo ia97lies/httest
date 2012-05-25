@@ -1,5 +1,5 @@
 REQUIRE _LUA:MODULE
-
+SET MAX_DURATION=240000
 INCLUDE $TOP/test/config.htb
 
 BLOCK:LUA MyCertSubjectName : priv pub 
