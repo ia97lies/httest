@@ -1071,7 +1071,8 @@ EOF
   done
   if [ "$OS" == "win" ]; then
     echo >>"$README"
-	echo "In addition, a Visual C++ 2008 Runtime is required, e.g.:" >>"$README"
+	echo "In addition, Visual C++ 2005+8 Runtimes are required, e.g.:" >>"$README"
+    echo "http://www.microsoft.com/download/en/details.aspx?id=5638" >>"$README"
     echo "http://www.microsoft.com/download/en/details.aspx?id=5582" >>"$README"
   fi
   cat >>"$README" <<EOF
