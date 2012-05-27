@@ -904,7 +904,8 @@ function win_build_htt {
   rm -rf "$WINSLN/Release"
   
   # find visual c++ 2010
-  PAT="Microsoft Visual Studio 10.0/VC/bin/vcvars32.bat"
+  MSVSVER="Microsoft Visual Studio 10.0"
+  PAT="$MSVSVER/VC/bin/vcvars32.bat"
   # search drive c first, don't want to scan all drives unless necessary
   VCVARS=`find /cygdrive/c | grep "$PAT" & true` 
   if [ "$VCVARS" == "" ];  then
@@ -1042,6 +1043,7 @@ function shrinkwrap {
   fi
   
   # create readme
+  echo -n "creating readme ... "
   if [ "$OS" == "win" ]; then
     README="$DIR/readme.txt"
     LIBINF="are included"
@@ -1082,13 +1084,78 @@ EOF
   if [ "$OS" == "win" ]; then
     unix2dos "$README"
   fi
+  echo "done"
+  
+  # create sysinfo
+  echo "creating sysinfo"
+  if [ "$OS" == "win" ]; then
+    SYSINFO="$DIR/sysinfo.txt"
+  else
+    SYSINFO="$DIR/SYSINFO"
+  fi
+  CMDS="${CMDS}echo htt version $HTT_VER\n"
+  CMDS="${CMDS}uname -srmp\n"
+  if [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}uname -i\n"
+  elif [ "$OS" != "mac" ]; then
+    CMDS="${CMDS}uname -io\n"
+  fi
+  CMDS="${CMDS}getconf LONG_BIT\n"
+  if [ "$OS" == "mac" ]; then
+    CMDS="${CMDS}sw_vers\n"
+  elif [ "$OS" == "win" ]; then
+    CMDS="${CMDS}cmd /c ver\n"
+  elif [ "$OS" == "linux" ]; then
+    CMDS="${CMDS}cat /etc/*version\n"
+    CMDS="${CMDS}lsb_release -drc\n"
+    CMDS="${CMDS}dpkg --list | grep linux-image\n"
+    CMDS="${CMDS}rpm -q kernel\n"
+    CMDS="${CMDS}cat /proc/version\n"
+  elif [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}cat /etc/release\n"
+    CMDS="${CMDS}showrev | grep Kernel\n"
+  fi
+  if [ "$OS" == "win" ]; then
+    CMDS="${CMDS}echo $MSVSVER\n"
+  elif [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}cc -V\n"
+  else
+    CMDS="${CMDS}gcc --version\n"
+  fi
+  if [ "$OS" == "win" ]; then
+    EXE_EXT=".exe"
+  else
+    EXE_EXT=""
+  fi
+  if [ "$OS" == "mac" ]; then
+    LDD="otool -L"
+  else
+    LDD="ldd"
+  fi
+  cd "$TOP"
+  for HTBIN in $HTBINS; do
+    CMDS="${CMDS}$LDD $HTBIN$EXE_EXT\n"
+  done
+  echo "Some more details about build system and binaries:" >>$SYSINFO
+  echo >>$SYSINFO
+  printf "$CMDS" | while read -r CMD; do
+    echo "> $CMD"
+    echo "> $CMD" >>$SYSINFO
+    set +e
+    eval $CMD >>$SYSINFO 2>&1
+    set -e
+    echo >>$SYSINFO
+  done
+  if [ "$OS" == "win" ]; then
+    unix2dos "$SYSINFO"
+  fi
 
   # check that correct number of files in release
   NEXPECTED=`echo "$HTBINS" | wc -w`
   if [ "$OS" == "win" ]; then
     NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
   fi
-  NEXPECTED=`expr $NEXPECTED + 1`
+  NEXPECTED=`expr $NEXPECTED + 2`
   echo -n "checking that $NEXPECTED files are in release ... "
   [ `ls "$DIR" | wc -w` -eq $NEXPECTED ]
   echo "ok"
