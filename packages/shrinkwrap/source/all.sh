@@ -156,6 +156,13 @@ function do_determine_binaries {
         for (i=3; i<=NF; i++) {
           printf("%s ", $(i));
         }
+      }
+      # httest 2.1
+      /bin_PROGRAMS=/ {
+        printf("%s ", substr($1, 14));
+        for (i=2; i<=NF; i++) {
+          printf("%s ", $(i));
+        }
       }'`
     for BIN in $BINS; do
       echo -n "$BIN "
@@ -170,7 +177,16 @@ function do_determine_binaries {
 #
 function do_determine_libs {
   echo -n "LIBS:    "
-  LIBVARS="APR APU SSL PCRE LUA JS XML2"
+  LIBVARS="APR APU SSL PCRE"
+  if [ `cat "$TOP/configure.in" | grep with-lua | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS LUA"
+  fi
+  if [ `cat "$TOP/configure.in" | grep with-spidermonkey | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS JS"
+  fi
+  if [ `cat "$TOP/configure.in" | grep with-libxml2 | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS XML2"
+  fi
   . "$SW/source/unix/libs.sh"
   . "$SW/source/win/libs.sh"
   for LIBVAR in $LIBVARS; do
