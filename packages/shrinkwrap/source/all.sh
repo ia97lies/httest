@@ -1043,7 +1043,7 @@ function shrinkwrap {
   fi
   
   # create readme
-  echo -n "creating readme ... "
+  echo "creating readme ..."
   if [ "$OS" == "win" ]; then
     README="$DIR/readme.txt"
     LIBINF="are included"
@@ -1071,7 +1071,7 @@ EOF
   done
   if [ "$OS" == "win" ]; then
     echo >>"$README"
-	echo "In addition, Visual C++ 2005+8 Runtimes are required, e.g.:" >>"$README"
+	echo "Visual C++ 2005 and 2008 runtimes are required, e.g.:" >>"$README"
     echo "http://www.microsoft.com/download/en/details.aspx?id=5638" >>"$README"
     echo "http://www.microsoft.com/download/en/details.aspx?id=5582" >>"$README"
   fi
@@ -1081,20 +1081,10 @@ This is "provided as is", no warranty of any kind.
 
 $(date -u "+%Y-%m-%d %H:%M:%S %Z")
 
+--
 EOF
-  if [ "$OS" == "win" ]; then
-    unix2dos "$README"
-  fi
-  echo "done"
-  
-  # create sysinfo
-  echo "creating sysinfo"
-  if [ "$OS" == "win" ]; then
-    SYSINFO="$DIR/sysinfo.txt"
-  else
-    SYSINFO="$DIR/SYSINFO"
-  fi
-  CMDS="${CMDS}echo htt version $HTT_VER\n"
+
+  # append some more info
   CMDS="${CMDS}uname -srmp\n"
   if [ "$OS" == "solaris" ]; then
     CMDS="${CMDS}uname -i\n"
@@ -1137,26 +1127,27 @@ EOF
   for HTBIN in $HTBINS; do
     CMDS="${CMDS}$LDD $HTBIN$EXE_EXT\n"
   done
-  echo "Some more details about build system and binaries:" >>$SYSINFO
-  echo >>$SYSINFO
   printf "$CMDS" | while read -r CMD; do
     echo "> $CMD"
-    echo "> $CMD" >>$SYSINFO
+    echo >>$README
+    echo "> $CMD" >>$README
     set +e
-    eval $CMD >>$SYSINFO 2>&1
+    OUT=`eval $CMD 2>&1`
     set -e
-    echo >>$SYSINFO
+    printf "%s\n" "$OUT" >>$README
   done
   if [ "$OS" == "win" ]; then
-    unix2dos "$SYSINFO"
+    unix2dos "$README"
   fi
+  echo "ok"
 
   # check that correct number of files in release
+  # (number of binaries plus readme)
   NEXPECTED=`echo "$HTBINS" | wc -w`
   if [ "$OS" == "win" ]; then
     NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
   fi
-  NEXPECTED=`expr $NEXPECTED + 2`
+  NEXPECTED=`expr $NEXPECTED + 1`
   echo -n "checking that $NEXPECTED files are in release ... "
   [ `ls "$DIR" | wc -w` -eq $NEXPECTED ]
   echo "ok"
