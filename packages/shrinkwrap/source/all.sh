@@ -156,6 +156,13 @@ function do_determine_binaries {
         for (i=3; i<=NF; i++) {
           printf("%s ", $(i));
         }
+      }
+      # httest 2.1
+      /bin_PROGRAMS=/ {
+        printf("%s ", substr($1, 14));
+        for (i=2; i<=NF; i++) {
+          printf("%s ", $(i));
+        }
       }'`
     for BIN in $BINS; do
       echo -n "$BIN "
@@ -170,7 +177,16 @@ function do_determine_binaries {
 #
 function do_determine_libs {
   echo -n "LIBS:    "
-  LIBVARS="APR APU SSL PCRE LUA JS XML2"
+  LIBVARS="APR APU SSL PCRE"
+  if [ `cat "$TOP/configure.in" | grep with-lua | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS LUA"
+  fi
+  if [ `cat "$TOP/configure.in" | grep with-spidermonkey | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS JS"
+  fi
+  if [ `cat "$TOP/configure.in" | grep with-libxml2 | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS XML2"
+  fi
   . "$SW/source/unix/libs.sh"
   . "$SW/source/win/libs.sh"
   for LIBVAR in $LIBVARS; do
@@ -904,7 +920,8 @@ function win_build_htt {
   rm -rf "$WINSLN/Release"
   
   # find visual c++ 2010
-  PAT="Microsoft Visual Studio 10.0/VC/bin/vcvars32.bat"
+  MSVSVER="Microsoft Visual Studio 10.0"
+  PAT="$MSVSVER/VC/bin/vcvars32.bat"
   # search drive c first, don't want to scan all drives unless necessary
   VCVARS=`find /cygdrive/c | grep "$PAT" & true` 
   if [ "$VCVARS" == "" ];  then
@@ -1042,6 +1059,7 @@ function shrinkwrap {
   fi
   
   # create readme
+  echo "creating readme ..."
   if [ "$OS" == "win" ]; then
     README="$DIR/readme.txt"
     LIBINF="are included"
@@ -1069,7 +1087,8 @@ EOF
   done
   if [ "$OS" == "win" ]; then
     echo >>"$README"
-	echo "In addition, a Visual C++ 2008 Runtime is required, e.g.:" >>"$README"
+	echo "Visual C++ 2005 and 2008 runtimes are required, e.g.:" >>"$README"
+    echo "http://www.microsoft.com/download/en/details.aspx?id=5638" >>"$README"
     echo "http://www.microsoft.com/download/en/details.aspx?id=5582" >>"$README"
   fi
   cat >>"$README" <<EOF
@@ -1078,12 +1097,68 @@ This is "provided as is", no warranty of any kind.
 
 $(date -u "+%Y-%m-%d %H:%M:%S %Z")
 
+--
 EOF
+
+  # append some more info
+  CMDS="${CMDS}uname -srmp\n"
+  if [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}uname -i\n"
+  elif [ "$OS" != "mac" ]; then
+    CMDS="${CMDS}uname -io\n"
+  fi
+  CMDS="${CMDS}getconf LONG_BIT\n"
+  if [ "$OS" == "mac" ]; then
+    CMDS="${CMDS}sw_vers\n"
+  elif [ "$OS" == "win" ]; then
+    CMDS="${CMDS}cmd /c ver\n"
+  elif [ "$OS" == "linux" ]; then
+    CMDS="${CMDS}cat /etc/*version\n"
+    CMDS="${CMDS}lsb_release -drc\n"
+    CMDS="${CMDS}dpkg --list | grep linux-image\n"
+    CMDS="${CMDS}rpm -q kernel\n"
+    CMDS="${CMDS}cat /proc/version\n"
+  elif [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}cat /etc/release\n"
+    CMDS="${CMDS}showrev | grep Kernel\n"
+  fi
+  if [ "$OS" == "win" ]; then
+    CMDS="${CMDS}echo $MSVSVER\n"
+  elif [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}cc -V\n"
+  else
+    CMDS="${CMDS}gcc --version\n"
+  fi
+  if [ "$OS" == "win" ]; then
+    EXE_EXT=".exe"
+  else
+    EXE_EXT=""
+  fi
+  if [ "$OS" == "mac" ]; then
+    LDD="otool -L"
+  else
+    LDD="ldd"
+  fi
+  cd "$TOP"
+  for HTBIN in $HTBINS; do
+    CMDS="${CMDS}$LDD $HTBIN$EXE_EXT\n"
+  done
+  printf "$CMDS" | while read -r CMD; do
+    echo "> $CMD"
+    echo >>$README
+    echo "> $CMD" >>$README
+    set +e
+    OUT=`eval $CMD 2>&1`
+    set -e
+    printf "%s\n" "$OUT" >>$README
+  done
   if [ "$OS" == "win" ]; then
     unix2dos "$README"
   fi
+  echo "ok"
 
   # check that correct number of files in release
+  # (number of binaries plus readme)
   NEXPECTED=`echo "$HTBINS" | wc -w`
   if [ "$OS" == "win" ]; then
     NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
