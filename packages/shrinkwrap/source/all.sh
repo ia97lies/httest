@@ -112,6 +112,8 @@ function do_determine_os {
     fi
   elif [ `uname -s` == "Darwin" ]; then
     OS="mac"
+  elif [ `uname -s` == "SunOS" ]; then
+    OS="solaris"
   fi
   echo "OS:      $OS"
   if [ "$OS" == "unknown" ]; then
@@ -154,6 +156,13 @@ function do_determine_binaries {
         for (i=3; i<=NF; i++) {
           printf("%s ", $(i));
         }
+      }
+      # httest 2.1
+      /bin_PROGRAMS=/ {
+        printf("%s ", substr($1, 14));
+        for (i=2; i<=NF; i++) {
+          printf("%s ", $(i));
+        }
       }'`
     for BIN in $BINS; do
       echo -n "$BIN "
@@ -168,7 +177,16 @@ function do_determine_binaries {
 #
 function do_determine_libs {
   echo -n "LIBS:    "
-  LIBVARS="APR APU SSL PCRE LUA JS XML2"
+  LIBVARS="APR APU SSL PCRE"
+  if [ `cat "$TOP/configure.in" | grep with-lua | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS LUA"
+  fi
+  if [ `cat "$TOP/configure.in" | grep with-spidermonkey | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS JS"
+  fi
+  if [ `cat "$TOP/configure.in" | grep with-libxml2 | wc -l` -eq 1 ]; then
+    LIBVARS="$LIBVARS XML2"
+  fi
   . "$SW/source/unix/libs.sh"
   . "$SW/source/win/libs.sh"
   for LIBVAR in $LIBVARS; do
@@ -402,6 +420,10 @@ function unix_build_LUA {
   cd "$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER"
   if [ "$OS" = "mac" ]; then
     make macosx
+  elif [ "$OS" = "solaris" ]; then
+    mv src/Makefile src/Makefile.bak
+    cat src/Makefile.bak | sed 's/CC= gcc/CC= cc/' | sed 's/CFLAGS= -O2 -Wall/CFLAGS= -O2/' >src/Makefile
+    make solaris
   else
     make linux
   fi
@@ -454,8 +476,46 @@ function unix_build_JS {
     chmod +x configure
   fi
   ./configure --disable-shared-js
-  make
-  create_custom_config $UNIX_JS_NAME $UNIX_JS_VER "-I\${DIR}" "-L\${DIR} -ljs_static"
+  if [ "$OS" == "solaris" ]; then
+    # workaround for sun cc limit on enum values for 32 bit target
+    cp jsclone.cpp jsclone.cpp.bak
+    cat jsclone.cpp.bak | awk '
+      BEGIN { skip=0 }
+      /enum StructuredDataType/ { skip=1 }
+      { if (skip==0) {
+          print $0
+        } else if (skip==1 && $0 == "};") {
+          skip=0
+          print "#define SCTAG_FLOAT_MAX           0xFFF00000"
+          print "#define SCTAG_NULL                0xFFFF0000"
+          print "#define SCTAG_UNDEFINED           0xFFFF0001"
+          print "#define SCTAG_BOOLEAN             0xFFFF0002"
+          print "#define SCTAG_INDEX               0xFFFF0003"
+          print "#define SCTAG_STRING              0xFFFF0004"
+          print "#define SCTAG_DATE_OBJECT         0xFFFF0005"
+          print "#define SCTAG_REGEXP_OBJECT       0xFFFF0006"
+          print "#define SCTAG_ARRAY_OBJECT        0xFFFF0007"
+          print "#define SCTAG_OBJECT_OBJECT       0xFFFF0008"
+          print "#define SCTAG_ARRAY_BUFFER_OBJECT 0xFFFF0009"
+          print "#define SCTAG_BOOLEAN_OBJECT      0xFFFF000A"
+          print "#define SCTAG_STRING_OBJECT       0xFFFF000B"
+          print "#define SCTAG_NUMBER_OBJECT       0xFFFF000C"
+          print "#define SCTAG_TYPED_ARRAY_MIN     0xFFFF0100"
+          print "#define SCTAG_TYPED_ARRAY_MAX     (SCTAG_TYPED_ARRAY_MIN + TypedArray::TYPE_MAX - 1)"
+          print "#define SCTAG_END_OF_BUILTIN_TYPES (SCTAG_TYPED_ARRAY_MAX + 1)"
+        }
+      }' >jsclone.cpp
+    # use gmake
+    gmake
+  else
+    make
+  fi
+
+  LIBS="-L\${DIR} -ljs_static"
+  if [ "$OS" == "solaris" ]; then
+    LIBS="$LIBS -L/usr/sfw/lib -lstdc++ -lCrun"
+  fi 
+  create_custom_config $UNIX_JS_NAME $UNIX_JS_VER "-I\${DIR}" "$LIBS"
 
   echo -n "checking that js lib has been built ... "
   [ -f libjs_static.a ]
@@ -536,18 +596,39 @@ function do_buildconf {
 #
 function unix_build_htt {
   cd "$TOP"
-  ./configure \
-    --with-apr="$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER" \
-    --with-apr-util="$TARGET/$UNIX_APU_NAME-$UNIX_APU_VER" \
-    --with-pcre="$TARGET/$UNIX_PCRE_NAME-$UNIX_PCRE_VER" \
-    --with-ssl="$TARGET/$UNIX_SSL_NAME-$UNIX_SSL_VER" \
-    --with-lua="$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER/src" \
-    --enable-lua-module=yes \
-    --with-spidermonkey="$TARGET/$UNIX_JS_NAME-$UNIX_JS_VER/js/src" \
-    --enable-js-module=yes \
-    --with-libxml2="$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER" \
-    --enable-html-module=yes \
-    enable_use_static=yes
+
+  WITH=""
+  for LIBVAR in $LIBVARS; do
+    case $LIBVAR in
+      APR)
+        WITH="$WITH --with-apr=$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER"
+        ;;
+      APU)
+        WITH="$WITH --with-apr-util=$TARGET/$UNIX_APU_NAME-$UNIX_APU_VER"
+        ;;
+      SSL)
+        WITH="$WITH --with-ssl=$TARGET/$UNIX_SSL_NAME-$UNIX_SSL_VER"
+        ;;
+      PCRE)
+        WITH="$WITH --with-pcre=$TARGET/$UNIX_PCRE_NAME-$UNIX_PCRE_VER"
+        ;;
+      LUA)
+        WITH="$WITH --with-lua=$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER/src"
+        WITH="$WITH --enable-lua-module=yes"
+        ;;
+      JS)
+        WITH="$WITH --with-spidermonkey=$TARGET/$UNIX_JS_NAME-$UNIX_JS_VER/js/src"
+        WITH="$WITH --enable-js-module=yes"
+        ;;
+      XML2)
+        WITH="$WITH --with-libxml2=$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER"
+        WITH="$WITH --enable-html-module=yes"
+        ;;
+    esac
+  done
+ 
+  echo "$WITH" 
+  ./configure $WITH enable_use_static=yes
   make clean all
 
   echo -n "checking that httest has been built ... "
@@ -839,7 +920,8 @@ function win_build_htt {
   rm -rf "$WINSLN/Release"
   
   # find visual c++ 2010
-  PAT="Microsoft Visual Studio 10.0/VC/bin/vcvars32.bat"
+  MSVSVER="Microsoft Visual Studio 10.0"
+  PAT="$MSVSVER/VC/bin/vcvars32.bat"
   # search drive c first, don't want to scan all drives unless necessary
   VCVARS=`find /cygdrive/c | grep "$PAT" & true` 
   if [ "$VCVARS" == "" ];  then
@@ -916,11 +998,26 @@ EOF
     NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
     CALL="$TOP/$HTBIN$EXE_EXT"
     "$CALL" --version | grep "$NAME"
-	[ `"$CALL" --version | grep "$NAME.* $HTT_VER" | wc -l` -eq 1 ]
+    OUT=`"$CALL" --version | grep "$NAME.* $HTT_VER"`
+    [ `echo "$OUT" | grep "$NAME.* $HTT_VER" | wc -l` -eq 1 ]
   done
 
   cd "$TOP/test"
-  TESTS="block.htt block_lua.htt block_js.htt html.htt"
+  TESTS="block.htt"
+  for LIBVAR in $LIBVARS; do
+    case $LIBVAR in
+      LUA)
+        TESTS="$TESTS block_lua.htt"
+        ;;
+      JS)
+        TESTS="$TESTS block_js.htt"
+        ;;
+      XML2)
+        TESTS="$TESTS html.htt"
+        ;;
+    esac
+  done
+
   for TEST in $TESTS; do
     echo -n "running $TEST ... "
     ./run$SH_EXT $TEST >"$TARGET/$TEST.out" 2>&1
@@ -962,6 +1059,7 @@ function shrinkwrap {
   fi
   
   # create readme
+  echo "creating readme ..."
   if [ "$OS" == "win" ]; then
     README="$DIR/readme.txt"
     LIBINF="are included"
@@ -989,7 +1087,8 @@ EOF
   done
   if [ "$OS" == "win" ]; then
     echo >>"$README"
-	echo "In addition, a Visual C++ 2008 Runtime is required, e.g.:" >>"$README"
+	echo "Visual C++ 2005 and 2008 runtimes are required, e.g.:" >>"$README"
+    echo "http://www.microsoft.com/download/en/details.aspx?id=5638" >>"$README"
     echo "http://www.microsoft.com/download/en/details.aspx?id=5582" >>"$README"
   fi
   cat >>"$README" <<EOF
@@ -998,12 +1097,68 @@ This is "provided as is", no warranty of any kind.
 
 $(date -u "+%Y-%m-%d %H:%M:%S %Z")
 
+--
 EOF
+
+  # append some more info
+  CMDS="${CMDS}uname -srmp\n"
+  if [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}uname -i\n"
+  elif [ "$OS" != "mac" ]; then
+    CMDS="${CMDS}uname -io\n"
+  fi
+  CMDS="${CMDS}getconf LONG_BIT\n"
+  if [ "$OS" == "mac" ]; then
+    CMDS="${CMDS}sw_vers\n"
+  elif [ "$OS" == "win" ]; then
+    CMDS="${CMDS}cmd /c ver\n"
+  elif [ "$OS" == "linux" ]; then
+    CMDS="${CMDS}cat /etc/*version\n"
+    CMDS="${CMDS}lsb_release -drc\n"
+    CMDS="${CMDS}dpkg --list | grep linux-image\n"
+    CMDS="${CMDS}rpm -q kernel\n"
+    CMDS="${CMDS}cat /proc/version\n"
+  elif [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}cat /etc/release\n"
+    CMDS="${CMDS}showrev | grep Kernel\n"
+  fi
+  if [ "$OS" == "win" ]; then
+    CMDS="${CMDS}echo $MSVSVER\n"
+  elif [ "$OS" == "solaris" ]; then
+    CMDS="${CMDS}cc -V\n"
+  else
+    CMDS="${CMDS}gcc --version\n"
+  fi
+  if [ "$OS" == "win" ]; then
+    EXE_EXT=".exe"
+  else
+    EXE_EXT=""
+  fi
+  if [ "$OS" == "mac" ]; then
+    LDD="otool -L"
+  else
+    LDD="ldd"
+  fi
+  cd "$TOP"
+  for HTBIN in $HTBINS; do
+    CMDS="${CMDS}$LDD $HTBIN$EXE_EXT\n"
+  done
+  printf "$CMDS" | while read -r CMD; do
+    echo "> $CMD"
+    echo >>$README
+    echo "> $CMD" >>$README
+    set +e
+    OUT=`eval $CMD 2>&1`
+    set -e
+    printf "%s\n" "$OUT" >>$README
+  done
   if [ "$OS" == "win" ]; then
     unix2dos "$README"
   fi
+  echo "ok"
 
   # check that correct number of files in release
+  # (number of binaries plus readme)
   NEXPECTED=`echo "$HTBINS" | wc -w`
   if [ "$OS" == "win" ]; then
     NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
@@ -1015,7 +1170,9 @@ EOF
   
   # tgz
   cd "$DIR/.."
-  tar cvzf "$NAME.tar.gz" "$NAME"
+  tar cvf "$NAME.tar" "$NAME"
+  gzip "$NAME.tar"
+  rm -f "$NAME.tar"
   echo -n "checking that tar.gz has been created ... "
   [ -f $DIR.tar.gz ]
   echo "ok"
@@ -1048,6 +1205,8 @@ function do_shrinkwrap {
     fi
   elif [ "$OS" == "win" -a "$ARCH" == "i686" -a "$BITS" == "32" ]; then
     SHORT_NAME="$OS"
+  elif [ "$OS" == "solaris" -a "$ARCH" == "sun4u" ]; then
+    SHORT_NAME="$OS-sparc-$BITS"
   fi
   NAME="httest-$HTT_VER-$SHORT_NAME"
   
