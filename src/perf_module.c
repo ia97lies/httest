@@ -30,51 +30,63 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-typedef struct stat_time_s {
+typedef struct perf_time_s {
   apr_time_t cur;
   apr_time_t min;
   apr_time_t avr;
   apr_time_t max;
   apr_time_t total;
-} stat_time_t;
+} perf_time_t;
 
-typedef struct stat_count_s {
+typedef struct perf_count_s {
   int reqs;
   int conns;
   int less[10];
   int status[600];
-} stat_count_t;
+} perf_count_t;
 
-typedef struct stat_s {
-  stat_count_t count;
+typedef struct perf_s {
+  perf_count_t count;
   apr_size_t recv_bytes;
   apr_size_t sent_bytes;
-  stat_time_t conn_time;
-  stat_time_t recv_time;
-  stat_time_t sent_time;
+  perf_time_t conn_time;
+  perf_time_t recv_time;
+  perf_time_t sent_time;
   apr_time_t sent_time_total;
-} stat_t;
+} perf_t;
 
-typedef struct stat_wconf_s {
+typedef struct perf_wconf_s {
   apr_time_t start_time;
   int cur_status;
   const char *request_line;
-  stat_t stat;
-} stat_wconf_t;
+  perf_t stat;
+} perf_wconf_t;
 
-typedef struct stat_gconf_s {
+typedef struct perf_host_s {
+  char *name;
+  int max_threads;
+  int no_threads;
+} perf_host_t;
+
+typedef struct perf_gconf_s {
   int on;
-#define STAT_GCONF_OFF 0
-#define STAT_GCONF_ON  1
-#define STAT_GCONF_LOG 2 
+#define PERF_GCONF_OFF  0
+#define PERF_GCONF_ON   1
+#define PERF_GCONF_LOG  2 
+  int flags;
+#define PERF_GCONF_FLAGS_NONE 0 
+#define PERF_GCONF_FLAGS_DIST 1 
   apr_file_t *log_file;
-  stat_t stat;
-} stat_gconf_t;
+  apr_hash_t *host_and_ports;
+  apr_hash_index_t *cur_host_i;
+  perf_host_t *cur_host;
+  perf_t stat;
+} perf_gconf_t;
 
 /************************************************************************
  * Globals 
  ***********************************************************************/
-const char * stat_module = "stat_module";
+const char * perf_module = "perf_module";
 
 /************************************************************************
  * Local 
@@ -86,11 +98,12 @@ const char * stat_module = "stat_module";
  * @param global IN 
  * @return stat config
  */
-static stat_gconf_t *stat_get_global_config(global_t *global) {
-  stat_gconf_t *config = module_get_config(global->config, stat_module);
+static perf_gconf_t *perf_get_global_config(global_t *global) {
+  perf_gconf_t *config = module_get_config(global->config, perf_module);
   if (config == NULL) {
     config = apr_pcalloc(global->pool, sizeof(*config));
-    module_set_config(global->config, apr_pstrdup(global->pool, stat_module), config);
+    config->host_and_ports = apr_hash_make(global->pool);
+    module_set_config(global->config, apr_pstrdup(global->pool, perf_module), config);
   }
   return config;
 }
@@ -101,11 +114,11 @@ static stat_gconf_t *stat_get_global_config(global_t *global) {
  * @param worker IN worker
  * @return stat config
  */
-static stat_wconf_t *stat_get_worker_config(worker_t *worker) {
-  stat_wconf_t *config = module_get_config(worker->config, stat_module);
+static perf_wconf_t *perf_get_worker_config(worker_t *worker) {
+  perf_wconf_t *config = module_get_config(worker->config, perf_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
-    module_set_config(worker->config, apr_pstrdup(worker->pbody, stat_module), config);
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, perf_module), config);
   }
   return config;
 }
@@ -115,28 +128,25 @@ static stat_wconf_t *stat_get_worker_config(worker_t *worker) {
  * @param global IN global config
  * @param line IN read line
  */
-static apr_status_t stat_read_line(global_t *global, char **line) {
+static apr_status_t perf_read_line(global_t *global, char **line) {
 
-  if (strncmp(*line, "STAT:", 5) == 0) {
+  if (strncmp(*line, "PERF:STAT", 9) == 0) {
+    perf_gconf_t *gconf = perf_get_global_config(global);
     char *cur;
     char *last;
 
-    apr_strtok(*line, ":", &last);
-    cur = apr_strtok(NULL, ":", &last);
+    apr_strtok(*line, " ", &last);
+    cur = apr_strtok(NULL, " ", &last);
     if (strcmp(cur, "ON") == 0) {
-      stat_gconf_t *gconf = stat_get_global_config(global);
-      gconf->on = STAT_GCONF_ON;
+      gconf->on = PERF_GCONF_ON;
     }
     else if (strcmp(cur, "OFF") == 0) {
-      stat_gconf_t *gconf = stat_get_global_config(global);
-      gconf->on |= STAT_GCONF_OFF;
+      gconf->on |= PERF_GCONF_OFF;
     }
-    else if (strncmp(cur, "LOG ", 4) == 0) {
+    else if (strcmp(cur, "LOG") == 0) {
       apr_status_t status;
       char *filename;
-      stat_gconf_t *gconf = stat_get_global_config(global);
-      gconf->on |= STAT_GCONF_LOG;
-      apr_strtok(cur, " ", &last);
+      gconf->on |= PERF_GCONF_LOG;
       filename = apr_strtok(NULL, " ", &last);
       if ((status = apr_file_open(&gconf->log_file, filename, 
                                   APR_READ|APR_WRITE|APR_CREATE|APR_APPEND|APR_XTHREAD, 
@@ -145,6 +155,19 @@ static apr_status_t stat_read_line(global_t *global, char **line) {
         return status;
       }
     }
+  }
+  else if (strncmp(*line, "PERF:DISTRIBUTE", 9) == 0) {
+    char *cur;
+    char *last;
+    perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
+    perf_gconf_t *gconf = perf_get_global_config(global);
+    gconf->flags |= PERF_GCONF_FLAGS_DIST;
+    apr_strtok(*line, " ", &last);
+    cur = apr_strtok(NULL, " ", &last);
+    
+    host->max_threads = apr_atoi64(cur); 
+    host->name = apr_strtok(NULL, " ", &last);
+    apr_hash_set(gconf->host_and_ports, host, APR_HASH_KEY_STRING, host->name);
   }
   return APR_SUCCESS;
 }
@@ -155,12 +178,12 @@ static apr_status_t stat_read_line(global_t *global, char **line) {
  * @param line IN line sent
  * @return APR_SUCCESS
  */
-static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
+static apr_status_t perf_line_sent(worker_t *worker, line_t *line) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     if (wconf->start_time == 0) {
       ++wconf->stat.count.reqs;
       wconf->start_time = apr_time_now();
@@ -180,12 +203,12 @@ static apr_status_t stat_line_sent(worker_t *worker, line_t *line) {
  * @param line IN line sent
  * @return APR_SUCCESS
  */
-static apr_status_t stat_WAIT_begin(worker_t *worker) {
+static apr_status_t perf_WAIT_begin(worker_t *worker) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     apr_time_t now = apr_time_now();
     apr_time_t duration = now - wconf->start_time;
     wconf->start_time = now;
@@ -207,12 +230,12 @@ static apr_status_t stat_WAIT_begin(worker_t *worker) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_read_status_line(worker_t *worker, char *line) {
+static apr_status_t perf_read_status_line(worker_t *worker, char *line) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     char *cur;
     wconf->stat.recv_bytes += strlen(line) + 2;
     if ((cur = strstr(line, " "))) {
@@ -233,12 +256,12 @@ static apr_status_t stat_read_status_line(worker_t *worker, char *line) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_read_header(worker_t *worker, char *line) {
+static apr_status_t perf_read_header(worker_t *worker, char *line) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     wconf->stat.recv_bytes += strlen(line) + 2;
   }   
   return APR_SUCCESS;
@@ -250,12 +273,12 @@ static apr_status_t stat_read_header(worker_t *worker, char *line) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_read_buf(worker_t *worker, char *buf, apr_size_t len) {
+static apr_status_t perf_read_buf(worker_t *worker, char *buf, apr_size_t len) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     wconf->stat.recv_bytes += len + 2;
   }   
   return APR_SUCCESS;
@@ -267,12 +290,12 @@ static apr_status_t stat_read_buf(worker_t *worker, char *buf, apr_size_t len) {
  * @param status IN apr status
  * @return received status 
  */
-static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
+static apr_status_t perf_WAIT_end(worker_t *worker, apr_status_t status) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     int i;
     apr_time_t compare;
     apr_time_t now = apr_time_now();
@@ -294,7 +317,7 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
       }
     }
   }
-  if (gconf->on & STAT_GCONF_LOG && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_LOG && worker->flags & FLAGS_CLIENT) {
     apr_pool_t *pool;
     char *date_str;
 
@@ -315,12 +338,12 @@ static apr_status_t stat_WAIT_end(worker_t *worker, apr_status_t status) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_pre_connect(worker_t *worker) {
+static apr_status_t perf_pre_connect(worker_t *worker) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     wconf->stat.conn_time.cur = apr_time_now();
     ++wconf->stat.count.conns;
   }
@@ -333,12 +356,12 @@ static apr_status_t stat_pre_connect(worker_t *worker) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_post_connect(worker_t *worker) {
+static apr_status_t perf_post_connect(worker_t *worker) {
   global_t *global = worker->global;
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(global);
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(global);
 
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     apr_time_t duration = apr_time_now() - wconf->stat.conn_time.cur;
     wconf->stat.conn_time.cur = duration;
     wconf->stat.conn_time.total += duration;
@@ -359,10 +382,10 @@ static apr_status_t stat_post_connect(worker_t *worker) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_worker_finally(worker_t *worker) {
-  stat_wconf_t *wconf = stat_get_worker_config(worker);
-  stat_gconf_t *gconf = stat_get_global_config(worker->global);
-  if (gconf->on & STAT_GCONF_ON && worker->flags & FLAGS_CLIENT) {
+static apr_status_t perf_worker_finally(worker_t *worker) {
+  perf_wconf_t *wconf = perf_get_worker_config(worker);
+  perf_gconf_t *gconf = perf_get_global_config(worker->global);
+  if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     int i;
     apr_thread_mutex_lock(worker->mutex);
     if (wconf->stat.sent_time.max > gconf->stat.sent_time.max) {
@@ -407,9 +430,9 @@ static apr_status_t stat_worker_finally(worker_t *worker) {
  * @param line IN received status line
  * @return APR_SUCCESS
  */
-static apr_status_t stat_worker_joined(global_t *global) {
-  stat_gconf_t *gconf = stat_get_global_config(global);
-  if (gconf->on & STAT_GCONF_ON) {
+static apr_status_t perf_worker_joined(global_t *global) {
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  if (gconf->on & PERF_GCONF_ON) {
     int i; 
     apr_time_t time;
     gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.count.reqs;
@@ -438,49 +461,71 @@ static apr_status_t stat_worker_joined(global_t *global) {
             gconf->stat.recv_time.min, gconf->stat.recv_time.max, gconf->stat.recv_time.avr);
     fflush(stdout);
   }
-  if (gconf->on & STAT_GCONF_ON) {
+  if (gconf->on & PERF_GCONF_LOG) {
     apr_file_close(gconf->log_file);
   }
   return APR_SUCCESS;
 }
 
+/**
+ * Distribute client worker.
+ * @param worker IN callee
+ * @param func IN concurrent function to call
+ * @param new_thread OUT thread handle of concurrent function
+ * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
+ */
+static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread) {
+  global_t *global = worker->global;
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  
+  if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
+    if (!gconf->cur_host || gconf->cur_host->no_threads >= gconf->cur_host->max_threads) {
+      void *val;
+      if (!gconf->cur_host_i) {
+        gconf->cur_host_i = apr_hash_first(global->pool, gconf->host_and_ports);
+      }
+      else {
+        gconf->cur_host_i = apr_hash_next(gconf->cur_host_i);
+      }
+      apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
+      gconf->cur_host = val;
+    }
+  }
+
+  return APR_ENOTHREAD;
+}
+
+/**
+ * Wait for distributed client worker.
+ * @param worker IN callee
+ * @param thread IN thread handle of concurrent function
+ * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
+ */
+static apr_status_t perf_client_join(worker_t *worker, apr_thread_t *thread) {
+  return APR_ENOTHREAD;
+}
+
 /************************************************************************
  * Commands 
  ***********************************************************************/
-/**
- * Do log every request to a file.
- * @param worker IN callee
- * @param parent IN caller
- * @param ptmp IN temp pool
- */
-static apr_status_t block_STAT_LOG(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  /* first param is format */
-  /* second param is file */
-  return APR_SUCCESS;
-}
 
 /************************************************************************
  * Module
  ***********************************************************************/
-apr_status_t stat_module_init(global_t *global) {
-  apr_status_t status;
-  if ((status = module_command_new(global, "STAT", "_LOG",
-	                           "<foo>",
-	                           "Bla bla bla.",
-	                           block_STAT_LOG)) != APR_SUCCESS) {
-    return status;
-  }
-  htt_hook_worker_joined(stat_worker_joined, NULL, NULL, 0);
-  htt_hook_worker_finally(stat_worker_finally, NULL, NULL, 0);
-  htt_hook_WAIT_end(stat_WAIT_end, NULL, NULL, 0);
-  htt_hook_read_status_line(stat_read_status_line, NULL, NULL, 0);
-  htt_hook_WAIT_begin(stat_WAIT_begin, NULL, NULL, 0);
-  htt_hook_read_header(stat_read_header, NULL, NULL, 0);
-  htt_hook_read_buf(stat_read_buf, NULL, NULL, 0);
-  htt_hook_line_sent(stat_line_sent, NULL, NULL, 0);
-  htt_hook_read_line(stat_read_line, NULL, NULL, 0);
-  htt_hook_pre_connect(stat_pre_connect, NULL, NULL, 0);
-  htt_hook_post_connect(stat_post_connect, NULL, NULL, 0);
+apr_status_t perf_module_init(global_t *global) {
+  htt_hook_read_line(perf_read_line, NULL, NULL, 0);
+  htt_hook_client_create(perf_client_create, NULL, NULL, 0);
+  htt_hook_client_join(perf_client_join, NULL, NULL, 0);
+  htt_hook_worker_joined(perf_worker_joined, NULL, NULL, 0);
+  htt_hook_worker_finally(perf_worker_finally, NULL, NULL, 0);
+  htt_hook_pre_connect(perf_pre_connect, NULL, NULL, 0);
+  htt_hook_post_connect(perf_post_connect, NULL, NULL, 0);
+  htt_hook_line_sent(perf_line_sent, NULL, NULL, 0);
+  htt_hook_WAIT_begin(perf_WAIT_begin, NULL, NULL, 0);
+  htt_hook_read_status_line(perf_read_status_line, NULL, NULL, 0);
+  htt_hook_read_header(perf_read_header, NULL, NULL, 0);
+  htt_hook_read_buf(perf_read_buf, NULL, NULL, 0);
+  htt_hook_WAIT_end(perf_WAIT_end, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

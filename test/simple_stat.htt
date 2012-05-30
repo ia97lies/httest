@@ -1,7 +1,6 @@
 INCLUDE $TOP/test/config.htb
 
-STAT:ON
-STAT:LOG tmp.log
+PERF:STAT ON
 
 CLIENT
 _REQ $YOUR_HOST $YOUR_PORT
