@@ -64,7 +64,6 @@ typedef struct perf_wconf_s {
 
 typedef struct perf_host_s {
   char *name;
-  int max_threads;
   int no_threads;
 } perf_host_t;
 
@@ -157,17 +156,16 @@ static apr_status_t perf_read_line(global_t *global, char **line) {
     }
   }
   else if (strncmp(*line, "PERF:DISTRIBUTE", 9) == 0) {
-    char *cur;
     char *last;
     perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
     perf_gconf_t *gconf = perf_get_global_config(global);
     gconf->flags |= PERF_GCONF_FLAGS_DIST;
     apr_strtok(*line, " ", &last);
-    cur = apr_strtok(NULL, " ", &last);
-    
-    host->max_threads = apr_atoi64(cur); 
     host->name = apr_strtok(NULL, " ", &last);
-    apr_hash_set(gconf->host_and_ports, host, APR_HASH_KEY_STRING, host->name);
+    while (host->name) {
+      apr_hash_set(gconf->host_and_ports, host->name, APR_HASH_KEY_STRING, host);
+      host->name = apr_strtok(NULL, " ", &last);
+    }
   }
   return APR_SUCCESS;
 }
@@ -468,6 +466,46 @@ static apr_status_t perf_worker_joined(global_t *global) {
 }
 
 /**
+ * Get cur host from hash
+ * @param gconf IN global config
+ */
+static perf_host_t *perf_get_cur_host(perf_gconf_t *gconf) {
+  void *val = NULL;
+  if (gconf->cur_host_i) {
+    apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
+  }
+  return val;
+}
+
+/**
+ * Get first remote host from hash
+ * @param global IN global instance
+ */
+static perf_host_t *perf_get_first_host(global_t *global) {
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  gconf->cur_host_i = apr_hash_first(global->pool, gconf->host_and_ports);
+  return perf_get_cur_host(gconf);
+}
+
+/**
+ * Get next remote host from hash
+ * @param global IN global instance
+ */
+static perf_host_t *perf_get_next_host(global_t *global) {
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  gconf->cur_host_i = apr_hash_next(gconf->cur_host_i);
+  return perf_get_cur_host(gconf);
+}
+
+/**
+ * Distribute host to remote host, start a supervisor thread
+ * @worker IN callee
+ * @return supervisor thread handle
+ */
+static apr_thread_t *perf_distribute_host(worker_t *worker) {
+  return NULL;
+}
+/**
  * Distribute client worker.
  * @param worker IN callee
  * @param func IN concurrent function to call
@@ -479,16 +517,17 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
   perf_gconf_t *gconf = perf_get_global_config(global);
   
   if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
-    if (!gconf->cur_host || gconf->cur_host->no_threads >= gconf->cur_host->max_threads) {
-      void *val;
+    if (!gconf->cur_host) {
       if (!gconf->cur_host_i) {
-        gconf->cur_host_i = apr_hash_first(global->pool, gconf->host_and_ports);
+        /* distribute to my self */
+        gconf->cur_host = perf_get_first_host(global);
+        return APR_ENOTHREAD;
       }
       else {
-        gconf->cur_host_i = apr_hash_next(gconf->cur_host_i);
+        /* distribute to remote host */
+        *new_thread = perf_distribute_host(worker);
+        gconf->cur_host = perf_get_next_host(global);
       }
-      apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
-      gconf->cur_host = val;
     }
   }
 
