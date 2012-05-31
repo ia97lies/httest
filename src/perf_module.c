@@ -65,6 +65,9 @@ typedef struct perf_wconf_s {
 typedef struct perf_host_s {
   char *name;
   int no_threads;
+  int flags;
+#define PERF_HOST_NONE      0
+#define PERF_HOST_CONNECTED 1
 } perf_host_t;
 
 typedef struct perf_gconf_s {
@@ -468,12 +471,14 @@ static apr_status_t perf_worker_joined(global_t *global) {
 /**
  * Get cur host from hash
  * @param gconf IN global config
+ * @return cur host
  */
 static perf_host_t *perf_get_cur_host(perf_gconf_t *gconf) {
   void *val = NULL;
   if (gconf->cur_host_i) {
     apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
   }
+  gconf->cur_host = val;
   return val;
 }
 
@@ -498,11 +503,67 @@ static perf_host_t *perf_get_next_host(global_t *global) {
 }
 
 /**
+ * Serialize to httestd
+ * @param worker IN callee
+ * @param fmt IN format
+ * @param ... IN
+ * @return apr_status_t
+ */
+static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
+  char *tmp;
+  va_list va;
+  apr_pool_t *pool;
+
+  apr_pool_create(&pool, NULL);
+  va_start(va, fmt);
+  tmp = apr_pvsprintf(pool, fmt, va);
+  va_end(va);
+  apr_pool_destroy(pool);
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Iterate all modules and blocks for serialization
+ * @param worker IN callee
+ */
+static apr_status_t perf_serialize_globals(worker_t *worker) {
+  int i;
+  apr_table_t *vars;
+  apr_table_t *shared;
+  apr_table_entry_t *e;
+  apr_pool_t *ptmp;
+  global_t *global = worker->global;
+
+  apr_pool_create(&ptmp, NULL);
+  vars = store_get_table(global->vars, ptmp);
+  e = (apr_table_entry_t *) apr_table_elts(vars)->elts;
+  for (i = 0; i < apr_table_elts(vars)->nelts; ++i) {
+    perf_serialize(worker, "SET %s=%s\n", e[i].key, e[i].val);
+  }
+  shared = store_get_table(global->vars, ptmp);
+  e = (apr_table_entry_t *) apr_table_elts(shared)->elts;
+  for (i = 0; i < apr_table_elts(shared)->nelts; ++i) {
+    perf_serialize(worker, "GLOBAL %s=%s\n", e[i].key, e[i].val);
+  }
+  apr_pool_destroy(ptmp);
+  return APR_SUCCESS;
+}
+
+/**
  * Distribute host to remote host, start a supervisor thread
  * @worker IN callee
  * @return supervisor thread handle
  */
 static apr_thread_t *perf_distribute_host(worker_t *worker) {
+  global_t *global = worker->global;
+  perf_gconf_t *gconf = perf_get_global_config(global);
+
+  if (!(gconf->cur_host->flags & PERF_HOST_CONNECTED)) {
+    /** TODO: connect to remote httestd */
+    perf_serialize_globals(worker);
+    gconf->cur_host->flags |= PERF_HOST_CONNECTED;
+  }
   return NULL;
 }
 /**
@@ -517,16 +578,22 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
   perf_gconf_t *gconf = perf_get_global_config(global);
   
   if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
-    if (!gconf->cur_host) {
-      if (!gconf->cur_host_i) {
-        /* distribute to my self */
-        gconf->cur_host = perf_get_first_host(global);
-        return APR_ENOTHREAD;
+    if (!gconf->cur_host_i) {
+      worker_log(worker, LOG_INFO, "Distribute CLIENT to my self");
+      perf_get_first_host(global);
+      return APR_ENOTHREAD;
+    }
+    else {
+      /* distribute to remote host */
+      worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", gconf->cur_host->name);
+      *new_thread = perf_distribute_host(worker);
+      perf_get_next_host(global);
+      if (*new_thread) {
+        return APR_SUCCESS;
       }
       else {
-        /* distribute to remote host */
-        *new_thread = perf_distribute_host(worker);
-        gconf->cur_host = perf_get_next_host(global);
+        worker_log(worker, LOG_INFO, "FAILED distribute CLIENT to my self");
+        return APR_ENOTHREAD;
       }
     }
   }
