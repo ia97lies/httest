@@ -26,6 +26,7 @@
  * Includes
  ***********************************************************************/
 #include "module.h"
+#include "tcp_module.h"
 
 /************************************************************************
  * Definitions 
@@ -65,9 +66,10 @@ typedef struct perf_wconf_s {
 typedef struct perf_host_s {
   char *name;
   int no_threads;
-  int flags;
+  int state;
 #define PERF_HOST_NONE      0
 #define PERF_HOST_CONNECTED 1
+#define PERF_HOST_ERROR 2
 } perf_host_t;
 
 typedef struct perf_gconf_s {
@@ -160,14 +162,17 @@ static apr_status_t perf_read_line(global_t *global, char **line) {
   }
   else if (strncmp(*line, "PERF:DISTRIBUTE", 9) == 0) {
     char *last;
+    char *name;
     perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
     perf_gconf_t *gconf = perf_get_global_config(global);
     gconf->flags |= PERF_GCONF_FLAGS_DIST;
     apr_strtok(*line, " ", &last);
-    host->name = apr_strtok(NULL, " ", &last);
-    while (host->name) {
-      apr_hash_set(gconf->host_and_ports, host->name, APR_HASH_KEY_STRING, host);
-      host->name = apr_strtok(NULL, " ", &last);
+    name = apr_strtok(NULL, " ", &last);
+    while (name) {
+      host->name = name;
+      apr_hash_set(gconf->host_and_ports, name, APR_HASH_KEY_STRING, host);
+      perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
+      name = apr_strtok(NULL, " ", &last);
     }
   }
   return APR_SUCCESS;
@@ -517,6 +522,7 @@ static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
   apr_pool_create(&pool, NULL);
   va_start(va, fmt);
   tmp = apr_pvsprintf(pool, fmt, va);
+  transport_write(worker->socket->transport, tmp, strlen(tmp));
   va_end(va);
   apr_pool_destroy(pool);
 
@@ -555,16 +561,45 @@ static apr_status_t perf_serialize_globals(worker_t *worker) {
  * @worker IN callee
  * @return supervisor thread handle
  */
-static apr_thread_t *perf_distribute_host(worker_t *worker) {
+static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle) {
+  apr_status_t status;
   global_t *global = worker->global;
   perf_gconf_t *gconf = perf_get_global_config(global);
+  apr_pool_t *ptmp;
 
-  if (!(gconf->cur_host->flags & PERF_HOST_CONNECTED)) {
-    /** TODO: connect to remote httestd */
-    perf_serialize_globals(worker);
-    gconf->cur_host->flags |= PERF_HOST_CONNECTED;
+  *handle = NULL;
+  apr_pool_create(&ptmp, NULL);
+  if (!(gconf->cur_host->state == PERF_HOST_CONNECTED) &&
+      !(gconf->cur_host->state == PERF_HOST_ERROR)) {
+    char *portname;
+    char *hostport = apr_pstrdup(ptmp, gconf->cur_host->name);
+    char *hostname = apr_strtok(hostport, ":", &portname);
+    
+    worker_get_socket(worker, hostname, portname);
+
+    if ((status = tcp_connect(worker, hostname, portname)) != APR_SUCCESS) {
+      gconf->cur_host->state = PERF_HOST_ERROR;
+      worker_log_error(worker, "Could not connect to httpd \"%s\" SKIP", gconf->cur_host->name);
+      apr_pool_destroy(ptmp);
+      return status;
+    }
+    htt_run_connect(worker);
+    gconf->cur_host->state = PERF_HOST_CONNECTED;
   }
-  return NULL;
+  else if ((gconf->cur_host->state == PERF_HOST_ERROR)) {
+    worker_log_error(worker, "Could not connect to httpd \"%s\" SKIP", gconf->cur_host->name);
+  }
+  else {
+    char *portname;
+    char *hostport = apr_pstrdup(ptmp, gconf->cur_host->name);
+    char *hostname = apr_strtok(hostport, ":", &portname);
+    
+    worker_get_socket(worker, hostname, portname);
+
+    perf_serialize_globals(worker);
+  }
+  apr_pool_destroy(ptmp);
+  return APR_SUCCESS;
 }
 /**
  * Distribute client worker.
@@ -584,15 +619,16 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
       return APR_ENOTHREAD;
     }
     else {
+      apr_status_t status;
       /* distribute to remote host */
       worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", gconf->cur_host->name);
-      *new_thread = perf_distribute_host(worker);
+      status = perf_distribute_host(worker, new_thread);
       perf_get_next_host(global);
-      if (*new_thread) {
-        return APR_SUCCESS;
+      if (status == APR_SUCCESS) {
+        /* return APR_SUCCESS; */
+        return APR_ENOTHREAD;
       }
       else {
-        worker_log(worker, LOG_INFO, "FAILED distribute CLIENT to my self");
         return APR_ENOTHREAD;
       }
     }
