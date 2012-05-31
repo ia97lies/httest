@@ -974,29 +974,10 @@ function do_win_build_htt {
 #
 # unix/win: run some basic tests
 #
-function basic_tests_htt {
-  if [ "$OS" == "win" ]; then
-    EXE_EXT=".exe"
-	SH_EXT=".bat"
-  else
-    EXE_EXT=""
-	SH_EXT=".sh"
-  fi
-  
-  if [ "$OS" == "win" -a ! -f "$TOP/test/run$SH_EXT" ]; then
-    cat >"$TOP/test/run$SH_EXT" <<EOF
-
-set TOP=..
-set HTTEST=..\src\httest.exe
-
-%HTTEST% %*
-EOF
-  chmod +x "$TOP/test/run$SH_EXT"
-  fi
-  
+function basic_tests_htt {    
   for HTBIN in $HTBINS; do
     NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
-    CALL="$TOP/$HTBIN$EXE_EXT"
+    CALL="$TOP/$HTBIN"
     "$CALL" --version | grep "$NAME"
     OUT=`"$CALL" --version | grep "$NAME.* $HTT_VER"`
     [ `echo "$OUT" | grep "$NAME.* $HTT_VER" | wc -l` -eq 1 ]
@@ -1020,7 +1001,7 @@ EOF
 
   for TEST in $TESTS; do
     echo -n "running $TEST ... "
-    ./run$SH_EXT $TEST >"$TARGET/$TEST.out" 2>&1
+    ./run.sh $TEST >"$TARGET/$TEST.out" 2>&1
     echo "ok"
   done
 }
@@ -1129,11 +1110,6 @@ EOF
   else
     CMDS="${CMDS}gcc --version\n"
   fi
-  if [ "$OS" == "win" ]; then
-    EXE_EXT=".exe"
-  else
-    EXE_EXT=""
-  fi
   if [ "$OS" == "mac" ]; then
     LDD="otool -L"
   else
@@ -1141,7 +1117,7 @@ EOF
   fi
   cd "$TOP"
   for HTBIN in $HTBINS; do
-    CMDS="${CMDS}$LDD $HTBIN$EXE_EXT\n"
+    CMDS="${CMDS}$LDD $HTBIN\n"
   done
   printf "$CMDS" | while read -r CMD; do
     echo "> $CMD"
