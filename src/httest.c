@@ -2619,7 +2619,9 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
     else if (status != APR_SUCCESS) {
       return status;
     }
-    apr_table_addn(global->threads, worker->name, (char *) thread);
+    if (thread) {
+      apr_table_addn(global->threads, worker->name, (char *) thread);
+    }
   }
   apr_table_clear(global->clients);
   

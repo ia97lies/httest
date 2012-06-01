@@ -70,6 +70,7 @@ typedef struct perf_host_s {
 #define PERF_HOST_NONE      0
 #define PERF_HOST_CONNECTED 1
 #define PERF_HOST_ERROR 2
+  apr_thread_mutex_t *sync_mutex;
 } perf_host_t;
 
 typedef struct perf_gconf_s {
@@ -556,6 +557,10 @@ static apr_status_t perf_serialize_globals(worker_t *worker) {
   return APR_SUCCESS;
 }
 
+static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread, void *selfv) {
+  return NULL;
+}
+
 /**
  * Distribute host to remote host, start a supervisor thread
  * @worker IN callee
@@ -587,9 +592,18 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle
     gconf->cur_host->state = PERF_HOST_CONNECTED;
     perf_serialize_globals(worker);
     ++gconf->cur_host->clients;
-    /* TODO: hold a mutex */
-    /* TODO: start supervisor thread */
-    /* TODO: supervisor thread must wait for mutex */
+    if ((status = apr_thread_mutex_create(&gconf->cur_host->sync_mutex,
+                                          APR_THREAD_MUTEX_DEFAULT, global->pool))
+        != APR_SUCCESS) {
+      worker_log_error(worker, "Could not create super visor sync mutex");
+      return status;
+    }
+    apr_thread_mutex_lock(gconf->cur_host->sync_mutex);
+    if ((status = apr_thread_create(handle, global->tattr, perf_thread_super,
+                                    worker, global->pool)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not create supervisor thread");
+      return status;
+    }
   }
   else if ((gconf->cur_host->state == PERF_HOST_ERROR)) {
     worker_log_error(worker, "Could not connect to httestd \"%s\" SKIP", gconf->cur_host->name);
