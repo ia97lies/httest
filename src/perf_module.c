@@ -65,7 +65,7 @@ typedef struct perf_wconf_s {
 
 typedef struct perf_host_s {
   char *name;
-  int no_threads;
+  int clients;
   int state;
 #define PERF_HOST_NONE      0
 #define PERF_HOST_CONNECTED 1
@@ -579,28 +579,31 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle
 
     if ((status = tcp_connect(worker, hostname, portname)) != APR_SUCCESS) {
       gconf->cur_host->state = PERF_HOST_ERROR;
-      worker_log_error(worker, "Could not connect to httpd \"%s\" SKIP", gconf->cur_host->name);
+      worker_log_error(worker, "Could not connect to httestd \"%s\" SKIP", gconf->cur_host->name);
       apr_pool_destroy(ptmp);
       return status;
     }
     htt_run_connect(worker);
     gconf->cur_host->state = PERF_HOST_CONNECTED;
+    perf_serialize_globals(worker);
+    ++gconf->cur_host->clients;
+    /* TODO: hold a mutex */
+    /* TODO: start supervisor thread */
+    /* TODO: supervisor thread must wait for mutex */
   }
   else if ((gconf->cur_host->state == PERF_HOST_ERROR)) {
-    worker_log_error(worker, "Could not connect to httpd \"%s\" SKIP", gconf->cur_host->name);
+    worker_log_error(worker, "Could not connect to httestd \"%s\" SKIP", gconf->cur_host->name);
+    apr_pool_destroy(ptmp);
+    return APR_ECONNREFUSED;
   }
   else {
-    char *portname;
-    char *hostport = apr_pstrdup(ptmp, gconf->cur_host->name);
-    char *hostname = apr_strtok(hostport, ":", &portname);
-    
-    worker_get_socket(worker, hostname, portname);
-
-    perf_serialize_globals(worker);
+    ++gconf->cur_host->clients;
   }
+
   apr_pool_destroy(ptmp);
   return APR_SUCCESS;
 }
+
 /**
  * Distribute client worker.
  * @param worker IN callee

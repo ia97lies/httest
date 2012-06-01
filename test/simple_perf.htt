@@ -1,6 +1,6 @@
 INCLUDE $TOP/test/config.htb
 
-PERF:DISTRIBUTED localhost:10010
+PERF:DISTRIBUTED localhost:10011
 
 CLIENT 2
 _REQ $YOUR_HOST $YOUR_PORT
@@ -18,10 +18,5 @@ __Content-Type: text/plain
 __Content-Length: AUTO
 __
 __Hallo Velo
-END
-
-SERVER 10010
-_RES
-_READLINE
 END
 
