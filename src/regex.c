@@ -89,7 +89,7 @@ regex_t *pregcomp(apr_pool_t * p, const char *pattern,
   if (preg->re_pcre == NULL)
     return NULL;
 
-  preg->re_nsub = pcre_info((const pcre *) preg->re_pcre, NULL, NULL);
+  pcre_fullinfo((const pcre *)preg->re_pcre, NULL, PCRE_INFO_CAPTURECOUNT, &(preg->re_nsub));
 
   apr_pool_cleanup_register(p, (void *) preg, regex_cleanup,
                             apr_pool_cleanup_null);
