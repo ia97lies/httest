@@ -660,7 +660,7 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
  * @param thread IN thread handle of concurrent function
  * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
  */
-static apr_status_t perf_client_join(worker_t *worker, apr_thread_t *thread) {
+static apr_status_t perf_client_start(worker_t *worker, apr_thread_t *thread) {
   return APR_ENOTHREAD;
 }
 
@@ -674,7 +674,7 @@ static apr_status_t perf_client_join(worker_t *worker, apr_thread_t *thread) {
 apr_status_t perf_module_init(global_t *global) {
   htt_hook_read_line(perf_read_line, NULL, NULL, 0);
   htt_hook_client_create(perf_client_create, NULL, NULL, 0);
-  htt_hook_client_join(perf_client_join, NULL, NULL, 0);
+  htt_hook_client_start(perf_client_start, NULL, NULL, 0);
   htt_hook_worker_joined(perf_worker_joined, NULL, NULL, 0);
   htt_hook_worker_finally(perf_worker_finally, NULL, NULL, 0);
   htt_hook_pre_connect(perf_pre_connect, NULL, NULL, 0);
