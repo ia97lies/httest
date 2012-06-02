@@ -661,7 +661,7 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
  * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
  */
 static apr_status_t perf_client_start(worker_t *worker, apr_thread_t *thread) {
-  return APR_ENOTHREAD;
+  return APR_SUCCESS;
 }
 
 /************************************************************************

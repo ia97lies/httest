@@ -3348,7 +3348,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_create,
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_start, 
                                       (worker_t *worker, apr_thread_t *thread), 
-                                      (worker, thread), APR_ENOTIMPL);
+                                      (worker, thread), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_finally, 
                                       (worker_t *worker), 
