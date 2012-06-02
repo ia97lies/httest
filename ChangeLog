@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.5
+  *) httest: Performance module for distributed client support.
+
+  *) httest: Improvments suggested by sonar scann
+
 Changes with httest 2.2.4
   *) httest: Bugfix possible segfault with _SSL:TRACE
 
