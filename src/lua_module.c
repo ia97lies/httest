@@ -201,7 +201,7 @@ static int luam_interpret(lua_State *L) {
 
   line = apr_strtok(buffer, "\n", &last);
   while (line) {
-    while (*line == ' ') { ++line };
+    while (*line == ' ') { ++line ; }
     if (*line != '\0') {
       apr_table_add(lines, "lua inline", line);
     }
