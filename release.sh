@@ -1,7 +1,7 @@
 TOP=`pwd`
 
 VERSION=$1
-OPTION=${1:-"release"}
+OPTION=${2:-"release"}
 
 set -u
 
