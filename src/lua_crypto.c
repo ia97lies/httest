@@ -395,7 +395,7 @@ static int hmac_fdigest(lua_State *L) {
 /**
  * Random Object
  */
-static int rand_do_bytes(lua_State *L, int (*bytes)(unsigned char *, int)) {
+static int rand_do_bytes(lua_State *L, int (*bytes)(unsigned char *buf, int len)) {
   size_t count = luaL_checkint(L, 1);
   unsigned char tmp[256], *buf = tmp;
   if (count > sizeof tmp) {
@@ -749,10 +749,20 @@ static int asn1_time_gc(lua_State *L) {
 static int dh_cb(int p, int n, BN_GENCB *cb) {
   char c='*';
 
-  if (p == 0) c='.';
-  if (p == 1) c='+';
-  if (p == 2) c='*';
-  if (p == 3) c='\n';
+  switch (p) {
+  case 0:
+    c='.';
+    break;
+  case 1:
+    c='+';
+    break;
+  case 2:
+    c='*';
+    break;
+  case 3:
+    c='\n';
+    break;
+  }
   BIO_write(cb->arg,&c,1);
   (void)BIO_flush(cb->arg);
   return 1;
@@ -771,8 +781,9 @@ static int dh_fnew(lua_State *L) {
   DH *dh = DH_new();
   BIO *bio_err;
   BN_GENCB cb;
-  if ((bio_err = BIO_new(BIO_s_file())) != NULL)
+  if ((bio_err = BIO_new(BIO_s_file())) != NULL) {
     BIO_set_fp(bio_err,stderr,BIO_NOCLOSE|BIO_FP_TEXT);
+  }
   BN_GENCB_set(&cb, dh_cb, bio_err);
   if (!DH_generate_parameters_ex(dh, num, generator, &cb)) {
     luaL_argerror(L, 1, "could not generate DH paramters");
@@ -856,8 +867,9 @@ static int dh_gc(lua_State *L) {
  * Create a metatable and leave it on top of the stack.
  */
 int luacrypto_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
-  if (!luaL_newmetatable (L, name))
+  if (!luaL_newmetatable (L, name)) {
     return 0;
+  }
   
   /* define methods */
   luaL_openlib (L, NULL, methods, 0);

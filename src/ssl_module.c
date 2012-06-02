@@ -58,6 +58,7 @@ typedef struct ssl_config_s {
   int flags;
   apr_pool_t *msg_pool;
   apr_table_t *msgs;
+  worker_t *msg_worker;
 } ssl_config_t;
 
 typedef struct ssl_socket_config_s {
@@ -784,6 +785,12 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
   ssl_config_t *config = ssl_get_worker_config(worker);
   ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
 
+  if (config->msg_worker) {
+    worker_destroy(config->msg_worker);
+  }
+  worker_new(&config->msg_worker, NULL, worker->prefix, worker->global, worker->interpret); 
+  config->msg_worker->config = worker->config;
+
   if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {
     worker_log(worker, LOG_ERR, "SSL_new failed.");
     return APR_ECONNREFUSED;
@@ -792,10 +799,10 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
   if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
 #ifndef OPENSSL_NO_TLSEXT
     SSL_set_tlsext_debug_callback(sconfig->ssl, ssl_tlsext_trace);
-    SSL_set_tlsext_debug_arg(sconfig->ssl, worker);
+    SSL_set_tlsext_debug_arg(sconfig->ssl, config->msg_worker);
 #endif
     SSL_set_msg_callback(sconfig->ssl, ssl_message_trace);
-    SSL_set_msg_callback_arg(sconfig->ssl, worker);
+    SSL_set_msg_callback_arg(sconfig->ssl, config->msg_worker);
   }
   if (config->cipher_suite != NULL) {
     if (SSL_set_cipher_list(sconfig->ssl, config->cipher_suite) == 0) {

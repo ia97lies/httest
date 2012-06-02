@@ -2573,6 +2573,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   worker_t *worker;
   apr_thread_t *thread;
 
+
   /* start all daemons first */
   e = (apr_table_entry_t *) apr_table_elts(global->daemons)->elts;
   for (i = 0; i < apr_table_elts(global->daemons)->nelts; ++i) {
@@ -2606,26 +2607,48 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   e = (apr_table_entry_t *) apr_table_elts(global->clients)->elts;
   for (i = 0; i < apr_table_elts(global->clients)->nelts; ++i) {
     worker = (void *)e[i].val;
-    if ((status =
-	 apr_thread_create(&thread, global->tattr, worker_thread_client,
-			   worker, global->pool)) != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not create client thread");
+    status = htt_run_client_create(worker, worker_thread_client, &thread);
+    if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
+      if ((status =
+           apr_thread_create(&thread, global->tattr, worker_thread_client,
+                             worker, global->pool)) != APR_SUCCESS) {
+        fprintf(stderr, "\nCould not create client thread");
+        return status;
+      }
+    }
+    else if (status != APR_SUCCESS) {
       return status;
     }
-    apr_table_addn(global->threads, worker->name, (char *) thread);
+    if (thread) {
+      apr_table_addn(global->threads, worker->name, (char *) thread);
+    }
   }
   apr_table_clear(global->clients);
-  
+   
+  /* start clients */
+  e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
+  for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
+    thread = (apr_thread_t *) e[i].val;
+    status = htt_run_client_start(worker, thread);
+    if (status != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not start client thread: %d", status);
+      return status;
+    }
+  }
+ 
   /* wait on thermination of all started threads */
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     apr_status_t retstat;
     thread = (apr_thread_t *) e[i].val;
-    if ((retstat = apr_thread_join(&status, thread))) {
-      fprintf(stderr, "\nCould not join thread: %d", retstat);
-      return retstat;
+    status = htt_run_thread_join(worker, thread);
+    if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
+      if ((retstat = apr_thread_join(&status, thread))) {
+        fprintf(stderr, "\nCould not join thread: %d", retstat);
+        return retstat;
+      }
     }
-    if (status != APR_SUCCESS) {
+    else if (status != APR_SUCCESS) {
       fprintf(stderr, "\nCould not join thread: %d", status);
       return status;
     }
@@ -3292,7 +3315,10 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(block_end)
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
+  APR_HOOK_LINK(client_create)
+  APR_HOOK_LINK(client_start)
   APR_HOOK_LINK(worker_finally)
+  APR_HOOK_LINK(thread_join)
   APR_HOOK_LINK(worker_joined)
 )
 
@@ -3316,9 +3342,21 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_end,
                                       (global_t *global), 
                                       (global), APR_SUCCESS);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_create, 
+                                      (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread), 
+                                      (worker, func, new_thread), APR_ENOTIMPL);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_start, 
+                                      (worker_t *worker, apr_thread_t *thread), 
+                                      (worker, thread), APR_SUCCESS);
+
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_finally, 
                                       (worker_t *worker), 
                                       (worker), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, thread_join, 
+                                      (worker_t *worker, apr_thread_t *thread), 
+                                      (worker, thread), APR_ENOTIMPL);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_joined, 
                                       (global_t *global), 

@@ -1,7 +1,7 @@
 TOP=`pwd`
 
 VERSION=$1
-OPTION=$2
+OPTION=${2:-"release"}
 
 set -u
 
@@ -20,6 +20,11 @@ function error() {
   echo "Release build FAILED"
   exit 1
 }
+
+if [ $OPTION = "try" ]; then
+  echo
+  echo "*** Try mode ***"
+fi
 
 echo
 echo "Release httest-$VERSION"

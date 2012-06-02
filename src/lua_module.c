@@ -201,7 +201,7 @@ static int luam_interpret(lua_State *L) {
 
   line = apr_strtok(buffer, "\n", &last);
   while (line) {
-    while (*line == ' ') ++line;
+    while (*line == ' ') { ++line ; }
     if (*line != '\0') {
       apr_table_add(lines, "lua inline", line);
     }
@@ -435,7 +435,9 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
 #endif
   if (failed) {
     const char *msg = lua_tostring(L, -1);
-    if (msg == NULL) msg = "(error object is not a string)";
+    if (msg == NULL) {
+      msg = "(error object is not a string)";
+    }
     worker_log_error(worker, "Lua error: %s", msg);
     lua_pop(L, 1);
     return APR_EGENERAL;
