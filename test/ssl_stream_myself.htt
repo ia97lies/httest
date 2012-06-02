@@ -15,7 +15,7 @@ _PIPE
 _EXEC cat httest_tmp 
 _EXEC rm httest_tmp
 _EXPECT . "HTTP/1.1 200 OK"
-_EXPECT . "httest_streamed [0-9a-z.]+"
+_EXPECT . "httest[0-9a-z.]+"
 _WAIT
 
 _REQ $YOUR_HOST SSL:$YOUR_PORT
@@ -32,7 +32,7 @@ _EXEC cat httest_tmp
 _CHUNK
 _EXEC rm httest_tmp
 _EXPECT . "HTTP/1.1 200 OK"
-_EXPECT . "httest_streamed [0-9a-z.]+"
+_EXPECT . "httest[0-9a-z.]+"
 _WAIT
 
 END

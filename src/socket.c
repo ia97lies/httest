@@ -327,7 +327,7 @@ static apr_status_t transfer_enc_reader_bb(sockreader_t *self,
   int chunk;
   char *end;
   char *line;
-  char *read;
+  char *read = NULL;
   apr_size_t chunk_cur;
   apr_size_t chunk_len;
   apr_bucket *b;
