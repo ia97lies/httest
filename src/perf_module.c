@@ -172,7 +172,7 @@ static apr_status_t perf_read_line(global_t *global, char **line) {
     while (name) {
       host->name = name;
       apr_hash_set(gconf->host_and_ports, name, APR_HASH_KEY_STRING, host);
-      perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
+      host = apr_pcalloc(global->pool, sizeof(*host));
       name = apr_strtok(NULL, " ", &last);
     }
   }
