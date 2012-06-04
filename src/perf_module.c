@@ -71,6 +71,7 @@ typedef struct perf_host_s {
 #define PERF_HOST_CONNECTED 1
 #define PERF_HOST_ERROR 2
   socket_t *socket; 
+  worker_t *worker;
 } perf_host_t;
 
 typedef struct perf_gconf_s {
@@ -515,7 +516,7 @@ static perf_host_t *perf_get_next_host(global_t *global) {
  * @param ... IN
  * @return apr_status_t
  */
-static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
+static apr_status_t perf_serialize(perf_host_t *host, char *fmt, ...) {
   char *tmp;
   va_list va;
   apr_pool_t *pool;
@@ -523,7 +524,7 @@ static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
   apr_pool_create(&pool, NULL);
   va_start(va, fmt);
   tmp = apr_pvsprintf(pool, fmt, va);
-  transport_write(worker->socket->transport, tmp, strlen(tmp));
+  transport_write(host->socket->transport, tmp, strlen(tmp));
   va_end(va);
   apr_pool_destroy(pool);
 
@@ -531,10 +532,12 @@ static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
 }
 
 /**
- * Iterate all modules and blocks for serialization
+ * Iterate all variables, modules and blocks for serialization
  * @param worker IN callee
+ * @param host IN remote host
+ * @return APR_SUCCESS
  */
-static apr_status_t perf_serialize_globals(worker_t *worker) {
+static apr_status_t perf_serialize_globals(worker_t *worker, perf_host_t *host) {
   int i;
   apr_table_t *vars;
   apr_table_t *shared;
@@ -546,13 +549,29 @@ static apr_status_t perf_serialize_globals(worker_t *worker) {
   vars = store_get_table(global->vars, ptmp);
   e = (apr_table_entry_t *) apr_table_elts(vars)->elts;
   for (i = 0; i < apr_table_elts(vars)->nelts; ++i) {
-    perf_serialize(worker, "SET %s=%s\n", e[i].key, e[i].val);
+    perf_serialize(host, "SET %s=%s\n", e[i].key, e[i].val);
   }
-  shared = store_get_table(global->vars, ptmp);
+  shared = store_get_table(global->shared, ptmp);
   e = (apr_table_entry_t *) apr_table_elts(shared)->elts;
   for (i = 0; i < apr_table_elts(shared)->nelts; ++i) {
-    perf_serialize(worker, "GLOBAL %s=%s\n", e[i].key, e[i].val);
+    perf_serialize(host, "GLOBAL %s=%s\n", e[i].key, e[i].val);
   }
+  apr_pool_destroy(ptmp);
+  return APR_SUCCESS;
+}
+
+/**
+ * Iterate all lines of client
+ * @param worker IN callee
+ * @param host IN remote host
+ * @return APR_SUCCESS
+ */
+static apr_status_t perf_serialize_clients(worker_t *worker, perf_host_t *host) {
+  apr_pool_t *ptmp;
+
+  apr_pool_create(&ptmp, NULL);
+  perf_serialize(host, "CLIENT %d\n", host->clients);
+  perf_serialize(host, "END\n", host->clients);
   apr_pool_destroy(ptmp);
   return APR_SUCCESS;
 }
@@ -612,7 +631,6 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle
     }
     htt_run_connect(worker);
     gconf->cur_host->state = PERF_HOST_CONNECTED;
-    perf_serialize_globals(worker);
     ++gconf->cur_host->clients;
     gconf->cur_host->socket = worker->socket;
     if ((status = apr_thread_create(handle, global->tattr, perf_thread_super,
@@ -653,6 +671,7 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
     if (!gconf->cur_host_i) {
       worker_log(worker, LOG_INFO, "Distribute CLIENT to my self");
       perf_get_first_host(global);
+      gconf->cur_host->worker = worker;
       return APR_ENOTHREAD;
     }
     else {
@@ -661,9 +680,10 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
       worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", gconf->cur_host->name);
       status = perf_distribute_host(worker, new_thread);
       perf_get_next_host(global);
+      gconf->cur_host->worker = worker;
       if (status == APR_SUCCESS) {
-        /* return APR_SUCCESS; */
-        return APR_ENOTHREAD;
+        return APR_SUCCESS;
+        /* return APR_ENOTHREAD; */
       }
       else {
         return APR_ENOTHREAD;
@@ -680,10 +700,11 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
  * @param thread IN thread handle of concurrent function
  * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
  */
-static apr_status_t perf_client_start(worker_t *worker, apr_thread_t *thread) {
+static apr_status_t perf_thread_start(worker_t *worker, apr_thread_t *thread) {
   perf_host_t *host;
   if ((apr_thread_data_get((void **)&host, "host", thread) == APR_SUCCESS) && host) {
-
+    perf_serialize_globals(worker, host);
+    perf_serialize_clients(worker, host);
   }
   return APR_SUCCESS;
 }
@@ -698,7 +719,7 @@ static apr_status_t perf_client_start(worker_t *worker, apr_thread_t *thread) {
 apr_status_t perf_module_init(global_t *global) {
   htt_hook_read_line(perf_read_line, NULL, NULL, 0);
   htt_hook_client_create(perf_client_create, NULL, NULL, 0);
-  htt_hook_client_start(perf_client_start, NULL, NULL, 0);
+  htt_hook_thread_start(perf_thread_start, NULL, NULL, 0);
   htt_hook_worker_joined(perf_worker_joined, NULL, NULL, 0);
   htt_hook_worker_finally(perf_worker_finally, NULL, NULL, 0);
   htt_hook_pre_connect(perf_pre_connect, NULL, NULL, 0);
