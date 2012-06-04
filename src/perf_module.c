@@ -70,6 +70,7 @@ typedef struct perf_host_s {
 #define PERF_HOST_NONE      0
 #define PERF_HOST_CONNECTED 1
 #define PERF_HOST_ERROR 2
+  apr_thread_mutex_t *sync;
   socket_t *socket; 
   worker_t *worker;
 } perf_host_t;
@@ -600,12 +601,17 @@ static apr_status_t perf_serialize_clients(worker_t *worker, perf_host_t *host) 
  */
 static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread, void *selfv) {
   perf_host_t *host = selfv;
-  apr_size_t len;
+  apr_size_t len = 1;
   apr_status_t status;
+  apr_pool_t *pool;
 
+  apr_pool_create(&pool, NULL);
+  apr_thread_mutex_lock(host->sync);
   status = transport_read(host->socket->transport, &host->socket->peek[host->socket->peeklen], &len);
-  fprintf(stderr, "\nXXXXXXXXXXXXXXXXXXX  %d XXXXXXXXXXXXXXXXXXXXXX\n", status);
+  fprintf(stderr, "XXXXXXXXXX %s(%d) XXXXXXXXXXXX\n", my_status_str(pool, status), status);
   fflush(stderr);
+  apr_thread_mutex_unlock(host->sync);
+  apr_pool_destroy(pool);
 
   apr_thread_exit(thread, APR_SUCCESS);
   return NULL;
@@ -652,6 +658,13 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle
     gconf->cur_host->state = PERF_HOST_CONNECTED;
     ++gconf->cur_host->clients;
     gconf->cur_host->socket = worker->socket;
+    if ((status = apr_thread_mutex_create(&gconf->cur_host->sync, 
+                                          APR_THREAD_MUTEX_DEFAULT,
+                                          global->pool)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not create supervisor thread sync mutex for remote host");
+      return status;
+    }
+    apr_thread_mutex_lock(gconf->cur_host->sync);
     if ((status = apr_thread_create(handle, global->tattr, perf_thread_super,
                                     gconf->cur_host, global->pool)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not create supervisor thread for remote host");
@@ -720,6 +733,7 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
 static apr_status_t perf_thread_start(worker_t *worker, apr_thread_t *thread) {
   perf_host_t *host;
   if ((apr_thread_data_get((void **)&host, "host", thread) == APR_SUCCESS) && host) {
+    apr_thread_mutex_unlock(host->sync);
     perf_serialize_globals(worker, host);
     perf_serialize_clients(worker, host);
     perf_serialize(host, "GO\n");
