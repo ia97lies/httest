@@ -351,8 +351,12 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
 
   if (self->log_mode >= log_mode) {
     int i;
+    int max_line_len;
+    int line_len;
     char *null="<null>";
     FILE *fd = stdout;
+    apr_pool_t *pool;
+    char * outbuf;
 
     if (!buf) {
       buf = null;
@@ -363,32 +367,67 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
       fd = stderr;
     }
 
-    i = 0;
     if (prefix) {
       fprintf(fd, "\n%s%s", self->prefix, prefix);
     }
+    
+    /* find longest line */
+    i = 0;
+    max_line_len = 0;
+    line_len = 0;
     while (i < len) {
       while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-	if (buf[i] >= 0x20) {
-	  fprintf(fd, "%c", buf[i]);
-	}
-	else {
-	  fprintf(fd, "0x%02x ", (unsigned char)buf[i]);
-	}
+        if (buf[i] >= 0x20) {
+          line_len++;
+        }
+        else {
+          line_len+=4;
+        }
         i++;
       }
-      fflush(fd);
       while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-	if (i != len -1) {
-	  if (buf[i] == '\n') {
-	    fprintf(fd, "%c", buf[i]);
-	    fprintf(fd, "%s%s", self->prefix, prefix?prefix:"");
-	  }
-	}
-	i++;
+        if (i != len -1) {
+          if (buf[i] == '\n') {
+            line_len+= 1 + strlen(self->prefix) + (prefix?strlen(prefix):0);
+          }
+        }
+        i++;
       }
-      fflush(fd);
+      if (line_len > max_line_len) {
+        max_line_len = line_len;
+      }
+      line_len = 0;
     }
+    
+    apr_pool_create(&pool, NULL);
+    outbuf = apr_pcalloc(pool, max_line_len + 100);
+
+    /* log lines */
+    while (i < len) {
+      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
+        if (buf[i] >= 0x20) {
+          sprintf(outbuf, "%c", buf[i]);
+        }
+        else {
+          sprintf(outbuf, "0x%02x ", (unsigned char)buf[i]);
+        }
+        i++;
+      }
+      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
+        if (i != len -1) {
+          if (buf[i] == '\n') {
+            sprintf(outbuf, "%c", buf[i]);
+            sprintf(outbuf, "%s%s", self->prefix, prefix?prefix:"");
+          }
+        }
+        i++;
+      }
+      fprintf(fd, "%s", outbuf);
+      fflush(fd);
+      outbuf[0] = 0;
+    }
+    
+    apr_pool_destroy(pool);
   }
 }
 
