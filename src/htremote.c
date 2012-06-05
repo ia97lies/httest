@@ -74,6 +74,11 @@
 /************************************************************************
  * Typedefs 
  ***********************************************************************/
+typedef struct connection_s {
+  const char *cmd;
+  apr_socket_t *socket;
+} connection_t;
+
 typedef struct stream_s {
   apr_pool_t *pool;
   apr_file_t *file;
@@ -91,6 +96,8 @@ apr_getopt_option_t options[] = {
   { "help", 'h', 0, "Display usage information (this message)" },
   { "port", 'p', 1, "Port" },
   { "command", 'e', 1, "Remote controlled command" },
+  { "restart", 'r', 0, "Restart after command terminates" },
+  { "thread", 't', 0, "Start a thread every connect and start command" },
   { NULL, 0, 0, NULL }
 };
 
@@ -360,6 +367,55 @@ static apr_status_t exec(apr_pool_t *pool, const char *cmd, apr_proc_t *proc) {
   return APR_SUCCESS;
 }
 
+static void * APR_THREAD_FUNC handle_connection(apr_thread_t * thread, void *selfv) {
+  apr_status_t status;
+  apr_proc_t proc;
+  apr_thread_t *thread1;
+  apr_thread_t *thread2;
+  apr_thread_t *thread3;
+  apr_exit_why_e exitwhy;
+  int exitcode = 0;
+  apr_pool_t *pool;
+  connection_t *conn = selfv;
+
+  apr_pool_create(&pool, NULL);
+  fprintf(stdout, "\nExec %s", conn->cmd);
+  exec(pool, conn->cmd, &proc);
+  
+  fprintf(stdout, "\nStart threads");
+  /* start 3 threads one for in one for out and one for err */
+  if ((status = create_in_stream(pool, conn->socket, proc.in, &thread1)) 
+      != APR_SUCCESS) {
+    fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
+    goto error;
+  }
+  if ((status = create_out_stream(pool, conn->socket, proc.out, &thread2))
+      != APR_SUCCESS) {
+    fprintf(stderr, "%s", my_status_str(pool, status));
+    goto error;
+  }
+  if ((status = create_out_stream(pool, conn->socket, proc.err, &thread3))
+      != APR_SUCCESS) {
+    fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
+    goto error;
+  }
+  
+  fprintf(stdout, "\nJoin command %s", conn->cmd);
+  fflush(stdout);
+  apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT);
+  if (exitcode) {
+    fprintf(stdout, "\nERROR %d", exitcode);
+    goto error;
+  }
+
+  fprintf(stdout, "\n--normal end\n");
+
+error:
+  apr_pool_destroy(pool);
+  return NULL;
+}
+
+
 /** 
  * call remote controler 
  *
@@ -377,12 +433,12 @@ int main(int argc, const char *const argv[]) {
   apr_socket_t *socket;
   apr_socket_t *listener;
   apr_sockaddr_t *local_addr;
-  apr_exit_why_e exitwhy;
-  int exitcode = 0;
-  apr_proc_t proc;
-  apr_thread_t *thread1;
-  apr_thread_t *thread2;
-  apr_thread_t *thread3;
+#define TYPE_NONE 0
+#define TYPE_RESTART 1
+#define TYPE_THREADED 2
+  int type = TYPE_NONE;
+  int count = 1;
+  int i;
 
   int port = 8080;
   const char *cmd = "";
@@ -412,6 +468,10 @@ int main(int argc, const char *const argv[]) {
       break;
     case 'e':
       cmd = optarg;
+      break;
+    case 'r':
+      type = TYPE_RESTART;
+      count = -1;
       break;
     }
   }
@@ -453,43 +513,27 @@ int main(int argc, const char *const argv[]) {
     return status;
   }
 
-  fprintf(stdout, "\nWait for connection");
-  if ((status = apr_socket_accept(&socket, listener, pool)) != APR_SUCCESS) {
-    fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
-    return status;
+  if (type != TYPE_THREADED) {
+    for (i = 0; i != count; i++) {
+      connection_t conn;
+
+      fprintf(stdout, "\nWait for connection");
+      if ((status = apr_socket_accept(&socket, listener, pool)) != APR_SUCCESS) {
+        fprintf(stderr, "\nERROR %s(%d)\n", my_status_str(pool, status), status);
+        return status;
+      }
+
+      conn.cmd = cmd;
+      conn.socket = socket;
+
+      handle_connection(NULL, &conn);
+    }
+  }
+  else {
   }
 
-  fprintf(stdout, "\nExec %s", cmd);
-  exec(pool, cmd, &proc);
-  
-  fprintf(stdout, "\nStart threads");
-  /* start 3 threads one for in one for out and one for err */
-  if ((status = create_in_stream(pool, socket, proc.in, &thread1)) 
-      != APR_SUCCESS) {
-    fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
-    return exitcode;
-  }
-  if ((status = create_out_stream(pool, socket, proc.out, &thread2))
-      != APR_SUCCESS) {
-    fprintf(stderr, "%s", my_status_str(pool, status));
-    return exitcode;
-  }
-  if ((status = create_out_stream(pool, socket, proc.err, &thread3))
-      != APR_SUCCESS) {
-    fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
-    return exitcode;
-  }
-  
-  fprintf(stdout, "\nJoin command %s", cmd);
+  fprintf(stdout, "\nTerminated");
   fflush(stdout);
-  apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT);
-  if (exitcode) {
-    fprintf(stdout, "\nERROR %d", exitcode);
-    return exitcode;
-  }
-
-  fprintf(stdout, "\n--normal end\n");
-
   return 0;
 }
 
