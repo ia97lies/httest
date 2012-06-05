@@ -1,5 +1,21 @@
 INCLUDE $TOP/test/config.htb
 
+DAEMON
+_EXEC ../src/htremote -p10011 -e"./run.sh -Ssn"
+END
+DAEMON
+_EXEC ../src/htremote -p10012 -e"./run.sh -Ssn"
+END
+DAEMON
+_EXEC ../src/htremote -p10013 -e"./run.sh -Ssn"
+END
+
+CLIENT
+_SLEEP 2000
+END
+
+GO
+
 PERF:DISTRIBUTED localhost:10011
 PERF:DISTRIBUTED localhost:10012
 PERF:DISTRIBUTED localhost:10013
