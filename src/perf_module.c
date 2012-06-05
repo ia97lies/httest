@@ -542,17 +542,16 @@ static apr_status_t perf_serialize(perf_host_t *host, char *fmt, ...) {
 
 /**
  * Iterate all variables, modules and blocks for serialization
- * @param worker IN callee
+ * @param global IN global context
  * @param host IN remote host
  * @return APR_SUCCESS
  */
-static apr_status_t perf_serialize_globals(worker_t *worker, perf_host_t *host) {
+static apr_status_t perf_serialize_globals(global_t *global, perf_host_t *host) {
   int i;
   apr_table_t *vars;
   apr_table_t *shared;
   apr_table_entry_t *e;
   apr_pool_t *ptmp;
-  global_t *global = worker->global;
 
   apr_pool_create(&ptmp, NULL);
   vars = store_get_table(global->vars, ptmp);
@@ -573,11 +572,11 @@ static apr_status_t perf_serialize_globals(worker_t *worker, perf_host_t *host) 
 
 /**
  * Iterate all lines of client
- * @param worker IN callee
+ * @param global IN global context
  * @param host IN remote host
  * @return APR_SUCCESS
  */
-static apr_status_t perf_serialize_clients(worker_t *worker, perf_host_t *host) {
+static apr_status_t perf_serialize_clients(global_t *global, perf_host_t *host) {
   int i;
   apr_pool_t *ptmp;
   apr_table_entry_t *e;
@@ -599,17 +598,29 @@ static apr_status_t perf_serialize_clients(worker_t *worker, perf_host_t *host) 
  * @param selfv IN void pointer to perf host struct
  * @return NULL
  */
-static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread, void *selfv) {
+static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread, 
+                                                void *selfv) {
   perf_host_t *host = selfv;
-  apr_size_t len = 1;
   apr_status_t status;
   apr_pool_t *pool;
+  apr_size_t len = 1;
+  char *buf;
+  sockreader_t *sockreader;
 
   apr_pool_create(&pool, NULL);
   apr_thread_mutex_lock(host->sync);
-  status = transport_read(host->socket->transport, &host->socket->peek[host->socket->peeklen], &len);
-  fprintf(stderr, "XXXXXXXXXX %s(%d) XXXXXXXXXXXX\n", my_status_str(pool, status), status);
-  fflush(stderr);
+  status = transport_read(host->socket->transport, buf, &len);
+
+  if ((status = sockreader_new(&sockreader, host->socket->transport,
+                               NULL, 0, pool)) == APR_SUCCESS) {
+    status = sockreader_read_line(sockreader, &buf); 
+    worker_log(host->worker, LOG_INFO, "Remote host finished\n");
+  }
+  else {
+    worker_log_error(host->worker, "Lost connection to remote host \"%s\"\n", 
+                     host->name);
+  }
+
   apr_thread_mutex_unlock(host->sync);
   apr_pool_destroy(pool);
 
@@ -629,19 +640,19 @@ static apr_status_t perf_host_cleanup(void *selfv) {
 /**
  * Distribute host to remote host, start a supervisor thread
  * @param worker IN callee
- * @param handle OUT thread handle
+ * @param thread OUT thread handle
  * @return supervisor thread handle
  */
-static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle) {
+static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **thread) {
   apr_status_t status;
   global_t *global = worker->global;
   perf_gconf_t *gconf = perf_get_global_config(global);
   apr_pool_t *ptmp;
 
-  *handle = NULL;
+  *thread = NULL;
   apr_pool_create(&ptmp, NULL);
-  if (!(gconf->cur_host->state == PERF_HOST_CONNECTED) &&
-      !(gconf->cur_host->state == PERF_HOST_ERROR)) {
+  if ((gconf->cur_host->state != PERF_HOST_CONNECTED) &&
+      (gconf->cur_host->state != PERF_HOST_ERROR)) {
     char *portname;
     char *hostport = apr_pstrdup(ptmp, gconf->cur_host->name);
     char *hostname = apr_strtok(hostport, ":", &portname);
@@ -665,13 +676,13 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle
       return status;
     }
     apr_thread_mutex_lock(gconf->cur_host->sync);
-    if ((status = apr_thread_create(handle, global->tattr, perf_thread_super,
+    if ((status = apr_thread_create(thread, global->tattr, perf_thread_super,
                                     gconf->cur_host, global->pool)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not create supervisor thread for remote host");
       return status;
     }
-    if ((status = apr_thread_data_set(gconf->cur_host, "host", perf_host_cleanup, *handle)) != APR_SUCCESS) {
-      worker_log_error(worker, "Could not store remote host handle to thread");
+    if ((status = apr_thread_data_set(gconf->cur_host, "host", perf_host_cleanup, *thread)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not store remote host to thread");
       return status;
     }
   }
@@ -730,12 +741,12 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
  * @param thread IN thread handle of concurrent function
  * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
  */
-static apr_status_t perf_thread_start(worker_t *worker, apr_thread_t *thread) {
+static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
   perf_host_t *host;
   if ((apr_thread_data_get((void **)&host, "host", thread) == APR_SUCCESS) && host) {
     apr_thread_mutex_unlock(host->sync);
-    perf_serialize_globals(worker, host);
-    perf_serialize_clients(worker, host);
+    perf_serialize_globals(global, host);
+    perf_serialize_clients(global, host);
     perf_serialize(host, "GO\n");
   }
   return APR_SUCCESS;
