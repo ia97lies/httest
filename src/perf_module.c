@@ -84,6 +84,7 @@ typedef struct perf_gconf_s {
 #define PERF_GCONF_FLAGS_NONE 0 
 #define PERF_GCONF_FLAGS_DIST 1 
   apr_file_t *log_file;
+  apr_hash_t *my_threads;
   apr_hash_t *host_and_ports;
   apr_hash_index_t *cur_host_i;
   perf_host_t *cur_host;
@@ -110,6 +111,7 @@ static perf_gconf_t *perf_get_global_config(global_t *global) {
   if (config == NULL) {
     config = apr_pcalloc(global->pool, sizeof(*config));
     config->host_and_ports = apr_hash_make(global->pool);
+    config->my_threads = apr_hash_make(global->pool);
     module_set_config(global->config, apr_pstrdup(global->pool, perf_module), config);
   }
   return config;
@@ -681,6 +683,7 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **thread
       worker_log_error(worker, "Could not create supervisor thread for remote host");
       return status;
     }
+    apr_hash_set(gconf->my_threads, *thread, sizeof(*thread), thread);
     if ((status = apr_thread_data_set(gconf->cur_host, "host", perf_host_cleanup, *thread)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not store remote host to thread");
       return status;
@@ -743,11 +746,14 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
  */
 static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
   perf_host_t *host;
-  if ((apr_thread_data_get((void **)&host, "host", thread) == APR_SUCCESS) && host) {
-    apr_thread_mutex_unlock(host->sync);
-    perf_serialize_globals(global, host);
-    perf_serialize_clients(global, host);
-    perf_serialize(host, "GO\n");
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  if (apr_hash_get(gconf->my_threads, thread, sizeof(thread))) {
+    if ((apr_thread_data_get((void **)&host, "host", thread) == APR_SUCCESS) && host) {
+      apr_thread_mutex_unlock(host->sync);
+      perf_serialize_globals(global, host);
+      perf_serialize_clients(global, host);
+      perf_serialize(host, "GO\n");
+    }
   }
   return APR_SUCCESS;
 }
