@@ -70,7 +70,9 @@ typedef struct perf_host_s {
 #define PERF_HOST_NONE      0
 #define PERF_HOST_CONNECTED 1
 #define PERF_HOST_ERROR 2
-  apr_thread_mutex_t *sync_mutex;
+  apr_thread_mutex_t *sync;
+  socket_t *socket; 
+  worker_t *worker;
 } perf_host_t;
 
 typedef struct perf_gconf_s {
@@ -447,8 +449,8 @@ static apr_status_t perf_worker_joined(global_t *global) {
     gconf->stat.conn_time.avr = gconf->stat.conn_time.total/gconf->stat.count.conns;
     fprintf(stdout, "\ntotal reqs: %d\n", gconf->stat.count.reqs);
     fprintf(stdout, "total conns: %d\n", gconf->stat.count.conns);
-    fprintf(stdout, "send bytes: %d\n", gconf->stat.sent_bytes);
-    fprintf(stdout, "received bytes: %d\n", gconf->stat.recv_bytes);
+    fprintf(stdout, "send bytes: %"APR_SIZE_T_FMT"\n", gconf->stat.sent_bytes);
+    fprintf(stdout, "received bytes: %"APR_SIZE_T_FMT"\n", gconf->stat.recv_bytes);
     for (i = 0, time = 1; i < 10; i++, time *= 2) {
       if (gconf->stat.count.less[i]) {
         fprintf(stdout, "%d request%s less than %"APR_TIME_T_FMT" seconds\n", 
@@ -477,35 +479,43 @@ static apr_status_t perf_worker_joined(global_t *global) {
 /**
  * Get cur host from hash
  * @param gconf IN global config
+ * @param worker IN store worker for cur host
  * @return cur host
  */
-static perf_host_t *perf_get_cur_host(perf_gconf_t *gconf) {
+static perf_host_t *perf_get_cur_host(perf_gconf_t *gconf, worker_t *worker) {
   void *val = NULL;
   if (gconf->cur_host_i) {
     apr_hash_this(gconf->cur_host_i, NULL, NULL, &val);
   }
   gconf->cur_host = val;
+  if (gconf->cur_host) {
+    gconf->cur_host->worker = worker;
+  }
   return val;
 }
 
 /**
  * Get first remote host from hash
  * @param global IN global instance
+ * @param worker IN store worker for first host
+ * @return cur host
  */
-static perf_host_t *perf_get_first_host(global_t *global) {
+static perf_host_t *perf_get_first_host(global_t *global, worker_t *worker) {
   perf_gconf_t *gconf = perf_get_global_config(global);
   gconf->cur_host_i = apr_hash_first(global->pool, gconf->host_and_ports);
-  return perf_get_cur_host(gconf);
+  return perf_get_cur_host(gconf, worker);
 }
 
 /**
  * Get next remote host from hash
  * @param global IN global instance
+ * @param worker IN store worker for next host
+ * @return cur host
  */
-static perf_host_t *perf_get_next_host(global_t *global) {
+static perf_host_t *perf_get_next_host(global_t *global, worker_t *worker) {
   perf_gconf_t *gconf = perf_get_global_config(global);
   gconf->cur_host_i = apr_hash_next(gconf->cur_host_i);
-  return perf_get_cur_host(gconf);
+  return perf_get_cur_host(gconf, worker);
 }
 
 /**
@@ -515,7 +525,7 @@ static perf_host_t *perf_get_next_host(global_t *global) {
  * @param ... IN
  * @return apr_status_t
  */
-static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
+static apr_status_t perf_serialize(perf_host_t *host, char *fmt, ...) {
   char *tmp;
   va_list va;
   apr_pool_t *pool;
@@ -523,7 +533,7 @@ static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
   apr_pool_create(&pool, NULL);
   va_start(va, fmt);
   tmp = apr_pvsprintf(pool, fmt, va);
-  transport_write(worker->socket->transport, tmp, strlen(tmp));
+  transport_write(host->socket->transport, tmp, strlen(tmp));
   va_end(va);
   apr_pool_destroy(pool);
 
@@ -531,51 +541,118 @@ static apr_status_t perf_serialize(worker_t *worker, char *fmt, ...) {
 }
 
 /**
- * Iterate all modules and blocks for serialization
- * @param worker IN callee
+ * Iterate all variables, modules and blocks for serialization
+ * @param global IN global context
+ * @param host IN remote host
+ * @return APR_SUCCESS
  */
-static apr_status_t perf_serialize_globals(worker_t *worker) {
+static apr_status_t perf_serialize_globals(global_t *global, perf_host_t *host) {
   int i;
   apr_table_t *vars;
   apr_table_t *shared;
   apr_table_entry_t *e;
   apr_pool_t *ptmp;
-  global_t *global = worker->global;
 
   apr_pool_create(&ptmp, NULL);
   vars = store_get_table(global->vars, ptmp);
   e = (apr_table_entry_t *) apr_table_elts(vars)->elts;
   for (i = 0; i < apr_table_elts(vars)->nelts; ++i) {
-    perf_serialize(worker, "SET %s=%s\n", e[i].key, e[i].val);
+    perf_serialize(host, "SET %s=%s\n", e[i].key, e[i].val);
   }
-  shared = store_get_table(global->vars, ptmp);
-  e = (apr_table_entry_t *) apr_table_elts(shared)->elts;
-  for (i = 0; i < apr_table_elts(shared)->nelts; ++i) {
-    perf_serialize(worker, "GLOBAL %s=%s\n", e[i].key, e[i].val);
+  if (global->shared) {
+    shared = store_get_table(global->shared, ptmp);
+    e = (apr_table_entry_t *) apr_table_elts(shared)->elts;
+    for (i = 0; i < apr_table_elts(shared)->nelts; ++i) {
+      perf_serialize(host, "GLOBAL %s=%s\n", e[i].key, e[i].val);
+    }
   }
   apr_pool_destroy(ptmp);
   return APR_SUCCESS;
 }
 
-static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread, void *selfv) {
+/**
+ * Iterate all lines of client
+ * @param global IN global context
+ * @param host IN remote host
+ * @return APR_SUCCESS
+ */
+static apr_status_t perf_serialize_clients(global_t *global, perf_host_t *host) {
+  int i;
+  apr_pool_t *ptmp;
+  apr_table_entry_t *e;
+
+  apr_pool_create(&ptmp, NULL);
+  perf_serialize(host, "CLIENT %d\n", host->clients);
+  e = (apr_table_entry_t *) apr_table_elts(host->worker->lines)->elts;
+  for (i = 0; i < apr_table_elts(host->worker->lines)->nelts; ++i) {
+    perf_serialize(host, "%s\n", e[i].val);
+  }
+  perf_serialize(host, "END\n");
+  apr_pool_destroy(ptmp);
+  return APR_SUCCESS;
+}
+
+/**
+ * Supervisor thread wait for remote host is done
+ * @param thread IN thread handle
+ * @param selfv IN void pointer to perf host struct
+ * @return NULL
+ */
+static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread, 
+                                                void *selfv) {
+  perf_host_t *host = selfv;
+  apr_status_t status;
+  apr_pool_t *pool;
+  apr_size_t len = 1;
+  char *buf;
+  sockreader_t *sockreader;
+
+  apr_pool_create(&pool, NULL);
+  apr_thread_mutex_lock(host->sync);
+  status = transport_read(host->socket->transport, buf, &len);
+
+  if ((status = sockreader_new(&sockreader, host->socket->transport,
+                               NULL, 0, pool)) == APR_SUCCESS) {
+    status = sockreader_read_line(sockreader, &buf); 
+    worker_log(host->worker, LOG_INFO, "Remote host finished\n");
+  }
+  else {
+    worker_log_error(host->worker, "Lost connection to remote host \"%s\"\n", 
+                     host->name);
+  }
+
+  apr_thread_mutex_unlock(host->sync);
+  apr_pool_destroy(pool);
+
+  apr_thread_exit(thread, APR_SUCCESS);
   return NULL;
 }
 
 /**
+ * Cleanup for thread data
+ * @param selfv IN void pointer to perf host struct
+ * @return APR_SUCCESS
+ */
+static apr_status_t perf_host_cleanup(void *selfv) {
+  return APR_SUCCESS;
+}
+
+/**
  * Distribute host to remote host, start a supervisor thread
- * @worker IN callee
+ * @param worker IN callee
+ * @param thread OUT thread handle
  * @return supervisor thread handle
  */
-static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle) {
+static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **thread) {
   apr_status_t status;
   global_t *global = worker->global;
   perf_gconf_t *gconf = perf_get_global_config(global);
   apr_pool_t *ptmp;
 
-  *handle = NULL;
+  *thread = NULL;
   apr_pool_create(&ptmp, NULL);
-  if (!(gconf->cur_host->state == PERF_HOST_CONNECTED) &&
-      !(gconf->cur_host->state == PERF_HOST_ERROR)) {
+  if ((gconf->cur_host->state != PERF_HOST_CONNECTED) &&
+      (gconf->cur_host->state != PERF_HOST_ERROR)) {
     char *portname;
     char *hostport = apr_pstrdup(ptmp, gconf->cur_host->name);
     char *hostname = apr_strtok(hostport, ":", &portname);
@@ -590,18 +667,22 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **handle
     }
     htt_run_connect(worker);
     gconf->cur_host->state = PERF_HOST_CONNECTED;
-    perf_serialize_globals(worker);
     ++gconf->cur_host->clients;
-    if ((status = apr_thread_mutex_create(&gconf->cur_host->sync_mutex,
-                                          APR_THREAD_MUTEX_DEFAULT, global->pool))
-        != APR_SUCCESS) {
-      worker_log_error(worker, "Could not create super visor sync mutex");
+    gconf->cur_host->socket = worker->socket;
+    if ((status = apr_thread_mutex_create(&gconf->cur_host->sync, 
+                                          APR_THREAD_MUTEX_DEFAULT,
+                                          global->pool)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not create supervisor thread sync mutex for remote host");
       return status;
     }
-    apr_thread_mutex_lock(gconf->cur_host->sync_mutex);
-    if ((status = apr_thread_create(handle, global->tattr, perf_thread_super,
-                                    worker, global->pool)) != APR_SUCCESS) {
-      worker_log_error(worker, "Could not create supervisor thread");
+    apr_thread_mutex_lock(gconf->cur_host->sync);
+    if ((status = apr_thread_create(thread, global->tattr, perf_thread_super,
+                                    gconf->cur_host, global->pool)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not create supervisor thread for remote host");
+      return status;
+    }
+    if ((status = apr_thread_data_set(gconf->cur_host, "host", perf_host_cleanup, *thread)) != APR_SUCCESS) {
+      worker_log_error(worker, "Could not store remote host to thread");
       return status;
     }
   }
@@ -632,7 +713,7 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
   if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
     if (!gconf->cur_host_i) {
       worker_log(worker, LOG_INFO, "Distribute CLIENT to my self");
-      perf_get_first_host(global);
+      perf_get_first_host(global, worker);
       return APR_ENOTHREAD;
     }
     else {
@@ -640,10 +721,10 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
       /* distribute to remote host */
       worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", gconf->cur_host->name);
       status = perf_distribute_host(worker, new_thread);
-      perf_get_next_host(global);
+      perf_get_next_host(global, worker);
       if (status == APR_SUCCESS) {
-        /* return APR_SUCCESS; */
-        return APR_ENOTHREAD;
+        return APR_SUCCESS;
+        /* return APR_ENOTHREAD; */
       }
       else {
         return APR_ENOTHREAD;
@@ -655,12 +736,19 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
 }
 
 /**
- * Wait for distributed client worker.
+ * Distribute client to remote host, we know now how many.
  * @param worker IN callee
  * @param thread IN thread handle of concurrent function
  * @return APR_ENOTHREAD if there is no schedul policy, else any apr status.
  */
-static apr_status_t perf_client_start(worker_t *worker, apr_thread_t *thread) {
+static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
+  perf_host_t *host;
+  if ((apr_thread_data_get((void **)&host, "host", thread) == APR_SUCCESS) && host) {
+    apr_thread_mutex_unlock(host->sync);
+    perf_serialize_globals(global, host);
+    perf_serialize_clients(global, host);
+    perf_serialize(host, "GO\n");
+  }
   return APR_SUCCESS;
 }
 
@@ -674,7 +762,7 @@ static apr_status_t perf_client_start(worker_t *worker, apr_thread_t *thread) {
 apr_status_t perf_module_init(global_t *global) {
   htt_hook_read_line(perf_read_line, NULL, NULL, 0);
   htt_hook_client_create(perf_client_create, NULL, NULL, 0);
-  htt_hook_client_start(perf_client_start, NULL, NULL, 0);
+  htt_hook_thread_start(perf_thread_start, NULL, NULL, 0);
   htt_hook_worker_joined(perf_worker_joined, NULL, NULL, 0);
   htt_hook_worker_finally(perf_worker_finally, NULL, NULL, 0);
   htt_hook_pre_connect(perf_pre_connect, NULL, NULL, 0);

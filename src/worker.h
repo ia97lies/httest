@@ -339,10 +339,10 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_create,
                           (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_finally,
                           (worker_t *worker));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_start,
-                          (worker_t *worker, apr_thread_t *thread));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_start,
+                          (global_t *global, apr_thread_t *thread));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_join,
-                          (worker_t *worker, apr_thread_t *thread));
+                          (global_t *global, apr_thread_t *thread));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_joined,
                           (global_t *global));
 
