@@ -4,6 +4,8 @@ Changes with httest 2.2.5
 
   *) httest: Improvments suggested by sonar scann
 
+  *) httest: Improved log performance with multi-threaded tests.
+
 Changes with httest 2.2.4
   *) httest: Bugfix possible segfault with _SSL:TRACE
 
