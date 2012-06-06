@@ -163,6 +163,7 @@ static void * APR_THREAD_FUNC in_stream(apr_thread_t *self, void *streamv) {
   apr_file_close(stream->file);
   
   apr_thread_exit(self, status);
+  apr_pool_destroy(stream->pool);
   return 0;
 }
 
@@ -211,6 +212,7 @@ static void * APR_THREAD_FUNC out_stream(apr_thread_t *self, void *streamv) {
   }
 
   apr_thread_exit(self, status);
+  apr_pool_destroy(stream->pool);
   return 0;
 }
 
@@ -224,11 +226,14 @@ static void * APR_THREAD_FUNC out_stream(apr_thread_t *self, void *streamv) {
  *
  * @return apr status
  */
-static apr_status_t create_in_stream(apr_pool_t *pool, apr_socket_t *socket,
-                                     apr_file_t *in, apr_thread_t **thread) {
+static apr_status_t create_in_stream(apr_socket_t *socket, apr_file_t *in, 
+                                     apr_thread_t **thread) {
   apr_status_t status;
   apr_threadattr_t *tattr;
   stream_t *stream;
+  apr_pool_t *pool;
+
+  apr_pool_create(&pool, NULL);
 
   if ((status = apr_threadattr_create(&tattr, pool)) != APR_SUCCESS) {
     return status;
@@ -265,12 +270,14 @@ static apr_status_t create_in_stream(apr_pool_t *pool, apr_socket_t *socket,
  *
  * @return apr status
  */
-static apr_status_t create_out_stream(apr_pool_t *pool, apr_socket_t *socket,
-                                      apr_file_t *out, apr_thread_t **thread) {
+static apr_status_t create_out_stream(apr_socket_t *socket, apr_file_t *out, 
+                                      apr_thread_t **thread) {
   apr_status_t status;
   apr_threadattr_t *tattr;
   stream_t *stream;
+  apr_pool_t *pool;
 
+  apr_pool_create(&pool, NULL);
   if ((status = apr_threadattr_create(&tattr, pool)) != APR_SUCCESS) {
     return status;
   }
@@ -384,17 +391,17 @@ static void * APR_THREAD_FUNC handle_connection(apr_thread_t * thread, void *sel
   
   fprintf(stdout, "\nStart threads");
   /* start 3 threads one for in one for out and one for err */
-  if ((status = create_in_stream(pool, conn->socket, proc.in, &thread1)) 
+  if ((status = create_in_stream(conn->socket, proc.in, &thread1)) 
       != APR_SUCCESS) {
     fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
     goto error;
   }
-  if ((status = create_out_stream(pool, conn->socket, proc.out, &thread2))
+  if ((status = create_out_stream(conn->socket, proc.out, &thread2))
       != APR_SUCCESS) {
     fprintf(stderr, "%s", my_status_str(pool, status));
     goto error;
   }
-  if ((status = create_out_stream(pool, conn->socket, proc.err, &thread3))
+  if ((status = create_out_stream(conn->socket, proc.err, &thread3))
       != APR_SUCCESS) {
     fprintf(stderr, "\nERROR %s\n", my_status_str(pool, status));
     goto error;
@@ -473,6 +480,10 @@ int main(int argc, const char *const argv[]) {
       type = TYPE_RESTART;
       count = -1;
       break;
+    case 't':
+      type = TYPE_THREADED;
+      count = -1;
+      break;
     }
   }
 
@@ -530,6 +541,7 @@ int main(int argc, const char *const argv[]) {
     }
   }
   else {
+    fprintf(stderr, "\nThreaded mode is not implemented yet.\n");
   }
 
   fprintf(stdout, "\nTerminated");
