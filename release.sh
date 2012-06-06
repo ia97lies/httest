@@ -5,7 +5,7 @@ OPTION=${2:-"release"}
 
 CUR=`pwd`
 
-trap error 1 2 3 15 ERR
+trap error 1 2 3 15
 
 function error() {
   cd $CUR
