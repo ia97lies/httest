@@ -230,6 +230,7 @@ EXTRA_DIST= \
 	server_up_down.htt \
 	shared.htt \
 	shell.htb \
+	simple_perf.htt \
 	simple_stat.htt \
 	skeleton.htt \
 	smtp_simple.htt \
