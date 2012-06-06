@@ -3,8 +3,6 @@ TOP=`pwd`
 VERSION=$1
 OPTION=${2:-"release"}
 
-set -u
-
 CUR=`pwd`
 
 trap error 1 2 3 15 ERR
