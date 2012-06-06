@@ -2049,8 +2049,6 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
     fprintf(stderr, "\nGlobal worker: could not create worker");
     return status;
   }
-  global->prefix = apr_pstrcat(global->pool, global->prefix, 
-			       "                        ", NULL);
   return APR_SUCCESS;
 }
 
@@ -2065,7 +2063,11 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
  */
 static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data, 
                                   apr_pool_t *ptmp) {
-  return global_worker(self, global, data, GLOBAL_STATE_CLIENT);
+  apr_status_t status;
+  status = global_worker(self, global, data, GLOBAL_STATE_CLIENT);
+  global->prefix = apr_pstrcat(global->pool, global->prefix, 
+			       "                        ", NULL);
+  return status;
 }
 
 /**
@@ -2079,7 +2081,12 @@ static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data,
  */
 static apr_status_t global_SERVER(command_t *self, global_t *global, char *data, 
                                   apr_pool_t *ptmp) {
-  return global_worker(self, global, data, GLOBAL_STATE_SERVER);
+  apr_status_t status;
+  status = global_worker(self, global, data, GLOBAL_STATE_SERVER);
+  global->prefix = apr_pstrcat(global->pool, global->prefix, 
+			       "                        ", NULL);
+
+  return status;
 }
 
 /**
@@ -2116,9 +2123,6 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     fprintf(stderr, "\nFailed on block start %s(%d)", my_status_str(global->pool, status), status);  
     return status;
   }
-  
-  /* A block has its callies prefix I suppose */
-  global->prefix = apr_pstrcat(global->pool, global->prefix, "", NULL);
   
   /* Get params and returns */
   /* create two tables for in/out vars */
@@ -2179,9 +2183,6 @@ static apr_status_t global_FILE(command_t * self, global_t * global,
   }
 
   global->worker->name = data;
-  
-  /* A block has its callies prefix I suppose */
-  global->prefix = apr_pstrcat(global->pool, global->prefix, "", NULL);
 
   /* open file */
   return APR_SUCCESS;
@@ -2656,6 +2657,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   apr_table_clear(global->threads);
 
   htt_run_worker_joined(global);
+  global->prefix = apr_pstrdup(global->pool, "");
   return APR_SUCCESS;
 }
 
