@@ -1,4 +1,9 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.6
+  *) httest: New RAMPUP command to control the start fo CLIENTS.
+
+  *) httest: refactoring to enable global commands in modules.
+
 Changes with httest 2.2.5
   *) httest: Performance module for distributed client support.
 
