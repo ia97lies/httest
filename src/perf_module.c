@@ -779,22 +779,68 @@ static apr_status_t block_PERF_STAT(worker_t * worker, worker_t *parent,
   return APR_SUCCESS;
 }
 
+/**
+ * PERF:RAMPUP command
+ * @param worker IN thread data object
+ * @param data IN
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
+                                      apr_pool_t *ptmp) {
+  apr_status_t status;
+  global_t *global = worker->global;
+  perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  const char *clients_str;
+  const char *interval_str;
+
+  status = APR_SUCCESS;
+  if ((status = module_check_global(worker)) == APR_SUCCESS) {
+    clients_str = store_get(worker->params, "1");
+    interval_str = store_get(worker->params, "2");
+    if (clients_str && interval_str) {
+    }
+    else if (!clients_str) {
+      worker_log_error(worker, "Number of clients per interval not specified");
+      status = APR_ENOENT;
+    }
+    else {
+      worker_log_error(worker, "Interval not specified");
+      status = APR_ENOENT;
+    }
+  }
+
+  return status;
+}
+
 /************************************************************************
  * Module
  ***********************************************************************/
 apr_status_t perf_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "PERF", "DISTRIBUTED", "<host>:<port>",
-				   "Distribute CLIENT to <host>:<port>, "
-                                   "need an agent on this host",
-	                           block_PERF_DISTRIBUTE)) != APR_SUCCESS) {
-    return status;
-  }
 
-  if ((status = module_command_new(global, "PERF", "STAT", "ON|OFF|LOG <filename>",
+  if ((status = module_command_new(global, "PERF", "STAT", 
+                                   "ON|OFF|LOG <filename>",
 				   "print statistics at end of test, option LOG "
                                    "do additional write all requests to <filename>",
 	                           block_PERF_STAT)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "PERF", "RAMPUP", 
+                                   "<clients> per <interval>",
+				   "Start <clients> per <interval> [ms], "
+                                   "<clients> per <interval> are started all "
+                                   "together",
+	                           block_PERF_RAMPUP)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "PERF", "DISTRIBUTED", 
+                                   "<host>:<port>",
+				   "Distribute CLIENT to <host>:<port>, "
+                                   "need an agent on this host",
+	                           block_PERF_DISTRIBUTE)) != APR_SUCCESS) {
     return status;
   }
 
