@@ -2750,11 +2750,15 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	  }
 	}
         else { /* let's see if we find block for this job */
+          int cur_log_mode = global->worker->log_mode;
           apr_pool_t *ptmp;
+
           apr_pool_create(&ptmp, NULL);
+          global->worker->log_mode = 0;
           status = command_CALL(NULL, global->worker, line, ptmp);
+          global->worker->log_mode = cur_log_mode;
           apr_pool_destroy(ptmp);
-          if (status != APR_SUCCESS) {
+          if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
             return status;
           }
         }
