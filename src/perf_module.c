@@ -165,21 +165,6 @@ static apr_status_t perf_read_line(global_t *global, char **line) {
       }
     }
   }
-  else if (strncmp(*line, "PERF:DISTRIBUTE", 9) == 0) {
-    char *last;
-    char *name;
-    perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
-    perf_gconf_t *gconf = perf_get_global_config(global);
-    gconf->flags |= PERF_GCONF_FLAGS_DIST;
-    apr_strtok(*line, " ", &last);
-    name = apr_strtok(NULL, " ", &last);
-    while (name) {
-      host->name = name;
-      apr_hash_set(gconf->host_and_ports, name, APR_HASH_KEY_STRING, host);
-      host = apr_pcalloc(global->pool, sizeof(*host));
-      name = apr_strtok(NULL, " ", &last);
-    }
-  }
   return APR_SUCCESS;
 }
 
@@ -762,10 +747,36 @@ static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
  * Commands 
  ***********************************************************************/
 
+/**
+ * PERF:DISTRIBUTE command
+ * @param worker IN thread data object
+ * @param data IN
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t block_PERF_DISTRIBUTE(worker_t * worker, worker_t *parent,
+                                          apr_pool_t *ptmp) {
+  global_t *global = worker->global;
+  perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  gconf->flags |= PERF_GCONF_FLAGS_DIST;
+  host->name = store_get_copy(worker->params, global->pool, "1");
+  apr_hash_set(gconf->host_and_ports, host->name, APR_HASH_KEY_STRING, host);
+  return APR_SUCCESS;
+
+}
+
 /************************************************************************
  * Module
  ***********************************************************************/
 apr_status_t perf_module_init(global_t *global) {
+  apr_status_t status;
+  if ((status = module_command_new(global, "PERF", "DISTRIBUTE", "<host>:<port>",
+				   "Distribute CLIENT to <host>:<port>, "
+                                   "need an agent on this host",
+	                           block_PERF_DISTRIBUTE)) != APR_SUCCESS) {
+    return status;
+  }
+
   htt_hook_read_line(perf_read_line, NULL, NULL, 0);
   htt_hook_client_create(perf_client_create, NULL, NULL, 0);
   htt_hook_thread_start(perf_thread_start, NULL, NULL, 0);

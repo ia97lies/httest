@@ -1299,9 +1299,10 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   /** get module worker */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
-    /* always jump over prefixing "_" */
-    module++;
-    block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    if (*module == '_') {
+      module++;
+      block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    }
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;

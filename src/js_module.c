@@ -257,17 +257,17 @@ static apr_status_t js_block_start(global_t *global, char **line) {
   apr_status_t status;
   if (strncmp(*line, ":JS ", 4) == 0) {
     *line += 4;
-    if ((status = worker_new(&global->worker, "", "", global, 
+    if ((status = worker_new(&global->cur_worker, "", "", global, 
                              block_js_interpreter)) 
         != APR_SUCCESS) {
       return status;
     }
     else {
-      js_wconf_t *wconf = js_get_worker_config(global->worker);
+      js_wconf_t *wconf = js_get_worker_config(global->cur_worker);
       js_gconf_t *gconf = js_get_global_config(global);
       gconf->do_read_line = 1;
       wconf->starting_line_nr = global->line_nr + 1;
-      return js_set_variable_names(global->worker, *line);
+      return js_set_variable_names(global->cur_worker, *line);
     }
   }
   return APR_ENOTIMPL;
@@ -298,7 +298,7 @@ static apr_status_t js_read_line(global_t *global, char **line) {
  */
 static apr_status_t js_block_end(global_t *global) {
   js_gconf_t *gconf = js_get_global_config(global);
-  js_wconf_t *wconf = js_get_worker_config(global->worker);
+  js_wconf_t *wconf = js_get_worker_config(global->cur_worker);
   gconf->do_read_line = 0;
   wconf->filename = global->filename;
   if (gconf->length) {
@@ -306,10 +306,10 @@ static apr_status_t js_block_end(global_t *global) {
     apr_table_entry_t *e;
     char *buf;
 
-    wconf->buffer = apr_pcalloc(global->worker->pbody, gconf->length);
+    wconf->buffer = apr_pcalloc(global->cur_worker->pbody, gconf->length);
     buf = wconf->buffer;
-    e = (apr_table_entry_t *) apr_table_elts(global->worker->lines)->elts;
-    for (i = 0; i < apr_table_elts(global->worker->lines)->nelts; i++) {
+    e = (apr_table_entry_t *) apr_table_elts(global->cur_worker->lines)->elts;
+    for (i = 0; i < apr_table_elts(global->cur_worker->lines)->nelts; i++) {
       strcpy(buf, e[i].val);
       buf += strlen(e[i].val);
       *buf = '\n';

@@ -1425,8 +1425,8 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
  *
  * @return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker,
-                                                     worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker, worker_t *parent,
+                                           apr_pool_t *ptmp) {
   ssl_config_t *config = ssl_get_worker_config(worker);
   const char *val = store_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);

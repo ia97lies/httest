@@ -196,6 +196,7 @@ struct global_s {
   int socktmo;
   char *prefix;
   worker_t *worker;
+  worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
 };
