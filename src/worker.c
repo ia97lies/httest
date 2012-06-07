@@ -1303,6 +1303,9 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       module++;
       block_name = apr_pstrcat(call_pool, "_", last, NULL);
     }
+    else {
+      block_name = apr_pstrdup(call_pool, last);
+    }
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;

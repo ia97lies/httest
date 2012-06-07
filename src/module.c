@@ -127,4 +127,12 @@ void module_set_config(apr_hash_t *config, const char *module, void *data) {
   apr_hash_set(config, module, APR_HASH_KEY_STRING, data);
 }
 
-
+apr_status_t module_check_global(worker_t *worker) {
+  if (strcmp(worker->name, "__htt_global__") == 0) {
+    return APR_SUCCESS;
+  }
+  else {
+    worker_log_error(worker, "This command can be used only in global context");
+    return APR_EINVAL;
+  }
+}

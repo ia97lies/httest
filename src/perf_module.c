@@ -133,42 +133,6 @@ static perf_wconf_t *perf_get_worker_config(worker_t *worker) {
 }
 
 /**
- * Test if statistic is turned on 
- * @param global IN global config
- * @param line IN read line
- */
-static apr_status_t perf_read_line(global_t *global, char **line) {
-
-  if (strncmp(*line, "PERF:STAT", 9) == 0) {
-    perf_gconf_t *gconf = perf_get_global_config(global);
-    char *cur;
-    char *last;
-
-    apr_strtok(*line, " ", &last);
-    cur = apr_strtok(NULL, " ", &last);
-    if (strcmp(cur, "ON") == 0) {
-      gconf->on = PERF_GCONF_ON;
-    }
-    else if (strcmp(cur, "OFF") == 0) {
-      gconf->on |= PERF_GCONF_OFF;
-    }
-    else if (strcmp(cur, "LOG") == 0) {
-      apr_status_t status;
-      char *filename;
-      gconf->on |= PERF_GCONF_LOG;
-      filename = apr_strtok(NULL, " ", &last);
-      if ((status = apr_file_open(&gconf->log_file, filename, 
-                                  APR_READ|APR_WRITE|APR_CREATE|APR_APPEND|APR_XTHREAD, 
-                                  APR_OS_DEFAULT, global->pool)) != APR_SUCCESS) {
-        fprintf(stderr, "Could not open log file \"%s\"", filename);
-        return status;
-      }
-    }
-  }
-  return APR_SUCCESS;
-}
-
-/**
  * Is called after line is sent
  * @param worker IN callee
  * @param line IN line sent
@@ -755,14 +719,64 @@ static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
  */
 static apr_status_t block_PERF_DISTRIBUTE(worker_t * worker, worker_t *parent,
                                           apr_pool_t *ptmp) {
+  apr_status_t status;
   global_t *global = worker->global;
   perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
   perf_gconf_t *gconf = perf_get_global_config(global);
+
+  if ((status = module_check_global(worker)) != APR_SUCCESS) {
+    return status;
+  }
   gconf->flags |= PERF_GCONF_FLAGS_DIST;
   host->name = store_get_copy(worker->params, global->pool, "1");
   apr_hash_set(gconf->host_and_ports, host->name, APR_HASH_KEY_STRING, host);
   return APR_SUCCESS;
+}
 
+/**
+ * PERF:LOG command
+ * @param worker IN thread data object
+ * @param data IN
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t block_PERF_STAT(worker_t * worker, worker_t *parent,
+                                    apr_pool_t *ptmp) {
+  apr_status_t status;
+  global_t *global = worker->global;
+  perf_host_t *host = apr_pcalloc(global->pool, sizeof(*host));
+  perf_gconf_t *gconf = perf_get_global_config(global);
+  const char *param;
+
+  if ((status = module_check_global(worker)) != APR_SUCCESS) {
+    return status;
+  }
+  param = store_get(worker->params, "1");
+  if (strcmp(param, "ON") == 0) {
+    gconf->on = PERF_GCONF_ON;
+  }
+  else if (strcmp(param, "OFF") == 0) {
+    gconf->on |= PERF_GCONF_OFF;
+  }
+  else if (strcmp(param, "LOG") == 0) {
+    apr_status_t status;
+    const char *filename;
+    gconf->on |= PERF_GCONF_LOG;
+    filename = store_get(worker->params, "2");
+    if (filename) {
+      if ((status = apr_file_open(&gconf->log_file, filename, 
+                                  APR_READ|APR_WRITE|APR_CREATE|APR_APPEND|APR_XTHREAD, 
+                                  APR_OS_DEFAULT, global->pool)) != APR_SUCCESS) {
+        worker_log_error(worker, "Could not open log file \"%s\"", filename);
+        return status;
+      }
+    }
+    else {
+      worker_log_error(worker, "No file specified for PERF:LOG command");
+      return APR_EINVAL;
+    }
+  }
+
+  return APR_SUCCESS;
 }
 
 /************************************************************************
@@ -770,14 +784,20 @@ static apr_status_t block_PERF_DISTRIBUTE(worker_t * worker, worker_t *parent,
  ***********************************************************************/
 apr_status_t perf_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "PERF", "DISTRIBUTE", "<host>:<port>",
+  if ((status = module_command_new(global, "PERF", "DISTRIBUTED", "<host>:<port>",
 				   "Distribute CLIENT to <host>:<port>, "
                                    "need an agent on this host",
 	                           block_PERF_DISTRIBUTE)) != APR_SUCCESS) {
     return status;
   }
 
-  htt_hook_read_line(perf_read_line, NULL, NULL, 0);
+  if ((status = module_command_new(global, "PERF", "STAT", "ON|OFF|LOG <filename>",
+				   "print statistics at end of test, option LOG "
+                                   "do additional write all requests to <filename>",
+	                           block_PERF_STAT)) != APR_SUCCESS) {
+    return status;
+  }
+
   htt_hook_client_create(perf_client_create, NULL, NULL, 0);
   htt_hook_thread_start(perf_thread_start, NULL, NULL, 0);
   htt_hook_worker_joined(perf_worker_joined, NULL, NULL, 0);

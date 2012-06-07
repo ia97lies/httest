@@ -86,5 +86,6 @@ apr_status_t module_command_new(global_t *global, const char *module,
 
 void * module_get_config(apr_hash_t *config, const char *module);
 void module_set_config(apr_hash_t *config, const char *module, void *data); 
+apr_status_t module_check_global(worker_t *worker); 
 
 #endif

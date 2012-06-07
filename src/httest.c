@@ -1895,6 +1895,9 @@ static apr_status_t global_new(global_t **global, store_t *vars,
     fprintf(stderr, "\nGlobal worker: could not create my worker");
   }
 
+  (*global)->worker->modules = (*global)->modules;
+  (*global)->worker->name = apr_pstrdup(p, "__htt_global__");
+
   return APR_SUCCESS;
 }
 
@@ -2987,9 +2990,15 @@ static void show_commands(apr_pool_t *p, global_t *global) {
 	for (hi = apr_hash_first(p, block); hi; hi = apr_hash_next(hi)) {
 	  apr_hash_this(hi, (const void **)&command, NULL, (void **)&worker);
 	  if (command) {
-	    ++command; /* skip "_" */
-	    line = apr_psprintf(p, "_%s:%s %s", module, command, 
-		    worker->short_desc?worker->short_desc:"");
+            if (*command == '_') {
+              ++command; /* skip "_" */
+              line = apr_psprintf(p, "_%s:%s %s", module, command, 
+                      worker->short_desc?worker->short_desc:"");
+            }
+            else {
+              line = apr_psprintf(p, "%s:%s %s", module, command, 
+                      worker->short_desc?worker->short_desc:"");
+            }
 	    SKM_sk_push(char, sorted, line);
 	  }
 	}
@@ -3055,16 +3064,19 @@ static void show_command_help(apr_pool_t *p, global_t *global,
     copy = apr_pstrdup(p, command);
     /* determine module if any */
     module = apr_strtok(copy, ":", &last);
-    /* always jump over prefixing "_" */
-    module++;
-    block_name = apr_pstrcat(p, "_", last, NULL);
+    if (*module == '_') {
+      module++;
+      block_name = apr_pstrcat(p, "_", last, NULL);
+    }
+    else {
+      block_name = apr_pstrdup(p, last);
+    }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
       fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
       exit(1);
     }
-    block_name = apr_pstrcat(p, "_", last, NULL);
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+      fprintf(stdout, "\ncommand: %s do not exist\n", command);
       exit(1);
     }
     else {
