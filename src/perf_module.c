@@ -73,9 +73,13 @@ typedef struct perf_host_s {
   apr_thread_mutex_t *sync;
   socket_t *socket; 
   worker_t *worker;
+  int flags;
+#define PERF_HOST_FLAGS_NONE 0
+#define PERF_HOST_FLAGS_GLOBALS_DIST 1
 } perf_host_t;
 
 typedef struct perf_rampup_s {
+  apr_size_t cur_clients;
   apr_size_t clients;
   apr_time_t interval;
 } perf_rampup_t;
@@ -511,20 +515,23 @@ static apr_status_t perf_serialize_globals(global_t *global, perf_host_t *host) 
   apr_table_entry_t *e;
   apr_pool_t *ptmp;
 
-  apr_pool_create(&ptmp, NULL);
-  vars = store_get_table(global->vars, ptmp);
-  e = (apr_table_entry_t *) apr_table_elts(vars)->elts;
-  for (i = 0; i < apr_table_elts(vars)->nelts; ++i) {
-    perf_serialize(host, "SET %s=%s\n", e[i].key, e[i].val);
-  }
-  if (global->shared) {
-    shared = store_get_table(global->shared, ptmp);
-    e = (apr_table_entry_t *) apr_table_elts(shared)->elts;
-    for (i = 0; i < apr_table_elts(shared)->nelts; ++i) {
-      perf_serialize(host, "GLOBAL %s=%s\n", e[i].key, e[i].val);
+  if (!host->flags & PERF_HOST_FLAGS_GLOBALS_DIST) {
+    apr_pool_create(&ptmp, NULL);
+    vars = store_get_table(global->vars, ptmp);
+    e = (apr_table_entry_t *) apr_table_elts(vars)->elts;
+    for (i = 0; i < apr_table_elts(vars)->nelts; ++i) {
+      perf_serialize(host, "SET %s=%s\n", e[i].key, e[i].val);
     }
+    if (global->shared) {
+      shared = store_get_table(global->shared, ptmp);
+      e = (apr_table_entry_t *) apr_table_elts(shared)->elts;
+      for (i = 0; i < apr_table_elts(shared)->nelts; ++i) {
+        perf_serialize(host, "GLOBAL %s=%s\n", e[i].key, e[i].val);
+      }
+    }
+    apr_pool_destroy(ptmp);
+    host->flags |= PERF_HOST_FLAGS_GLOBALS_DIST; 
   }
-  apr_pool_destroy(ptmp);
   return APR_SUCCESS;
 }
 
@@ -539,14 +546,17 @@ static apr_status_t perf_serialize_clients(global_t *global, perf_host_t *host) 
   apr_pool_t *ptmp;
   apr_table_entry_t *e;
 
-  apr_pool_create(&ptmp, NULL);
-  perf_serialize(host, "CLIENT %d\n", host->clients);
-  e = (apr_table_entry_t *) apr_table_elts(host->worker->lines)->elts;
-  for (i = 0; i < apr_table_elts(host->worker->lines)->nelts; ++i) {
-    perf_serialize(host, "%s\n", e[i].val);
+  if (host->clients > 0) {
+    apr_pool_create(&ptmp, NULL);
+    perf_serialize(host, "CLIENT %d\n", host->clients);
+    e = (apr_table_entry_t *) apr_table_elts(host->worker->lines)->elts;
+    for (i = 0; i < apr_table_elts(host->worker->lines)->nelts; ++i) {
+      perf_serialize(host, "%s\n", e[i].val);
+    }
+    perf_serialize(host, "END\n");
+    apr_pool_destroy(ptmp);
+    host->clients = 0;
   }
-  perf_serialize(host, "END\n");
-  apr_pool_destroy(ptmp);
   return APR_SUCCESS;
 }
 
@@ -668,30 +678,44 @@ static apr_status_t perf_distribute_host(worker_t *worker, apr_thread_t **thread
 static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread) {
   global_t *global = worker->global;
   perf_gconf_t *gconf = perf_get_global_config(global);
+  apr_status_t status = APR_ENOTHREAD;
   
   if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
     if (!gconf->cur_host_i) {
       worker_log(worker, LOG_INFO, "Distribute CLIENT to my self");
       perf_get_first_host(global, worker);
-      return APR_ENOTHREAD;
+      status = APR_ENOTHREAD;
     }
     else {
-      apr_status_t status;
       /* distribute to remote host */
       worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", gconf->cur_host->name);
       status = perf_distribute_host(worker, new_thread);
       perf_get_next_host(global, worker);
-      if (status == APR_SUCCESS) {
-        return APR_SUCCESS;
-        /* return APR_ENOTHREAD; */
-      }
-      else {
-        return APR_ENOTHREAD;
+      if (status != APR_SUCCESS) {
+        status = APR_ENOTHREAD;
       }
     }
   }
 
-  return APR_ENOTHREAD;
+  if (gconf->flags & PERF_GCONF_FLAGS_RAMPUP) {
+    if (gconf->rampup.cur_clients >= gconf->rampup.clients) {
+      if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
+        perf_host_t *host = perf_get_cur_host(gconf, worker);
+        if (host) {
+          perf_serialize_globals(global, host);
+          perf_serialize_clients(global, host);
+          perf_serialize(host, "START\n");
+        }
+      }
+      apr_sleep(gconf->rampup.interval);
+      gconf->rampup.cur_clients = 0;
+    } 
+    else {
+      ++gconf->rampup.cur_clients;
+    }
+  }
+
+  return status;
 }
 
 /**
@@ -708,7 +732,7 @@ static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
       apr_thread_mutex_unlock(host->sync);
       perf_serialize_globals(global, host);
       perf_serialize_clients(global, host);
-      perf_serialize(host, "START\n");
+      perf_serialize(host, "GO\n");
     }
   }
   return APR_SUCCESS;
@@ -806,6 +830,7 @@ static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
     clients_str = store_get(worker->params, "1");
     interval_str = store_get(worker->params, "2");
     if (clients_str && interval_str) {
+      gconf->flags |= PERF_GCONF_FLAGS_RAMPUP;
       gconf->rampup.clients = apr_atoi64(clients_str);
       gconf->rampup.interval = apr_time_from_msec(apr_atoi64(interval_str));
     }
