@@ -75,14 +75,21 @@ typedef struct perf_host_s {
   worker_t *worker;
 } perf_host_t;
 
+typedef struct perf_rampup_s {
+  apr_size_t clients;
+  apr_time_t interval;
+} perf_rampup_t;
+
 typedef struct perf_gconf_s {
   int on;
 #define PERF_GCONF_OFF  0
 #define PERF_GCONF_ON   1
 #define PERF_GCONF_LOG  2 
   int flags;
-#define PERF_GCONF_FLAGS_NONE 0 
-#define PERF_GCONF_FLAGS_DIST 1 
+#define PERF_GCONF_FLAGS_NONE   0 
+#define PERF_GCONF_FLAGS_DIST   1 
+#define PERF_GCONF_FLAGS_RAMPUP 2 
+  perf_rampup_t rampup;
   apr_file_t *log_file;
   apr_hash_t *my_threads;
   apr_hash_t *host_and_ports;
@@ -799,6 +806,8 @@ static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
     clients_str = store_get(worker->params, "1");
     interval_str = store_get(worker->params, "2");
     if (clients_str && interval_str) {
+      gconf->rampup.clients = apr_atoi64(clients_str);
+      gconf->rampup.interval = apr_time_from_msec(apr_atoi64(interval_str));
     }
     else if (!clients_str) {
       worker_log_error(worker, "Number of clients per interval not specified");
