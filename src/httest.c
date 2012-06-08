@@ -114,6 +114,10 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
 static apr_status_t global_GO(command_t *self, global_t *global, 
 			     char *data, apr_pool_t *ptmp); 
+static apr_status_t global_START(command_t *self, global_t *global, 
+			         char *data, apr_pool_t *ptmp); 
+static apr_status_t global_JOIN(command_t *self, global_t *global, 
+			        char *data, apr_pool_t *ptmp); 
 static apr_status_t global_END(command_t *self, global_t *global, 
 			      char *data, apr_pool_t *ptmp); 
 static apr_status_t global_DAEMON(command_t *self, global_t *global, 
@@ -150,7 +154,15 @@ command_t global_commands[] = {
   "Close CLIENT|SERVER body",
   COMMAND_FLAGS_NONE},
   {"GO", (command_f )global_GO, "", 
-  "Starts all defined clients, servers and daemons. All started client and servers will be joined",
+  "Starts all defined clients, servers and daemons. "
+  "All started client and servers will be joined. "
+  "It is actually a START followed by JOIN.",
+  COMMAND_FLAGS_NONE},
+  {"START", (command_f )global_START, "", 
+  "Starts all defined clients, servers and daemons.",
+  COMMAND_FLAGS_NONE},
+  {"JOIN", (command_f )global_JOIN, "", 
+  "All started client and servers will be joined, only makes sense after START.",
   COMMAND_FLAGS_NONE},
   {"CLIENT", (command_f )global_CLIENT, "[<number of concurrent clients>]", 
   "Client body start, close it with END and a newline",
@@ -2570,7 +2582,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
 #endif
 
 /**
- * Global GO command
+ * Global START command starts all so far defined threads 
  *
  * @param self IN command
  * @param global IN global object
@@ -2578,8 +2590,8 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_GO(command_t *self, global_t *global, char *data, 
-                              apr_pool_t *ptmp) {
+static apr_status_t global_START(command_t *self, global_t *global, char *data, 
+                                 apr_pool_t *ptmp) {
   apr_status_t status;
   apr_table_entry_t *e;
   int i;
@@ -2587,7 +2599,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   apr_thread_t *thread;
 
 
-  /* start all daemons first */
+  /* create all daemons first */
   e = (apr_table_entry_t *) apr_table_elts(global->daemons)->elts;
   for (i = 0; i < apr_table_elts(global->daemons)->nelts; ++i) {
     worker = (void *)e[i].val;
@@ -2599,7 +2611,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
     }
   }
   apr_table_clear(global->daemons);
-  /* start all servers */
+  /* create all servers */
   e = (apr_table_entry_t *) apr_table_elts(global->servers)->elts;
   for (i = 0; i < apr_table_elts(global->servers)->nelts; ++i) {
     sync_lock(global->sync);
@@ -2614,7 +2626,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   }
   apr_table_clear(global->servers);
 
-  /* start all clients */
+  /* create clients */
   sync_lock(global->sync);
   sync_unlock(global->sync);
   e = (apr_table_entry_t *) apr_table_elts(global->clients)->elts;
@@ -2638,18 +2650,36 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   }
   apr_table_clear(global->clients);
    
-  /* start clients */
+  /* notify start threads */
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     thread = (apr_thread_t *) e[i].val;
     status = htt_run_thread_start(global, thread);
     if (status != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not start client thread: %d", status);
+      fprintf(stderr, "\nCould not start thread: %d", status);
       return status;
     }
   }
- 
-  /* wait on thermination of all started threads */
+  return APR_SUCCESS;
+}
+
+/**
+ * Global JOIN command waits for all started threads except DAEMONs
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_JOIN(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
+  apr_status_t status;
+  apr_table_entry_t *e;
+  int i;
+  apr_thread_t *thread;
+
+  /* join all started threads */
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     apr_status_t retstat;
@@ -2671,6 +2701,26 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   htt_run_worker_joined(global);
   global->prefix = apr_pstrdup(global->pool, "");
   return APR_SUCCESS;
+}
+ 
+
+/**
+ * Global GO command start all threads which are declared so far and wait
+ * until all threads except DAEMON threads do have terminated.
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_GO(command_t *self, global_t *global, char *data, 
+                              apr_pool_t *ptmp) {
+  apr_status_t status = global_START(self, global, data, ptmp);
+  if (status == APR_SUCCESS) {
+    status = global_JOIN(self, global, data, ptmp);
+  }
+  return status;
 }
 
 /**

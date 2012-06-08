@@ -708,7 +708,7 @@ static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
       apr_thread_mutex_unlock(host->sync);
       perf_serialize_globals(global, host);
       perf_serialize_clients(global, host);
-      perf_serialize(host, "GO\n");
+      perf_serialize(host, "START\n");
     }
   }
   return APR_SUCCESS;
