@@ -404,8 +404,8 @@ command_t local_commands[] = {
    "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
    "negation with a leading '!' in the <regex>",
    COMMAND_FLAGS_BODY},
-  {"_LOOP", (command_f )command_LOOP, "<n>", 
-  "Do loop the body <n> times,\n"
+  {"_LOOP", (command_f )command_LOOP, "<n> [<variable>]", 
+  "Do loop the body <n> times, alternative additional <variable> hold count,\n"
   "close body with _END LOOP",
   COMMAND_FLAGS_BODY},
   {"_FOR", (command_f )command_FOR, "<variable> \"|'<string>*\"|'", 
@@ -1077,18 +1077,20 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
     }
     cur = apr_time_now();
 
-    /* avoid division by zero, do happen on windows */
-    while ((cur - start == 0)) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
-    }
-    
-    /* wait loop until we are below the max bps */
-    while (((body->sent * APR_USEC_PER_SEC) / (cur - start)) > bps ) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
+    if (bps > 0) {
+      /* avoid division by zero, do happen on windows */
+      while ((cur - start == 0)) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
+      
+      /* wait loop until we are below the max bps */
+      while (((body->sent * APR_USEC_PER_SEC) / (cur - start)) > bps ) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
     }
 
     /* reset sent bytes */
@@ -1150,22 +1152,24 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
     }
     cur = apr_time_now();
 
-    /* avoid division by zero, do happen on windows */
-    while ((cur - start == 0)) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
-    }
-    
-    /* wait loop until we are below the max rps */
-    while (((body->req_cnt * APR_USEC_PER_SEC) / (cur - start)) > rps ) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
-    }
+    if (rps > 0) {
+      /* avoid division by zero, do happen on windows */
+      while ((cur - start == 0)) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
+      
+      /* wait loop until we are below the max rps */
+      while (((body->req_cnt * APR_USEC_PER_SEC) / (cur - start)) > rps ) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
 
-    /* reset sent bytes */
-    body->req_cnt = 0;
+      /* reset sent requests */
+      body->req_cnt = 0;
+    }
 
     /* test termination */
     if (apr_time_sec(cur - init) >= duration) {
