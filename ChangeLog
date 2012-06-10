@@ -4,6 +4,9 @@ Changes with httest 2.2.6
 
   *) httest: refactoring to enable global commands in modules.
 
+  *) httest: _LOOP for a given time implemented, i.e. _LOOP 1000 [ms] loops
+             for 1000 ms. Only [ms] implemented yet.
+
 Changes with httest 2.2.5
   *) httest: Performance module for distributed client support.
 

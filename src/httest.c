@@ -413,38 +413,41 @@ command_t local_commands[] = {
 
   /* body section */
   {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
-   "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
+   "Test string match, number equality or simply an expression to run body, \n"
+   "close body with _END,\n"
    "negation with a leading '!' in the <regex>",
    COMMAND_FLAGS_BODY},
-  {"_LOOP", (command_f )command_LOOP, "<n> [<variable>]", 
-  "Do loop the body <n> times, alternative additional <variable> hold count,\n"
-  "close body with _END LOOP",
+  {"_LOOP", (command_f )command_LOOP, "<n>[s|ms]|FOREVER [<variable>]", 
+  "LOOP for specified times or optional for a duration given as \"s\" or "
+  "\"ms\" with no space after number, additional you can specify a variable "
+  "which holds the loop count,\n"
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_FOR", (command_f )command_FOR, "<variable> \"|'<string>*\"|'", 
   "Do for each element,\n"
-  "close body with _END FOR",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_BPS", (command_f )command_BPS, "<n> <duration>", 
   "Send not more than defined bytes per second, while defined duration [s]\n"
-  "close body with _END BPS",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_RPS", (command_f )command_RPS, "<n> <duration>", 
   "Send not more than defined requests per second, while defined duration [s]\n"
   "Request is count on every _WAIT call\n"
-  "close body with _END RPS",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_SOCKET", (command_f )command_SOCKET, "", 
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
-  "close body with _END SOCKET",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
-  "close body with _END ERROR",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
 #if APR_HAS_FORK
   {"_PROCESS", (command_f )command_PROCESS, "<name>", 
   "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
-  "close body with _END PROCESS",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
 #endif
 
@@ -948,8 +951,10 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   char **argv;
   int i;
   char *var;
+  apr_time_t duration;
+  apr_time_t start;
 
-  COMMAND_NEED_ARG("<number>|FOREVER"); 
+  COMMAND_NEED_ARG("<number>[s|ms]|FOREVER"); 
  
   my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
@@ -960,7 +965,22 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     loop = apr_atoi64(argv[0]);
   }
 
-  var = argv[1]; 
+  fprintf(stderr, "\nXXXX %s XXXX\n", argv[1]);
+  fflush(stderr);
+  if (argv[1] != NULL) {
+    if (strcmp(argv[1], "[ms]") == 0) {
+      /* this are miliseconds we wanna loop */
+      duration = apr_time_from_msec(loop);
+      loop = -1;
+      var = argv[2]; 
+    }
+    else {
+      var = argv[1]; 
+    }
+  }
+  else {
+    var = NULL;
+  }
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -968,12 +988,16 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   }
   
   /* loop */
+  start = apr_time_now();
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
     if (var) {
       worker_var_set(body, var, apr_itoa(ptmp, i));
     }
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
+      break;
+    }
+    if (apr_time_now() - start >= duration) {
       break;
     }
   }
