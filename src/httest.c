@@ -965,8 +965,6 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     loop = apr_atoi64(argv[0]);
   }
 
-  fprintf(stderr, "\nXXXX %s XXXX\n", argv[1]);
-  fflush(stderr);
   if (argv[1] != NULL) {
     if (strcmp(argv[1], "[ms]") == 0) {
       /* this are miliseconds we wanna loop */
