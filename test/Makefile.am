@@ -156,6 +156,7 @@ EXTRA_DIST= \
 	lock.htt \
 	loop_auto.htt \
 	loop_cur.htt \
+	loop_duration.htt \
 	loop.htt \
 	macro.htt \
 	macro_too_many_redirects.htt \
@@ -230,8 +231,11 @@ EXTRA_DIST= \
 	server_up_down.htt \
 	shared.htt \
 	shell.htb \
+	simple.htt \
 	simple_perf.htt \
+	simple_rampup.htt \
 	simple_stat.htt \
+	simple.visual \
 	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.hte \
