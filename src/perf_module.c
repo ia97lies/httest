@@ -295,8 +295,9 @@ static apr_status_t perf_WAIT_end(worker_t *worker, apr_status_t status) {
     apr_pool_create(&pool, NULL);
     date_str = apr_palloc(pool, APR_RFC822_DATE_LEN);
     apr_rfc822_date(date_str, apr_time_now());
-    apr_file_printf(gconf->log_file, "[%s] \"%s\" %d %"APR_TIME_T_FMT" %"APR_TIME_T_FMT"\n", 
+    apr_file_printf(gconf->log_file, "[%s] \"%s\" %d %s %"APR_TIME_T_FMT" %"APR_TIME_T_FMT"\n", 
                     date_str,  wconf->request_line, wconf->cur_status, 
+                    status == APR_SUCCESS ? "OK" : "FAILED",
                     wconf->stat.sent_time.cur, wconf->stat.recv_time.cur);
     apr_pool_destroy(pool);
   }
