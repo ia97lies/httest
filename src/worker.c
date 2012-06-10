@@ -351,12 +351,8 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
 
   if (self->log_mode >= log_mode) {
     int i;
-    int max_line_len;
-    int line_len;
     char *null="<null>";
     FILE *fd = stdout;
-    apr_pool_t *pool;
-    char * outbuf;
 
     if (!buf) {
       buf = null;
@@ -367,67 +363,32 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
       fd = stderr;
     }
 
+    i = 0;
     if (prefix) {
       fprintf(fd, "\n%s%s", self->prefix, prefix);
     }
-    
-    /* find longest line */
-    i = 0;
-    max_line_len = 0;
-    line_len = 0;
     while (i < len) {
       while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-        if (buf[i] >= 0x20) {
-          line_len++;
-        }
-        else {
-          line_len+=4;
-        }
+	if (buf[i] >= 0x20) {
+	  fprintf(fd, "%c", buf[i]);
+	}
+	else {
+	  fprintf(fd, "0x%02x ", (unsigned char)buf[i]);
+	}
         i++;
       }
-      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-        if (i != len -1) {
-          if (buf[i] == '\n') {
-            line_len+= 1 + strlen(self->prefix) + (prefix?strlen(prefix):0);
-          }
-        }
-        i++;
-      }
-      if (line_len > max_line_len) {
-        max_line_len = line_len;
-      }
-      line_len = 0;
-    }
-    
-    apr_pool_create(&pool, NULL);
-    outbuf = apr_pcalloc(pool, max_line_len + 100);
-
-    /* log lines */
-    while (i < len) {
-      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-        if (buf[i] >= 0x20) {
-          sprintf(outbuf, "%c", buf[i]);
-        }
-        else {
-          sprintf(outbuf, "0x%02x ", (unsigned char)buf[i]);
-        }
-        i++;
-      }
-      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-        if (i != len -1) {
-          if (buf[i] == '\n') {
-            sprintf(outbuf, "%c", buf[i]);
-            sprintf(outbuf, "%s%s", self->prefix, prefix?prefix:"");
-          }
-        }
-        i++;
-      }
-      fprintf(fd, "%s", outbuf);
       fflush(fd);
-      outbuf[0] = 0;
+      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
+	if (i != len -1) {
+	  if (buf[i] == '\n') {
+	    fprintf(fd, "%c", buf[i]);
+	    fprintf(fd, "%s%s", self->prefix, prefix?prefix:"");
+	  }
+	}
+	i++;
+      }
     }
-    
-    apr_pool_destroy(pool);
+    fflush(fd);
   }
 }
 
@@ -1299,13 +1260,9 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   /** get module worker */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
-    if (*module == '_') {
-      module++;
-      block_name = apr_pstrcat(call_pool, "_", last, NULL);
-    }
-    else {
-      block_name = apr_pstrdup(call_pool, last);
-    }
+    /* always jump over prefixing "_" */
+    module++;
+    block_name = apr_pstrcat(call_pool, "_", last, NULL);
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1507,10 +1464,8 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 
   COMMAND_OPTIONAL_ARG;
 
-  apr_pool_create(&pool, NULL);
-
   if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    goto out_err;
+    return status;
   }
 
   if (apr_isdigit(copy[0])) {
@@ -1524,6 +1479,9 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     recv_len = -1;
   }
 
+
+  apr_pool_create(&pool, NULL);
+
   if (worker->recorder->on == RECORDER_PLAY) {
     worker->sockreader = worker->recorder->sockreader;
   }
@@ -1532,7 +1490,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
    * Give modules a chance to setup stuff before _WAIT read from network
    */
   if ((status = htt_run_WAIT_begin(worker)) != APR_SUCCESS) {
-    goto out_err;
+    return status;
   }
 
   if (worker->sockreader == NULL) {
@@ -1577,7 +1535,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
    * Give modules the possibility to expect/grep/match there own stuff
    */
   if ((status = htt_run_read_pre_headers(worker)) != APR_SUCCESS) {
-    goto out_err;
+    return status;
   }
 
   /** Status line, make that a little fuzzy in reading trailing empty lines of last
@@ -1586,7 +1544,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
       line[0] == 0);
   if (line[0] != 0) { 
     if ((status = htt_run_read_status_line(worker, line)) != APR_SUCCESS) {
-      goto out_err;
+      return status;
     }
     if (worker->recorder->on == RECORDER_RECORD &&
 	worker->recorder->flags & RECORDER_RECORD_STATUS) {
@@ -1669,7 +1627,7 @@ http_0_9:
       }
     }
     if ((status = htt_run_read_buf(worker, buf, len)) != APR_SUCCESS) {
-      goto out_err;
+      return status;
     }
     if ((status = worker_handle_buf(worker, pool, buf, len)) != APR_SUCCESS) {
       goto out_err;
@@ -1710,12 +1668,12 @@ out_err:
   else {
     ++worker->req_cnt;
   }
-  status = worker_assert(worker, status);
-
   /**
    * Give modules a chance to cleanup stuff after _WAIT
    */
   htt_run_WAIT_end(worker, status);
+  status = worker_assert(worker, status);
+  /** measure request end */
 
   apr_pool_destroy(pool);
   return status;
