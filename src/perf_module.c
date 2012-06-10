@@ -701,7 +701,7 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
     if (gconf->rampup.cur_clients >= gconf->rampup.clients) {
       if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
         perf_host_t *host = perf_get_cur_host(gconf, worker);
-        if (host) {
+        if (host && host->state == PERF_HOST_CONNECTED) {
           perf_serialize_globals(global, host);
           perf_serialize_clients(global, host);
           perf_serialize(host, "START\n");
