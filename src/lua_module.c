@@ -100,11 +100,11 @@ static lua_gconf_t *lua_get_global_config(global_t *global) {
  * @return lua reader instance
  */
 static lua_reader_t *lua_new_lua_reader(worker_t *worker, apr_pool_t *pool) {
-  lua_wconf_t *wconf = lua_get_worker_config(worker);
+  lua_wconf_t *bconf = lua_get_worker_config(worker->block);
   lua_reader_t *reader = apr_pcalloc(pool, sizeof(*reader));
   reader->pool = pool;
   reader->lines = worker->lines;
-  reader->starting_line_nr = wconf->starting_line_nr;
+  reader->starting_line_nr = bconf->starting_line_nr;
 	return reader;
 }
 
