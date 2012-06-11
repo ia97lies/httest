@@ -1287,7 +1287,6 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     goto error;
   }
   else { 
-    apr_hash_t *config;
     int log_mode; 
     int i;
     int j;
@@ -1338,17 +1337,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
-    if (!apr_hash_get(block->config, worker->name, APR_HASH_KEY_STRING)) {
-      config = apr_hash_overlay(worker->pbody, block->config, worker->config);
-      worker->config = config;
-      apr_hash_set(block->config, worker->name, APR_HASH_KEY_STRING, (void *)1);
-    }
     lines = my_table_deep_copy(call_pool, block->lines);
     apr_thread_mutex_unlock(worker->mutex);
     /* CR END */
 
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
+    call->block = block;
     call->params = params;
     call->retvars = retvars;
     call->locals = locals;
@@ -1373,6 +1368,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     worker->locals = locals;
     worker->lines = lines;
     worker->cmd = cmd;
+    worker->block = NULL;
 
     goto error;
   }

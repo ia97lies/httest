@@ -1,0 +1,14 @@
+BLOCK:LUA test1 
+print("\nI'm in test1") 
+END
+
+BLOCK:LUA test2 arg1 
+print("\nI'm in test2, arg1="..arg1) 
+END 
+
+CLIENT 
+test1 
+test2 "test2arg" 
+test1 
+END
+
