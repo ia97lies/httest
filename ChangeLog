@@ -9,6 +9,8 @@ Changes with httest 2.2.6
 
   *) httest: Bugfixed log body data.
 
+  *) httest: Bugfixed possible coredump with lua blocks.
+
 Changes with httest 2.2.5
   *) httest: Performance module for distributed client support.
 
