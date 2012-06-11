@@ -159,7 +159,7 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
   JSRuntime *rt;  
   JSContext *cx;  
   JSObject  *global;
-  js_wconf_t *wconf = js_get_worker_config(worker);
+  js_wconf_t *bconf = js_get_worker_config(worker->block);
 
   if ((rt = JS_NewRuntime(8 * 1024 * 1024)) == NULL) {
     worker_log_error(worker, "Could not create javascript runtime");
@@ -186,11 +186,11 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     return APR_EGENERAL;
   } 
 
-  if (!wconf->func) {
+  if (!bconf->func) {
     int i;
     const char **argv = NULL;
-    int argc = apr_table_elts(wconf->params)->nelts; 
-    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(wconf->params)->elts;
+    int argc = apr_table_elts(bconf->params)->nelts; 
+    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(bconf->params)->elts;
 
     if (argc-1) {
       argv = apr_pcalloc(worker->pbody, argc * sizeof(char*));
@@ -199,11 +199,11 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
       }
     }
 
-    wconf->func = JS_CompileFunction(cx, global, worker->name, argc-1, argv, 
-                                          wconf->buffer, wconf->length, 
-                                          wconf->filename, 
-                                          wconf->starting_line_nr);
-    if (wconf->func == NULL) {
+    bconf->func = JS_CompileFunction(cx, global, worker->name, argc-1, argv, 
+                                          bconf->buffer, bconf->length, 
+                                          bconf->filename, 
+                                          bconf->starting_line_nr);
+    if (bconf->func == NULL) {
       return APR_EINVAL;
     }
   }
@@ -213,9 +213,9 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
     jsval rval;  
     JSString *str;
     JSBool ok; 
-    int argc = apr_table_elts(wconf->params)->nelts; 
+    int argc = apr_table_elts(bconf->params)->nelts; 
     jsval *jargv = apr_pcalloc(ptmp, argc * sizeof(jsval *)); 
-    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(wconf->params)->elts;
+    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(bconf->params)->elts;
 
     for (i = 1; i < argc; i++) {
       const char *val = NULL;
@@ -225,13 +225,13 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
       jargv[i-1] = STRING_TO_JSVAL(str); 
     }
 
-    ok = JS_CallFunction(cx, global, wconf->func, argc-1, jargv, &rval);
+    ok = JS_CallFunction(cx, global, bconf->func, argc-1, jargv, &rval);
     if (ok == JS_FALSE) {
       return APR_EINVAL;
     }
-    if (apr_table_elts(wconf->retvars)->nelts && JSVAL_IS_STRING(rval)) {
+    if (apr_table_elts(bconf->retvars)->nelts && JSVAL_IS_STRING(rval)) {
       str = JS_ValueToString(cx, rval);  
-      e = (apr_table_entry_t *) apr_table_elts(wconf->retvars)->elts;
+      e = (apr_table_entry_t *) apr_table_elts(bconf->retvars)->elts;
       store_set(worker->vars, store_get(worker->retvars, e[0].key), JS_EncodeString(cx, str));
     }
   }

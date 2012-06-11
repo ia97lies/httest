@@ -1260,9 +1260,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   /** get module worker */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
-    /* always jump over prefixing "_" */
-    module++;
-    block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    if (*module == '_') {
+      module++;
+      block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    }
+    else {
+      block_name = apr_pstrdup(call_pool, last);
+    }
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1283,7 +1287,6 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     goto error;
   }
   else { 
-    apr_hash_t *config;
     int log_mode; 
     int i;
     int j;
@@ -1334,17 +1337,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
-    if (!apr_hash_get(block->config, worker->name, APR_HASH_KEY_STRING)) {
-      config = apr_hash_overlay(worker->pbody, block->config, worker->config);
-      worker->config = config;
-      apr_hash_set(block->config, worker->name, APR_HASH_KEY_STRING, (void *)1);
-    }
     lines = my_table_deep_copy(call_pool, block->lines);
     apr_thread_mutex_unlock(worker->mutex);
     /* CR END */
 
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
+    call->block = block;
     call->params = params;
     call->retvars = retvars;
     call->locals = locals;
@@ -1369,6 +1368,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     worker->locals = locals;
     worker->lines = lines;
     worker->cmd = cmd;
+    worker->block = NULL;
 
     goto error;
   }
@@ -1464,8 +1464,10 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 
   COMMAND_OPTIONAL_ARG;
 
+  apr_pool_create(&pool, NULL);
+
   if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
+    goto out_err;
   }
 
   if (apr_isdigit(copy[0])) {
@@ -1479,9 +1481,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     recv_len = -1;
   }
 
-
-  apr_pool_create(&pool, NULL);
-
   if (worker->recorder->on == RECORDER_PLAY) {
     worker->sockreader = worker->recorder->sockreader;
   }
@@ -1490,7 +1489,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
    * Give modules a chance to setup stuff before _WAIT read from network
    */
   if ((status = htt_run_WAIT_begin(worker)) != APR_SUCCESS) {
-    return status;
+    goto out_err;
   }
 
   if (worker->sockreader == NULL) {
@@ -1535,7 +1534,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
    * Give modules the possibility to expect/grep/match there own stuff
    */
   if ((status = htt_run_read_pre_headers(worker)) != APR_SUCCESS) {
-    return status;
+    goto out_err;
   }
 
   /** Status line, make that a little fuzzy in reading trailing empty lines of last
@@ -1544,7 +1543,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
       line[0] == 0);
   if (line[0] != 0) { 
     if ((status = htt_run_read_status_line(worker, line)) != APR_SUCCESS) {
-      return status;
+      goto out_err;
     }
     if (worker->recorder->on == RECORDER_RECORD &&
 	worker->recorder->flags & RECORDER_RECORD_STATUS) {
@@ -1627,7 +1626,7 @@ http_0_9:
       }
     }
     if ((status = htt_run_read_buf(worker, buf, len)) != APR_SUCCESS) {
-      return status;
+      goto out_err;
     }
     if ((status = worker_handle_buf(worker, pool, buf, len)) != APR_SUCCESS) {
       goto out_err;
@@ -1668,12 +1667,12 @@ out_err:
   else {
     ++worker->req_cnt;
   }
+  status = worker_assert(worker, status);
+
   /**
    * Give modules a chance to cleanup stuff after _WAIT
    */
   htt_run_WAIT_end(worker, status);
-  status = worker_assert(worker, status);
-  /** measure request end */
 
   apr_pool_destroy(pool);
   return status;

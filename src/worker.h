@@ -77,6 +77,8 @@ struct worker_s {
   interpret_f interpret;
   /* worker config */
   apr_hash_t *config;
+  /* worker block if this is a CALL */
+  worker_t *block;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
   /* dies on END */
