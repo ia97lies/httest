@@ -951,7 +951,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   char **argv;
   int i;
   char *var;
-  apr_time_t duration;
+  apr_time_t duration = 0;
   apr_time_t start;
 
   COMMAND_NEED_ARG("<number>[s|ms]|FOREVER"); 
@@ -968,7 +968,8 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   if (argv[1] != NULL) {
     if (strcmp(argv[1], "[ms]") == 0) {
       /* this are miliseconds we wanna loop */
-      duration = apr_time_from_msec(loop);
+      /* apr_time_from_msec available in apr 1.4.x */
+      duration = 1000 * loop;
       loop = -1;
       var = argv[2]; 
     }
@@ -995,7 +996,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
-    if (apr_time_now() - start >= duration) {
+    if (duration != 0 && apr_time_now() - start >= duration) {
       break;
     }
   }

@@ -833,7 +833,8 @@ static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
     if (clients_str && interval_str) {
       gconf->flags |= PERF_GCONF_FLAGS_RAMPUP;
       gconf->rampup.clients = apr_atoi64(clients_str);
-      gconf->rampup.interval = apr_time_from_msec(apr_atoi64(interval_str));
+      /* apr_time_from_msec available in apr 1.4.x */
+      gconf->rampup.interval = 1000 * apr_atoi64(interval_str);
     }
     else if (!clients_str) {
       worker_log_error(worker, "Number of clients per interval not specified");
