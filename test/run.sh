@@ -4,4 +4,4 @@ TOP=..
 export TOP
 
 HTTEST=../src/httest
-$HTTEST $@
+$HTTEST_PRE $HTTEST $@
