@@ -16,8 +16,9 @@ function run_single {
   if [ -f $B.valgrind ]; then
     ./run.sh $B.htt >/dev/null 2>/dev/null
     lines=`wc -l $B.valgrind | awk '{ print $1 }'`
-    tail -n ${lines} /tmp/tmp.txt >/tmp/tmp2.txt
-    diff /tmp/tmp2.txt $B.valgrind
+    tail -n ${lines} /tmp/tmp.txt | sed -e 's/==[0-9]*==//' >/tmp/tmp2.txt
+    cat $B.valgrind | sed -e 's/==[0-9]*==//' >/tmp/tmp3.txt
+    diff /tmp/tmp2.txt /tmp/tmp3.txt
   else
     printf "SKIP"
   fi
