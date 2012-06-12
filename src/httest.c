@@ -1426,7 +1426,7 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     char *line;
     apr_pool_t *ptmp;
 
-    apr_pool_create(&ptmp, worker->pbody);
+    apr_pool_create(&ptmp, NULL);
     worker->file_and_line = e[worker->cmd].key;
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {

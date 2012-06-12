@@ -1723,7 +1723,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
   char *tag;
   apr_pool_t *pool;
 
-  apr_pool_create(&pool, self->pbody);
+  apr_pool_create(&pool, NULL);
   socket = 
     apr_hash_get(self->sockets, apr_pstrcat(self->pbody, hostname, portname, 
 	                                    NULL),
@@ -1984,7 +1984,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "EXPECT ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
   }
   match = apr_pstrdup(pool, interm);
@@ -2086,7 +2086,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "MATCH ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
@@ -2195,7 +2195,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "GREP ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
@@ -3562,7 +3562,7 @@ apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data,
   pool = module_get_config(worker->config, apr_pstrdup(ptmp, "MATCH_SEQ"));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), pool);
   }
 
@@ -3612,7 +3612,7 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data,
     apr_pool_destroy(worker->recorder->pool);
   }
 
-  apr_pool_create(&worker->recorder->pool, worker->pbody);
+  apr_pool_create(&worker->recorder->pool, NULL);
 
   /* setup a sockreader for recording */
   sockreader_new(&worker->recorder->sockreader, NULL, NULL, 0, 
