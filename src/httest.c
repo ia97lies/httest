@@ -3187,6 +3187,7 @@ exit:
  * own exit func
  */
 static void my_exit() {
+  apr_terminate();
   if (!success) {
     fprintf(stderr, " FAILED\n");
     fflush(stderr);
@@ -3198,6 +3199,7 @@ static void my_exit() {
 }
 
 static void no_output_exit() {
+  apr_terminate();
 }
 
 /** 
