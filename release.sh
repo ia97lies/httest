@@ -16,7 +16,7 @@ function error() {
   sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/"
   mv configure.in.tmp configure.in
   echo "Release build FAILED"
-  exit 1
+  exit $1
 }
 
 if [ $OPTION = "try" ]; then
@@ -129,3 +129,6 @@ fi
 echo
 echo Release build SUCCESS 
 
+if [ $OPTION = "try" ]; then
+    error 0
+fi

@@ -31,6 +31,7 @@ EXTRA_DIST= \
 	block_js_on_the_fly.htt \
 	block_js.txt \
 	block_local_vars.htt \
+	block_lua_2_funcs.htt \
 	block_lua_buf.htt \
 	block_lua_cert.htt \
 	block_lua_crypto.htt \
@@ -81,6 +82,7 @@ EXTRA_DIST= \
 	embedded_file.htt \
 	embedded_sh.htt \
 	embedded_sh_pipe.htt \
+	empty.htt \
 	env.htt \
 	error_body.hte \
 	error_body.htt \
@@ -218,6 +220,7 @@ EXTRA_DIST= \
 	run_lib.sh \
 	run_ntlm.sh \
 	run.sh \
+	run_valgrind.sh \
 	run_visual.sh \
 	run_wild.sh \
 	sendfile_chunked.htt \
@@ -291,6 +294,7 @@ EXTRA_DIST= \
 	test_run_ntlm.sh \
 	test_run_shell.sh \
 	test_run_visual.sh \
+	threaded.htt \
 	threaded_server.hte \
 	threaded_server.htt \
 	threaded_server.txt \
