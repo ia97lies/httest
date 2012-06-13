@@ -89,6 +89,7 @@ char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
   int i;
   int start;
   int line_end;
+  int mark = 0;
   char *var_name;
   char *new_line;
   const char *val;
@@ -125,7 +126,11 @@ once_again:
         }
         new_line = apr_pstrcat(p, line, val, &line[i], NULL);
         line = new_line;
-        goto once_again;
+        i = mark;
+        mark = 0;
+      }
+      else if (!mark) {
+        mark = line_end;
       }
     }
     else {
