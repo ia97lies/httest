@@ -97,7 +97,10 @@ char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
 
   new_line = line;
 
-once_again:
+  if (!strchr(line, '$')) {
+    return new_line;
+  }
+
   i = 0;
   while (line[i] != 0) {
     if (line[i] == '$') {
