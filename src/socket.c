@@ -231,7 +231,6 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
 	  break;
 	}
       }
-
       min_len = len - i < self->len - self->i ? len - i : self->len - self->i;
       memcpy(&block[i], &self->buf[self->i], min_len);
       i += min_len;

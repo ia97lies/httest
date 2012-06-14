@@ -89,19 +89,19 @@ char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
   int i;
   int start;
   int line_end;
-  int mark = 0;
   char *var_name;
   char *new_line;
   const char *val;
   char open_curly_brace;
+  char *next_dollar;
 
   new_line = line;
 
-  if (!strchr(line, '$')) {
+  if (!(next_dollar = strchr(line, '$'))) {
     return new_line;
   }
 
-  i = 0;
+  i = next_dollar - line;
   while (line[i] != 0) {
     if (line[i] == '$') {
       line_end = i;
@@ -129,15 +129,14 @@ char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
         }
         new_line = apr_pstrcat(p, line, val, &line[i], NULL);
         line = new_line;
-        i = mark;
-        mark = 0;
-      }
-      else if (!mark) {
-        mark = line_end;
+        i = 0;
       }
     }
+    if ((next_dollar = strchr(&line[i], '$'))) {
+      i = next_dollar - line;
+    }
     else {
-      ++i;
+      break;
     }
   }
   return new_line;
