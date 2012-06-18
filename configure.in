@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.53)
-AC_INIT(httest, 2.2.6, ia97lies@sourceforge.net)
+AC_INIT(httest, snapshot, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 
