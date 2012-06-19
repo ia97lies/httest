@@ -57,7 +57,7 @@ typedef struct perf_s {
 } perf_t;
 
 typedef struct perf_wconf_s {
-  apr_time_t start_time;
+  apr_time_t WAIT_time;
   int cur_status;
   const char *request_line;
   perf_t stat;
@@ -106,6 +106,7 @@ typedef struct perf_gconf_s {
  * Globals 
  ***********************************************************************/
 const char * perf_module = "perf_module";
+apr_time_t start_time;
 
 /************************************************************************
  * Local 
@@ -155,9 +156,9 @@ static apr_status_t perf_line_sent(worker_t *worker, line_t *line) {
   perf_gconf_t *gconf = perf_get_global_config(global);
 
   if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
-    if (wconf->start_time == 0) {
+    if (wconf->WAIT_time == 0) {
       ++wconf->stat.count.reqs;
-      wconf->start_time = apr_time_now();
+      wconf->WAIT_time = apr_time_now();
       wconf->request_line = line->buf;
     }
     wconf->stat.sent_bytes += line->len;
@@ -181,8 +182,8 @@ static apr_status_t perf_WAIT_begin(worker_t *worker) {
 
   if (gconf->on & PERF_GCONF_ON && worker->flags & FLAGS_CLIENT) {
     apr_time_t now = apr_time_now();
-    apr_time_t duration = now - wconf->start_time;
-    wconf->start_time = now;
+    apr_time_t duration = now - wconf->WAIT_time;
+    wconf->WAIT_time = now;
     wconf->stat.sent_time.cur = duration;
     wconf->stat.sent_time_total += duration;
     if (duration > wconf->stat.sent_time.max) {
@@ -270,8 +271,8 @@ static apr_status_t perf_WAIT_end(worker_t *worker, apr_status_t status) {
     int i;
     apr_time_t compare;
     apr_time_t now = apr_time_now();
-    apr_time_t duration = now - wconf->start_time;
-    wconf->start_time = 0;
+    apr_time_t duration = now - wconf->WAIT_time;
+    wconf->WAIT_time = 0;
     wconf->stat.recv_time.cur = duration;
     wconf->stat.recv_time.total += duration;
     if (duration > wconf->stat.recv_time.max) {
@@ -407,6 +408,7 @@ static apr_status_t perf_worker_joined(global_t *global) {
   if (gconf->on & PERF_GCONF_ON) {
     int i; 
     apr_time_t time;
+    float seconds;
     gconf->stat.sent_time.avr = gconf->stat.sent_time_total/gconf->stat.count.reqs;
     gconf->stat.recv_time.avr = gconf->stat.recv_time.total/gconf->stat.count.reqs;
     gconf->stat.conn_time.avr = gconf->stat.conn_time.total/gconf->stat.count.conns;
@@ -414,6 +416,12 @@ static apr_status_t perf_worker_joined(global_t *global) {
     fprintf(stdout, "total conns: %d\n", gconf->stat.count.conns);
     fprintf(stdout, "send bytes: %"APR_SIZE_T_FMT"\n", gconf->stat.sent_bytes);
     fprintf(stdout, "received bytes: %"APR_SIZE_T_FMT"\n", gconf->stat.recv_bytes);
+    seconds = (float)(apr_time_now() - start_time)/ APR_USEC_PER_SEC;
+    
+    fprintf(stdout, "test duration: %02f\n", seconds);
+    if (gconf->stat.count.reqs > 0) {
+      fprintf(stdout, "request per second: %02f\n", gconf->stat.count.reqs/seconds);
+    }
     for (i = 0, time = 1; i < 10; i++, time *= 2) {
       if (gconf->stat.count.less[i]) {
         fprintf(stdout, "%d request%s less than %"APR_TIME_T_FMT" seconds\n", 
@@ -855,6 +863,7 @@ static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
 apr_status_t perf_module_init(global_t *global) {
   apr_status_t status;
 
+  start_time = apr_time_now();
   if ((status = module_command_new(global, "PERF", "STAT", 
                                    "ON|OFF|LOG <filename>",
 				   "print statistics at end of test, option LOG "

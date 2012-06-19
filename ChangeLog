@@ -1,4 +1,7 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.7
+  *) httest: Performance improvments around receiving and sending data.
+
 Changes with httest 2.2.6
   *) httest: New RAMPUP command to control the start fo CLIENTS.
 
