@@ -419,7 +419,7 @@ static apr_status_t perf_worker_joined(global_t *global) {
     seconds = (float)(apr_time_now() - start_time)/ APR_USEC_PER_SEC;
     
     fprintf(stdout, "test duration: %02f\n", seconds);
-    if (gconf->stat.count.reqs > 0) {
+    if (seconds > 0) {
       fprintf(stdout, "request per second: %02f\n", gconf->stat.count.reqs/seconds);
     }
     for (i = 0, time = 1; i < 10; i++, time *= 2) {
