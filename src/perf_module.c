@@ -591,7 +591,7 @@ static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread,
   if ((status = sockreader_new(&sockreader, host->socket->transport,
                                NULL, 0, pool)) == APR_SUCCESS) {
     status = sockreader_read_line(sockreader, &buf); 
-    worker_log(host->worker, LOG_INFO, "Remote host finished\n");
+    worker_log(host->worker, LOG_INFO, "Remote host finished \"%s\"\n", buf);
   }
   else {
     worker_log_error(host->worker, "Lost connection to remote host \"%s\"\n", 

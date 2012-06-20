@@ -3344,7 +3344,7 @@ int main(int argc, const char *const argv[]) {
       cur_file = apr_pstrdup(pool, opt->argv[opt->ind++]);
     }
 
-    if (flags & MAIN_FLAGS_USE_STDIN) {
+    if (flags & MAIN_FLAGS_USE_STDIN && log_mode != LOG_NONE) {
       fprintf(stdout, "simple htt shell\n");
     }
     else if (flags & MAIN_FLAGS_PRINT_TSTAMP) {
