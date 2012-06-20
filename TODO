@@ -1,8 +1,8 @@
 TODO List
 ---------
 + Distributed
-  - Start a listening httest and send script over TCP/SSL
-  - Send script to a listening httest
+  - Synchronize results from distributed tests
+  - Count errors, do not break
 
 + HTML
   - DOM, XmlHttpRequest and HTML interaction
@@ -10,7 +10,6 @@ TODO List
 
 + SSL
   - Need more information on ssl failure
-  - Integrate OpenSSL 1.0.0 and 1.0.1 and extend _SSL:TRACE
 
 + Debugger
   - break on error
@@ -20,7 +19,6 @@ TODO List
   - Color coding in output
   - Stack trace on error is not highlighted. Do it the C way :)
   - XML output
-  - Statistic output at the end.
 
 + Scanning
   - Parameterized scripts
@@ -40,4 +38,4 @@ TODO List
   - Encrpyt the ntml type 3 message and extrakt user
   - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
   - Shared variables => SHARED <var-name-list>
-
+  - Firefox plugin
