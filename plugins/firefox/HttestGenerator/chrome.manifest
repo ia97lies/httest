@@ -1,0 +1,8 @@
+content     httestgenerator    chrome/content/
+content     httestgenerator    chrome/content/ contentaccessible=yes
+overlay chrome://browser/content/browser.xul chrome://httestgenerator/content/browser.xul
+
+locale	httestgenerator	en-US	locale/en-US/
+
+skin	httestgenerator	classic/1.0	skin/
+style	chrome://global/content/customizeToolbar.xul	chrome://httestgenerator/skin/skin.css
