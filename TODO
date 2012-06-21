@@ -1,5 +1,10 @@
 TODO List
 ---------
++ Syntax
+  - Tighter integration of Lua
+  - Preprocessor do generate Lua script for a CLIEN/SERVER/DAEMON/BLOCK/... body see doc/httest3.txt
+  - Mark _LOOP and stuff as obsolete or translate them to a lua for loop
+
 + Distributed
   - Synchronize results from distributed tests
   - Count errors, do not break

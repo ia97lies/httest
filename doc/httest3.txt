@@ -24,7 +24,7 @@ interpret([[
   __
   _EXPECT headers "200 OK"
   _WAIT
-]], { "i" = i, "j" = j })
+]], { "i" = i })
 
 Every unresolved variable found in block should be added in a assoziative
 table which is also handed over to C
@@ -32,3 +32,4 @@ table which is also handed over to C
 It seems to me that this would be the best way to improve httest, better than
 creating a new language.
 
+--> Transform httest script to a lua script while reading.
