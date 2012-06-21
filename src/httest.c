@@ -114,6 +114,8 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
 static apr_status_t global_GO(command_t *self, global_t *global, 
 			     char *data, apr_pool_t *ptmp); 
+static apr_status_t global_EXIT(command_t *self, global_t *global, 
+			     char *data, apr_pool_t *ptmp); 
 static apr_status_t global_START(command_t *self, global_t *global, 
 			         char *data, apr_pool_t *ptmp); 
 static apr_status_t global_JOIN(command_t *self, global_t *global, 
@@ -163,6 +165,9 @@ command_t global_commands[] = {
   COMMAND_FLAGS_NONE},
   {"JOIN", (command_f )global_JOIN, "", 
   "All started client and servers will be joined, only makes sense after START.",
+  COMMAND_FLAGS_NONE},
+  {"EXIT", (command_f )global_EXIT, "", 
+  "Graceful script termination, useful for shell mode.",
   COMMAND_FLAGS_NONE},
   {"CLIENT", (command_f )global_CLIENT, "[<number of concurrent clients>]", 
   "Client body start, close it with END and a newline",
@@ -2747,6 +2752,28 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
 }
 
 /**
+ * Global EXIT command for graceful script termination 
+ * until all threads except DAEMON threads do have terminated.
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_EXIT(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
+  if (success) {
+    exit(0);
+  }
+  else {
+    exit(1);
+  }
+  /* never reach this point */
+  return APR_ENOTIMPL;
+}
+
+/**
  * Recursiv interpreter. Can handle recursiv calls to with sub files i.e. INCLUDE.
  *
  * @param fp IN current open file
@@ -3344,8 +3371,10 @@ int main(int argc, const char *const argv[]) {
       cur_file = apr_pstrdup(pool, opt->argv[opt->ind++]);
     }
 
-    if (flags & MAIN_FLAGS_USE_STDIN && log_mode != LOG_NONE) {
-      fprintf(stdout, "simple htt shell\n");
+    if ((flags & MAIN_FLAGS_USE_STDIN)) {
+      if (log_mode != LOG_NONE) {
+        fprintf(stdout, "simple htt shell\n");
+      }
     }
     else if (flags & MAIN_FLAGS_PRINT_TSTAMP) {
       time = apr_time_now();
