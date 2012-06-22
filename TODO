@@ -1,9 +1,14 @@
 TODO List
 ---------
++ Core
+  - Develop a virtual maschine for httest to improve script execution
+  - Add a "on the fly" compile step before execution
+
 + Syntax
-  - Tighter integration of Lua
-  - Preprocessor do generate Lua script for a CLIEN/SERVER/DAEMON/BLOCK/... body see doc/httest3.txt
-  - Mark _LOOP and stuff as obsolete or translate them to a lua for loop
+  - Remove this annoying _ before the calls
+  - No upercase commands anymore
+  - Migration script, test it for adovum httest scripts
+  - Or keep it backward compatible
 
 + Distributed
   - Synchronize results from distributed tests
@@ -44,3 +49,4 @@ TODO List
   - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
   - Shared variables => SHARED <var-name-list>
   - Firefox plugin
+  - To display version do shortcut it to -V (htremote, httest, htnlm, ...)

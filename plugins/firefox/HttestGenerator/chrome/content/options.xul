@@ -1,31 +1,31 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
- 
+
 <prefwindow 
-     title="Httest Generator Preferences"
-     xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
- 
-	<prefpane label="Httest Generator Preferences">
-		<preferences>
-			<preference id="httest-generator-autorun" name="extensions.httestgenerator.autorun" type="bool"/>
-		</preferences>
-		
-		<groupbox>
-			<caption label="Settings"/>
-			<grid>
-				<columns>
-					<column flex="4"/>
-					<column flex="1"/>
-				</columns>
-				<rows>
-					<row>
-						<label control="autorun" value="Autorun"/>
-						<checkbox id="autorun" preference="httest-generator-autorun"/>
-					</row>
-				</rows>
-			</grid>
-		</groupbox>	
-		
-	</prefpane>
- 
+  title="Httest Generator Preferences"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <prefpane label="Httest Generator Preferences">
+    <preferences>
+      <preference id="httest-generator-autorun" name="extensions.httestgenerator.autorun" type="bool"/>
+    </preferences>
+
+    <groupbox>
+      <caption label="Settings"/>
+      <grid>
+        <columns>
+          <column flex="4"/>
+          <column flex="1"/>
+        </columns>
+        <rows>
+          <row>
+            <label control="autorun" value="Autorun"/>
+            <checkbox id="autorun" preference="httest-generator-autorun"/>
+          </row>
+        </rows>
+      </grid>
+    </groupbox>	
+
+  </prefpane>
+
 </prefwindow>
