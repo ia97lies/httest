@@ -149,7 +149,6 @@ struct worker_s {
   apr_port_t listener_port;
   char *listener_addr;
   sockreader_t *sockreader;
-  recorder_t *recorder;
 #define LOG_NONE 0
 #define LOG_ERR 1
 #define LOG_WARN 2
