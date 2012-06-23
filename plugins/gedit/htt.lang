@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Syntax coloring for the httest language (htt.sf.net),
+for gedit / GtkSourceView (projects.gnome.org/gedit);
+place this file in:
+  ~/.local/share/gtksourceview-2.0/language-specs
+first version created in June 2012 by $(whois jexler.net).
+      
+This is "provided as is", no warranty of any kind.
+-->
+<language id="htt" _name="httest" version="2.0" _section="Scripts">
+  <metadata>
+    <property name="mimetypes"></property>
+    <property name="globs">*.htt;*.htb;*.hte;*.man</property>
+    <property name="line-comment-start">#</property>
+  </metadata>
+
+  <styles>
+    <style id="comment"             _name="Comment"             map-to="def:comment"/>
+    <style id="string"              _name="String"              map-to="def:string"/>
+    <style id="keyword"             _name="Keyword"             map-to="def:keyword"/>
+    <style id="type"                _name="Type"                map-to="def:type"/>
+</styles>
+
+  <definitions>
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>(?&lt;!\S)#</start>
+      <include>
+        <context ref="def:in-comment"/>
+      </include>
+    </context>
+
+    <context id="double-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <!-- highlight escaped chars -->
+        <context style-ref="def:special-char">
+            <match>\\[$`"\\]</match>
+        </context>
+        <!-- skip backslash where it's not an escaping char -->
+        <context>
+            <match>\\</match>
+        </context>
+        <context ref="def:line-continue"/>
+	<context ref="type"/>
+      </include>
+    </context>
+
+    <context id="single-quoted-string" style-ref="string" class="string" class-disabled="no-spell-check">
+      <start>'</start>
+      <end>'</end>
+    </context>
+
+    <context id="built-in-command-1" style-ref="keyword">
+      <prefix></prefix>
+      <suffix></suffix>
+      <keyword>\_\_</keyword>
+      <keyword>\_\-</keyword>
+    </context>
+
+    <context id="built-in-command-2" style-ref="keyword">
+      <prefix>(?&lt;![^\s;\(\)\`])</prefix>
+      <suffix>(?![^\s;\(\)\`])</suffix>
+      <keyword>CLIENT</keyword>
+      <keyword>SERVER</keyword>
+      <keyword>DAEMON</keyword>
+      <keyword>BLOCK</keyword>
+      <keyword>BLOCK:JS</keyword>
+      <keyword>BLOCK:LUA</keyword>
+      <keyword>END</keyword>
+      <keyword>LUA</keyword>
+      <keyword>SH</keyword>
+      <keyword>INCLUDE</keyword>
+      <keyword>AUTO_CLOSE</keyword>
+      <keyword>EXEC</keyword>
+      <keyword>SET</keyword>
+      <keyword>GLOBAL</keyword>
+      <keyword>PATH</keyword>
+      <keyword>TIMEOUT</keyword>
+      <keyword>PROCESS</keyword>
+      <keyword>FILE</keyword>
+      <keyword>MODULE</keyword>
+      <keyword>REQUIRE</keyword>
+      <keyword>_ADD_HEADER</keyword>
+      <keyword>_AUTO_CLOSE</keyword>
+      <keyword>_AUTO_COOKIE</keyword>
+      <keyword>_BREAK</keyword>
+      <keyword>_CALL</keyword>
+      <keyword>_CHECK</keyword>
+      <keyword>_CHUNK</keyword>
+      <keyword>_CLOSE</keyword>
+      <keyword>_DEBUG</keyword>
+      <keyword>_DOWN</keyword>
+      <keyword>_EXEC</keyword>
+      <keyword>_EXIT</keyword>
+      <keyword>_EXPECT</keyword>
+      <keyword>_FLUSH</keyword>
+      <keyword>_GREP</keyword>
+      <keyword>_HEADER</keyword>
+      <keyword>_IGNORE_BODY</keyword>
+      <keyword>_LOCAL</keyword>
+      <keyword>_LOG_LEVEL</keyword>
+      <keyword>_LOG_LEVEL_GET</keyword>
+      <keyword>_LOG_LEVEL_SET</keyword>
+      <keyword>_MATCH</keyword>
+      <keyword>_ONLY_PRINTABLE</keyword>
+      <keyword>_PIPE</keyword>
+      <keyword>_PLAY</keyword>
+      <keyword>_PRINT_HEX</keyword>
+      <keyword>_PROCESS</keyword>
+      <keyword>_PROC_WAIT</keyword>
+      <keyword>_READLINE</keyword>
+      <keyword>_RECORD</keyword>
+      <keyword>_RECV</keyword>
+      <keyword>_REQ</keyword>
+      <keyword>_RES</keyword>
+      <keyword>_RESWAIT</keyword>
+      <keyword>_SENDFILE</keyword>
+      <keyword>_SEQUENCE</keyword>
+      <keyword>_SET</keyword>
+      <keyword>_SH</keyword>
+      <keyword>_SOCKET</keyword>
+      <keyword>_SOCKSTATE</keyword>
+      <keyword>_TIMEOUT</keyword>
+      <keyword>_TUNNEL</keyword>
+      <keyword>_UNSET</keyword>
+      <keyword>_UP</keyword>
+      <keyword>_USE</keyword>
+      <keyword>_VERSION</keyword>
+      <keyword>_WAIT</keyword>
+      <keyword>_BINARY:RECV</keyword>
+      <keyword>_BINARY:SEND</keyword>
+      <keyword>_CODER:B64DEC</keyword>
+      <keyword>_CODER:B64ENC</keyword>
+      <keyword>_CODER:HTMLDEC</keyword>
+      <keyword>_CODER:URLDEC</keyword>
+      <keyword>_CODER:URLENC</keyword>
+      <keyword>_DATE:FORMAT</keyword>
+      <keyword>_DATE:GET_TIME</keyword>
+      <keyword>_DATE:SYNC</keyword>
+      <keyword>_DATE:TIMER</keyword>
+      <keyword>_DBG:BP</keyword>
+      <keyword>_MATH:EVAL</keyword>
+      <keyword>_MATH:OP</keyword>
+      <keyword>_MATH:RAND</keyword>
+      <keyword>_PROC:DETACH</keyword>
+      <keyword>_PROC:GET_PID</keyword>
+      <keyword>_PROC:LOCK</keyword>
+      <keyword>_PROC:UNLOCK</keyword>
+      <keyword>_SOCKS:CONNECT</keyword>
+      <keyword>_SSL:ACCEPT</keyword>
+      <keyword>_SSL:CLOSE</keyword>
+      <keyword>_SSL:CONNECT</keyword>
+      <keyword>_SSL:GET_CERT_VALUE</keyword>
+      <keyword>_SSL:GET_SESSION</keyword>
+      <keyword>_SSL:GET_SESSION_ID</keyword>
+      <keyword>_SSL:LOAD_CERT</keyword>
+      <keyword>_SSL:LOAD_KEY</keyword>
+      <keyword>_SSL:RENEG_CERT</keyword>
+      <keyword>_SSL:SECURE_RENEG_SUPPORTED</keyword>
+      <keyword>_SSL:SET_CERT</keyword>
+      <keyword>_SSL:SET_ENGINE</keyword>
+      <keyword>_SSL:SET_LEGACY</keyword>
+      <keyword>_SSL:SET_SESSION</keyword>
+      <keyword>_SYS:SLEEP</keyword>
+      <keyword>_TCP:ACCEPT</keyword>
+      <keyword>_TCP:CLOSE</keyword>
+      <keyword>_TCP:CONNECT</keyword>
+      <keyword>_TCP:LISTEN</keyword>
+      <keyword>_THREAD:GET_NUMBER</keyword>
+      <keyword>_UDP:BIND</keyword>
+      <keyword>_UDP:CONNECT</keyword>
+      <keyword>_WS:RECV</keyword>
+      <keyword>_WS:SEND</keyword>
+      <keyword>_WS:VERSION</keyword>
+      <keyword>_LOOP</keyword>
+      <keyword>_FOR</keyword>
+      <keyword>_BPS</keyword>
+      <keyword>_RPS</keyword>
+      <keyword>_SOCKET</keyword>
+      <keyword>_IGNORE_BODY</keyword>
+      <keyword>_END</keyword>
+      <keyword>_IF</keyword>
+      <keyword>_ELSE</keyword>
+      <keyword>_ERROR</keyword>
+      <keyword>_END</keyword>
+    </context>
+
+    <context id="built-in-command">
+      <include>
+        <context ref="built-in-command-1"/>
+        <context ref="built-in-command-2"/>
+      </include>
+    </context>
+
+    <context id="type" style-ref="type">
+      <prefix>(?&lt;![^\s;\(\)\`])</prefix>
+      <suffix>(?![^\s;\(\)\`])</suffix>
+      <keyword>POLL</keyword>
+      <keyword>CHUNKED</keyword>
+      <keyword>DO_NOT_CHECK</keyword>
+      <keyword>AUTO</keyword>
+      <keyword>on</keyword>
+      <keyword>off</keyword>
+      <keyword>On</keyword>
+      <keyword>Off</keyword>
+      <keyword>SSL</keyword>
+      <keyword>SSL2</keyword>
+      <keyword>SSL3</keyword>
+      <keyword>TLS1</keyword>
+      <keyword>OK</keyword>
+      <keyword>FAILED</keyword>
+      <keyword>NOT</keyword>
+      <keyword>MATCH</keyword>
+      <keyword>EQUAL</keyword>
+      <keyword>LT</keyword>
+      <keyword>GT</keyword>
+      <keyword>LE</keyword>
+      <keyword>GE</keyword>
+      <keyword>EQ</keyword>
+      <keyword>ADD</keyword>
+      <keyword>SUB</keyword>
+      <keyword>MUL</keyword>
+      <keyword>DIV</keyword>
+      <keyword>TODO</keyword>
+      <keyword>FIXME</keyword>
+      <keyword>XXX</keyword>
+      <keyword>NOTE</keyword>
+    </context>
+
+    <context id="htt" class="no-spell-check">
+      <include>
+        <context ref="line-comment"/>
+        <context ref="def:escape"/>
+        <context ref="single-quoted-string"/>
+        <context ref="double-quoted-string"/>
+        <context ref="built-in-command"/>
+        <context ref="type"/>
+      </include>
+    </context>
+
+  </definitions>
+</language>

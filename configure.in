@@ -158,6 +158,7 @@ AC_CONFIG_FILES([Makefile
                  plugins/Makefile
                  plugins/bbedit/Makefile
                  plugins/crimson/Makefile
+                 plugins/gedit/Makefile
                  plugins/notepadpp/Makefile
                  plugins/vim/Makefile
                  plugins/xemacs/Makefile
