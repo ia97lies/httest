@@ -208,7 +208,8 @@
 		<string>TODO</string>
 		<string>FIXME</string>
 		<string>XXX</string>
-		<string>NOTE</string>	</array>
+		<string>NOTE</string>
+	</array>
 	
 	<key>BBLMCommentLineDefault</key>
 	<string>#</string>
