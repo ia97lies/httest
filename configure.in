@@ -156,9 +156,10 @@ AC_CONFIG_FILES([Makefile
                  macros/Makefile
                  examples/Makefile
                  plugins/Makefile
+                 plugins/bbedit/Makefile
+                 plugins/crimson/Makefile
                  plugins/vim/Makefile
                  plugins/xemacs/Makefile
-                 plugins/crimson/Makefile
                  test/Makefile])
 AC_OUTPUT
 
