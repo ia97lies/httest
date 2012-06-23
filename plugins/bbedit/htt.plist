@@ -12,6 +12,8 @@
       note that the user's Library folder is hiddden by default
       since OS X Lion (show with "chflags nohidden ~/Library");
       first version created in June 2012 by $(whois jexler.net).
+      
+      This is "provided as is", no warranty of any kind.
 -->
 		
 <dict>
