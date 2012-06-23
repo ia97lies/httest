@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS=foreign
-SUBDIRS= bbedit crimson vim xemacs
+SUBDIRS= bbedit crimson notepad++ im xemacs
