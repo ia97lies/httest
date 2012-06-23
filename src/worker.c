@@ -1521,9 +1521,9 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   apr_ssize_t recv_len = -1;
   apr_size_t peeklen;
 
+  recorder_t *recorder = worker_get_recorder(worker);
   buf = NULL;
   len = 0;
-  recorder_t *recorder = worker_get_recorder(worker);
 
   COMMAND_OPTIONAL_ARG;
 
