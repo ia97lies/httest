@@ -29,4 +29,4 @@ httest-*/
 .DS_Store
 .project
 .sonar
-demo
+nginx.pid
