@@ -52,21 +52,6 @@ typedef struct validation_s {
   apr_table_t *exec;
 } validation_t;
 
-typedef struct recorder_s {
-  int on;
-#define RECORDER_OFF 0
-#define RECORDER_RECORD 1
-#define RECORDER_PLAY 2
-  int flags;
-#define RECORDER_RECORD_NONE 0
-#define RECORDER_RECORD_STATUS 1
-#define RECORDER_RECORD_HEADERS 2
-#define RECORDER_RECORD_BODY 4
-#define RECORDER_RECORD_ALL RECORDER_RECORD_STATUS|RECORDER_RECORD_HEADERS|RECORDER_RECORD_BODY 
-  apr_pool_t *pool;
-  sockreader_t *sockreader;
-} recorder_t;
-
 typedef struct worker_s worker_t;
 typedef struct global_s global_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent, 

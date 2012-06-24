@@ -89,6 +89,21 @@ typedef struct replacer_s {
   worker_t *worker;
 } replacer_t;
 
+typedef struct recorder_s {
+  int on;
+#define RECORDER_OFF 0
+#define RECORDER_RECORD 1
+#define RECORDER_PLAY 2
+  int flags;
+#define RECORDER_RECORD_NONE 0
+#define RECORDER_RECORD_STATUS 1
+#define RECORDER_RECORD_HEADERS 2
+#define RECORDER_RECORD_BODY 4
+#define RECORDER_RECORD_ALL RECORDER_RECORD_STATUS|RECORDER_RECORD_HEADERS|RECORDER_RECORD_BODY 
+  apr_pool_t *pool;
+  sockreader_t *sockreader;
+} recorder_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
