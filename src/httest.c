@@ -3440,8 +3440,6 @@ int main(int argc, const char *const argv[]) {
       break;
     }
   }
-  apr_pool_destroy(pool);
-
   return 0;
 }
 
