@@ -2114,7 +2114,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 	                          APR_SUCCESS);
     }
     else {
-      worker_log(worker, LOG_ERR, "Variable \"%s\" do not exist", var);
+      worker_log(worker, LOG_ERR, "Variable \"%s\" does not exist", var);
       return APR_EINVAL;
     }
   }
@@ -2228,7 +2228,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     }
   }
   else {
-    worker_log(worker, LOG_ERR, "Match type %s do not exist", type);
+    worker_log(worker, LOG_ERR, "Match type %s does not exist", type);
     return APR_ENOENT;
   }
 
@@ -2335,7 +2335,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     }
   }
   else {
-    worker_log(worker, LOG_ERR, "Grep type %s do not exist", type);
+    worker_log(worker, LOG_ERR, "Grep type %s does not exist", type);
     return APR_ENOENT;
   }
 
@@ -3607,7 +3607,7 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
     apr_exit_why_e why;
     apr_proc_t *proc = apr_hash_get(worker->procs, var, APR_HASH_KEY_STRING);
     if (!proc) {
-      worker_log_error(worker, "Process \"%s\" do not exist", var);
+      worker_log_error(worker, "Process \"%s\" does not exist", var);
       return APR_EINVAL;
     }
     apr_proc_wait(proc, &exitcode, &why, APR_WAIT); 
