@@ -1,0 +1,15 @@
+REQUIRE _LUA:MODULE
+
+INCLUDE $TOP/test/config.htb
+
+BLOCK:LUA MyMd5 p1 : hex
+  assert(io.input(p1))
+  local md5_of_p1 = crypto.evp.digest("md5", io.read("*all"))
+  return md5_of_p1
+END
+
+CLIENT
+  MyMd5 "$TOP/test/block_lua_file_md5.htt" HEX
+  _DEBUG $HEX
+END
+
