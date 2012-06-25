@@ -1879,6 +1879,9 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   apr_status_t status;
   *global = apr_pcalloc(p, sizeof(global_t));
 
+  apr_pool_t *pmutex;
+
+  apr_pool_create(&pmutex, NULL);
   (*global)->pool = p;
   (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
@@ -1918,14 +1921,14 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   if ((status = apr_thread_mutex_create(&(*global)->sync, 
 	                                APR_THREAD_MUTEX_DEFAULT,
-                                        p)) != APR_SUCCESS) {
+                                        pmutex)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create sync mutex");
     return status;
   }
  
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
-                                        p)) != APR_SUCCESS) {
+                                        pmutex)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create mutex");
     return status;
   }
@@ -3440,6 +3443,9 @@ int main(int argc, const char *const argv[]) {
       break;
     }
   }
+
+  apr_pool_destroy(pool);
+
   return 0;
 }
 
