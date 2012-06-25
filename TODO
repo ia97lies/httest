@@ -7,8 +7,9 @@ TODO List
 + Syntax
   - Remove this annoying _ before the calls
   - No upercase commands anymore
-  - Migration script, test it for adovum httest scripts
+  - Migration script, test it for adnovum httest scripts
   - Or keep it backward compatible
+  - Syntax higlighting implement a special XML based output to generate vim, gedit, emacs, ... color coding scheme
 
 + Distributed
   - Synchronize results from distributed tests
