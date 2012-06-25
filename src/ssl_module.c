@@ -310,7 +310,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
     case TLS1_VERSION:
       str_version = "TLS 1.0";
       break;
-#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
     case TLS1_1_VERSION:
       str_version = "TLS 1.1";
       break;
@@ -386,7 +386,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 
   if (version == SSL3_VERSION ||
       version == TLS1_VERSION ||
-#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
       version == TLS1_2_VERSION ||
       version == TLS1_1_VERSION ||
 #endif
@@ -711,7 +711,7 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = TLSv1_client_method();
   }
-#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
   else if (strcasecmp(sslstr, "TLS1.1") == 0) {
     is_ssl = 1;
     config->meth = TLSv1_1_client_method();
@@ -758,7 +758,7 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = TLSv1_server_method();
   }
-#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
   else if (strcasecmp(sslstr, "TLS1.1") == 0) {
     is_ssl = 1;
     config->meth = TLSv1_1_server_method();
@@ -1425,8 +1425,8 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
  *
  * @return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker,
-                                                     worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker, worker_t *parent,
+                                           apr_pool_t *ptmp) {
   ssl_config_t *config = ssl_get_worker_config(worker);
   const char *val = store_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);
@@ -1917,7 +1917,7 @@ apr_status_t ssl_module_init(global_t *global) {
 
   if ((status = module_command_new(global, "SSL", "_CONNECT",
 	                           "SSL|SSL2|SSL3|DTLS1|TLS1"
-#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
                                    "|TLS1.1|TLS1.2"
 #endif
                                    " [<cert-file> <key-file>]",
@@ -1928,7 +1928,7 @@ apr_status_t ssl_module_init(global_t *global) {
   }
   if ((status = module_command_new(global, "SSL", "_ACCEPT",
 	                           "SSL|SSL2|SSL3|DTLS|TLS1"
-#if (OPENSSL_VERSION_NUMBER >= 0x1000102fL)
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
                                    "|TLS1.1|TLS1.2"
 #endif
                                    " [<cert-file> <key-file>]",

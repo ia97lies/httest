@@ -160,7 +160,7 @@ apr_status_t block_DATE_SYNC(worker_t *worker, worker_t *parent, apr_pool_t *ptm
     seconds = apr_time_sec(now) + 1;
     next_full = apr_time_from_sec(seconds);
   }
-  else if (first && strcmp(first, "minute") == 0) {
+  else /* if (first && strcmp(first, "minute") == 0) */ {
     seconds = apr_time_sec(now) + (60 - (apr_time_sec(now) % 60));
     next_full = apr_time_from_sec(seconds);
   }

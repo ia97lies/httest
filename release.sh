@@ -1,13 +1,11 @@
 TOP=`pwd`
 
 VERSION=$1
-OPTION=${1:-"release"}
-
-set -u
+OPTION=${2:-"release"}
 
 CUR=`pwd`
 
-trap error 1 2 3 15 ERR
+trap error 1 2 3 15
 
 function error() {
   cd $CUR
@@ -18,7 +16,7 @@ function error() {
   sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/"
   mv configure.in.tmp configure.in
   echo "Release build FAILED"
-  exit 1
+  exit $1
 }
 
 if [ $OPTION = "try" ]; then
@@ -131,3 +129,6 @@ fi
 echo
 echo Release build SUCCESS 
 
+if [ $OPTION = "try" ]; then
+    error 0
+fi

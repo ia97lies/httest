@@ -313,6 +313,10 @@ apr_status_t tcp_accept(worker_t *worker) {
     worker->socket->socket = NULL;
     return status;
   }
+  if ((status = apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY, 1)) 
+      != APR_SUCCESS) {
+    return status;
+  }
   if ((status =
          apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
       != APR_SUCCESS) {

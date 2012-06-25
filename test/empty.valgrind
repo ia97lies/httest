@@ -1,0 +1,15 @@
+==13840== HEAP SUMMARY:
+==13840==     in use at exit: 31,196 bytes in 2,145 blocks
+==13840==   total heap usage: 2,395 allocs, 250 frees, 2,006,612 bytes allocated
+==13840== 
+==13840== LEAK SUMMARY:
+==13840==    definitely lost: 0 bytes in 0 blocks
+==13840==    indirectly lost: 0 bytes in 0 blocks
+==13840==      possibly lost: 0 bytes in 0 blocks
+==13840==    still reachable: 31,196 bytes in 2,145 blocks
+==13840==         suppressed: 0 bytes in 0 blocks
+==13840== Reachable blocks (those to which a pointer was found) are not shown.
+==13840== To see them, rerun with: --leak-check=full --show-reachable=yes
+==13840== 
+==13840== For counts of detected and suppressed errors, rerun with: -v
+==13840== ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 45 from 6)

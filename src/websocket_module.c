@@ -269,6 +269,9 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     if (payload) {
       len = strlen(payload);
     }
+    else {
+      len = 0;
+    }
   }
   else {
     len = apr_atoi64(payload_len);

@@ -52,21 +52,6 @@ typedef struct validation_s {
   apr_table_t *exec;
 } validation_t;
 
-typedef struct recorder_s {
-  int on;
-#define RECORDER_OFF 0
-#define RECORDER_RECORD 1
-#define RECORDER_PLAY 2
-  int flags;
-#define RECORDER_RECORD_NONE 0
-#define RECORDER_RECORD_STATUS 1
-#define RECORDER_RECORD_HEADERS 2
-#define RECORDER_RECORD_BODY 4
-#define RECORDER_RECORD_ALL RECORDER_RECORD_STATUS|RECORDER_RECORD_HEADERS|RECORDER_RECORD_BODY 
-  apr_pool_t *pool;
-  sockreader_t *sockreader;
-} recorder_t;
-
 typedef struct worker_s worker_t;
 typedef struct global_s global_t;
 typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent, 
@@ -77,6 +62,8 @@ struct worker_s {
   interpret_f interpret;
   /* worker config */
   apr_hash_t *config;
+  /* worker block if this is a CALL */
+  worker_t *block;
   /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
   /* dies on END */
@@ -147,7 +134,6 @@ struct worker_s {
   apr_port_t listener_port;
   char *listener_addr;
   sockreader_t *sockreader;
-  recorder_t *recorder;
 #define LOG_NONE 0
 #define LOG_ERR 1
 #define LOG_WARN 2
@@ -196,6 +182,7 @@ struct global_s {
   int socktmo;
   char *prefix;
   worker_t *worker;
+  worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
 };
@@ -339,8 +326,10 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_create,
                           (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_finally,
                           (worker_t *worker));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_join,
-                          (worker_t *worker, apr_thread_t *thread));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_start,
+                          (global_t *global, apr_thread_t *thread));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_join,
+                          (global_t *global, apr_thread_t *thread));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_joined,
                           (global_t *global));
 

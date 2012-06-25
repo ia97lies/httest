@@ -31,6 +31,7 @@ EXTRA_DIST= \
 	block_js_on_the_fly.htt \
 	block_js.txt \
 	block_local_vars.htt \
+	block_lua_2_funcs.htt \
 	block_lua_buf.htt \
 	block_lua_cert.htt \
 	block_lua_crypto.htt \
@@ -81,6 +82,7 @@ EXTRA_DIST= \
 	embedded_file.htt \
 	embedded_sh.htt \
 	embedded_sh_pipe.htt \
+	empty.htt \
 	env.htt \
 	error_body.hte \
 	error_body.htt \
@@ -156,6 +158,7 @@ EXTRA_DIST= \
 	lock.htt \
 	loop_auto.htt \
 	loop_cur.htt \
+	loop_duration.htt \
 	loop.htt \
 	macro.htt \
 	macro_too_many_redirects.htt \
@@ -217,6 +220,7 @@ EXTRA_DIST= \
 	run_lib.sh \
 	run_ntlm.sh \
 	run.sh \
+	run_valgrind.sh \
 	run_visual.sh \
 	run_wild.sh \
 	sendfile_chunked.htt \
@@ -230,7 +234,11 @@ EXTRA_DIST= \
 	server_up_down.htt \
 	shared.htt \
 	shell.htb \
+	simple.htt \
+	simple_perf.htt \
+	simple_rampup.htt \
 	simple_stat.htt \
+	simple.visual \
 	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.hte \
@@ -286,6 +294,7 @@ EXTRA_DIST= \
 	test_run_ntlm.sh \
 	test_run_shell.sh \
 	test_run_visual.sh \
+	threaded.htt \
 	threaded_server.hte \
 	threaded_server.htt \
 	threaded_server.txt \

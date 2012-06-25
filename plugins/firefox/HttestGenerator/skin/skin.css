@@ -1,0 +1,12 @@
+#httest-generator-toolbar-button {
+	list-style-image: url("chrome://httestgenerator/skin/toolbar-large.png");
+}
+
+#httest-generator-status-bar-icon {
+	width: 83px;
+	margin: 0 5px;
+}
+
+.httest-generator-selected {
+	outline: 2px solid red !important;
+}

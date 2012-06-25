@@ -1,4 +1,26 @@
                                                          -*- coding: utf-8 -*-
+Changes with httest 2.2.7
+  *) httest: Performance improvments around receiving and sending data.
+
+Changes with httest 2.2.6
+  *) httest: New RAMPUP command to control the start fo CLIENTS.
+
+  *) httest: refactoring to enable global commands in modules.
+
+  *) httest: _LOOP for a given time implemented, i.e. _LOOP 1000 [ms] loops
+             for 1000 ms. Only [ms] implemented yet.
+
+  *) httest: Bugfixed log body data.
+
+  *) httest: Bugfixed possible coredump with lua blocks.
+
+Changes with httest 2.2.5
+  *) httest: Performance module for distributed client support.
+
+  *) httest: Improvments suggested by sonar scann
+
+  *) httest: Improved log performance with multi-threaded tests.
+
 Changes with httest 2.2.4
   *) httest: Bugfix possible segfault with _SSL:TRACE
 

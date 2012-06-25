@@ -86,8 +86,9 @@ regex_t *pregcomp(apr_pool_t * p, const char *pattern,
   preg->re_pcre = pcre_compile(pattern, 0, error, erroff, NULL);
   preg->re_erroffset = *erroff;
 
-  if (preg->re_pcre == NULL)
+  if (preg->re_pcre == NULL) {
     return NULL;
+  }
 
   pcre_fullinfo((const pcre *)preg->re_pcre, NULL, PCRE_INFO_CAPTURECOUNT, &(preg->re_nsub));
 
@@ -132,8 +133,9 @@ int regexec(regex_t * preg, const char *data, apr_size_t len,
   rc = pcre_exec((const pcre *) preg->re_pcre, NULL, data,
                  len, 0, options, ovector, nmatch * 3);
 
-  if (rc == 0)
+  if (rc == 0) {
     rc = nmatch;                /* All captured slots were filled in */
+  }
 
   if (rc >= 0) {
     apr_size_t i;
@@ -141,16 +143,18 @@ int regexec(regex_t * preg, const char *data, apr_size_t len,
       pmatch[i].rm_so = ovector[i * 2];
       pmatch[i].rm_eo = ovector[i * 2 + 1];
     }
-    if (allocated_ovector)
+    if (allocated_ovector) {
       free(ovector);
+    }
     for (; i < nmatch; i++)
       pmatch[i].rm_so = pmatch[i].rm_eo = -1;
     ++preg->match;
     return 0;
   }
   else {
-    if (allocated_ovector)
+    if (allocated_ovector) {
       free(ovector);
+    }
     return rc;
   }
 }

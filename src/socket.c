@@ -219,6 +219,7 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
                                    apr_size_t *length) {
   apr_status_t status;
   int i;
+  int min_len;
   int len = *length;
 
   status = APR_SUCCESS;
@@ -230,34 +231,35 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
 	  break;
 	}
       }
-
-      if (block) {
-	block[i] = self->buf[self->i];
-      }
-      ++i;
-      ++self->i;
+      min_len = len - i < self->len - self->i ? len - i : self->len - self->i;
+      memcpy(&block[i], &self->buf[self->i], min_len);
+      i += min_len;
+      self->i += min_len;
     }
 
     /* on eof we like to get the bytes recvieved so far */
-    while (i < len && self->i < self->len) {
-      block[i] = self->buf[self->i];
-      ++i;
-      ++self->i;
-    }
+    min_len = len - i < self->len - self->i ? len - i : self->len - self->i;
+    memcpy(&block[i], &self->buf[self->i], min_len);
+    i += min_len;
+    self->i += min_len;
   }
   else {
     while (i < len) {
-      if (len - i > self->len - self->i) {
-	i += self->len - self->i;
+      if (self->i >= self->len) {
 	if ((status = sockreader_fill(self)) != APR_SUCCESS) {
 	  break;
 	}
       }
-      else {
-	i = len;
-	self->i += len;
-      }
+
+      min_len = len - i < self->len - self->i ? len - i : self->len - self->i;
+      i += min_len;
+      self->i += min_len;
     }
+
+    /* on eof we like to get the bytes recvieved so far */
+    min_len = len - i < self->len - self->i ? len - i : self->len - self->i;
+    i += min_len;
+    self->i += min_len;
   }
 
   *length = i;
@@ -327,7 +329,7 @@ static apr_status_t transfer_enc_reader_bb(sockreader_t *self,
   int chunk;
   char *end;
   char *line;
-  char *read;
+  char *read = NULL;
   apr_size_t chunk_cur;
   apr_size_t chunk_len;
   apr_bucket *b;

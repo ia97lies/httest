@@ -93,11 +93,15 @@ char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
   char *new_line;
   const char *val;
   char open_curly_brace;
+  char *next_dollar;
 
   new_line = line;
 
-once_again:
-  i = 0;
+  if (!(next_dollar = strchr(line, '$'))) {
+    return new_line;
+  }
+
+  i = next_dollar - line;
   while (line[i] != 0) {
     if (line[i] == '$') {
       line_end = i;
@@ -125,11 +129,14 @@ once_again:
         }
         new_line = apr_pstrcat(p, line, val, &line[i], NULL);
         line = new_line;
-        goto once_again;
+        i = 0;
       }
     }
+    if ((next_dollar = strchr(&line[i], '$'))) {
+      i = next_dollar - line;
+    }
     else {
-      ++i;
+      break;
     }
   }
   return new_line;

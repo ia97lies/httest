@@ -114,6 +114,12 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
 
 static apr_status_t global_GO(command_t *self, global_t *global, 
 			     char *data, apr_pool_t *ptmp); 
+static apr_status_t global_EXIT(command_t *self, global_t *global, 
+			     char *data, apr_pool_t *ptmp); 
+static apr_status_t global_START(command_t *self, global_t *global, 
+			         char *data, apr_pool_t *ptmp); 
+static apr_status_t global_JOIN(command_t *self, global_t *global, 
+			        char *data, apr_pool_t *ptmp); 
 static apr_status_t global_END(command_t *self, global_t *global, 
 			      char *data, apr_pool_t *ptmp); 
 static apr_status_t global_DAEMON(command_t *self, global_t *global, 
@@ -150,7 +156,18 @@ command_t global_commands[] = {
   "Close CLIENT|SERVER body",
   COMMAND_FLAGS_NONE},
   {"GO", (command_f )global_GO, "", 
-  "Starts all defined clients, servers and daemons. All started client and servers will be joined",
+  "Starts all defined clients, servers and daemons. "
+  "All started client and servers will be joined. "
+  "It is actually a START followed by JOIN.",
+  COMMAND_FLAGS_NONE},
+  {"START", (command_f )global_START, "", 
+  "Starts all defined clients, servers and daemons.",
+  COMMAND_FLAGS_NONE},
+  {"JOIN", (command_f )global_JOIN, "", 
+  "All started client and servers will be joined, only makes sense after START.",
+  COMMAND_FLAGS_NONE},
+  {"EXIT", (command_f )global_EXIT, "", 
+  "Graceful script termination, useful for shell mode.",
   COMMAND_FLAGS_NONE},
   {"CLIENT", (command_f )global_CLIENT, "[<number of concurrent clients>]", 
   "Client body start, close it with END and a newline",
@@ -401,38 +418,41 @@ command_t local_commands[] = {
 
   /* body section */
   {"_IF", (command_f )command_IF, "(\"<string>\" [NOT] MATCH \"regex\")|(\"<number>\" [NOT] EQ|LT|GT|LE|GT \"<number>)\"|\"(\"expression\")\"", 
-   "Test string match, number equality or simply an expression to run body, close body with _END IF,\n"
+   "Test string match, number equality or simply an expression to run body, \n"
+   "close body with _END,\n"
    "negation with a leading '!' in the <regex>",
    COMMAND_FLAGS_BODY},
-  {"_LOOP", (command_f )command_LOOP, "<n>", 
-  "Do loop the body <n> times,\n"
-  "close body with _END LOOP",
+  {"_LOOP", (command_f )command_LOOP, "<n>[s|ms]|FOREVER [<variable>]", 
+  "LOOP for specified times or optional for a duration given as \"s\" or "
+  "\"ms\" with no space after number, additional you can specify a variable "
+  "which holds the loop count,\n"
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_FOR", (command_f )command_FOR, "<variable> \"|'<string>*\"|'", 
   "Do for each element,\n"
-  "close body with _END FOR",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_BPS", (command_f )command_BPS, "<n> <duration>", 
   "Send not more than defined bytes per second, while defined duration [s]\n"
-  "close body with _END BPS",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_RPS", (command_f )command_RPS, "<n> <duration>", 
   "Send not more than defined requests per second, while defined duration [s]\n"
   "Request is count on every _WAIT call\n"
-  "close body with _END RPS",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_SOCKET", (command_f )command_SOCKET, "", 
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
-  "close body with _END SOCKET",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
-  "close body with _END ERROR",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
 #if APR_HAS_FORK
   {"_PROCESS", (command_f )command_PROCESS, "<name>", 
   "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
-  "close body with _END PROCESS",
+  "close body with _END",
   COMMAND_FLAGS_BODY},
 #endif
 
@@ -936,8 +956,10 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   char **argv;
   int i;
   char *var;
+  apr_time_t duration = 0;
+  apr_time_t start;
 
-  COMMAND_NEED_ARG("<number>|FOREVER"); 
+  COMMAND_NEED_ARG("<number>[s|ms]|FOREVER"); 
  
   my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
@@ -948,7 +970,21 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     loop = apr_atoi64(argv[0]);
   }
 
-  var = argv[1]; 
+  if (argv[1] != NULL) {
+    if (strcmp(argv[1], "[ms]") == 0) {
+      /* this are miliseconds we wanna loop */
+      /* apr_time_from_msec available in apr 1.4.x */
+      duration = 1000 * loop;
+      loop = -1;
+      var = argv[2]; 
+    }
+    else {
+      var = argv[1]; 
+    }
+  }
+  else {
+    var = NULL;
+  }
   
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
@@ -956,12 +992,16 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   }
   
   /* loop */
+  start = apr_time_now();
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
     if (var) {
       worker_var_set(body, var, apr_itoa(ptmp, i));
     }
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
+      break;
+    }
+    if (duration != 0 && apr_time_now() - start >= duration) {
       break;
     }
   }
@@ -1077,18 +1117,20 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
     }
     cur = apr_time_now();
 
-    /* avoid division by zero, do happen on windows */
-    while ((cur - start == 0)) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
-    }
-    
-    /* wait loop until we are below the max bps */
-    while (((body->sent * APR_USEC_PER_SEC) / (cur - start)) > bps ) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
+    if (bps > 0) {
+      /* avoid division by zero, do happen on windows */
+      while ((cur - start == 0)) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
+      
+      /* wait loop until we are below the max bps */
+      while (((body->sent * APR_USEC_PER_SEC) / (cur - start)) > bps ) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
     }
 
     /* reset sent bytes */
@@ -1150,22 +1192,24 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
     }
     cur = apr_time_now();
 
-    /* avoid division by zero, do happen on windows */
-    while ((cur - start == 0)) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
-    }
-    
-    /* wait loop until we are below the max rps */
-    while (((body->req_cnt * APR_USEC_PER_SEC) / (cur - start)) > rps ) {
-      /* wait 1 ms */
-      apr_sleep(1000);
-      cur = apr_time_now();
-    }
+    if (rps > 0) {
+      /* avoid division by zero, do happen on windows */
+      while ((cur - start == 0)) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
+      
+      /* wait loop until we are below the max rps */
+      while (((body->req_cnt * APR_USEC_PER_SEC) / (cur - start)) > rps ) {
+        /* wait 1 ms */
+        apr_sleep(1000);
+        cur = apr_time_now();
+      }
 
-    /* reset sent bytes */
-    body->req_cnt = 0;
+      /* reset sent requests */
+      body->req_cnt = 0;
+    }
 
     /* test termination */
     if (apr_time_sec(cur - init) >= duration) {
@@ -1387,7 +1431,7 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     char *line;
     apr_pool_t *ptmp;
 
-    apr_pool_create(&ptmp, worker->pbody);
+    apr_pool_create(&ptmp, NULL);
     worker->file_and_line = e[worker->cmd].key;
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
@@ -1890,6 +1934,14 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->socktmo = 300000000;
   (*global)->prefix = apr_pstrdup(p, "");
 
+  if ((status = worker_new(&(*global)->worker, NULL, (*global)->prefix, 
+                           (*global), NULL)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal worker: could not create my worker");
+  }
+
+  (*global)->worker->modules = (*global)->modules;
+  (*global)->worker->name = apr_pstrdup(p, "__htt_global__");
+
   return APR_SUCCESS;
 }
 
@@ -1935,14 +1987,14 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
       return APR_EINVAL;
     }
     /* get number of concurrent default is 1 */
-    val = apr_strtok(global->worker->additional, " ", &last);
+    val = apr_strtok(global->cur_worker->additional, " ", &last);
     if (val) {
       concurrent = apr_atoi64(val);
       if (concurrent <= 0) {
 	fprintf(stderr, "\nNumber of concurrent clients must be > 0");
 	return EINVAL;
       }
-      global->worker->additional = NULL;
+      global->cur_worker->additional = NULL;
     }
     else {
       concurrent = 1;
@@ -1961,8 +2013,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     break; 
   case GLOBAL_STATE_BLOCK:
     /* store block */
-    apr_hash_set(global->blocks, global->worker->name, APR_HASH_KEY_STRING, 
-	         global->worker);
+    apr_hash_set(global->blocks, global->cur_worker->name, APR_HASH_KEY_STRING, 
+	         global->cur_worker);
     global->state = GLOBAL_STATE_NONE;
     return htt_run_block_end(global);
     break; 
@@ -1977,14 +2029,14 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     break; 
   case GLOBAL_STATE_FILE:
     /* write file */
-    if ((status = worker_to_file(global->worker)) != APR_SUCCESS) {
-      worker_set_global_error(global->worker);
-      fprintf(stderr, "\nCould not create %s: %s(%d)", global->worker->name, 
+    if ((status = worker_to_file(global->cur_worker)) != APR_SUCCESS) {
+      worker_set_global_error(global->cur_worker);
+      fprintf(stderr, "\nCould not create %s: %s(%d)", global->cur_worker->name, 
 	      my_status_str(global->pool, status), status);
       return status;
     }
 
-    apr_pool_cleanup_register(global->pool, global->worker->name, 
+    apr_pool_cleanup_register(global->pool, global->cur_worker->name, 
                               worker_file_cleanup, apr_pool_cleanup_null);
     global->state = GLOBAL_STATE_NONE;
     return APR_SUCCESS;
@@ -1996,32 +2048,32 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
   }
 
   /* store the workers to start them later */
-  global->worker->filename = global->filename;
+  global->cur_worker->filename = global->filename;
   while (concurrent) {
     clone = NULL;
     --concurrent;
     called_name = apr_psprintf(global->pool, "%s-%d", name, concurrent);
-    global->worker->name = called_name;
-    global->worker->which = concurrent;
+    global->cur_worker->name = called_name;
+    global->cur_worker->which = concurrent;
     if (concurrent) {
-      if ((status = worker_clone(&clone, global->worker)) != APR_SUCCESS) {
-	worker_log(global->worker, LOG_ERR, "Could not clone thread");
+      if ((status = worker_clone(&clone, global->cur_worker)) != APR_SUCCESS) {
+	worker_log(global->cur_worker, LOG_ERR, "Could not clone thread");
 	return APR_EINVAL;
       }
     }
 
     switch (global->state) {
     case GLOBAL_STATE_CLIENT:
-      apr_table_addn(global->clients, called_name, (char *) global->worker);
+      apr_table_addn(global->clients, called_name, (char *) global->cur_worker);
       break;
     case GLOBAL_STATE_SERVER:
-      apr_table_addn(global->servers, called_name, (char *) global->worker);
+      apr_table_addn(global->servers, called_name, (char *) global->cur_worker);
       break;
     case GLOBAL_STATE_DAEMON:
-      apr_table_addn(global->daemons, called_name, (char *) global->worker);
+      apr_table_addn(global->daemons, called_name, (char *) global->cur_worker);
       break;
     }
-    global->worker = clone;
+    global->cur_worker = clone;
   }
   /* reset */
   global->state = GLOBAL_STATE_NONE;
@@ -2044,13 +2096,11 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
 
   /* Client start */
   global->state = state;
-  if ((status = worker_new(&global->worker, data, global->prefix, global, 
+  if ((status = worker_new(&global->cur_worker, data, global->prefix, global, 
                            worker_interpret)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal worker: could not create worker");
     return status;
   }
-  global->prefix = apr_pstrcat(global->pool, global->prefix, 
-			       "                        ", NULL);
   return APR_SUCCESS;
 }
 
@@ -2065,7 +2115,11 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
  */
 static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data, 
                                   apr_pool_t *ptmp) {
-  return global_worker(self, global, data, GLOBAL_STATE_CLIENT);
+  apr_status_t status;
+  status = global_worker(self, global, data, GLOBAL_STATE_CLIENT);
+  global->prefix = apr_pstrcat(global->pool, global->prefix, 
+			       "                        ", NULL);
+  return status;
 }
 
 /**
@@ -2079,7 +2133,12 @@ static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data,
  */
 static apr_status_t global_SERVER(command_t *self, global_t *global, char *data, 
                                   apr_pool_t *ptmp) {
-  return global_worker(self, global, data, GLOBAL_STATE_SERVER);
+  apr_status_t status;
+  status = global_worker(self, global, data, GLOBAL_STATE_SERVER);
+  global->prefix = apr_pstrcat(global->pool, global->prefix, 
+			       "                        ", NULL);
+
+  return status;
 }
 
 /**
@@ -2107,7 +2166,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
   if ((status = htt_run_block_start(global, &data)) 
       == APR_ENOTIMPL) {
     /* Start a new worker */
-    if ((status = worker_new(&global->worker, data, global->prefix, global, 
+    if ((status = worker_new(&global->cur_worker, data, global->prefix, global, 
                              worker_interpret)) != APR_SUCCESS) {
       return status;
     }
@@ -2116,9 +2175,6 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     fprintf(stderr, "\nFailed on block start %s(%d)", my_status_str(global->pool, status), status);  
     return status;
   }
-  
-  /* A block has its callies prefix I suppose */
-  global->prefix = apr_pstrcat(global->pool, global->prefix, "", NULL);
   
   /* Get params and returns */
   /* create two tables for in/out vars */
@@ -2129,7 +2185,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
       fprintf(stderr, "\nChar ':' is not allowed in block name \"%s\"", token);
       return APR_EINVAL;
     }
-    global->worker->name = data;
+    global->cur_worker->name = data;
   }
   while (token) {
     if (strcmp(token, ":") == 0) {
@@ -2138,11 +2194,11 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     }
     else {
       if (input) {
-       store_set(global->worker->params, apr_itoa(global->worker->pbody, i), 
+       store_set(global->cur_worker->params, apr_itoa(global->cur_worker->pbody, i), 
                   token);
       }
       else {
-        store_set(global->worker->retvars, apr_itoa(global->worker->pbody, i),
+        store_set(global->cur_worker->retvars, apr_itoa(global->cur_worker->pbody, i),
                   token);
       }
       i++;
@@ -2172,16 +2228,13 @@ static apr_status_t global_FILE(command_t * self, global_t * global,
   global->state = GLOBAL_STATE_FILE;
 
   /* Start a new worker */
-  if ((status = worker_new(&global->worker, data, global->prefix, global, 
+  if ((status = worker_new(&global->cur_worker, data, global->prefix, global, 
                            worker_interpret)) != APR_SUCCESS) {
     fprintf(stderr, "\nCould not initiate worker instance");
     return status;
   }
 
-  global->worker->name = data;
-  
-  /* A block has its callies prefix I suppose */
-  global->prefix = apr_pstrcat(global->pool, global->prefix, "", NULL);
+  global->cur_worker->name = data;
 
   /* open file */
   return APR_SUCCESS;
@@ -2557,7 +2610,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
 #endif
 
 /**
- * Global GO command
+ * Global START command starts all so far defined threads 
  *
  * @param self IN command
  * @param global IN global object
@@ -2565,8 +2618,8 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
  *
  * @return APR_SUCCESS
  */
-static apr_status_t global_GO(command_t *self, global_t *global, char *data, 
-                              apr_pool_t *ptmp) {
+static apr_status_t global_START(command_t *self, global_t *global, char *data, 
+                                 apr_pool_t *ptmp) {
   apr_status_t status;
   apr_table_entry_t *e;
   int i;
@@ -2574,7 +2627,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   apr_thread_t *thread;
 
 
-  /* start all daemons first */
+  /* create all daemons first */
   e = (apr_table_entry_t *) apr_table_elts(global->daemons)->elts;
   for (i = 0; i < apr_table_elts(global->daemons)->nelts; ++i) {
     worker = (void *)e[i].val;
@@ -2586,7 +2639,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
     }
   }
   apr_table_clear(global->daemons);
-  /* start all servers */
+  /* create all servers */
   e = (apr_table_entry_t *) apr_table_elts(global->servers)->elts;
   for (i = 0; i < apr_table_elts(global->servers)->nelts; ++i) {
     sync_lock(global->sync);
@@ -2601,7 +2654,7 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   }
   apr_table_clear(global->servers);
 
-  /* start all clients */
+  /* create clients */
   sync_lock(global->sync);
   sync_unlock(global->sync);
   e = (apr_table_entry_t *) apr_table_elts(global->clients)->elts;
@@ -2619,16 +2672,47 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
     else if (status != APR_SUCCESS) {
       return status;
     }
-    apr_table_addn(global->threads, worker->name, (char *) thread);
+    if (thread) {
+      apr_table_addn(global->threads, worker->name, (char *) thread);
+    }
   }
   apr_table_clear(global->clients);
-  
-  /* wait on thermination of all started threads */
+   
+  /* notify start threads */
+  e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
+  for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
+    thread = (apr_thread_t *) e[i].val;
+    status = htt_run_thread_start(global, thread);
+    if (status != APR_SUCCESS) {
+      fprintf(stderr, "\nCould not start thread: %d", status);
+      return status;
+    }
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * Global JOIN command waits for all started threads except DAEMONs
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_JOIN(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
+  apr_status_t status;
+  apr_table_entry_t *e;
+  int i;
+  apr_thread_t *thread;
+
+  /* join all started threads */
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     apr_status_t retstat;
     thread = (apr_thread_t *) e[i].val;
-    status = htt_run_client_join(worker, thread);
+    status = htt_run_thread_join(global, thread);
     if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
       if ((retstat = apr_thread_join(&status, thread))) {
         fprintf(stderr, "\nCould not join thread: %d", retstat);
@@ -2643,7 +2727,50 @@ static apr_status_t global_GO(command_t *self, global_t *global, char *data,
   apr_table_clear(global->threads);
 
   htt_run_worker_joined(global);
+  global->prefix = apr_pstrdup(global->pool, "");
   return APR_SUCCESS;
+}
+ 
+
+/**
+ * Global GO command start all threads which are declared so far and wait
+ * until all threads except DAEMON threads do have terminated.
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_GO(command_t *self, global_t *global, char *data, 
+                              apr_pool_t *ptmp) {
+  apr_status_t status = global_START(self, global, data, ptmp);
+  if (status == APR_SUCCESS) {
+    status = global_JOIN(self, global, data, ptmp);
+  }
+  return status;
+}
+
+/**
+ * Global EXIT command for graceful script termination 
+ * until all threads except DAEMON threads do have terminated.
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN unused
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_EXIT(command_t *self, global_t *global, char *data, 
+                                apr_pool_t *ptmp) {
+  if (success) {
+    exit(0);
+  }
+  else {
+    exit(1);
+  }
+  /* never reach this point */
+  return APR_ENOTIMPL;
 }
 
 /**
@@ -2703,7 +2830,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	    return status;
 	  }
         }
-        else if ((status = worker_add_line(global->worker, 
+        else if ((status = worker_add_line(global->cur_worker, 
 					   apr_psprintf(global->pool, "%s:%d", 
 					   global->filename, line_nr), line)) 
 	    != APR_SUCCESS) {
@@ -2719,7 +2846,6 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	/* lookup function index */
 	i = 0;
 	command = lookup_command(global_commands, line);
-	/* found command? */
 	if (command->func) {
 	  i += strlen(command->name);
 	  if ((status = command->func(command, global, &line[i], NULL)) 
@@ -2727,6 +2853,19 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	    return status;
 	  }
 	}
+        else { /* let's see if we find block for this job */
+          int cur_log_mode = global->worker->log_mode;
+          apr_pool_t *ptmp;
+
+          apr_pool_create(&ptmp, NULL);
+          global->worker->log_mode = 0;
+          status = command_CALL(NULL, global->worker, line, ptmp);
+          global->worker->log_mode = cur_log_mode;
+          apr_pool_destroy(ptmp);
+          if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
+            return status;
+          }
+        }
       }
     }
   }
@@ -2959,9 +3098,15 @@ static void show_commands(apr_pool_t *p, global_t *global) {
 	for (hi = apr_hash_first(p, block); hi; hi = apr_hash_next(hi)) {
 	  apr_hash_this(hi, (const void **)&command, NULL, (void **)&worker);
 	  if (command) {
-	    ++command; /* skip "_" */
-	    line = apr_psprintf(p, "_%s:%s %s", module, command, 
-		    worker->short_desc?worker->short_desc:"");
+            if (*command == '_') {
+              ++command; /* skip "_" */
+              line = apr_psprintf(p, "_%s:%s %s", module, command, 
+                      worker->short_desc?worker->short_desc:"");
+            }
+            else {
+              line = apr_psprintf(p, "%s:%s %s", module, command, 
+                      worker->short_desc?worker->short_desc:"");
+            }
 	    SKM_sk_push(char, sorted, line);
 	  }
 	}
@@ -3027,16 +3172,19 @@ static void show_command_help(apr_pool_t *p, global_t *global,
     copy = apr_pstrdup(p, command);
     /* determine module if any */
     module = apr_strtok(copy, ":", &last);
-    /* always jump over prefixing "_" */
-    module++;
-    block_name = apr_pstrcat(p, "_", last, NULL);
+    if (*module == '_') {
+      module++;
+      block_name = apr_pstrcat(p, "_", last, NULL);
+    }
+    else {
+      block_name = apr_pstrdup(p, last);
+    }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
       fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
       exit(1);
     }
-    block_name = apr_pstrcat(p, "_", last, NULL);
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+      fprintf(stdout, "\ncommand: %s do not exist\n", command);
       exit(1);
     }
     else {
@@ -3223,8 +3371,10 @@ int main(int argc, const char *const argv[]) {
       cur_file = apr_pstrdup(pool, opt->argv[opt->ind++]);
     }
 
-    if (flags & MAIN_FLAGS_USE_STDIN) {
-      fprintf(stdout, "simple htt shell\n");
+    if ((flags & MAIN_FLAGS_USE_STDIN)) {
+      if (log_mode != LOG_NONE) {
+        fprintf(stdout, "simple htt shell\n");
+      }
     }
     else if (flags & MAIN_FLAGS_PRINT_TSTAMP) {
       time = apr_time_now();
@@ -3290,8 +3440,6 @@ int main(int argc, const char *const argv[]) {
       break;
     }
   }
-  apr_pool_destroy(pool);
-
   return 0;
 }
 
@@ -3303,8 +3451,9 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
   APR_HOOK_LINK(client_create)
+  APR_HOOK_LINK(thread_start)
   APR_HOOK_LINK(worker_finally)
-  APR_HOOK_LINK(client_join)
+  APR_HOOK_LINK(thread_join)
   APR_HOOK_LINK(worker_joined)
 )
 
@@ -3332,13 +3481,17 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_create,
                                       (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread), 
                                       (worker, func, new_thread), APR_ENOTIMPL);
 
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, thread_start, 
+                                      (global_t *global, apr_thread_t *thread), 
+                                      (global, thread), APR_SUCCESS);
+
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_finally, 
                                       (worker_t *worker), 
                                       (worker), APR_SUCCESS);
 
-APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_join, 
-                                      (worker_t *worker, apr_thread_t *thread), 
-                                      (worker, thread), APR_ENOTIMPL);
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, thread_join, 
+                                      (global_t *global, apr_thread_t *thread), 
+                                      (global, thread), APR_ENOTIMPL);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_joined, 
                                       (global_t *global), 

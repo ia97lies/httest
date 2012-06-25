@@ -89,6 +89,21 @@ typedef struct replacer_s {
   worker_t *worker;
 } replacer_t;
 
+typedef struct recorder_s {
+  int on;
+#define RECORDER_OFF 0
+#define RECORDER_RECORD 1
+#define RECORDER_PLAY 2
+  int flags;
+#define RECORDER_RECORD_NONE 0
+#define RECORDER_RECORD_STATUS 1
+#define RECORDER_RECORD_HEADERS 2
+#define RECORDER_RECORD_BODY 4
+#define RECORDER_RECORD_ALL RECORDER_RECORD_STATUS|RECORDER_RECORD_HEADERS|RECORDER_RECORD_BODY 
+  apr_pool_t *pool;
+  sockreader_t *sockreader;
+} recorder_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -96,6 +111,20 @@ typedef struct replacer_s {
 /************************************************************************
  * Implementation
  ***********************************************************************/
+/**
+ * Get recorder struct from worker config
+ * @param worker IN thread object
+ * @return recoder
+ */
+static recorder_t *worker_get_recorder(worker_t *worker) {
+  recorder_t *recorder = module_get_config(worker->config, "_RECORD");
+  if (!recorder) {
+    recorder = apr_pcalloc(worker->pbody, sizeof(recorder_t));
+    module_set_config(worker->config, "_RECORD", recorder);
+  }
+  return recorder;
+}
+
 /**
  * set a variable either as local or global
  * make a copy and replace existing
@@ -351,8 +380,13 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
 
   if (self->log_mode >= log_mode) {
     int i;
+    int j;
+    int max_line_len;
+    int line_len;
     char *null="<null>";
     FILE *fd = stdout;
+    apr_pool_t *pool;
+    char * outbuf;
 
     if (!buf) {
       buf = null;
@@ -363,34 +397,76 @@ void worker_log_buf(worker_t * self, int log_mode, const char *buf,
       fd = stderr;
     }
 
-    i = 0;
     if (prefix) {
       fprintf(fd, "\n%s%s", self->prefix, prefix);
     }
+    
+    /* find longest line */
+    i = 0;
+    max_line_len = 0;
+    line_len = 0;
     while (i < len) {
       while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-	if (buf[i] >= 0x20) {
-	  fprintf(fd, "%c", buf[i]);
-	}
-	else {
-	  fprintf(fd, "0x%02x ", (unsigned char)buf[i]);
-	}
+        if (buf[i] >= 0x20) {
+          line_len++;
+        }
+        else {
+          line_len+=4;
+        }
         i++;
       }
-      fflush(fd);
       while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-	if (i != len -1) {
-	  if (buf[i] == '\n') {
-	    fprintf(fd, "%c", buf[i]);
-	    fprintf(fd, "%s%s", self->prefix, prefix?prefix:"");
-	  }
-	}
-	i++;
+        if (i != len -1) {
+          if (buf[i] == '\n') {
+            line_len+= 1 + strlen(self->prefix) + (prefix?strlen(prefix):0);
+          }
+        }
+        i++;
       }
-      fflush(fd);
+      if (line_len > max_line_len) {
+        max_line_len = line_len;
+      }
+      line_len = 0;
     }
+    
+    apr_pool_create(&pool, NULL);
+    outbuf = apr_pcalloc(pool, max_line_len + 100);
+
+    /* log lines */
+    i = 0;
+    while (i < len) {
+      j = 0;
+      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
+        if (buf[i] >= 0x20) {
+          sprintf(&outbuf[j], "%c", buf[i]);
+          j++;
+        }
+        else {
+          sprintf(&outbuf[j], "0x%02x ", (unsigned char)buf[i]);
+          j+=4;
+        }
+        i++;
+      }
+      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
+        if (i != len -1) {
+          if (buf[i] == '\n') {
+            sprintf(&outbuf[j], "%c", buf[i]);
+            j++;
+            sprintf(&outbuf[j], "%s%s", self->prefix, prefix?prefix:"");
+            j+= strlen(self->prefix) + (prefix?strlen(prefix):0);
+          }
+        }
+        i++;
+      }
+      fprintf(fd, "%s", outbuf);
+      fflush(fd);
+      outbuf[0] = 0;
+    }
+    
+    apr_pool_destroy(pool);
   }
 }
+
 
 /**
  * client thread
@@ -1260,9 +1336,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   /** get module worker */
   if ((last = strchr(block_name, ':'))) {
     module = apr_strtok(module, ":", &last);
-    /* always jump over prefixing "_" */
-    module++;
-    block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    if (*module == '_') {
+      module++;
+      block_name = apr_pstrcat(call_pool, "_", last, NULL);
+    }
+    else {
+      block_name = apr_pstrdup(call_pool, last);
+    }
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
       worker_log_error(worker, "Could not find module \"%s\"", module);
       return APR_EINVAL;
@@ -1283,7 +1363,6 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     goto error;
   }
   else { 
-    apr_hash_t *config;
     int log_mode; 
     int i;
     int j;
@@ -1334,17 +1413,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
-    if (!apr_hash_get(block->config, worker->name, APR_HASH_KEY_STRING)) {
-      config = apr_hash_overlay(worker->pbody, block->config, worker->config);
-      worker->config = config;
-      apr_hash_set(block->config, worker->name, APR_HASH_KEY_STRING, (void *)1);
-    }
     lines = my_table_deep_copy(call_pool, block->lines);
     apr_thread_mutex_unlock(worker->mutex);
     /* CR END */
 
     call = apr_pcalloc(call_pool, sizeof(*call));
     memcpy(call, worker, sizeof(*call));
+    call->block = block;
     call->params = params;
     call->retvars = retvars;
     call->locals = locals;
@@ -1369,6 +1444,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     worker->locals = locals;
     worker->lines = lines;
     worker->cmd = cmd;
+    worker->block = NULL;
 
     goto error;
   }
@@ -1394,6 +1470,7 @@ static apr_status_t worker_get_headers(worker_t *worker,
   char *last;
   char *key = NULL;
   const char *val = "";
+  recorder_t *recorder = worker_get_recorder(worker);
 
   /** get headers */
   while ((status = sockreader_read_line(sockreader, &line)) == APR_SUCCESS && 
@@ -1401,9 +1478,9 @@ static apr_status_t worker_get_headers(worker_t *worker,
     if ((status = htt_run_read_header(worker, line)) != APR_SUCCESS) {
       return status;
     }
-    if (worker->recorder->on == RECORDER_RECORD &&
-				worker->recorder->flags & RECORDER_RECORD_HEADERS) {
-      sockreader_push_line(worker->recorder->sockreader, line);
+    if (recorder->on == RECORDER_RECORD && 
+        recorder->flags & RECORDER_RECORD_HEADERS) {
+      sockreader_push_line(recorder->sockreader, line);
     }
     worker_log(worker, LOG_INFO, "<%s", line);
     worker_match(worker, worker->match.dot, line, strlen(line));
@@ -1459,13 +1536,16 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   apr_ssize_t recv_len = -1;
   apr_size_t peeklen;
 
+  recorder_t *recorder = worker_get_recorder(worker);
   buf = NULL;
   len = 0;
 
   COMMAND_OPTIONAL_ARG;
 
+  apr_pool_create(&pool, NULL);
+
   if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
-    return status;
+    goto out_err;
   }
 
   if (apr_isdigit(copy[0])) {
@@ -1479,18 +1559,15 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     recv_len = -1;
   }
 
-
-  apr_pool_create(&pool, NULL);
-
-  if (worker->recorder->on == RECORDER_PLAY) {
-    worker->sockreader = worker->recorder->sockreader;
+  if (recorder->on == RECORDER_PLAY) {
+    worker->sockreader = recorder->sockreader;
   }
 
   /**
    * Give modules a chance to setup stuff before _WAIT read from network
    */
   if ((status = htt_run_WAIT_begin(worker)) != APR_SUCCESS) {
-    return status;
+    goto out_err;
   }
 
   if (worker->sockreader == NULL) {
@@ -1535,7 +1612,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
    * Give modules the possibility to expect/grep/match there own stuff
    */
   if ((status = htt_run_read_pre_headers(worker)) != APR_SUCCESS) {
-    return status;
+    goto out_err;
   }
 
   /** Status line, make that a little fuzzy in reading trailing empty lines of last
@@ -1544,11 +1621,11 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
       line[0] == 0);
   if (line[0] != 0) { 
     if ((status = htt_run_read_status_line(worker, line)) != APR_SUCCESS) {
-      return status;
+      goto out_err;
     }
-    if (worker->recorder->on == RECORDER_RECORD &&
-	worker->recorder->flags & RECORDER_RECORD_STATUS) {
-      sockreader_push_line(worker->recorder->sockreader, line);
+    if (recorder->on == RECORDER_RECORD &&
+	recorder->flags & RECORDER_RECORD_STATUS) {
+      sockreader_push_line(recorder->sockreader, line);
     }
     worker_log(worker, LOG_INFO, "<%s", line);
     worker_match(worker, worker->match.dot, line, strlen(line));
@@ -1627,15 +1704,15 @@ http_0_9:
       }
     }
     if ((status = htt_run_read_buf(worker, buf, len)) != APR_SUCCESS) {
-      return status;
+      goto out_err;
     }
     if ((status = worker_handle_buf(worker, pool, buf, len)) != APR_SUCCESS) {
       goto out_err;
     }
-    if (worker->recorder->on == RECORDER_RECORD &&
-			worker->recorder->flags & RECORDER_RECORD_BODY) {
-      sockreader_push_line(worker->recorder->sockreader, "");
-      sockreader_push_back(worker->recorder->sockreader, buf, len);
+    if (recorder->on == RECORDER_RECORD && 
+        recorder->flags & RECORDER_RECORD_BODY) {
+      sockreader_push_line(recorder->sockreader, "");
+      sockreader_push_back(recorder->sockreader, buf, len);
     }
     if (var) {
       worker_var_set(worker, var, buf);
@@ -1660,20 +1737,20 @@ http_0_9:
   }
 
 out_err:
-  if (worker->recorder->on == RECORDER_PLAY) {
-    apr_pool_destroy(worker->recorder->pool);
-    worker->recorder->on = RECORDER_OFF;
+  if (recorder->on == RECORDER_PLAY) {
+    apr_pool_destroy(recorder->pool);
+    recorder->on = RECORDER_OFF;
     worker->sockreader = NULL;
   }
   else {
     ++worker->req_cnt;
   }
+  status = worker_assert(worker, status);
+
   /**
    * Give modules a chance to cleanup stuff after _WAIT
    */
   htt_run_WAIT_end(worker, status);
-  status = worker_assert(worker, status);
-  /** measure request end */
 
   apr_pool_destroy(pool);
   return status;
@@ -1724,7 +1801,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
   char *tag;
   apr_pool_t *pool;
 
-  apr_pool_create(&pool, self->pbody);
+  apr_pool_create(&pool, NULL);
   socket = 
     apr_hash_get(self->sockets, apr_pstrcat(self->pbody, hostname, portname, 
 	                                    NULL),
@@ -1985,7 +2062,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "EXPECT ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
   }
   match = apr_pstrdup(pool, interm);
@@ -2087,7 +2164,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "MATCH ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
@@ -2196,7 +2273,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "GREP ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
@@ -3563,7 +3640,7 @@ apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data,
   pool = module_get_config(worker->config, apr_pstrdup(ptmp, "MATCH_SEQ"));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create(&pool, worker->pbody);
+    apr_pool_create(&pool, NULL);
     module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), pool);
   }
 
@@ -3583,6 +3660,7 @@ apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data,
 apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data, 
                             apr_pool_t *ptmp) {
   char *copy;
+  recorder_t *recorder = worker_get_recorder(worker);
   COMMAND_NEED_ARG("RES [ALL] {STATUS|HEADERS|BODY}*");
 
   if (strncmp(copy, "RES", 3) != 0) {
@@ -3591,35 +3669,29 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data,
   }
 
   if (strstr(copy, "ALL")) {
-    worker->recorder->flags = RECORDER_RECORD_ALL;
+    recorder->flags = RECORDER_RECORD_ALL;
   }
   if (strstr(copy, "STATUS")) {
-    worker->recorder->flags |= RECORDER_RECORD_STATUS;
+    recorder->flags |= RECORDER_RECORD_STATUS;
   }
   if (strstr(copy, "HEADERS")) {
-    worker->recorder->flags |= RECORDER_RECORD_HEADERS;
+    recorder->flags |= RECORDER_RECORD_HEADERS;
   }
   if (strstr(copy, "BODY")) {
-    worker->recorder->flags |= RECORDER_RECORD_BODY;
+    recorder->flags |= RECORDER_RECORD_BODY;
   }
 
-  /* start or restart recorder */
-  if (!worker->recorder) { 
-    worker->recorder = apr_pcalloc(worker->pbody, sizeof(recorder_t));
-  }
-
-  if (worker->recorder->on) {
+  if (recorder->on) {
     /* restart the recorder by dropping the sockreader pool */
-    apr_pool_destroy(worker->recorder->pool);
+    apr_pool_destroy(recorder->pool);
   }
 
-  apr_pool_create(&worker->recorder->pool, worker->pbody);
+  apr_pool_create(&recorder->pool, NULL);
 
   /* setup a sockreader for recording */
-  sockreader_new(&worker->recorder->sockreader, NULL, NULL, 0, 
-                 worker->recorder->pool);
+  sockreader_new(&recorder->sockreader, NULL, NULL, 0, recorder->pool);
 
-  worker->recorder->on = RECORDER_RECORD;
+  recorder->on = RECORDER_RECORD;
 
   return APR_SUCCESS;
 }
@@ -3635,10 +3707,11 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data,
  */
 apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data, 
                           apr_pool_t *ptmp) {
+  recorder_t *recorder = worker_get_recorder(worker);
   COMMAND_NO_ARG;
   /* if recorded data available do play back */
-  if (worker->recorder->on == RECORDER_RECORD) {
-    worker->recorder->on = RECORDER_PLAY;
+  if (recorder->on == RECORDER_RECORD) {
+    recorder->on = RECORDER_PLAY;
   }
   else {
     worker_log_error(worker, "Can not play cause recorder is not in recording mode");
@@ -3807,7 +3880,6 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->grep.error = apr_table_make(p, 2);
   (*self)->grep.exec = apr_table_make(p, 2);
   (*self)->sockets = apr_hash_make(p);
-  (*self)->recorder = apr_pcalloc(p, sizeof(recorder_t));
 #if APR_HAS_FORK
   (*self)->procs = NULL;
 #endif
@@ -3875,7 +3947,6 @@ apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->grep.exec = my_table_swallow_copy(p, orig->grep.exec);
   (*self)->listener = NULL;
   (*self)->sockets = apr_hash_make(p);
-  (*self)->recorder = apr_pcalloc(p, sizeof(recorder_t));
 #if APR_HAS_FORK
   (*self)->procs = NULL;
 #endif
