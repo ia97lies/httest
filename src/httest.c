@@ -1877,9 +1877,9 @@ error:
 static apr_status_t global_new(global_t **global, store_t *vars, 
                                int log_mode, apr_pool_t *p) {
   apr_status_t status;
-  *global = apr_pcalloc(p, sizeof(global_t));
-
   apr_pool_t *pmutex;
+
+  *global = apr_pcalloc(p, sizeof(global_t));
 
   apr_pool_create(&pmutex, NULL);
   (*global)->pool = p;
