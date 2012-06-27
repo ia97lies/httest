@@ -31,7 +31,7 @@ function main {
   # build log
   BUILDLOG="target/build.log"
   # blue bold
-  echo "see $(tput bold)$(tput setaf 4)$BUILDLOG$(tput sgr 0) for build log ..."
+  printf "see \e[34;1m$BUILDLOG\e[0m for build log ...\n"
   echo
   BUILDLOG="$SW/$BUILDLOG"
   echo "" >"$BUILDLOG"
@@ -78,7 +78,7 @@ function main {
 #
 function print_ok {
   # bold green
-  echo "$(tput bold)$(tput setaf 2)OK$(tput sgr 0)"
+  printf "\e[32;1mOK\e[0m\n"
 }
 
 #
@@ -86,7 +86,7 @@ function print_ok {
 #
 function print_ok_up_to_date {
   # bold blue
-  echo "$(tput bold)$(tput setaf 4)OK$(tput sgr 0) $(tput setaf 7)(up to date)$(tput sgr 0)"
+  printf "\e[34;1mOK\e[0m \e[37m(up to date)\e[0m\n"
 }
 
 #
@@ -94,7 +94,7 @@ function print_ok_up_to_date {
 #
 function print_failed {
   # bold red
-  echo "$(tput bold)$(tput setaf 1)FAILED$(tput sgr 0)"
+  printf "\e[31;1mFAILED\e[0m\n"
 }
 
 #
@@ -118,7 +118,7 @@ function do_determine_os {
   echo "OS:      $OS"
   if [ "$OS" == "unknown" ]; then
     # yellow bold
-    echo "$(tput bold)$(tput setaf 3)WARNING:$(tput sgr 0) unknown os, treating like linux"
+    printf "\e[33;1mWARNING:\e[0m unknown os, treating like linux\n"
   fi
   
   ARCH=`uname -m`
@@ -136,10 +136,10 @@ function do_determine_version {
   NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
   if [ "$HTT_VER" == "snapshot" ]; then
     # violet bold
-    echo "VERSION: $(tput bold)$(tput setaf 5)$HTT_VER$(tput sgr 0)"
+    printf "VERSION: \e[35;1m$HTT_VER\e[0m\n"
   else
     # blue bold
-    echo "VERSION: $(tput bold)$(tput setaf 4)$HTT_VER$(tput sgr 0)"
+    printf "VERSION: \e[34;1m$HTT_VER\e[0m\n"
   fi
 }
 
