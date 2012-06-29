@@ -9,18 +9,19 @@ while (<STDIN>) {
     # out: strong, in: light
     $strong = ($1 eq ">") ? "1" : "0";
     if ($line =~ m/^[<>]/) {
-      # CLIENT: blue
-      print "\033[$strong;34m$line\033[0m\n";
+      # client: blue
+      $color="34";
     } elsif ($line =~ m/^ {24,24}[<>]/) {
-      # SERVER 1: green
-      print "\033[$strong;32m$line\033[0m\n";
+      # server: green
+      $color="32";
     } elsif ($line =~ m/^ {48,48}[<>]/) {
-      # SERVER 2: purple
-      print "\033[$strong;35m$line\033[0m\n";
+      # server 2: purple
+      $color="35";
     } else {
-      # SERVER 3,4,5,..: brown
-      print "\033[$strong;33m$line\033[0m\n";
+      # more servers: brown
+      $color="33";
     }
+    print "\033[$strong;${color}m$line\033[0m\n";
   } elsif ($line =~ m/^ *\_[_-]/) {
     # data: normal
     print "$line\n";
