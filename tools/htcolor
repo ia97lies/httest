@@ -4,28 +4,29 @@
 # $ cat block.htt.out | htcolor
 while (<STDIN>) {
   my $line = $_;
+  chomp($line);
   if ($line =~ m/^ *([<>])/) {
     # out: strong, in: light
     $strong = ($1 eq ">") ? "1" : "0";
     if ($line =~ m/^[<>]/) {
       # CLIENT: blue
-      print "\033[$strong;34m$line\033[0m";
+      print "\033[$strong;34m$line\033[0m\n";
     } elsif ($line =~ m/^ {24,24}[<>]/) {
       # SERVER 1: green
-      print "\033[$strong;32m$line\033[0m";
+      print "\033[$strong;32m$line\033[0m\n";
     } elsif ($line =~ m/^ {48,48}[<>]/) {
       # SERVER 2: purple
-      print "\033[$strong;35m$line\033[0m";
+      print "\033[$strong;35m$line\033[0m\n";
     } else {
       # SERVER 3,4,5,..: brown
-      print "\033[$strong;33m$line\033[0m";
+      print "\033[$strong;33m$line\033[0m\n";
     }
   } elsif ($line =~ m/^ *\_[_-]/) {
     # data: normal
-    print "$line";
+    print "$line\n";
   } else {
     # rest: normal (keywords bold)
     $line =~ s/^ *[A-Z_][A-Z_:]*[ \t]/\033[1m$&\033[0m/;
-    print "$line";
+    print "$line\n";
   }
 }
