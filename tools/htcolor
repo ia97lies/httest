@@ -3,7 +3,7 @@
 # $ httest block.htt | htcolor
 # $ cat block.htt.out | htcolor
 # color both stdout and stderr...
-# $ { httest block.hte 2>&3 | htcolor; } 3>&1 1>&2 | htcolor -e
+# $ { { httest $@ 1>&3 2>&4; } 4>&1 | htcolor -e; } 3>&1 1>&2 | htcolor
 if ($ARGV[0] eq "-e") {
   while (<STDIN>) {
     my $line = $_;
