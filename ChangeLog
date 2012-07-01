@@ -1,4 +1,10 @@
                                                          -*- coding: utf-8 -*-
+  
+  *) plugins: Syntax highlighting for BBEdit/TextWrangler (Mac),
+              Notepad++ (Win) and gedit/gtkSourceView (Linux).
+  
+  *) tools: htcolor Perl script to color httest output.
+
 Changes with httest 2.2.7
   *) httest: Performance improvments around receiving and sending data.
 

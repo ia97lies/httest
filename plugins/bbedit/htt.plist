@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+	"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+
+<!--  Syntax coloring for the httest language (htt.sf.net),
+      for BBedit and TextWrangler editors (barebones.com);
+      place this file on your Mac in:
+        ~/Library/Application Support/BBEdit/Language Modules
+      resp.
+        ~/Library/Application Support/TextWrangler/Language Modules
+      note that the user's Library folder is hiddden by default
+      since OS X Lion (show with "chflags nohidden ~/Library");
+      first version created in June 2012 by $(whois jexler.net).
+      
+      This is "provided as is", no warranty of any kind.
+-->
+		
+<dict>
+	<key>BBEditDocumentType</key>
+	<string>CodelessLanguageModule</string>
+	
+	<key>BBLMLanguageDisplayName</key>
+	<string>httest</string>
+	
+	<key>BBLMLanguageCode</key>
+	<string>htt~</string>
+	
+	<key>BBLMSuffixMap</key>
+	<array>
+ 		<dict>
+    		<key>BBLMLanguageSuffix</key>
+    		<string>.htt</string>
+		</dict>
+ 		<dict>
+    		<key>BBLMLanguageSuffix</key>
+    		<string>.htb</string>
+		</dict>
+ 		<dict>
+    		<key>BBLMLanguageSuffix</key>
+    		<string>.hte</string>
+		</dict>
+ 		<dict>
+    		<key>BBLMLanguageSuffix</key>
+    		<string>.man</string>
+		</dict>
+	</array>
+	
+	<key>BBLMIsCaseSensitive</key>
+	<true/>
+	
+	<key>BBLMColorsSyntax</key>
+	<true/>
+
+	<key>BBLMKeywordList</key>
+	<array>
+		<string>CLIENT</string>
+		<string>SERVER</string>
+		<string>DAEMON</string>
+		<string>BLOCK</string>
+		<string>BLOCK:JS</string>
+		<string>BLOCK:LUA</string>
+		<string>END</string>
+		<string>LUA</string>
+		<string>SH</string>
+		<string>INCLUDE</string>
+		<string>AUTO_CLOSE</string>
+		<string>EXEC</string>
+		<string>SET</string>
+		<string>GLOBAL</string>
+		<string>PATH</string>
+		<string>TIMEOUT</string>
+		<string>PROCESS</string>
+		<string>FILE</string>
+		<string>MODULE</string>
+		<string>REQUIRE</string>
+		<string>_ADD_HEADER</string>
+		<string>_AUTO_CLOSE</string>
+		<string>_AUTO_COOKIE</string>
+		<string>_BREAK</string>
+		<string>_CALL</string>
+		<string>_CHECK</string>
+		<string>_CHUNK</string>
+		<string>_CLOSE</string>
+		<string>_DEBUG</string>
+		<string>_DOWN</string>
+		<string>_EXEC</string>
+		<string>_EXIT</string>
+		<string>_EXPECT</string>
+		<string>_FLUSH</string>
+		<string>_GREP</string>
+		<string>_HEADER</string>
+		<string>_IGNORE_BODY</string>
+		<string>_LOCAL</string>
+		<string>_LOG_LEVEL</string>
+		<string>_LOG_LEVEL_GET</string>
+		<string>_LOG_LEVEL_SET</string>
+		<string>_MATCH</string>
+		<string>_ONLY_PRINTABLE</string>
+		<string>_PIPE</string>
+		<string>_PLAY</string>
+		<string>_PRINT_HEX</string>
+		<string>_PROCESS</string>
+		<string>_PROC_WAIT</string>
+		<string>_READLINE</string>
+		<string>_RECORD</string>
+		<string>_RECV</string>
+		<string>_REQ</string>
+		<string>_RES</string>
+		<string>_RESWAIT</string>
+		<string>_SENDFILE</string>
+		<string>_SEQUENCE</string>
+		<string>_SET</string>
+		<string>_SH</string>
+		<string>_SOCKET</string>
+		<string>_SOCKSTATE</string>
+		<string>_TIMEOUT</string>
+		<string>_TUNNEL</string>
+		<string>_UNSET</string>
+		<string>_UP</string>
+		<string>_USE</string>
+		<string>_VERSION</string>
+		<string>_WAIT</string>
+		<string>_BINARY:RECV</string>
+		<string>_BINARY:SEND</string>
+		<string>_CODER:B64DEC</string>
+		<string>_CODER:B64ENC</string>
+		<string>_CODER:HTMLDEC</string>
+		<string>_CODER:URLDEC</string>
+		<string>_CODER:URLENC</string>
+		<string>_DATE:FORMAT</string>
+		<string>_DATE:GET_TIME</string>
+		<string>_DATE:SYNC</string>
+		<string>_DATE:TIMER</string>
+		<string>_DBG:BP</string>
+		<string>_MATH:EVAL</string>
+		<string>_MATH:OP</string>
+		<string>_MATH:RAND</string>
+		<string>_PROC:DETACH</string>
+		<string>_PROC:GET_PID</string>
+		<string>_PROC:LOCK</string>
+		<string>_PROC:UNLOCK</string>
+		<string>_SOCKS:CONNECT</string>
+		<string>_SSL:ACCEPT</string>
+		<string>_SSL:CLOSE</string>
+		<string>_SSL:CONNECT</string>
+		<string>_SSL:GET_CERT_VALUE</string>
+		<string>_SSL:GET_SESSION</string>
+		<string>_SSL:GET_SESSION_ID</string>
+		<string>_SSL:LOAD_CERT</string>
+		<string>_SSL:LOAD_KEY</string>
+		<string>_SSL:RENEG_CERT</string>
+		<string>_SSL:SECURE_RENEG_SUPPORTED</string>
+		<string>_SSL:SET_CERT</string>
+		<string>_SSL:SET_ENGINE</string>
+		<string>_SSL:SET_LEGACY</string>
+		<string>_SSL:SET_SESSION</string>
+		<string>_SYS:SLEEP</string>
+		<string>_TCP:ACCEPT</string>
+		<string>_TCP:CLOSE</string>
+		<string>_TCP:CONNECT</string>
+		<string>_TCP:LISTEN</string>
+		<string>_THREAD:GET_NUMBER</string>
+		<string>_UDP:BIND</string>
+		<string>_UDP:CONNECT</string>
+		<string>_WS:RECV</string>
+		<string>_WS:SEND</string>
+		<string>_WS:VERSION</string>
+		<string>_LOOP</string>
+		<string>_FOR</string>
+		<string>_BPS</string>
+		<string>_RPS</string>
+		<string>_SOCKET</string>
+		<string>_IGNORE_BODY</string>
+		<string>_END</string>
+		<string>_IF</string>
+		<string>_ELSE</string>
+		<string>_ERROR</string>
+		<string>_END</string>
+	</array>
+	
+	<key>BBLMPredefinedNameList</key>
+	<array>
+		<string>POLL</string>
+		<string>CHUNKED</string>
+		<string>DO_NOT_CHECK</string>
+		<string>AUTO</string>
+		<string>on</string>
+		<string>off</string>
+		<string>On</string>
+		<string>Off</string>
+		<string>SSL</string>
+		<string>SSL2</string>
+		<string>SSL3</string>
+		<string>TLS1</string>
+		<string>OK</string>
+		<string>FAILED</string>
+		<string>NOT</string>
+		<string>MATCH</string>
+		<string>EQUAL</string>
+		<string>LT</string>
+		<string>GT</string>
+		<string>LE</string>
+		<string>GE</string>
+		<string>EQ</string>
+		<string>ADD</string>
+		<string>SUB</string>
+		<string>MUL</string>
+		<string>DIV</string>
+		<string>TODO</string>
+		<string>FIXME</string>
+		<string>XXX</string>
+		<string>NOTE</string>
+	</array>
+	
+	<key>BBLMCommentLineDefault</key>
+	<string>#</string>
+	
+	<key>Language Features</key>
+	<dict>
+		<key>Identifier and Keyword Character Class</key>
+		<string>A-Za-z0-9_:</string>
+		
+		<key>Open Strings 1</key>
+		<string>"</string>
+		<key>Close Strings 1</key>
+		<string>"</string>
+		<key>Escape Char in Strings 1</key>
+		<string>\</string>
+		<key>End-of-line Ends Strings 1</key>
+		<true/>
+
+		<key>Open Strings 2</key>
+		<string>'</string>
+		<key>Close Strings 2</key>
+		<string>'</string>
+		<key>Escape Char in Strings 2</key>
+		<string>\</string>
+		<key>End-of-line Ends Strings 2</key>
+		<true/>
+		
+		<key>Open Line Comments</key>
+		<string>#</string>
+	</dict> 
+</dict>
+</plist>

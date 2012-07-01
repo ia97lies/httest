@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# colors httest output, just pipe into this script...
+# $ httest block.htt | htcolor
+# $ cat block.htt.out | htcolor
+# color both stdout and stderr...
+# $ { { httest $@ 1>&3 2>&4; } 4>&1 | htcolor -e; } 3>&1 1>&2 | htcolor
+if ($ARGV[0] eq "-e") {
+  while (<STDIN>) {
+    my $line = $_;
+    chomp($line);
+    # failed: strong
+    $line =~ s/failed/\033[1;31m$&\033[0;31m/i;
+    # stderr: red
+    print "\033[0;31m$line\033[0m\n";
+  }
+} else {
+  while (<STDIN>) {
+    my $line = $_;
+    chomp($line);
+    if ($line =~ m/^ *([<>])/) {
+      # out: strong, in: light
+      $strong = ($1 eq ">") ? "1" : "0";
+      if ($line =~ m/^[<>]/) {
+        # client: blue
+        $color="34";
+      } elsif ($line =~ m/^ {24,24}[<>]/) {
+        # server: green
+        $color="32";
+      } elsif ($line =~ m/^ {48,48}[<>]/) {
+        # server 2: purple
+        $color="35";
+      } else {
+        # more servers: brown
+        $color="33";
+      }
+      print "\033[$strong;${color}m$line\033[0m\n";
+    } elsif ($line =~ m/^ *\_[_-]/) {
+      # data: normal
+      print "$line\n";
+    } else {
+      # rest: normal (keywords bold)
+      $line =~ s/^ *[A-Z_][A-Z_:]*[ \t]/\033[1m$&\033[0m/;
+      print "$line\n";
+    }
+  }
+}

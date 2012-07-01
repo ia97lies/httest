@@ -7,8 +7,9 @@ TODO List
 + Syntax
   - Remove this annoying _ before the calls
   - No upercase commands anymore
-  - Migration script, test it for adovum httest scripts
+  - Migration script, test it for adnovum httest scripts
   - Or keep it backward compatible
+  - Syntax higlighting implement a special XML based output to generate vim, gedit, emacs, ... color coding scheme
 
 + Distributed
   - Synchronize results from distributed tests
@@ -50,3 +51,5 @@ TODO List
   - Shared variables => SHARED <var-name-list>
   - Firefox plugin
   - To display version do shortcut it to -V (htremote, httest, htnlm, ...)
+  - REQUIRE_VERSION <version> do fail if running httest are older.
+    -> "error: 10: httest minimum version 2.2.6 required, but version 2.1.5 detected!"

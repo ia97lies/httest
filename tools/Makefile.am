@@ -3,6 +3,7 @@
 
 bin_PROGRAMS = htx2b hturlext
 dist_man_MANS = htx2b.1 hturlext.1
+EXTRA_DIST = htcolor
 
 htx2b_SOURCES= \
 	htx2b.c

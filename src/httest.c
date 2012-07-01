@@ -1877,8 +1877,11 @@ error:
 static apr_status_t global_new(global_t **global, store_t *vars, 
                                int log_mode, apr_pool_t *p) {
   apr_status_t status;
+  apr_pool_t *pmutex;
+
   *global = apr_pcalloc(p, sizeof(global_t));
 
+  apr_pool_create(&pmutex, NULL);
   (*global)->pool = p;
   (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
@@ -1918,14 +1921,14 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   if ((status = apr_thread_mutex_create(&(*global)->sync, 
 	                                APR_THREAD_MUTEX_DEFAULT,
-                                        p)) != APR_SUCCESS) {
+                                        pmutex)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create sync mutex");
     return status;
   }
  
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
-                                        p)) != APR_SUCCESS) {
+                                        pmutex)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create mutex");
     return status;
   }
@@ -3180,11 +3183,11 @@ static void show_command_help(apr_pool_t *p, global_t *global,
       block_name = apr_pstrdup(p, last);
     }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
-      fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+      fprintf(stdout, "\ncommand: %s does not exist\n\n", command);
       exit(1);
     }
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      fprintf(stdout, "\ncommand: %s do not exist\n", command);
+      fprintf(stdout, "\ncommand: %s does not exist\n", command);
       exit(1);
     }
     else {
@@ -3203,7 +3206,7 @@ static void show_command_help(apr_pool_t *p, global_t *global,
 
   }
 
-  fprintf(stdout, "\ncommand: %s do not exist\n\n", command);
+  fprintf(stdout, "\ncommand: %s does not exist\n\n", command);
   exit(1);
 
 exit:
@@ -3440,6 +3443,7 @@ int main(int argc, const char *const argv[]) {
       break;
     }
   }
+
   apr_pool_destroy(pool);
 
   return 0;

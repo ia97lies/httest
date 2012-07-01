@@ -1212,7 +1212,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, a
       sconfig->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
     }
     else {
-      worker_log_error(worker, "Variable \"%s\" do not exist", copy);
+      worker_log_error(worker, "Variable \"%s\" does not exist", copy);
       return APR_ENOENT;
     }
   }

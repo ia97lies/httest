@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-trap "echo \"$(tput bold)$(tput setaf 1)FAILED$(tput sgr 0)\"" EXIT
+trap "printf \"\e[31;1mFAILED\e[0m\n\"" EXIT
 if [ "$#" == "0" ]; then
   ARGS="all"
 else
@@ -10,6 +10,6 @@ fi
 for ARG in $ARGS; do
   echo "make: source/$ARG.sh ... "
   source/$ARG.sh
-  echo "make: source/$ARG.sh ... $(tput bold)$(tput setaf 2)OK$(tput sgr 0)"
+  printf "make: source/$ARG.sh ... \e[32;1mOK\e[0m\n"
 done
 trap - EXIT

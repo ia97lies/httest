@@ -1,0 +1,45 @@
+<!--  Syntax coloring for the httest language (htt.sf.net),
+      for the Notepad++ editor (notepad-plus-plus.org);
+      import this file in Notepad++ with menu
+	    View -> User-Defined-Dialogue... -> Import...
+      first version created in June 2012 by $(whois jexler.net).
+      
+      This is "provided as is", no warranty of any kind.
+-->
+
+<NotepadPlus>
+    <UserLang name="htt" ext="htt htb hte man">
+        <Settings>
+            <Global caseIgnored="no" />
+            <TreatAsSymbol comment="no" commentLine="yes" />
+            <Prefix words1="no" words2="no" words3="no" words4="no" />
+        </Settings>
+        <KeywordLists>
+            <Keywords name="Delimiters">000000</Keywords>
+            <Keywords name="Folder+"></Keywords>
+            <Keywords name="Folder-"></Keywords>
+            <Keywords name="Operators"></Keywords>
+            <Keywords name="Comment">1 2 0#</Keywords>
+            <Keywords name="Words1">CLIENT&#x000D;&#x000A;SERVER&#x000D;&#x000A;DAEMON&#x000D;&#x000A;BLOCK&#x000D;&#x000A;BLOCK:JS&#x000D;&#x000A;BLOCK:LUA&#x000D;&#x000A;END&#x000D;&#x000A;LUA&#x000D;&#x000A;SH&#x000D;&#x000A;INCLUDE&#x000D;&#x000A;AUTO_CLOSE&#x000D;&#x000A;EXEC&#x000D;&#x000A;SET&#x000D;&#x000A;GLOBAL&#x000D;&#x000A;PATH&#x000D;&#x000A;TIMEOUT&#x000D;&#x000A;PROCESS&#x000D;&#x000A;FILE&#x000D;&#x000A;MODULE&#x000D;&#x000A;REQUIRE&#x000D;&#x000A;</Keywords>
+            <Keywords name="Words2">_ADD_HEADER&#x000D;&#x000A;_AUTO_CLOSE&#x000D;&#x000A;_AUTO_COOKIE&#x000D;&#x000A;_BREAK&#x000D;&#x000A;_CALL&#x000D;&#x000A;_CHECK&#x000D;&#x000A;_CHUNK&#x000D;&#x000A;_CLOSE&#x000D;&#x000A;_DEBUG&#x000D;&#x000A;_DOWN&#x000D;&#x000A;_EXEC&#x000D;&#x000A;_EXIT&#x000D;&#x000A;_EXPECT&#x000D;&#x000A;_FLUSH&#x000D;&#x000A;_GREP&#x000D;&#x000A;_HEADER&#x000D;&#x000A;_IGNORE_BODY&#x000D;&#x000A;_LOCAL&#x000D;&#x000A;_LOG_LEVEL&#x000D;&#x000A;_LOG_LEVEL_GET&#x000D;&#x000A;_LOG_LEVEL_SET&#x000D;&#x000A;_MATCH&#x000D;&#x000A;_ONLY_PRINTABLE&#x000D;&#x000A;_PIPE&#x000D;&#x000A;_PLAY&#x000D;&#x000A;_PRINT_HEX&#x000D;&#x000A;_PROCESS&#x000D;&#x000A;_PROC_WAIT&#x000D;&#x000A;_READLINE&#x000D;&#x000A;_RECORD&#x000D;&#x000A;_RECV&#x000D;&#x000A;_REQ&#x000D;&#x000A;_RES&#x000D;&#x000A;_RESWAIT&#x000D;&#x000A;_SENDFILE&#x000D;&#x000A;_SEQUENCE&#x000D;&#x000A;_SET&#x000D;&#x000A;_SH&#x000D;&#x000A;_SOCKET&#x000D;&#x000A;_SOCKSTATE&#x000D;&#x000A;_TIMEOUT&#x000D;&#x000A;_TUNNEL&#x000D;&#x000A;_UNSET&#x000D;&#x000A;_UP&#x000D;&#x000A;_USE&#x000D;&#x000A;_VERSION&#x000D;&#x000A;_WAIT&#x000D;&#x000A;_BINARY:RECV&#x000D;&#x000A;_BINARY:SEND&#x000D;&#x000A;_CODER:B64DEC&#x000D;&#x000A;_CODER:B64ENC&#x000D;&#x000A;_CODER:HTMLDEC&#x000D;&#x000A;_CODER:URLDEC&#x000D;&#x000A;_CODER:URLENC&#x000D;&#x000A;_DATE:FORMAT&#x000D;&#x000A;_DATE:GET_TIME&#x000D;&#x000A;_DATE:SYNC&#x000D;&#x000A;_DATE:TIMER&#x000D;&#x000A;_DBG:BP&#x000D;&#x000A;_MATH:EVAL&#x000D;&#x000A;_MATH:OP&#x000D;&#x000A;_MATH:RAND&#x000D;&#x000A;_PROC:DETACH&#x000D;&#x000A;_PROC:GET_PID&#x000D;&#x000A;_PROC:LOCK&#x000D;&#x000A;_PROC:UNLOCK&#x000D;&#x000A;_SOCKS:CONNECT&#x000D;&#x000A;_SSL:ACCEPT&#x000D;&#x000A;_SSL:CLOSE&#x000D;&#x000A;_SSL:CONNECT&#x000D;&#x000A;_SSL:GET_CERT_VALUE&#x000D;&#x000A;_SSL:GET_SESSION&#x000D;&#x000A;_SSL:GET_SESSION_ID&#x000D;&#x000A;_SSL:LOAD_CERT&#x000D;&#x000A;_SSL:LOAD_KEY&#x000D;&#x000A;_SSL:RENEG_CERT&#x000D;&#x000A;_SSL:SECURE_RENEG_SUPPORTED&#x000D;&#x000A;_SSL:SET_CERT&#x000D;&#x000A;_SSL:SET_ENGINE&#x000D;&#x000A;_SSL:SET_LEGACY&#x000D;&#x000A;_SSL:SET_SESSION&#x000D;&#x000A;_SYS:SLEEP&#x000D;&#x000A;_TCP:ACCEPT&#x000D;&#x000A;_TCP:CLOSE&#x000D;&#x000A;_TCP:CONNECT&#x000D;&#x000A;_TCP:LISTEN&#x000D;&#x000A;_THREAD:GET_NUMBER&#x000D;&#x000A;_UDP:BIND&#x000D;&#x000A;_UDP:CONNECT&#x000D;&#x000A;_WS:RECV&#x000D;&#x000A;_WS:SEND&#x000D;&#x000A;_WS:VERSION&#x000D;&#x000A;_LOOP&#x000D;&#x000A;_FOR&#x000D;&#x000A;_BPS&#x000D;&#x000A;_RPS&#x000D;&#x000A;_SOCKET&#x000D;&#x000A;_IGNORE_BODY&#x000D;&#x000A;_END&#x000D;&#x000A;_IF&#x000D;&#x000A;_ELSE&#x000D;&#x000A;_ERROR&#x000D;&#x000A;_END&#x000D;&#x000A;</Keywords>
+            <Keywords name="Words3">POLL&#x000D;&#x000A;CHUNKED&#x000D;&#x000A;DO_NOT_CHECK&#x000D;&#x000A;AUTO&#x000D;&#x000A;on&#x000D;&#x000A;off&#x000D;&#x000A;On&#x000D;&#x000A;Off&#x000D;&#x000A;SSL&#x000D;&#x000A;SSL2&#x000D;&#x000A;SSL3&#x000D;&#x000A;TLS1&#x000D;&#x000A;OK&#x000D;&#x000A;FAILED&#x000D;&#x000A;TODO&#x000D;&#x000A;FIXME&#x000D;&#x000A;XXX&#x000D;&#x000A;NOTE&#x000D;&#x000A;</Keywords>
+            <Keywords name="Words4">NOT&#x000D;&#x000A;MATCH&#x000D;&#x000A;EQUAL&#x000D;&#x000A;LT&#x000D;&#x000A;GT&#x000D;&#x000A;LE&#x000D;&#x000A;GE&#x000D;&#x000A;EQ&#x000D;&#x000A;ADD&#x000D;&#x000A;SUB&#x000D;&#x000A;MUL&#x000D;&#x000A;DIV&#x000D;&#x000A;</Keywords>
+        </KeywordLists>
+        <Styles>
+            <WordsStyle name="DEFAULT" styleID="11" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="FOLDEROPEN" styleID="12" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="FOLDERCLOSE" styleID="13" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="KEYWORD1" styleID="5" fgColor="0000FF" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="KEYWORD2" styleID="6" fgColor="0080C0" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="KEYWORD3" styleID="7" fgColor="408080" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="KEYWORD4" styleID="8" fgColor="008000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="COMMENT" styleID="1" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="COMMENT LINE" styleID="2" fgColor="C0C0C0" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="NUMBER" styleID="4" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="OPERATOR" styleID="10" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="DELIMINER1" styleID="14" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="DELIMINER2" styleID="15" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="DELIMINER3" styleID="16" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+        </Styles>
+    </UserLang>
+</NotepadPlus>

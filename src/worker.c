@@ -89,6 +89,21 @@ typedef struct replacer_s {
   worker_t *worker;
 } replacer_t;
 
+typedef struct recorder_s {
+  int on;
+#define RECORDER_OFF 0
+#define RECORDER_RECORD 1
+#define RECORDER_PLAY 2
+  int flags;
+#define RECORDER_RECORD_NONE 0
+#define RECORDER_RECORD_STATUS 1
+#define RECORDER_RECORD_HEADERS 2
+#define RECORDER_RECORD_BODY 4
+#define RECORDER_RECORD_ALL RECORDER_RECORD_STATUS|RECORDER_RECORD_HEADERS|RECORDER_RECORD_BODY 
+  apr_pool_t *pool;
+  sockreader_t *sockreader;
+} recorder_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -1521,9 +1536,9 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   apr_ssize_t recv_len = -1;
   apr_size_t peeklen;
 
+  recorder_t *recorder = worker_get_recorder(worker);
   buf = NULL;
   len = 0;
-  recorder_t *recorder = worker_get_recorder(worker);
 
   COMMAND_OPTIONAL_ARG;
 
@@ -2099,7 +2114,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 	                          APR_SUCCESS);
     }
     else {
-      worker_log(worker, LOG_ERR, "Variable \"%s\" do not exist", var);
+      worker_log(worker, LOG_ERR, "Variable \"%s\" does not exist", var);
       return APR_EINVAL;
     }
   }
@@ -2213,7 +2228,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     }
   }
   else {
-    worker_log(worker, LOG_ERR, "Match type %s do not exist", type);
+    worker_log(worker, LOG_ERR, "Match type %s does not exist", type);
     return APR_ENOENT;
   }
 
@@ -2320,7 +2335,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     }
   }
   else {
-    worker_log(worker, LOG_ERR, "Grep type %s do not exist", type);
+    worker_log(worker, LOG_ERR, "Grep type %s does not exist", type);
     return APR_ENOENT;
   }
 
@@ -3592,7 +3607,7 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
     apr_exit_why_e why;
     apr_proc_t *proc = apr_hash_get(worker->procs, var, APR_HASH_KEY_STRING);
     if (!proc) {
-      worker_log_error(worker, "Process \"%s\" do not exist", var);
+      worker_log_error(worker, "Process \"%s\" does not exist", var);
       return APR_EINVAL;
     }
     apr_proc_wait(proc, &exitcode, &why, APR_WAIT); 
