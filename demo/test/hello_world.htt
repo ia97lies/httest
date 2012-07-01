@@ -1,9 +1,0 @@
-CLIENT
-_REQ localhost 8080
-__GET /index.html HTTP/1.1
-__Host: localhost:8080
-__
-_EXPECT headers "200 OK"
-_EXPECT body "Hello World"
-_WAIT
-END
