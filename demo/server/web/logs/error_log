@@ -1,0 +1,8 @@
+[Thu Jun 14 17:02:09 2012] [notice] Apache/2.2.21 (Unix) configured -- resuming normal operations
+[Thu Jun 14 17:12:10 2012] [error] [client 127.0.0.1] request failed: error reading the headers
+[Thu Jun 14 17:18:08 2012] [error] [client 127.0.0.1] request failed: error reading the headers
+[Thu Jun 14 17:20:44 2012] [error] [client 127.0.0.1] request failed: error reading the headers
+[Thu Jun 14 17:22:03 2012] [error] [client 127.0.0.1] request failed: error reading the headers
+[Thu Jun 14 17:22:03 2012] [error] [client 127.0.0.1] request failed: error reading the headers
+[Thu Jun 14 17:25:55 2012] [error] [client 127.0.0.1] request failed: error reading the headers
+[Thu Jun 14 17:42:58 2012] [notice] caught SIGTERM, shutting down

@@ -1,0 +1,11 @@
+CLIENT 20
+_AUTO_CLOSE on
+_IGNORE_BODY on
+_LOOP 1000
+_REQ localhost 8080
+__GET /perf/index.html HTTP/1.1
+__Host: localhost:8080
+__
+_WAIT
+_END
+END
