@@ -1,0 +1,20 @@
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST SSL:$YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__
+_WAIT
+END
+
+SERVER SSL:$YOUR_PORT 1
+_CERT $TOP/test/server.cert.pem $TOP/test/server.key.pem
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Length: AUTO
+__
+__Hello World
+END
+
