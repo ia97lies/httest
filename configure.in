@@ -162,6 +162,7 @@ AC_CONFIG_FILES([Makefile
                  plugins/notepadpp/Makefile
                  plugins/vim/Makefile
                  plugins/xemacs/Makefile
-                 test/Makefile])
+                 test/Makefile
+                 test/sub/Makefile])
 AC_OUTPUT
 

@@ -3,5 +3,5 @@
 TOP=..
 export TOP
 
-HTTEST=../src/httest
+HTTEST=$TOP/src/httest
 $HTTEST_PRE $HTTEST $@

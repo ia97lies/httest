@@ -36,6 +36,7 @@ EXTRA_DIST= \
 	block_lua_cert.htt \
 	block_lua_crypto.htt \
 	block_lua_dh.htt \
+	block_lua_file_md5.htt \
 	block_lua.hte \
 	block_lua.htt \
 	block_lua_httest.htt \
@@ -194,6 +195,8 @@ EXTRA_DIST= \
 	null_content.htt \
 	only_printable.htt \
 	overflow.htt \
+	perf_terminate_check.htt \
+	perf_terminate_check.visual \
 	pipe_exec_out.htt \
 	pipelining_request.htt \
 	pipe_recv_to_file.htt \
@@ -216,6 +219,7 @@ EXTRA_DIST= \
 	request_ended_server.htt \
 	rps.htt \
 	run_all.sh \
+	run_color.sh \
 	run_errors.sh \
 	run_lib.sh \
 	run_ntlm.sh \
@@ -339,6 +343,7 @@ EXTRA_DIST= \
 	websocket.htt \
 	_wrapper_test.sh 
 
+SUBDIRS= sub
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_store
