@@ -111,6 +111,8 @@ static ssl_gconf_t *ssl_get_global_config(global_t *global) {
   if (config == NULL) {
     config = apr_pcalloc(global->pool, sizeof(*config));
     module_set_config(global->config, apr_pstrdup(global->pool, ssl_module), config);
+    config->certfile = RSA_SERVER_CERT;
+    config->keyfile = RSA_SERVER_KEY;
   }
   return config;
 }
@@ -1011,13 +1013,7 @@ static apr_status_t block_SSL_SET_DEFAULT_CERT(worker_t * worker,
   }
 
   gconf->certfile = store_get_copy(worker->params, global->pool, "1");
-  if (!gconf->certfile) {
-    gconf->certfile = RSA_SERVER_CERT;
-  }
   gconf->keyfile = store_get_copy(worker->params, global->pool, "2");
-  if (!gconf->keyfile) {
-    gconf->keyfile = RSA_SERVER_KEY;
-  }
   gconf->cafile = store_get_copy(worker->params, global->pool, "3");
 
   return APR_SUCCESS;
@@ -1868,6 +1864,7 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
       key = gconf->keyfile;
     }
     if (!ca) {
+      ca = gconf->cafile;
     }
     if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
       return status;
@@ -1971,6 +1968,8 @@ apr_status_t ssl_module_init(global_t *global) {
   SSL_load_error_strings();
   SSL_library_init();
   ssl_util_thread_setup(global->pool);
+
+  ssl_get_global_config(global);
 
   if ((status = module_command_new(global, "SSL", "SET_DEFAULT_CERT", "[<cert>] [<key>] [<ca>]",
 	                           "set default cert files <cert> <key> <ca> ",

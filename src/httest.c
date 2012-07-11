@@ -3450,7 +3450,6 @@ int main(int argc, const char *const argv[]) {
 }
 
 APR_HOOK_STRUCT(
-  APR_HOOK_LINK(module_init)
   APR_HOOK_LINK(read_line)
   APR_HOOK_LINK(block_start)
   APR_HOOK_LINK(block_end)
