@@ -1,7 +1,7 @@
                                                          -*- coding: utf-8 -*-
   
 Changes with httest 2.2.8
-  *) httest: Bugfixed cert loading problem if server is threaded.
+  *) httest: Workaround for cert loading problem if server is threaded.
 
   *) plugins: Syntax highlighting for BBEdit/TextWrangler (Mac),
               Notepad++ (Win) and gedit/gtkSourceView (Linux).
