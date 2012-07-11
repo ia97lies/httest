@@ -8,8 +8,8 @@ __
 _WAIT
 END
 
+SSL:SET_DEFAULT_CERT $TOP/test/server.cert.pem $TOP/test/server.key.pem
 SERVER SSL:$YOUR_PORT 1
-_CERT $TOP/test/server.cert.pem $TOP/test/server.key.pem
 _RES
 _WAIT
 __HTTP/1.1 200 OK

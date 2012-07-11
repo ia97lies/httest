@@ -40,7 +40,13 @@
  ***********************************************************************/
 const char * ssl_module = "ssl_module";
 
-typedef struct ssl_config_s {
+typedef struct ssl_gconf_s {
+  const char *certfile;
+  const char *keyfile;
+  const char *cafile;
+} ssl_gconf_t;
+
+typedef struct ssl_wconf_s {
   X509 *cert;
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
@@ -59,13 +65,13 @@ typedef struct ssl_config_s {
   apr_pool_t *msg_pool;
   apr_table_t *msgs;
   worker_t *msg_worker;
-} ssl_config_t;
+} ssl_wconf_t;
 
-typedef struct ssl_socket_config_s {
+typedef struct ssl_sconf_s {
   int is_ssl;
   SSL *ssl;
   SSL_SESSION *sess;
-} ssl_socket_config_t;
+} ssl_sconf_t;
 
 typedef struct ssl_transport_s {
   SSL *ssl;
@@ -83,7 +89,7 @@ typedef struct ssl_transport_s {
  * @return ssl transport context
  */
 static ssl_transport_t *ssl_get_transport(worker_t *worker, 
-                                          ssl_socket_config_t *sconfig) {
+                                          ssl_sconf_t *sconfig) {
   apr_interval_time_t tmo;
   ssl_transport_t *ssl_transport = apr_pcalloc(worker->pbody, sizeof(*ssl_transport));
   ssl_transport->ssl = sconfig->ssl;
@@ -95,13 +101,28 @@ static ssl_transport_t *ssl_get_transport(worker_t *worker,
 }
 
 /**
+ * Get ssl config from global 
+ *
+ * @param global IN global 
+ * @return ssl config
+ */
+static ssl_gconf_t *ssl_get_global_config(global_t *global) {
+  ssl_gconf_t *config = module_get_config(global->config, ssl_module);
+  if (config == NULL) {
+    config = apr_pcalloc(global->pool, sizeof(*config));
+    module_set_config(global->config, apr_pstrdup(global->pool, ssl_module), config);
+  }
+  return config;
+}
+
+/**
  * Get ssl config from worker
  *
  * @param worker IN worker
  * @return ssl config
  */
-static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
-  ssl_config_t *config = module_get_config(worker->config, ssl_module);
+static ssl_wconf_t *ssl_get_worker_config(worker_t *worker) {
+  ssl_wconf_t *config = module_get_config(worker->config, ssl_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
     module_set_config(worker->config, apr_pstrdup(worker->pbody, ssl_module), config);
@@ -115,8 +136,8 @@ static ssl_config_t *ssl_get_worker_config(worker_t *worker) {
  * @param worker IN worker
  * @return socket config
  */
-static ssl_socket_config_t *ssl_get_socket_config(worker_t *worker) {
-  ssl_socket_config_t *config;
+static ssl_sconf_t *ssl_get_socket_config(worker_t *worker) {
+  ssl_sconf_t *config;
 
   if (!worker || !worker->socket) {
     return NULL;
@@ -140,7 +161,7 @@ static ssl_socket_config_t *ssl_get_socket_config(worker_t *worker) {
 static apr_status_t worker_ssl_handshake(worker_t * worker) {
   apr_status_t status;
   char *error;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
   
   if ((status = ssl_handshake(sconfig->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
@@ -176,7 +197,7 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
   EVP_PKEY *pkey = NULL;
   X509 *cert = NULL;
   STACK_OF(X509) *ca = NULL;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!(in = BIO_new_file(infile, "rb"))) {
     worker_log_error(worker, "Could not open p12 \"%s\"", infile);
@@ -218,7 +239,7 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
   worker_t *worker = arg;
   char *extname;
   char *entry;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   switch(type) {
     case TLSEXT_TYPE_server_name:
@@ -296,7 +317,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
   worker_t *worker = arg;
   char *entry;
   const char *str_write_p, *str_version, *str_content_type = "", *str_details1 = "", *str_details2= "";
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   str_write_p = write_p ? ">" : "<";
 
@@ -587,7 +608,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile, 
                             const char *keyfile, const char *ca, int check) {
   int len = 0;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (config->flags & SSL_CONFIG_FLAGS_CERT_SET) {
     return APR_SUCCESS;
@@ -691,7 +712,7 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
  */
 static int worker_set_client_method(worker_t * worker, const char *sslstr) {
   int is_ssl = 0;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
@@ -738,7 +759,7 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
  */
 static int worker_set_server_method(worker_t * worker, const char *sslstr) {
   int is_ssl = 0;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
@@ -782,8 +803,8 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
  * @return apr status
  */
 static apr_status_t ssl_new_instance(worker_t *worker) {
-  ssl_config_t *config = ssl_get_worker_config(worker);
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (config->msg_worker) {
     worker_destroy(config->msg_worker);
@@ -822,7 +843,7 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
 static apr_status_t worker_ssl_accept(worker_t * worker) {
   apr_status_t status;
   char *error;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
     if (!sconfig->ssl) {
@@ -971,6 +992,37 @@ tryagain:
 /************************************************************************
  * Commands
  ***********************************************************************/
+
+/**
+ * SSL:SET_DEFAULT_CERT command
+ * @param worker IN thread data object
+ * @param data IN
+ * @return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t block_SSL_SET_DEFAULT_CERT(worker_t * worker, 
+                                               worker_t *parent,
+                                               apr_pool_t *ptmp) {
+  apr_status_t status;
+  global_t *global = worker->global;
+  ssl_gconf_t *gconf = ssl_get_global_config(global);
+
+  if ((status = module_check_global(worker)) != APR_SUCCESS) {
+    return status;
+  }
+
+  gconf->certfile = store_get_copy(worker->params, global->pool, "1");
+  if (!gconf->certfile) {
+    gconf->certfile = RSA_SERVER_CERT;
+  }
+  gconf->keyfile = store_get_copy(worker->params, global->pool, "2");
+  if (!gconf->keyfile) {
+    gconf->keyfile = RSA_SERVER_KEY;
+  }
+  gconf->cafile = store_get_copy(worker->params, global->pool, "3");
+
+  return APR_SUCCESS;
+}
+
 /**
  * Connect block
  *
@@ -984,7 +1036,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
   int is_ssl;
   BIO *bio;
   apr_os_sock_t fd;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   sslstr = store_get(worker->params, "1");
   if (!sslstr) {
@@ -1062,7 +1114,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
 static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *sslstr;
   int is_ssl;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   sslstr = store_get(worker->params, "1");
   if (!sslstr) {
@@ -1085,15 +1137,16 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
       const char *key;
       const char *ca;
       apr_status_t status;
+      ssl_gconf_t *gconf = ssl_get_global_config(worker->global);
 
       cert = store_get(worker->params, "2");
       key = store_get(worker->params, "3");
       ca = store_get(worker->params, "4");
       if (!cert) {
-	cert = RSA_SERVER_CERT;
+	cert = gconf->certfile;
       }
       if (!key) {
-	key = RSA_SERVER_KEY;
+	key = gconf->keyfile;
       }
       if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
 	return status;
@@ -1142,7 +1195,7 @@ static apr_status_t block_SSL_CLOSE(worker_t * worker, worker_t *parent, apr_poo
  */
 static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = store_get(worker->params, "1");
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
     worker_log_error(worker, "Missing varibale name to store session in");
@@ -1187,7 +1240,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, a
  */
 static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = store_get(worker->params, "1");
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
     worker_log_error(worker, "Missing session to set on SSL");
@@ -1232,7 +1285,7 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
   const char *copy = store_get(worker->params, "1");
   SSL_SESSION *sess;
   char *val;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
     worker_log_error(worker, "Missing varibale name to store session in");
@@ -1271,8 +1324,8 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
   int rc;
   const char *copy = store_get(worker->params, "1");
 
-  ssl_config_t *config = ssl_get_worker_config(worker);
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (config->cert) {
     X509_free(config->cert);
@@ -1365,7 +1418,7 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
   const char *cmd = store_get(worker->params, "1");
   const char *var = store_get(worker->params, "2");
 
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!cmd) {
     worker_log_error(worker, "SSL variable name is missing");
@@ -1427,7 +1480,7 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
  */
 static apr_status_t block_SSL_CIPHER_SUITE(worker_t * worker, worker_t *parent,
                                            apr_pool_t *ptmp) {
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
   const char *val = store_get(worker->params, "1");
   char *copy = apr_pstrdup(worker->pbody, val);
   config->cipher_suite = copy;
@@ -1467,7 +1520,7 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent, apr
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (config->cert) {
     X509_free(config->cert);
@@ -1496,7 +1549,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent, apr_
   char *copy = apr_pstrdup(worker->pbody, val);
   BIO *mem;
 
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (config->pkey) {
     EVP_PKEY_free(config->pkey);
@@ -1521,7 +1574,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent, apr_
  * @return APR_SUCCESS
  */
 static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!config->ssl_ctx) {
     worker_log_error(worker, "Can not set cert, ssl not enabled in %s",
@@ -1564,7 +1617,7 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
  * @return APR_SUCCESS
  */
 static apr_status_t block_SSL_SET_CA(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   /* check if we have parameters */
   if (store_get_size(worker->params)) {
@@ -1586,7 +1639,7 @@ static apr_status_t block_SSL_SET_CA(worker_t * worker, worker_t *parent, apr_po
 static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker, 
                                                      worker_t *parent, apr_pool_t *ptmp) {
 #if (define USE_SSL && OPENSSL_VERSION_NUMBER >= 0x009080ff)
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
   if (SSL_get_secure_renegotiation_support(sconfig->ssl)) {
     return APR_SUCCESS;
   }
@@ -1609,7 +1662,7 @@ static apr_status_t block_SSL_SECURE_RENEG_SUPPORTED(worker_t * worker,
 static apr_status_t block_SSL_TRACE(worker_t * worker, worker_t *parent, 
                                     apr_pool_t *ptmp) {
   apr_pool_t *pool;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
   config->flags |= SSL_CONFIG_FLAGS_TRACE;
   apr_pool_create(&pool, NULL);
   config->msg_pool = pool;
@@ -1625,13 +1678,13 @@ static apr_status_t block_SSL_TRACE(worker_t * worker, worker_t *parent,
  * @return APR_SUCCESS
  */
 static apr_status_t ssl_worker_clone(worker_t *worker, worker_t *clone) {
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   worker_get_socket(clone, "Default", "0");
   clone->socket->is_ssl = worker->socket->is_ssl;
 
   if (config->meth) {
-    ssl_config_t *clone_config = ssl_get_worker_config(clone);
+    ssl_wconf_t *clone_config = ssl_get_worker_config(clone);
     /* copy workers content to clone */
     memcpy(clone_config, config, sizeof(*clone_config)); 
     clone_config->ssl_ctx = NULL;
@@ -1659,7 +1712,7 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
   char *cert = NULL;
   char *key = NULL;
   char *ca = NULL;
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!worker->socket) {
     worker_log_error(worker, "No socket available");
@@ -1723,7 +1776,8 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
   }
   else { 
     *new_portinfo = port;
-    if ((status = worker_ssl_ctx(worker, RSA_SERVER_CERT, RSA_SERVER_KEY, NULL, 0)) 
+    ssl_gconf_t *gconf = ssl_get_global_config(worker->global);
+    if ((status = worker_ssl_ctx(worker, gconf->certfile, gconf->keyfile, NULL, 0)) 
         != APR_SUCCESS) {
       return status;
     }
@@ -1740,7 +1794,7 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
  */
 static apr_status_t ssl_hook_connect(worker_t *worker) {
   apr_status_t status;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
     transport_t *transport;
@@ -1787,15 +1841,16 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
  */
 static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
   apr_status_t status;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (worker->socket->is_ssl) {
     char *last;
     transport_t *transport;
     ssl_transport_t *ssl_transport;
-    char *cert = NULL;
-    char *key = NULL;
-    char *ca = NULL;
+    const char *cert = NULL;
+    const char *key = NULL;
+    const char *ca = NULL;
+    ssl_gconf_t *gconf = ssl_get_global_config(worker->global);
 
     if (data && data[0]) {
       cert = apr_strtok(data, " ", &last);
@@ -1807,10 +1862,12 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
       }
     }
     if (!cert) {
-      cert = RSA_SERVER_CERT;
+      cert = gconf->certfile;
     }
     if (!key) {
-      key = RSA_SERVER_KEY;
+      key = gconf->keyfile;
+    }
+    if (!ca) {
     }
     if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
       return status;
@@ -1842,7 +1899,7 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
 static apr_status_t ssl_hook_close(worker_t *worker, char *info, 
                                    char **new_info) {
   int i;
-  ssl_socket_config_t *sconfig = ssl_get_socket_config(worker);
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   *new_info = info;
   if (!info || !info[0]) {
@@ -1876,7 +1933,7 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
  * @return APR_SUCCESS or apr error
  */
 static apr_status_t ssl_hook_read_pre_headers(worker_t *worker) {
-  ssl_config_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
   if (config->msgs) {
     int i;
     apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(config->msgs)->elts;
@@ -1914,6 +1971,12 @@ apr_status_t ssl_module_init(global_t *global) {
   SSL_load_error_strings();
   SSL_library_init();
   ssl_util_thread_setup(global->pool);
+
+  if ((status = module_command_new(global, "SSL", "SET_DEFAULT_CERT", "[<cert>] [<key>] [<ca>]",
+	                           "set default cert files <cert> <key> <ca> ",
+	                           block_SSL_SET_DEFAULT_CERT)) != APR_SUCCESS) {
+    return status;
+  }
 
   if ((status = module_command_new(global, "SSL", "_CONNECT",
 	                           "SSL|SSL2|SSL3|DTLS1|TLS1"
