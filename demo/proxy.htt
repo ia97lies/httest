@@ -6,14 +6,36 @@ __Host: localhost:9080
 __User-Agent: httest-$htt_version
 __
 _WAIT
+_CLOSE
+_REQ localhost 9080
+__GET /proxy/special/foo/bar HTTP/1.1
+__Host: localhost:9080
+__User-Agent: httest-$htt_version
+__
+_WAIT
+
 END
 
 SERVER 8080
 _RES
+_EXPECT headers "/foo/bar"
 _WAIT
 __HTTP/1.1 200 OK
 __Content-Type: text/plain
 __Content-Length: AUTO
 __
 __Hallo Welt!
+
+_CLOSE
+
+_RES
+_EXPECT headers "!/proxy/special"
+_EXPECT headers "/foo/bar"
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__Hallo Welt!
+
 END
