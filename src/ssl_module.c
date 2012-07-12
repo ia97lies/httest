@@ -1771,8 +1771,8 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
     *new_portinfo = portinfo;
   }
   else { 
-    *new_portinfo = port;
     ssl_gconf_t *gconf = ssl_get_global_config(worker->global);
+    *new_portinfo = port;
     if ((status = worker_ssl_ctx(worker, gconf->certfile, gconf->keyfile, NULL, 0)) 
         != APR_SUCCESS) {
       return status;
