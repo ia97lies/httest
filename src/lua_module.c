@@ -100,11 +100,11 @@ static lua_gconf_t *lua_get_global_config(global_t *global) {
  * @return lua reader instance
  */
 static lua_reader_t *lua_new_lua_reader(worker_t *worker, apr_pool_t *pool) {
-  lua_wconf_t *bconf = lua_get_worker_config(worker->block);
+  lua_wconf_t *wconf = lua_get_worker_config(worker->block);
   lua_reader_t *reader = apr_pcalloc(pool, sizeof(*reader));
   reader->pool = pool;
   reader->lines = worker->lines;
-  reader->starting_line_nr = bconf->starting_line_nr;
+  reader->starting_line_nr = wconf->starting_line_nr;
 	return reader;
 }
 
@@ -399,12 +399,12 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
   apr_table_entry_t *e; 
   lua_reader_t *reader;
 
-  lua_wconf_t *bconf = lua_get_worker_config(worker->block);
+  lua_wconf_t *wconf = lua_get_worker_config(worker->block);
   lua_State *L = luaL_newstate();
 
   luaL_openlibs(L);
-  e = (apr_table_entry_t *) apr_table_elts(bconf->params)->elts;
-  for (i = 1; i < apr_table_elts(bconf->params)->nelts; i++) {
+  e = (apr_table_entry_t *) apr_table_elts(wconf->params)->elts;
+  for (i = 1; i < apr_table_elts(wconf->params)->nelts; i++) {
     const char *val = NULL;
     char *param = store_get_copy(worker->params, ptmp, e[i].key);
     val = worker_get_value_from_param(worker, param, ptmp);
@@ -442,8 +442,8 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
     lua_pop(L, 1);
     return APR_EGENERAL;
   }
-  e = (apr_table_entry_t *) apr_table_elts(bconf->retvars)->elts;
-  for (i = 0; i < apr_table_elts(bconf->retvars)->nelts; i++) {
+  e = (apr_table_entry_t *) apr_table_elts(wconf->retvars)->elts;
+  for (i = 0; i < apr_table_elts(wconf->retvars)->nelts; i++) {
     worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
     if (lua_isstring(L, i + 1)) {
       store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(L, i + 1));
@@ -548,12 +548,30 @@ static apr_status_t lua_block_end(global_t *global) {
 /************************************************************************
  * Commands 
  ***********************************************************************/
+/**
+ * _LUA:CALL
+ * @param worker IN thread data object
+ * @param data IN
+ * @return APR_SUCCESS or APR_EGENERAL
+ */
+static apr_status_t block_LUA_CALL(worker_t * worker, worker_t *parent,
+                                   apr_pool_t *ptmp) {
+  return APR_SUCCESS;
+}
 
 /************************************************************************
  * Module
  ***********************************************************************/
 apr_status_t lua_module_init(global_t *global) {
+  apr_status_t status;
   module_command_new(global, "LUA", "_MODULE", "", "", NULL);
+
+  if ((status = module_command_new(global, "LUA", "_CALL", "<lua-function> <args>",
+	                           "Call a lua function loaded by BLOCK:LUA",
+	                           block_LUA_CALL)) != APR_SUCCESS) {
+    return status;
+  }
+
   htt_hook_block_start(lua_block_start, NULL, NULL, 0);
   htt_hook_read_line(lua_read_line, NULL, NULL, 0);
   htt_hook_block_end(lua_block_end, NULL, NULL, 0);

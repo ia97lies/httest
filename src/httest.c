@@ -150,6 +150,8 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global,
 				   char *data, apr_pool_t *ptmp); 
 static apr_status_t global_MODULE(command_t *self, global_t *global, 
 				  char *data, apr_pool_t *ptmp); 
+static apr_status_t global_REQUIRE_VERSION(command_t *self, global_t *global, 
+				           char *data, apr_pool_t *ptmp); 
 
 command_t global_commands[] = {
   {"END", (command_f )global_END, "", 
