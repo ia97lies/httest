@@ -44,6 +44,7 @@ typedef struct lua_wconf_s {
   int starting_line_nr; 
   apr_table_t *params;
   apr_table_t *retvars;
+  lua_State *L;
 } lua_wconf_t;
 
 typedef struct lua_gconf_s {
@@ -386,6 +387,72 @@ static const struct luaL_Reg htt_transport_m[] = {
 };
 
 /**
+ * Simple lua loader for lua block
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temp pool for this function
+ * @return apr status
+ */
+static apr_status_t block_lua_loader(worker_t *worker, worker_t *parent, 
+                                     apr_pool_t *ptmp) {
+  int failed;
+  int i;
+  apr_table_entry_t *e; 
+  lua_reader_t *reader;
+
+  lua_wconf_t *wconf = lua_get_worker_config(worker->block);
+  lua_State *L = luaL_newstate();
+
+  if (wconf->L) {
+    lua_close(L);
+  }
+  luaL_openlibs(L);
+  e = (apr_table_entry_t *) apr_table_elts(wconf->params)->elts;
+  for (i = 1; i < apr_table_elts(wconf->params)->nelts; i++) {
+    const char *val = NULL;
+    char *param = store_get_copy(worker->params, ptmp, e[i].key);
+    val = worker_get_value_from_param(worker, param, ptmp);
+    lua_pushstring(L, val);
+    lua_setglobal(L, e[i].key);
+  }
+  luaopen_crypto(L);
+  lua_pushlightuserdata(L, parent);
+  lua_setfield(L, LUA_REGISTRYINDEX, "htt_parent");
+  lua_pushlightuserdata(L, worker);
+  lua_setfield(L, LUA_REGISTRYINDEX, "htt_worker");
+  luaL_newmetatable(L, "htt.transport");
+  lua_pushvalue(L, -1);  /* pushes the metatable */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+  luaL_register(L, NULL, htt_transport_m);
+  luaL_register(L, "htt", htt_lib_f);
+  lua_pop(L, -1);
+  lua_pop(L, -1);
+  reader = lua_new_lua_reader(worker, ptmp);
+#if ( LUA_VERSION_NUM == 501 )		
+  failed = (lua_load(L, lua_get_line, reader, "@client") != 0 || 
+            lua_pcall(L, 0, LUA_MULTRET, 0) != 0);
+#elif ( LUA_VERSION_NUM  == 502 )
+  failed = (lua_load(L, lua_get_line, reader, "@client", NULL) != 0 || 
+            lua_pcall(L, 0, LUA_MULTRET, 0) != 0);
+#else
+  #error this lua version is not supported
+#endif
+  if (failed) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg == NULL) {
+      msg = "(error object is not a string)";
+    }
+    worker_log_error(worker, "Lua error: %s", msg);
+    lua_pop(L, 1);
+    return APR_EGENERAL;
+  }
+  
+  wconf->L = L;
+
+  return APR_SUCCESS;
+}
+
+/**
  * Simple lua interpreter for lua block
  * @param worker IN callee
  * @param parent IN caller
@@ -499,15 +566,26 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
  */
 static apr_status_t lua_block_start(global_t *global, char **line) {
   apr_status_t status;
-  if (strncmp(*line, ":LUA ", 5) == 0) {
+  if (strncmp(*line, ":LUA ", 5) == 0 ||
+      strncmp(*line, ":LUA:LOAD ", 10) == 0) {
     lua_wconf_t *wconf;
     lua_gconf_t *gconf = lua_get_global_config(global);
     gconf->do_read_line = 1;
-    *line += 5;
-    if ((status = worker_new(&global->cur_worker, "", "", global, 
-                             block_lua_interpreter)) 
-        != APR_SUCCESS) {
-      return status;
+    if (strncmp(*line, ":LUA ", 5) == 0) {
+      *line += 5;
+      if ((status = worker_new(&global->cur_worker, "", "", global, 
+                               block_lua_interpreter)) 
+          != APR_SUCCESS) {
+        return status;
+      }
+    }
+    else {
+      *line += 10;
+      if ((status = worker_new(&global->cur_worker, "", "", global, 
+                               block_lua_loader)) 
+          != APR_SUCCESS) {
+        return status;
+      }
     }
     wconf = lua_get_worker_config(global->cur_worker);
     wconf->starting_line_nr = global->line_nr;
