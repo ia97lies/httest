@@ -230,6 +230,10 @@ command_t global_commands[] = {
    "Define a module to collect a number of BLOCKs. If you call a BLOCK within"
    "a module, you need to prefix the BLOCK name with \"<name>:\"",
   COMMAND_FLAGS_NONE}, 
+  {"REQUIRE_VERSION", (command_f )global_REQUIRE_VERSION, "<version>",
+   "Test if the executing httest is newer or equal the given <version>. "
+   "Skipping a test will return a 2 instead of 1 for fail or 0 for success.",
+  COMMAND_FLAGS_NONE}, 
   {NULL, NULL, NULL,
   NULL ,
   COMMAND_FLAGS_NONE}
@@ -2406,6 +2410,74 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
 }
 
 /**
+ * Use to define a MODULE. Used to make a name space for BLOCKs.
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN MODULE name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_REQUIRE_VERSION(command_t * self, global_t * global,
+                                           char *data, apr_pool_t *ptmp) {
+  char *major;
+  char *minor;
+  char *maint;
+  char *version;
+  char *v_major;
+  char *v_minor;
+  char *v_maint;
+  char *last;
+  apr_status_t status = APR_SUCCESS;
+
+  apr_collapse_spaces(data, data);
+
+  if ((major = apr_strtok(data, ".", &last))) {
+    if ((minor = apr_strtok(NULL, ".", &last))) {
+      if (!(maint = apr_strtok(NULL, ".", &last))) {
+        status = APR_EGENERAL;
+      }
+    }
+    else {
+      status = APR_EGENERAL;
+    }
+  }
+  else {
+    status = APR_EGENERAL;
+  }
+  
+  version = apr_pstrdup(ptmp, VERSION);
+  v_major = apr_strtok(version, ".", &last);
+  v_minor = apr_strtok(NULL, ".", &last);
+  v_maint = apr_strtok(NULL, ".", &last);
+
+  if (apr_atoi64(major) <= apr_atoi64(v_major)) {
+    if (apr_atoi64(minor) <= apr_atoi64(v_minor)) {
+      if (apr_atoi64(maint) > apr_atoi64(v_maint)) {
+        status = APR_EINVAL;
+      }
+    }
+    else {
+      status = APR_EINVAL;
+    }
+  }
+  else {
+    status = APR_EINVAL;
+  }
+
+  if (APR_STATUS_IS_EGENERAL(status)) {
+    fprintf(stderr, "\nGiven version \"%s\" is not valid, "
+                    "must be of the form <major>.<minor>.<maint>", data);
+  }
+  else if (APR_STATUS_IS_EINVAL(status)) {
+    success = 2;
+    exit(2);
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
  * Global PATH command
  *
  * @param self IN command
@@ -2845,32 +2917,32 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       }
       else {
 	command_t *command;
+        apr_pool_t *ptmp;
 	/* replace all variables for global commands */
 	line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
+        apr_pool_create(&ptmp, NULL);
 	/* lookup function index */
 	i = 0;
 	command = lookup_command(global_commands, line);
 	if (command->func) {
 	  i += strlen(command->name);
-	  if ((status = command->func(command, global, &line[i], NULL)) 
+	  if ((status = command->func(command, global, &line[i], ptmp)) 
 	      != APR_SUCCESS) {
 	    return status;
 	  }
 	}
         else { /* let's see if we find block for this job */
           int cur_log_mode = global->worker->log_mode;
-          apr_pool_t *ptmp;
 
-          apr_pool_create(&ptmp, NULL);
           global->worker->log_mode = 0;
           status = command_CALL(NULL, global->worker, line, ptmp);
           global->worker->log_mode = cur_log_mode;
-          apr_pool_destroy(ptmp);
           if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
             return status;
           }
         }
+        apr_pool_destroy(ptmp);
       }
     }
   }
@@ -3220,12 +3292,16 @@ exit:
  * own exit func
  */
 static void my_exit() {
-  if (!success) {
+  if (success == 0) {
     fprintf(stderr, " FAILED\n");
     fflush(stderr);
   }
-  else {
+  else if (success == 1) {
     fprintf(stdout, " OK\n");
+    fflush(stdout);
+  }
+  else if (success == 2) {
+    fprintf(stdout, " SKIPPED\n");
     fflush(stdout);
   }
 }

@@ -53,6 +53,7 @@ typedef struct ssl_wconf_s {
   SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
+  apr_pool_t *cert_pool;
   const char *certfile;
   const char *keyfile;
   const char *cafile;
@@ -610,9 +611,9 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile, 
                             const char *keyfile, const char *ca, int check) {
   int len = 0;
-  ssl_wconf_t *config = ssl_get_worker_config(worker);
+  ssl_wconf_t *wconf = ssl_get_worker_config(worker);
 
-  if (config->flags & SSL_CONFIG_FLAGS_CERT_SET) {
+  if (wconf->flags & SSL_CONFIG_FLAGS_CERT_SET) {
     return APR_SUCCESS;
   }
 
@@ -621,35 +622,39 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
     certfile = NULL;
   }
 
-  if (config->set_ca && !ca) {
-    ca = config->set_ca;
+  if (wconf->set_ca && !ca) {
+    ca = wconf->set_ca;
   }
 
   /* test if there are the same cert, key ca files or no certs at all */
   if (!(
-      (((!config->certfile && !certfile) || 
-      (config->certfile && certfile && strcmp(config->certfile, certfile) == 0)) &&
-      ((!config->keyfile && !keyfile) ||
-      (config->keyfile && keyfile && strcmp(config->keyfile, keyfile) == 0)) &&
-      ((!config->cafile && !ca) ||
-      (config->cafile && ca && strcmp(config->cafile, ca) == 0))))) {
+      (((!wconf->certfile && !certfile) || 
+      (wconf->certfile && certfile && strcmp(wconf->certfile, certfile) == 0)) &&
+      ((!wconf->keyfile && !keyfile) ||
+      (wconf->keyfile && keyfile && strcmp(wconf->keyfile, keyfile) == 0)) &&
+      ((!wconf->cafile && !ca) ||
+      (wconf->cafile && ca && strcmp(wconf->cafile, ca) == 0))))) {
     /* if there are not the same cert, key, ca files reinitialize ssl_ctx */
-    if (config->ssl_ctx) {
-      SSL_CTX_free(config->ssl_ctx);
-      config->ssl_ctx = NULL;
+    if (wconf->ssl_ctx) {
+      SSL_CTX_free(wconf->ssl_ctx);
+      wconf->ssl_ctx = NULL;
     }
   }
 
-  config->certfile = certfile;
-  config->keyfile = keyfile;
-  config->cafile = ca;
+  if (wconf->cert_pool) {
+    apr_pool_destroy(wconf->cert_pool);
+  }
+  apr_pool_create(&wconf->cert_pool, NULL);
+  wconf->certfile = certfile ? apr_pstrdup(wconf->cert_pool, certfile) : NULL;
+  wconf->keyfile = keyfile ? apr_pstrdup(wconf->cert_pool, keyfile) : NULL;
+  wconf->cafile = ca ? apr_pstrdup(wconf->cert_pool, ca) : NULL;
 
   worker_log(worker, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
              keyfile?keyfile:"(null)",
              ca?ca:"(null)");
-  if (!config->ssl_ctx) {
-    if (!(config->ssl_ctx = SSL_CTX_new(config->meth))) {
+  if (!wconf->ssl_ctx) {
+    if (!(wconf->ssl_ctx = SSL_CTX_new(wconf->meth))) {
       worker_log(worker, LOG_ERR, "Could not initialize SSL Context.");
       return APR_EINVAL;
     }
@@ -672,34 +677,34 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   }
   else {
     worker_log(worker, LOG_DEBUG, "pem formated cert and key");
-    if (certfile && SSL_CTX_use_certificate_file(config->ssl_ctx, certfile, 
+    if (certfile && SSL_CTX_use_certificate_file(wconf->ssl_ctx, certfile, 
 						 SSL_FILETYPE_PEM) <= 0 && 
 	check) { 
       worker_log(worker, LOG_ERR, "Could not load certifacte \"%s\"",
 		 certfile);
       return APR_EINVAL;
     }
-    if (keyfile && SSL_CTX_use_PrivateKey_file(config->ssl_ctx, keyfile, 
+    if (keyfile && SSL_CTX_use_PrivateKey_file(wconf->ssl_ctx, keyfile, 
 					       SSL_FILETYPE_PEM) <= 0 && 
 	check) {
       worker_log(worker, LOG_ERR, "Could not load private key \"%s\"",
 		 keyfile);
       return APR_EINVAL;
     }
-    if (ca && !SSL_CTX_load_verify_locations(config->ssl_ctx, ca,
+    if (ca && !SSL_CTX_load_verify_locations(wconf->ssl_ctx, ca,
 					     NULL) && check) {
       worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", ca);
       return APR_EINVAL;
     }
 
     if (certfile && keyfile&& check && 
-	!SSL_CTX_check_private_key(config->ssl_ctx)) {
+	!SSL_CTX_check_private_key(wconf->ssl_ctx)) {
       worker_log(worker, LOG_ERR, "Private key does not match the certificate public key");
       return APR_EINVAL;
     }
   }
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-  SSL_CTX_set_verify_depth(config->ssl_ctx,1);
+  SSL_CTX_set_verify_depth(wconf->ssl_ctx,1);
 #endif
   return APR_SUCCESS;
 }
