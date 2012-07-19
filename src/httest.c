@@ -152,6 +152,8 @@ static apr_status_t global_MODULE(command_t *self, global_t *global,
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_REQUIRE_VERSION(command_t *self, global_t *global, 
 				           char *data, apr_pool_t *ptmp); 
+static apr_status_t global_REQUIRE_MODULE(command_t *self, global_t *global, 
+				          char *data, apr_pool_t *ptmp); 
 
 command_t global_commands[] = {
   {"END", (command_f )global_END, "", 
@@ -232,8 +234,14 @@ command_t global_commands[] = {
   COMMAND_FLAGS_NONE}, 
   {"REQUIRE_VERSION", (command_f )global_REQUIRE_VERSION, "<version>",
    "Test if the executing httest is newer or equal the given <version>. "
+   "Test will be skipped if not. "
    "Skipping a test will return a 2 instead of 1 for fail or 0 for success.",
   COMMAND_FLAGS_NONE}, 
+  {"REQUIRE_MODULE", (command_f )global_REQUIRE_MODULE, "<module>*",
+   "Test if the executing httest do have the specified modules. "
+   "Test will be skipped if not. "
+   "Skipping a test will return a 2 instead of 1 for fail or 0 for success.",
+  COMMAND_FLAGS_NONE},
   {NULL, NULL, NULL,
   NULL ,
   COMMAND_FLAGS_NONE}
@@ -2410,7 +2418,7 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
 }
 
 /**
- * Use to define a MODULE. Used to make a name space for BLOCKs.
+ * Use to check required version for this test script.
  *
  * @param self IN command
  * @param global IN global object
@@ -2474,6 +2482,28 @@ static apr_status_t global_REQUIRE_VERSION(command_t * self, global_t * global,
     exit(2);
   }
 
+  return APR_SUCCESS;
+}
+
+/**
+ * Do check if specified modules are loaded
+ *
+ * @param self IN command
+ * @param global IN global object
+ * @param data IN MODULE name 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t global_REQUIRE_MODULE(command_t * self, global_t * global,
+                                          char *data, apr_pool_t *ptmp) {
+  char *last;
+  char *module;
+
+  apr_collapse_spaces(data, data);
+  module = apr_strtok(data, " ", &last);
+  while (module) {
+    module = apr_strtok(data, " ", &last);
+  }
   return APR_SUCCESS;
 }
 
