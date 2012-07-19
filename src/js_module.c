@@ -372,7 +372,6 @@ static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, ap
  ***********************************************************************/
 apr_status_t js_module_init(global_t *global) {
   apr_status_t status;
-  module_command_new(global, "JS", "_MODULE", "", "", NULL);
   if ((status = module_command_new(global, "JS", "_BLOCK_CREATE", "<block-name> <script>",
 				   "Create a javascript block on the fly",
 	                           block_JS_BLOCK_CREATE)) != APR_SUCCESS) {

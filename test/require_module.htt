@@ -1,0 +1,6 @@
+REQUIRE_MODULE LUA SSL FOO
+
+CLIENT
+_DEBUG *MUST* not reach this line
+_EXIT FAILED
+END

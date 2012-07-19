@@ -9,16 +9,6 @@ function run_all {
   for E in $list; do
     rm -f .out.txt
     printf "$i/$count $(date) $E "
-    grep REQUIRE $E >/dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-      REQUIRE=`grep REQUIRE $E | awk '{ print $2 }'`
-      ./run.sh -C $REQUIRE >/dev/null 2>/dev/null
-      if [ $? -ne 0 ]; then
-        printf "\e[1;31mSKIP\e[0m\n"
-        let i++
-        continue;
-      fi
-    fi
     CORES_PRE=`ls core* 2>/dev/null | wc -l` 
     run_single $E .out.txt
     if [ $? -eq 1 ]; then

@@ -1,4 +1,4 @@
-REQUIRE _JS:MODULE
+REQUIRE_MODULE JS
 
 INCLUDE $TOP/test/config.htb
 

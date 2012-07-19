@@ -2499,10 +2499,13 @@ static apr_status_t global_REQUIRE_MODULE(command_t * self, global_t * global,
   char *last;
   char *module;
 
-  apr_collapse_spaces(data, data);
   module = apr_strtok(data, " ", &last);
   while (module) {
-    module = apr_strtok(data, " ", &last);
+    if (!apr_hash_get(global->modules, module, APR_HASH_KEY_STRING)) {
+      success = 2;
+      exit(2);
+    }
+    module = apr_strtok(NULL, " ", &last);
   }
   return APR_SUCCESS;
 }

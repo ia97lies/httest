@@ -1,3 +1,5 @@
+REQUIRE_MODULE LUA
+
 BLOCK:LUA test1 
 print("\nI'm in test1") 
 END

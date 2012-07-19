@@ -192,7 +192,6 @@ static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_poo
  ***********************************************************************/
 apr_status_t html_module_init(global_t *global) {
   apr_status_t status;
-  module_command_new(global, "HTML", "_MODULE", "", "", NULL);
   if ((status = module_command_new(global, "HTML", "_PARSE",
 	                           "<html>",
 	                           "Parse HTML",
