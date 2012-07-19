@@ -1,35 +1,64 @@
-+Ideas for httest 3.0
-The main idea is do mesh up httest and lua
++Syntax httest 3.0
+++ Constrains
+- Errors must point to the correct line
+- Verbose mode should also print called lines
 
-CLIENT
-  for i=1,10 do
-    _REQ locahost 8080
-    __GET /step/$i HTTP/1.1
-    __Host: localhost
-    __
-    _EXPECT headers "200 OK"
-    _WAIT
+++ Simplify
+- Syntax lower case
+- Remove underscores before local commands
+- No brakets and stuff, keep the test simple and readable
+
+++ Performance
+- Design parser with a precompile step to increase script performance
+- Command lookup O(1)
+
+++ Architecture
+- Still want modules
+- Very small core
+
++++ Parser Object
+- htt_object
+  - name
+- htt_command -> htt_object
+  - interpreter
+  - list of htt_command
+- htt_thread -> htt_command
+  - thread context
+  - list of htt->thread
+
++++ Narrative
+- Global context is same as thread context
+- Compile step lookup commands and translate into faster format (a tree)
+- On compilation all thread, function, ... will be created
+- Global starts interpret
+- Global starts all clients/servers/deamons/... and wait on it
+- client/server/... do start interpret
+- client/server/... can also start threads and wait on it
+- bodies can contain other bodies
+
+++ Samples
++++ First
+function foo a b c : d e
+  debug a b c
+  return "bla" "bli" 
+end
+
+client
+  req localhost:8080 SSL
+  _GET / HTTP/1.1
+  _Host: localhost:8080
+  _
+  expect . foo.*
+  wait
+
+  if $foo =~ foo.*
+    debug bla
+  else
+    debug bli
   end
-END
- 
-All variable used in lua are also usable in the old httest script.
-This could fundamentaly simplify httest and improve it with many
-benefits from lua.
+end
 
-The httest parser should replace blocks of httest to 
-interpret([[
-  _REQ locahost 8080
-  __GET /step/$i,$j HTTP/1.1
-  __Host: localhost
-  __
-  _EXPECT headers "200 OK"
-  _WAIT
-]], { "i" = i })
+server 8080
+...
+end
 
-Every unresolved variable found in block should be added in a assoziative
-table which is also handed over to C
-
-It seems to me that this would be the best way to improve httest, better than
-creating a new language.
-
---> Transform httest script to a lua script while reading.
