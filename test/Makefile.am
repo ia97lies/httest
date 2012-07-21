@@ -217,6 +217,8 @@ EXTRA_DIST= \
 	recv_length.htt \
 	recv_polling.htt \
 	request_ended_server.htt \
+	require_module.htt \
+	require_version.htt \
 	rps.htt \
 	run_all.sh \
 	run_color.sh \
@@ -266,6 +268,7 @@ EXTRA_DIST= \
 	ssl_mutual.htt \
 	ssl_mutual.txt \
 	ssl_mutual_verify.htt \
+	ssl_no_default_pem.htt \
 	ssl_plain_first.htt \
 	ssl_server_cert_verify2.htt \
 	ssl_server_cert_verify3.htt \

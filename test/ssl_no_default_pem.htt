@@ -1,5 +1,8 @@
 INCLUDE $TOP/test/config.htb
 
+EXEC mv server.cert.pem foo.cert.pem
+EXEC mv server.key.pem foo.key.pem
+
 CLIENT
 _REQ $YOUR_HOST SSL:$YOUR_PORT
 __GET /your/path/to/your/resource?your=params HTTP/1.1
@@ -8,7 +11,7 @@ __
 _WAIT
 END
 
-SSL:SET_DEFAULT_CERT $TOP/test/server.cert.pem $TOP/test/server.key.pem
+SSL:SET_DEFAULT_CERT $TOP/test/foo.cert.pem $TOP/test/foo.key.pem
 SERVER SSL:$YOUR_PORT 1
 _RES
 _WAIT
@@ -18,3 +21,7 @@ __
 __Hello World
 END
 
+BLOCK FINALLY
+_EXEC mv foo.cert.pem server.cert.pem
+_EXEC mv foo.key.pem server.key.pem
+END
