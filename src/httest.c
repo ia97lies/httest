@@ -1573,8 +1573,6 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
   worker->mythread = thread;
   worker->flags |= FLAGS_CLIENT;
 
-  worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
-
   sync_lock(worker->mutex);
   ++running_threads;
   sync_unlock(worker->mutex);
@@ -1614,8 +1612,6 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
   worker_t *worker = selfv;
   worker->mythread = thread;
   worker->flags |= FLAGS_CLIENT;
-
-  worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
   worker_log(worker, LOG_INFO, "Daemon start ...");
 
@@ -1928,11 +1924,6 @@ static apr_status_t global_new(global_t **global, store_t *vars,
     return status;
   }
 
-  if ((status = apr_thread_cond_create(&(*global)->cond, p)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not create condition");
-    return status;
-  }
-
   if ((status = apr_thread_mutex_create(&(*global)->sync, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
@@ -2065,7 +2056,6 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
   }
 
   /* store the workers to start them later */
-  global->cur_worker->filename = global->filename;
   while (concurrent) {
     clone = NULL;
     --concurrent;
@@ -2118,6 +2108,9 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
     fprintf(stderr, "\nGlobal worker: could not create worker");
     return status;
   }
+  global->cur_worker->file_and_line = apr_psprintf(global->cur_worker->pbody, 
+                                                   "%s:%d", global->filename, 
+                                                   global->line_nr);
   return APR_SUCCESS;
 }
 

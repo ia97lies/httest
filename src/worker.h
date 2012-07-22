@@ -58,27 +58,36 @@ typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent,
                                    apr_pool_t *ptmp);
 struct worker_s {
   global_t *global;
-  /* interpreter function */
   interpret_f interpret;
-  /* worker config */
+  apr_table_t *lines;
+  const char *short_desc;
+  const char *desc;
+  int cmd;
+  int cmd_from;
+  int cmd_to;
   apr_hash_t *config;
-  /* worker block if this is a CALL */
   worker_t *block;
-  /* this is the pool where the structure lives */
   apr_pool_t *heartbeat;
-  /* dies on END */
   apr_pool_t *pbody;
-  /* dies on every flush */
   apr_pool_t *pcache;
-  /* body variables */
   store_t *vars;
-  /* block parameters */
   store_t *params;
-  /* block return variables */
   store_t *retvars;
-  /* block local variables */
   store_t *locals;
-  const char *filename;
+  apr_thread_mutex_t *sync_mutex;
+  apr_thread_mutex_t *mutex;
+  apr_hash_t *modules;
+  apr_hash_t *blocks;
+  apr_thread_t *mythread;
+#define LOG_NONE 0
+#define LOG_ERR 1
+#define LOG_WARN 2
+#define LOG_INFO 3
+#define LOG_CMD 4
+#define LOG_ALL_CMD 5
+#define LOG_DEBUG 6
+  int log_mode;
+
   apr_file_t *tmpf;
 #define FLAGS_NONE           0x00000000
 #define FLAGS_PIPE           0x00000001
@@ -97,26 +106,16 @@ struct worker_s {
 #define FLAGS_LOADED_BLOCK   0x00004000
   int flags;
   apr_proc_t proc;
-  int cmd;
-  int cmd_from;
-  int cmd_to;
   int which;
   char *name;
   char *prefix;
   char *additional;
   char *file_and_line;
-  const char *short_desc;
-  const char *desc;
   int chunksize;
   apr_size_t sent;
   int req_cnt;
   char *match_seq;
   apr_time_t socktmo;
-  apr_thread_t *mythread;
-  apr_thread_cond_t *sync_cond;
-  apr_thread_mutex_t *sync_mutex;
-  apr_thread_mutex_t *mutex;
-  apr_table_t *lines;
   apr_table_t *cache;
   validation_t match;
   validation_t grep;
@@ -126,28 +125,19 @@ struct worker_s {
   apr_table_t *headers_add;
   apr_table_t *headers;
   apr_table_t *tmp_table;
-  apr_hash_t *modules;
-  apr_hash_t *blocks;
   apr_hash_t *sockets;
   apr_socket_t *listener;
   socket_t *socket;
   apr_port_t listener_port;
   char *listener_addr;
   sockreader_t *sockreader;
-#define LOG_NONE 0
-#define LOG_ERR 1
-#define LOG_WARN 2
-#define LOG_INFO 3
-#define LOG_CMD 4
-#define LOG_ALL_CMD 5
-#define LOG_DEBUG 6
-  int log_mode;
 #if APR_HAS_FORK
   apr_hash_t *procs;
 #endif
 };
 
 struct global_s {
+  worker_t *worker;
   apr_pool_t *pool;
   apr_hash_t *config;
   int flags;
@@ -165,7 +155,6 @@ struct global_s {
   apr_table_t *daemons;
   int CLTs; 
   int SRVs; 
-  apr_thread_cond_t *cond; 
   apr_thread_mutex_t *sync;
   apr_thread_mutex_t *mutex;
   int line_nr;
@@ -181,7 +170,6 @@ struct global_s {
   int file_state;
   int socktmo;
   char *prefix;
-  worker_t *worker;
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;

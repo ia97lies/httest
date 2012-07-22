@@ -3855,11 +3855,9 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   p = (*self)->pbody;
   (*self)->interpret = function;
   (*self)->config = apr_hash_make(p);
-  (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
   (*self)->additional = apr_pstrdup(p, additional);
-  (*self)->sync_cond = global->cond;
   (*self)->sync_mutex = global->sync;
   (*self)->mutex = global->mutex;
   (*self)->lines = apr_table_make(p, 20);

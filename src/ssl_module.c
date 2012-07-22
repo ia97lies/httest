@@ -50,7 +50,7 @@ typedef struct ssl_wconf_s {
   X509 *cert;
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
-  SSL_METHOD *meth;
+  const SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
   apr_pool_t *cert_pool;
