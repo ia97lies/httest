@@ -4,18 +4,13 @@ bin_PROGRAMS = httest htproxy htremote htntlm
 dist_man_MANS = httest.1 htproxy.1 htntlm.1 htremote.1
 
 httest_SOURCES = \
-	httest.c file.c socket.c regex.c util.c replacer.c ssl.c worker.c \
-	module.c transport.c store.c eval.c \
-	modules.c ssl_module.c tcp_module.c skeleton_module.c date_module.c \
-	coder_module.c math_module.c sys_module.c binary_module.c \
-	udp_module.c socks_module.c websocket_module.c dbg_module.c \
-	perf_module.c
+	htt.c store.c util.c
 
-EXTRA_httest_SOURCES = \
-	lua_crypto.c lua_module.c js_module.c html_module.c
+#EXTRA_httest_SOURCES = \
+#	lua_crypto.c lua_module.c js_module.c html_module.c
 
-httest_LDADD = $(HTTEST_MODULES)
-httest_DEPENDENCIES = $(HTTEST_MODULES)
+#httest_LDADD = $(HTTEST_MODULES)
+#httest_DEPENDENCIES = $(HTTEST_MODULES)
 
 htproxy_SOURCES = \
 	htproxy.c file.c socket.c regex.c util.c ssl.c replacer.c worker.c \
