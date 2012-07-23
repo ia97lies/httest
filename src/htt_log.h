@@ -40,7 +40,10 @@ typedef struct htt_log_s htt_log_t;
 htt_log_t * htt_log_make(apr_pool_t *pool, FILE *std, FILE *err, 
                          int mode, const char *prefix); 
 void htt_log(htt_log_t *log, int log_mode, char *fmt, ...); 
-void htt_log_buf(htt_log_t *log, int log_mode, const char *buf, int len);
+void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len, 
+                 char *prefix); 
+void htt_log_outbuf(htt_log_t *log, int mode, const char *buf, int len); 
+void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len); 
 void htt_log_error(htt_log_t *log, char *position, char *fmt, ...); 
 
 #endif

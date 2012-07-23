@@ -353,6 +353,7 @@ int main(int argc, const char *const argv[]) {
 
     /* interpret current file */
     /* TODO: new crafted interpreter for httest */
+    /* htt_interpret_fp(htt, fp); */
 
     if (log_mode > LOG_WARN) {
       fprintf(stdout, "\n");
