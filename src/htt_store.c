@@ -34,21 +34,24 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include "store.h"
+
+#include "htt_core.h"
+#include "htt_store.h"
+#include "htt_log.h"
 
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-struct store_s {
+struct htt_store_s {
   apr_pool_t *pool;
   apr_hash_t *hash;
 };
 
-typedef struct store_element_s {
+typedef struct htt_store_element_s {
   apr_pool_t *pool;
   const char *value;
-} store_element_t;
+} htt_store_element_t;
 
 /************************************************************************
  * Globals 
@@ -62,8 +65,8 @@ typedef struct store_element_s {
  * @param pool IN pool to alloc this store
  * @return store
  */
-store_t *store_make(apr_pool_t *pool) {
-  store_t *store = apr_pcalloc(pool, sizeof(*store));
+htt_store_t *htt_store_make(apr_pool_t *pool) {
+  htt_store_t *store = apr_pcalloc(pool, sizeof(*store));
   store->pool = pool;
   store->hash = apr_hash_make(pool);
   return store;
@@ -75,8 +78,8 @@ store_t *store_make(apr_pool_t *pool) {
  * @param name IN key
  * @return value
  */
-const char *store_get(store_t *store, const char *name) {
-  store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
+const char *htt_store_get(htt_store_t *store, const char *name) {
+  htt_store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
     return element->value;
   }
@@ -92,8 +95,8 @@ const char *store_get(store_t *store, const char *name) {
  * @param name IN key
  * @return value copy from your pool
  */
-char *store_get_copy(store_t *store, apr_pool_t *pool, const char *name) {
-  const char *value = store_get(store, name);
+char *htt_store_get_copy(htt_store_t *store, apr_pool_t *pool, const char *name) {
+  const char *value = htt_store_get(store, name);
   if (value) {
     return apr_pstrdup(pool, value);
   }
@@ -108,9 +111,9 @@ char *store_get_copy(store_t *store, apr_pool_t *pool, const char *name) {
  * @param name IN key
  * @param value IN
  */
-void store_set(store_t *store, const char *name, const char *value) {
+void htt_store_set(htt_store_t *store, const char *name, const char *value) {
   apr_pool_t *pool;
-  store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
+  htt_store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
     apr_pool_destroy(element->pool);
     apr_pool_create(&element->pool, store->pool);
@@ -131,8 +134,8 @@ void store_set(store_t *store, const char *name, const char *value) {
  * @param store IN store hook
  * @param name IN key
  */
-void store_unset(store_t *store, const char *name) {
-  store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
+void htt_store_unset(htt_store_t *store, const char *name) {
+  htt_store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
     apr_pool_destroy(element->pool);
     apr_pool_create(&element->pool, store->pool);
@@ -145,11 +148,11 @@ void store_unset(store_t *store, const char *name) {
  * @param store IN store hook
  * @param other IN foreign store hook
  */
-void store_merge(store_t *store, store_t *other) {
+void htt_store_merge(htt_store_t *store, htt_store_t *other) {
   apr_hash_index_t *i;
   const void *key;
   void *val;
-  store_element_t *element;
+  htt_store_element_t *element;
 
   if (!store || !other) {
     return;
@@ -158,7 +161,7 @@ void store_merge(store_t *store, store_t *other) {
   for (i = apr_hash_first(other->pool, other->hash); i; i = apr_hash_next(i)) {
     apr_hash_this(i, &key, NULL, &val);
     element = val;
-    store_set(store, key, element->value);
+    htt_store_set(store, key, element->value);
   }
 }
 
@@ -167,7 +170,7 @@ void store_merge(store_t *store, store_t *other) {
  * @param store IN store hook
  * @return count
  */
-apr_size_t store_get_size(store_t *store) {
+apr_size_t htt_store_get_size(htt_store_t *store) {
   return apr_hash_count(store->hash);
 }
 
@@ -177,9 +180,9 @@ apr_size_t store_get_size(store_t *store) {
  * @param pool IN pool for new store 
  * @return new store
  */
-store_t *store_copy(store_t *store, apr_pool_t *pool) {
-  store_t *copy = store_make(pool);
-  store_merge(copy, store);
+htt_store_t *htt_store_copy(htt_store_t *store, apr_pool_t *pool) {
+  htt_store_t *copy = htt_store_make(pool);
+  htt_store_merge(copy, store);
   return copy;
 }
 
@@ -189,11 +192,11 @@ store_t *store_copy(store_t *store, apr_pool_t *pool) {
  * @param pool IN to allocate keys table
  * @return table of key/values
  */
-apr_table_t *store_get_table(store_t *store, apr_pool_t *pool) {
+apr_table_t *htt_store_get_table(htt_store_t *store, apr_pool_t *pool) {
   apr_hash_index_t *i;
   const void *key;
   void *val;
-  store_element_t *element;
+  htt_store_element_t *element;
   apr_table_t *table = apr_table_make(pool, 5);
 
   for (i = apr_hash_first(pool, store->hash); i; i = apr_hash_next(i)) {

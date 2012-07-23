@@ -19,25 +19,12 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool store.
+ * Interface of the htt log.
  */
 
-#ifndef HTTEST_STORE_H
-#define HTTEST_STORE_H
+#ifndef HTT_CORE_H
+#define HTT_CORE_H
 
-#include <apr_pools.h>
-#include <apr_tables.h>
-
-typedef struct store_s store_t;
-
-store_t *store_make(apr_pool_t *pool);
-const char *store_get(store_t *store, const char *name);
-char *store_get_copy(store_t *store, apr_pool_t *pool, const char *name);
-void store_set(store_t *store, const char *name, const char *value);
-void store_unset(store_t *store, const char *name);
-void store_merge(store_t *store, store_t *other); 
-apr_size_t store_get_size(store_t *store); 
-store_t *store_copy(store_t *store, apr_pool_t *pool);
-apr_table_t *store_get_table(store_t *store, apr_pool_t *pool);
+typedef struct htt_s htt_t;
 
 #endif

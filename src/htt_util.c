@@ -32,7 +32,7 @@
 #include <apr_env.h>
 
 #include "defines.h"
-#include "util.h"
+#include "htt_util.h"
 
 
 /************************************************************************
@@ -64,7 +64,7 @@
  *
  * @return SUCCESS
  */
-apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out,
+apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
                                  apr_pool_t *pool, int with_quotes)
 {
     const char *cp;
@@ -150,7 +150,7 @@ apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out,
 }
 
 /**
- * @deprecitated: should do everything with new my_get_args
+ * @deprecitated: should do everything with new htt_get_args
  * get a string starting/ending with a char, unescape this char if found as an 
  * escape sequence.
  *
@@ -160,7 +160,7 @@ apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out,
  * @return <string with unescaped <char>>
  * @note: Example: "foo bar \"hallo velo\"" -> foo bar "hallo velo"
  */
-char *my_unescape(char *string, char **last) {
+char *htt_unescape(char *string, char **last) {
   char *result;
   char enclose;
   apr_size_t i;
@@ -200,72 +200,6 @@ char *my_unescape(char *string, char **last) {
 }
 
 /**
- * Deep table copy
- *
- * @param p IN pool
- * @param orig IN orig table
- *
- * @return copy of orig
- */
-apr_table_t *my_table_deep_copy(apr_pool_t *p, apr_table_t *orig) {
-  apr_table_entry_t *e;
-  apr_table_t *dest;
-  int i;
-  apr_size_t size;
-
-  if (!orig) {
-    dest = apr_table_make(p, 5);
-    return dest;
-  }
-
-  size  = apr_table_elts(orig)->nelts;
-
-  if (size < 5) {
-    size = 5;
-  }
-  dest = apr_table_make(p, size);
-  e = (apr_table_entry_t *) apr_table_elts(orig)->elts;
-  for (i = 0; i < apr_table_elts(orig)->nelts; ++i) {
-    apr_table_add(dest, e[i].key, e[i].val);
-  }
-
-  return dest;
-}
-
-/**
- * Swallow table copy
- *
- * @param p IN pool
- * @param orig IN orig table
- *
- * @return copy of orig
- */
-apr_table_t *my_table_swallow_copy(apr_pool_t *p, apr_table_t *orig) {
-  apr_table_entry_t *e;
-  apr_table_t *dest;
-  int i;
-  apr_size_t size;
-    
-  if (!orig) {
-    dest = apr_table_make(p, 5);
-    return dest;
-  }
-
-  size  = apr_table_elts(orig)->nelts;
-
-  if (size < 5) {
-    size = 5;
-  }
-  dest = apr_table_make(p, size);
-  e = (apr_table_entry_t *) apr_table_elts(orig)->elts;
-  for (i = 0; i < apr_table_elts(orig)->nelts; ++i) {
-    apr_table_addn(dest, apr_pstrdup(p, e[i].key), e[i].val);
-  }
-
-  return dest;
-}
-
-/**
  * get the status string
  *
  * @param p IN pool
@@ -273,7 +207,7 @@ apr_table_t *my_table_swallow_copy(apr_pool_t *p, apr_table_t *orig) {
  *
  * @return status string
  */
-char *my_status_str(apr_pool_t * p, apr_status_t rc) {
+char *htt_status_str(apr_pool_t * p, apr_status_t rc) {
   char *text = apr_pcalloc(p, 201);
   apr_strerror(rc, text, 200);
   return text;
@@ -286,14 +220,14 @@ char *my_status_str(apr_pool_t * p, apr_status_t rc) {
  * @param line IN string of params
  * @param params INOUT table to store params
  */
-void my_get_args(char *line, store_t *params, apr_pool_t *pool) {
+void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool) {
   int i; 
   char **argv;
 
-  if (my_tokenize_to_argv(line, &argv, pool, 0) == APR_SUCCESS) {
+  if (htt_tokenize_to_argv(line, &argv, pool, 0) == APR_SUCCESS) {
     for (i = 0; argv[i] != NULL; i++) {
       /* store value by his index */
-      store_set(params, apr_itoa(pool, i), argv[i]);
+      htt_store_set(params, apr_itoa(pool, i), argv[i]);
     }
   }
 }
@@ -303,7 +237,7 @@ void my_get_args(char *line, store_t *params, apr_pool_t *pool) {
  *
  * @param program name
  */
-void copyright(const char *progname) {
+void htt_copyright(const char *progname) {
   printf("%s " PACKAGE_VERSION "\n", progname);
   printf("\nCopyright (C) 2006 Free Software Foundation, Inc.\n"
          "This is free software; see the source for copying conditions.  There is NO\n"
@@ -312,37 +246,13 @@ void copyright(const char *progname) {
 }
 
 /**
- * filename
- *
- * @param path IN path to file
- *
- * @return last part of path
- */
-const char *filename(apr_pool_t *pool, const char *path) {
-  char *tmp;
-  char *elem;
-  char *last;
-  
-  char *old = NULL;
-
-  tmp = apr_pstrdup(pool, path);
-  elem = apr_strtok(tmp, "/", &last);
-  while (elem) {
-    old = elem;
-    elem = apr_strtok(NULL, "/", &last);
-  }
-
-  return old;
-} 
-
-/**
  * 2 hex digit number to char borowed from apache sourc
  *
  * @param what IN hex to convert
  *
  * @return char
  */
-char x2c(const char *what) {
+char htt_x2c(const char *what) {
   register char digit;
 
 #if !APR_CHARSET_EBCDIC

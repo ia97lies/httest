@@ -25,6 +25,10 @@
 #ifndef HTT_LOG_H
 #define HTT_LOG_H
 
+#include <apr_file_io.h>
+
+typedef struct htt_log_s htt_log_t;
+
 #define LOG_NONE 0
 #define LOG_ERR 1
 #define LOG_WARN 2
@@ -33,4 +37,11 @@
 #define LOG_ALL_CMD 5
 #define LOG_DEBUG 6
 
+htt_log_t * htt_log_make(apr_pool_t *pool, FILE *std, FILE *err, 
+                         int mode, const char *prefix); 
+void htt_log(htt_log_t *log, int log_mode, char *fmt, ...); 
+void htt_log_buf(htt_log_t *log, int log_mode, const char *buf, int len);
+void htt_log_error(htt_log_t *log, char *position, char *fmt, ...); 
+
 #endif
+

@@ -62,9 +62,10 @@
 #endif
 
 #include "file.h"
-#include "util.h"
-#include "replacer.h"
+#include "htt_util.h"
+#include "htt_core.h"
 #include "htt_log.h"
+#include "htt_store.h"
 
 /************************************************************************
  * Defines 
@@ -73,6 +74,11 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
+struct htt_s {
+  apr_pool_t *pool;
+  htt_store_t *defines;
+  htt_log_t *log;
+};
 
 /************************************************************************
  * Globals 
@@ -175,7 +181,6 @@ int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   char *cur_file;
   apr_file_t *fp;
-  store_t *vars;
   int log_mode;
 #define MAIN_FLAGS_NONE 0
 #define MAIN_FLAGS_PRINT_TSTAMP 1
@@ -185,6 +190,7 @@ int main(int argc, const char *const argv[]) {
   int flags;
   apr_time_t time;
   char time_str[256];
+  htt_t *htt;
 
   srand(apr_time_now()); 
   
@@ -197,10 +203,11 @@ int main(int argc, const char *const argv[]) {
 #endif
   
   /* set default */
+  htt = apr_pcalloc(pool, sizeof(*htt));
+  htt->pool = pool;
+  htt->defines = htt_store_make(pool);
   log_mode = LOG_CMD;
   flags = MAIN_FLAGS_NONE;
-
-  vars = store_make(pool);
 
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
@@ -211,7 +218,7 @@ int main(int argc, const char *const argv[]) {
       exit(0);
       break;
     case 'V':
-      copyright("httest");
+      htt_copyright("httest");
       exit(0);
       break;
     case 'n':
@@ -257,7 +264,7 @@ int main(int argc, const char *const argv[]) {
 
         var = apr_strtok(entry, "=", &val);
         if (val && val[0]) {
-          store_set(vars, var, val);
+          htt_store_set(htt->defines, var, val);
         }
         else {
           fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
@@ -307,7 +314,7 @@ int main(int argc, const char *const argv[]) {
       time = apr_time_now();
       if ((status = apr_ctime(time_str, time)) != APR_SUCCESS) {
 	fprintf(stderr, "Could not format time: %s (%d)\n", 
-	        my_status_str(pool, status), status);
+	        htt_status_str(pool, status), status);
 	success = 0;
 	exit(1);
       }
@@ -326,7 +333,7 @@ int main(int argc, const char *const argv[]) {
     if (flags & MAIN_FLAGS_USE_STDIN) {
       if ((status = apr_file_open_stdin(&fp, pool)) != APR_SUCCESS) {
 	fprintf(stderr, "Could not open stdin: %s (%d)\n", 
-	        my_status_str(pool, status), status);
+	        htt_status_str(pool, status), status);
 	success = 0;
 	exit(1);
       }
@@ -335,7 +342,7 @@ int main(int argc, const char *const argv[]) {
               apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT,
                             pool)) != APR_SUCCESS) {
       fprintf(stderr, "\nCould not open %s: %s (%d)", cur_file,
-	      my_status_str(pool, status), status);
+	      htt_status_str(pool, status), status);
       success = 0;
       exit(1);
     }

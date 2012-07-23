@@ -22,10 +22,10 @@
  * Interface of the HTTP Test Tool util.
  */
 
-#ifndef HTTEST_UTIL_H
-#define HTTEST_UTIL_H
+#ifndef HTT_UTIL_H
+#define HTT_UTIL_H
 
-#include "store.h"
+#include "htt_store.h"
 
 #define swap16(x) \
   ((((x) & 0x00ffU) << 8)| \
@@ -63,14 +63,11 @@
 # define ntoh64(x) (x)
 #endif
 
-char *my_unescape(char *string, char **last); 
-apr_table_t *my_table_deep_copy(apr_pool_t *p, apr_table_t *orig); 
-apr_table_t *my_table_swallow_copy(apr_pool_t *p, apr_table_t *orig); 
-char *my_status_str(apr_pool_t * p, apr_status_t rc); 
-void copyright(const char *progname); 
-const char *filename(apr_pool_t *pool, const char *path); 
-char x2c(const char *what); 
-void my_get_args(char *line, store_t *params, apr_pool_t *pool); 
-apr_status_t my_tokenize_to_argv(const char *arg_str, char ***argv_out, 
-                                 apr_pool_t *pool, int with_quotes);
+char *htt_unescape(char *string, char **last); 
+char *htt_status_str(apr_pool_t * p, apr_status_t rc); 
+void htt_copyright(const char *progname); 
+char htt_x2c(const char *what); 
+void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool); 
+apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out, 
+                                  apr_pool_t *pool, int with_quotes);
 #endif
