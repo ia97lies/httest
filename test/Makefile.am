@@ -346,6 +346,7 @@ EXTRA_DIST= \
 	websocket.htt \
 	_wrapper_test.sh 
 
+SUBDIRS= sub
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_store
