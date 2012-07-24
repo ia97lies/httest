@@ -22,15 +22,14 @@
  * Interface of the HTTP Test Tool file.
  */
 
-#ifndef HTTEST_FILE_H
-#define HTTEST_FILE_H
+#ifndef HTT_BUFREADER_H
+#define HTT_BUFREADER_H
 
-typedef struct bufreader_s bufreader_t;
+typedef struct htt_bufreader_s htt_bufreader_t;
 
-apr_status_t bufreader_new(bufreader_t ** bufreader, apr_file_t * fp,
-                           apr_pool_t * p);
-apr_status_t bufreader_read_line(bufreader_t * self, char **line); 
-apr_status_t bufreader_read_eof(bufreader_t * self,
-                                char **buf, apr_size_t *len); 
+htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp);
+apr_status_t htt_bufreader_read_line(htt_bufreader_t * bufreader, char **line); 
+apr_status_t htt_bufreader_read_eof(htt_bufreader_t * bufreader, char **buf, 
+                                    apr_size_t *len); 
 
 #endif

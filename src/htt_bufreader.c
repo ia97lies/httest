@@ -34,14 +34,14 @@
 #include <apr_buckets.h>
 
 #include "defines.h"
-#include "file.h"
+#include "htt_bufreader.h"
 
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
 
-struct bufreader_s {
+struct htt_bufreader_s {
   apr_status_t status;
   apr_pool_t *pool;
   apr_file_t *fp;
@@ -57,7 +57,7 @@ struct bufreader_s {
  * Forward declaration 
  ***********************************************************************/
 
-static apr_status_t bufreader_fill(bufreader_t * self); 
+static apr_status_t htt_bufreader_fill(htt_bufreader_t * self); 
 
 
 /************************************************************************
@@ -65,45 +65,41 @@ static apr_status_t bufreader_fill(bufreader_t * self);
  ***********************************************************************/
 
 /**
- * New bufreader object 
+ * New htt_bufreader object 
  *
- * @param self OUT bufreader object
+ * @param self OUT htt_bufreader object
  * @param fp IN an open file to read
  * @param p IN pool
  *
  * @return an apr status
  */
-apr_status_t bufreader_new(bufreader_t ** self, apr_file_t * fp,
-                           apr_pool_t * p) {
+htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp) {
   apr_status_t status;
   apr_allocator_t *allocator;
+  htt_bufreader_t *bufreader;
 
-  *self = apr_pcalloc(p, sizeof(bufreader_t));
-  (*self)->fp = fp;
-  (*self)->alloc = apr_bucket_alloc_create(p);
-  (*self)->line = apr_brigade_create(p, (*self)->alloc);
-  allocator = apr_pool_allocator_get(p);
+  bufreader = apr_pcalloc(pool, sizeof(htt_bufreader_t));
+  bufreader->fp = fp;
+  bufreader->alloc = apr_bucket_alloc_create(pool);
+  bufreader->line = apr_brigade_create(pool, bufreader->alloc);
+  allocator = apr_pool_allocator_get(pool);
   apr_allocator_max_free_set(allocator, 1024*1024);
-  (*self)->pool = p;
-  (*self)->status = APR_SUCCESS;
-  apr_pool_create(&(*self)->pool, p);
+  bufreader->pool = pool;
+  bufreader->status = APR_SUCCESS;
+  apr_pool_create(&bufreader->pool, pool);
 
-  if ((status = bufreader_fill((*self))) != APR_SUCCESS) {
-    return status;
-  }
-
-  return APR_SUCCESS;
+  return bufreader;
 }
 
 /**
  * read line from file 
  *
- * @param self IN bufreader object
+ * @param self IN htt_bufreader object
  * @param line OUT read line
  *
  * @return an apr status
  */
-apr_status_t bufreader_read_line(bufreader_t * self, char **line) {
+apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
   char c;
   apr_size_t i;
   apr_status_t status = APR_SUCCESS;
@@ -115,7 +111,7 @@ apr_status_t bufreader_read_line(bufreader_t * self, char **line) {
   c = 0;
   while (leave_loop == 0 && (status = apr_file_eof(self->fp)) != APR_EOF) {    
     if (self->i >= self->len) {
-      if ((status = bufreader_fill(self)) != APR_SUCCESS) {
+      if ((status = htt_bufreader_fill(self)) != APR_SUCCESS) {
         break;
       }
     }
@@ -146,13 +142,13 @@ apr_status_t bufreader_read_line(bufreader_t * self, char **line) {
 /**
  * Read specifed block
  *
- * @param self IN bufreader object
+ * @param self IN htt_bufreader object
  * @param block IN a block to fill up
  * @param length INOUT length of block, on return length of filled bytes
  *
  * @return APR_SUCCESS else APR error
  */
-apr_status_t bufreader_read_block(bufreader_t * self, char *block,
+apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
                                   apr_size_t *length) {
   apr_status_t status;
   int i;
@@ -165,7 +161,7 @@ apr_status_t bufreader_read_block(bufreader_t * self, char *block,
   i = 0;
   while (i < len) {
     if (self->i >= self->len) {
-      if ((status = bufreader_fill(self)) != APR_SUCCESS) {
+      if ((status = htt_bufreader_fill(self)) != APR_SUCCESS) {
         break;
       }
     }
@@ -190,13 +186,13 @@ apr_status_t bufreader_read_block(bufreader_t * self, char *block,
 /**
  * eof reader
  *
- * @param self IN bufreader object
+ * @param self IN htt_bufreader object
  * @param buf OUT data 
  * @param len OUT data len
  *
  * @return APR_SUCCESS else an APR error
  */
-apr_status_t bufreader_read_eof(bufreader_t * self,
+apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
                                 char **buf, apr_size_t *len) {
   char *read;
   apr_size_t block;
@@ -213,7 +209,7 @@ apr_status_t bufreader_read_eof(bufreader_t * self,
   read = apr_pcalloc(self->pool, BLOCK_MAX);
   do {
     block = BLOCK_MAX;
-    status = bufreader_read_block(self, read, &block);
+    status = htt_bufreader_read_block(self, read, &block);
     b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
     APR_BRIGADE_INSERT_TAIL(bb, b);
     read = apr_pcalloc(self->pool, BLOCK_MAX);
@@ -233,11 +229,11 @@ apr_status_t bufreader_read_eof(bufreader_t * self,
 /**
  * Fill up buffer with data from file 
  *
- * @param self IN bufreader object
+ * @param self IN htt_bufreader object
  *
  * @return an apr status
  */
-static apr_status_t bufreader_fill(bufreader_t * self) {
+static apr_status_t htt_bufreader_fill(htt_bufreader_t * self) {
   self->i = 0;
   self->len = BLOCK_MAX;
 

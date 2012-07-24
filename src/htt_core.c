@@ -61,7 +61,7 @@
 #include <unistd.h> /* for getpid() */
 #endif
 
-#include "file.h"
+#include "htt_bufreader.h"
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
@@ -83,7 +83,7 @@ struct htt_s {
 /************************************************************************
  * Globals 
  ***********************************************************************/
-int success = 0;
+int htt_error = 0;
 
 /************************************************************************
  * Private 
@@ -144,19 +144,23 @@ static void usage(const char *progname) {
   fprintf(stdout, "\n");
 }
 
+/************************************************************************
+ * Public 
+ ***********************************************************************/
+
 /**
  * verbose exit func
  */
-static void htt_exit() {
-  if (success == 0) {
-    fprintf(stderr, " FAILED\n");
-    fflush(stderr);
-  }
-  else if (success == 1) {
+void htt_exit() {
+  if (htt_error == 0) {
     fprintf(stdout, " OK\n");
     fflush(stdout);
   }
-  else if (success == 2) {
+  else if (htt_error == 1) {
+    fprintf(stderr, " FAILED\n");
+    fflush(stderr);
+  }
+  else if (htt_error == 2) {
     fprintf(stdout, " SKIPPED\n");
     fflush(stdout);
   }
@@ -165,27 +169,45 @@ static void htt_exit() {
 /**
  * silent exit func
  */
-static void htt_no_output_exit() {
+void htt_no_output_exit() {
 }
 
-/************************************************************************
- * Public 
- ***********************************************************************/
+/**
+ * Throw error exception, terminate 
+ */
+void htt_throw_error() {
+  htt_error = 1;
+  exit(1);
+}
+
+/**
+ * Throw skip exception, terminate
+ */
+void htt_throw_skip() {
+  htt_error = 1;
+  exit(1);
+}
 
 /**
  * Instanted a new interpreter
  * @param pool IN
- * @param std IN standard out
- * @param err IN error out
  * @return new interpreter instance
  */
-htt_t *htt_new(apr_pool_t *pool, FILE *std, FILE *err) {
+htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
   htt->defines = htt_store_make(pool);
-  htt->log = htt_log_new(pool, std, err);
-
   return htt;
+}
+
+/**
+ * Set log file handles
+ * @param htt IN instance
+ * @param std IN standard out
+ * @param err IN error out
+ */
+void htt_set_log(htt_t *htt, FILE *std, FILE *err) {
+  htt->log = htt_log_new(htt->pool, std, err);
 }
 
 /**
@@ -204,7 +226,7 @@ void htt_add_value(htt_t *htt, const char *key, const char *val) {
  * @param fp IN apr file pointer
  * @return apr status
  */
-apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp) {
+apr_status_t htt_interpret_file(htt_t *htt, apr_file_t *fp) {
   return APR_SUCCESS;
 }
 
@@ -219,7 +241,7 @@ apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp) {
  * @param argc IN number of arguments
  * @param argv IN argument array
  *
- * @return 0 if success
+ * @return 0 if htt_error
  */
 int main(int argc, const char *const argv[]) {
   apr_status_t status;
@@ -251,8 +273,9 @@ int main(int argc, const char *const argv[]) {
 #endif
   
   /* set default */
-  htt = htt_new(pool, stdout, stderr);
-  log_mode = LOG_CMD;
+  htt = htt_new(pool);
+  htt_set_log(htt, stdout, stderr);
+  log_mode = HTT_LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
   /* get options */
@@ -271,22 +294,22 @@ int main(int argc, const char *const argv[]) {
       flags |= MAIN_FLAGS_NO_OUTPUT; 
       break;
     case 's':
-      log_mode = LOG_NONE;
+      log_mode = HTT_LOG_NONE;
       break;
     case 'e':
-      log_mode = LOG_ERR;
+      log_mode = HTT_LOG_ERR;
       break;
     case 'p':
-      log_mode = LOG_DEBUG;
+      log_mode = HTT_LOG_DEBUG;
       break;
     case 'w':
-      log_mode = LOG_WARN;
+      log_mode = HTT_LOG_WARN;
       break;
     case 'i':
-      log_mode = LOG_INFO;
+      log_mode = HTT_LOG_INFO;
       break;
     case 'd':
-      log_mode = LOG_ALL_CMD;
+      log_mode = HTT_LOG_ALL_CMD;
       break;
     case 't':
       flags |= MAIN_FLAGS_PRINT_DURATION; 
@@ -315,7 +338,7 @@ int main(int argc, const char *const argv[]) {
         else {
           fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
           fflush(stderr);
-          exit(1);
+          htt_throw_error();
         }
       }
       break;
@@ -325,14 +348,14 @@ int main(int argc, const char *const argv[]) {
   /* test for wrong options */
   if (!APR_STATUS_IS_EOF(status)) {
     fprintf(stderr, "try \"httest --help\" to get more information\n");
-    exit(1);
+    htt_throw_error();
   }
 
   /* test at least one file */
   if (!log_mode == -1 && !(flags & MAIN_FLAGS_USE_STDIN) && !(argc - opt->ind)) {
     fprintf(stderr, "httest: wrong number of arguments\n\n");
     fprintf(stderr, "try \"httest --help\" to get more information\n");
-    exit(1);
+    htt_throw_error();
   }
 
   if (flags & MAIN_FLAGS_NO_OUTPUT) {
@@ -352,7 +375,7 @@ int main(int argc, const char *const argv[]) {
     }
 
     if ((flags & MAIN_FLAGS_USE_STDIN)) {
-      if (log_mode != LOG_NONE) {
+      if (log_mode != HTT_LOG_NONE) {
         fprintf(stdout, "simple htt shell\n");
       }
     }
@@ -361,8 +384,7 @@ int main(int argc, const char *const argv[]) {
       if ((status = apr_ctime(time_str, time)) != APR_SUCCESS) {
 	fprintf(stderr, "Could not format time: %s (%d)\n", 
 	        htt_status_str(pool, status), status);
-	success = 0;
-	exit(1);
+        htt_throw_error();
       }
       if (!(flags & MAIN_FLAGS_NO_OUTPUT)) {
 	fprintf(stdout, "%s  run %-54s\t", time_str, cur_file);
@@ -380,8 +402,7 @@ int main(int argc, const char *const argv[]) {
       if ((status = apr_file_open_stdin(&fp, pool)) != APR_SUCCESS) {
 	fprintf(stderr, "Could not open stdin: %s (%d)\n", 
 	        htt_status_str(pool, status), status);
-	success = 0;
-	exit(1);
+        htt_throw_error();
       }
     }
     else if ((status =
@@ -389,8 +410,7 @@ int main(int argc, const char *const argv[]) {
                             pool)) != APR_SUCCESS) {
       fprintf(stderr, "\nCould not open %s: %s (%d)", cur_file,
 	      htt_status_str(pool, status), status);
-      success = 0;
-      exit(1);
+      htt_throw_error();
     }
 
     if (flags & MAIN_FLAGS_PRINT_DURATION) {
@@ -399,9 +419,11 @@ int main(int argc, const char *const argv[]) {
 
     /* interpret current file */
     /* TODO: new crafted interpreter for httest */
-    /* htt_interpret_fp(htt, fp); */
+    if ((status = htt_interpret_file(htt, fp)) != APR_SUCCESS) {
+      htt_throw_error();
+    }
 
-    if (log_mode > LOG_WARN) {
+    if (log_mode > HTT_LOG_WARN) {
       fprintf(stdout, "\n");
       fflush(stdout);
     }
