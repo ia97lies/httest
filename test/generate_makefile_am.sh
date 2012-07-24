@@ -4,7 +4,6 @@ printf "EXTRA_DIST= "
 for e in `ls -1 *.htt *.htb *.hte *.txt *.sh *.pem *.ntlm *.visual`; do echo \\; printf "\t$e "; done
 echo
 echo
-echo "SUBDIRS= sub"
 echo "test_store_SOURCES=test_store.c \$(top_srcdir)/src/store.c"
 echo "AM_CFLAGS=-I\$(top_srcdir)/src"
 echo "check_PROGRAMS=test_store"
