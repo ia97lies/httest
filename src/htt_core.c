@@ -86,7 +86,7 @@ struct htt_s {
 int success = 0;
 
 /************************************************************************
- * Implementation 
+ * Private 
  ***********************************************************************/
 
 apr_getopt_option_t options[] = {
@@ -145,7 +145,7 @@ static void usage(const char *progname) {
 }
 
 /**
- * own exit func
+ * verbose exit func
  */
 static void htt_exit() {
   if (success == 0) {
@@ -162,8 +162,56 @@ static void htt_exit() {
   }
 }
 
+/**
+ * silent exit func
+ */
 static void htt_no_output_exit() {
 }
+
+/************************************************************************
+ * Public 
+ ***********************************************************************/
+
+/**
+ * Instanted a new interpreter
+ * @param pool IN
+ * @param std IN standard out
+ * @param err IN error out
+ * @return new interpreter instance
+ */
+htt_t *htt_new(apr_pool_t *pool, FILE *std, FILE *err) {
+  htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
+  htt->pool = pool;
+  htt->defines = htt_store_make(pool);
+  htt->log = htt_log_new(pool, std, err);
+
+  return htt;
+}
+
+/**
+ * Set values to pass to interpreter
+ * @param htt IN instance
+ * @param key IN key
+ * @param val IN value
+ */
+void htt_add_value(htt_t *htt, const char *key, const char *val) {
+  htt_store_set(htt->defines, key, val);
+}
+
+/**
+ * Interpret reading from given apr_file_t 
+ * @param htt IN instance
+ * @param fp IN apr file pointer
+ * @return apr status
+ */
+apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp) {
+  return APR_SUCCESS;
+}
+
+/************************************************************************
+ * Main 
+ * TODO: put this to httest.c if finished
+ ***********************************************************************/
 
 /** 
  * htt main 
@@ -203,9 +251,7 @@ int main(int argc, const char *const argv[]) {
 #endif
   
   /* set default */
-  htt = apr_pcalloc(pool, sizeof(*htt));
-  htt->pool = pool;
-  htt->defines = htt_store_make(pool);
+  htt = htt_new(pool, stdout, stderr);
   log_mode = LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
@@ -264,7 +310,7 @@ int main(int argc, const char *const argv[]) {
 
         var = apr_strtok(entry, "=", &val);
         if (val && val[0]) {
-          htt_store_set(htt->defines, var, val);
+          htt_add_value(htt, var, val);
         }
         else {
           fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);

@@ -28,8 +28,10 @@
 #include "htt_log.h"
 
 struct htt_log_s {
+  apr_pool_t *pool;
   FILE *std; 
   FILE *err; 
+  int prev_mode;
   int mode;
   const char *prefix;
 };
@@ -39,17 +41,44 @@ struct htt_log_s {
  * @param pool IN
  * @param std IN file desc for stdout
  * @param err IN file desc for errout
- * @param prefix IN prefix i.e. spaces
  * @return htt log instance
  */
-htt_log_t * htt_log_make(apr_pool_t *pool, FILE *std, FILE *err, 
-                         int mode, const char *prefix) {
+htt_log_t * htt_log_new(apr_pool_t *pool, FILE *std, FILE *err) {
   htt_log_t *log = apr_pcalloc(pool, sizeof(*log));
+  log->pool = pool;
   log->std = std;
   log->err = err;
-  log->mode = mode;
-  log->prefix = prefix;
+  log->mode = HTT_LOG_INFO;;
+  log->prefix = apr_pstrdup(pool, "");
   return log;
+}
+
+/**
+ * Set logger mode
+ * @param log IN instance
+ * @param mode IN 
+ */
+void htt_log_set_mode(htt_log_t *log, int mode) {
+  log->prev_mode = log->mode;
+  log->mode = mode;
+}
+
+/**
+ * Unset logger mode, take the old value
+ * @param log IN instance
+ * @param mode IN 
+ */
+void htt_log_unset_mode(htt_log_t *log, int mode) {
+  log->mode = log->prev_mode;
+}
+
+/**
+ * Log formated text
+ * @param log IN instance
+ * @param prefix IN prefix i.e. spaces
+ */
+void htt_log_set_prefix(htt_log_t *log, const char *prefix) {
+  log->prefix = apr_pstrdup(log->pool, prefix);
 }
 
 /**
@@ -67,7 +96,7 @@ void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
 
     apr_pool_create(&pool, NULL);
     va_start(va, fmt);
-    if (log->mode == LOG_ERR) {
+    if (log->mode == HTT_LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
       fprintf(log->err, "\n%-88s", tmp);
       fflush(log->err);
@@ -107,7 +136,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
       len = strlen(buf);
     }
     
-    if (mode == LOG_ERR) {
+    if (mode == HTT_LOG_ERR) {
       fd = log->err;
     }
 
