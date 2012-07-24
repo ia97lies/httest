@@ -74,11 +74,15 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
+typedef struct htt_worker_s htt_worker_t;
 struct htt_s {
   apr_pool_t *pool;
   htt_store_t *defines;
   htt_log_t *log;
+  apr_hash_t *commands;
 };
+
+typedef apr_status_t(*htt_function_f)(htt_worker_t *worker);
 
 /************************************************************************
  * Globals 
@@ -221,12 +225,31 @@ void htt_add_value(htt_t *htt, const char *key, const char *val) {
 }
 
 /**
+ * Add command
+ * @param htt IN instance
+ * @param name IN command name
+ * @param type IN none | body
+ * @param function IN function called by interpreter
+ */
+void htt_add_command(htt_t *htt, const char *name, int type, 
+                     htt_function_f function) {
+}
+
+/**
  * Interpret reading from given apr_file_t 
  * @param htt IN instance
  * @param fp IN apr file pointer
  * @return apr status
  */
 apr_status_t htt_interpret_file(htt_t *htt, apr_file_t *fp) {
+  apr_status_t status;
+  htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
+  char *line;
+
+  while ((status = htt_bufreader_read_line(bufreader, &line)) == APR_SUCCESS) {
+    fprintf(stderr, "\nXXX %s", line);
+  }
+
   return APR_SUCCESS;
 }
 
@@ -336,7 +359,8 @@ int main(int argc, const char *const argv[]) {
           htt_add_value(htt, var, val);
         }
         else {
-          fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
+          fprintf(stderr, "Error miss value in variable definition \"-D%s\", "
+                          "need the format -D<var>=<val>\n", optarg);
           fflush(stderr);
           htt_throw_error();
         }

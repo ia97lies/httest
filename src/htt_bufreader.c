@@ -74,7 +74,6 @@ static apr_status_t htt_bufreader_fill(htt_bufreader_t * self);
  * @return an apr status
  */
 htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp) {
-  apr_status_t status;
   apr_allocator_t *allocator;
   htt_bufreader_t *bufreader;
 
