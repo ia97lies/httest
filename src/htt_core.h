@@ -25,6 +25,8 @@
 #ifndef HTT_CORE_H
 #define HTT_CORE_H
 
+#include <apr_file_io.h>
+
 typedef struct htt_s htt_t;
 typedef struct htt_command_s htt_command_t; 
 

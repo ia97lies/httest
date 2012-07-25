@@ -6,7 +6,7 @@ dist_man_MANS = httest.1
 #		htproxy.1 htntlm.1 htremote.1
 
 httest_SOURCES = \
-	htt_core.c htt_store.c htt_log.c htt_util.c htt_bufreader.c
+	httest.c htt_core.c htt_store.c htt_log.c htt_util.c htt_bufreader.c
 
 #EXTRA_httest_SOURCES = \
 #	lua_crypto.c lua_module.c js_module.c html_module.c
