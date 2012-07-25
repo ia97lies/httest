@@ -84,9 +84,6 @@ struct htt_s {
   int cur_line;
 };
 
-typedef struct htt_command_s htt_command_t; 
-typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *params);
-typedef apr_status_t(*htt_function_f)(htt_worker_t *worker);
 struct htt_command_s {
   const char *name;
   const char *signature;
@@ -98,15 +95,6 @@ struct htt_command_s {
   htt_compile_f compile;
   htt_function_f function;
 };
-
-void htt_throw_error(); 
-void htt_throw_skip(); 
-void htt_add_command(htt_t *htt, const char *name, const char *signature, 
-                     const char *short_desc, const char *desc, int type,
-                     htt_compile_f compile, htt_function_f function); 
-apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp);
-void htt_set_cur_file_name(htt_t *htt, const char *name); 
-const char *htt_get_cur_file_name(htt_t *htt); 
 
 /************************************************************************
  * Globals 
