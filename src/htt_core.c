@@ -80,6 +80,8 @@ struct htt_s {
   htt_store_t *defines;
   htt_log_t *log;
   apr_hash_t *commands;
+  const char *cur_file;
+  int cur_line;
 };
 
 typedef struct htt_command_s htt_command_t; 
@@ -102,7 +104,10 @@ void htt_throw_skip();
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc, int type,
                      htt_compile_f compile, htt_function_f function); 
-apr_status_t htt_interpret_file(htt_t *htt, apr_file_t *fp);
+apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp);
+void htt_set_cur_file_name(htt_t *htt, const char *name); 
+const char *htt_get_cur_file_name(htt_t *htt); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -176,9 +181,10 @@ static void usage(const char *progname) {
 static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
   char *line;
   apr_status_t status = APR_SUCCESS;
+  htt->cur_line = 1;
 
   while (status == APR_SUCCESS && 
-         (status = htt_bufreader_read_line(bufreader, &line)) == APR_SUCCESS) {
+         htt_bufreader_read_line(bufreader, &line) == APR_SUCCESS) {
     for (; *line == ' ' || *line == '\t'; ++line);
     if (*line != '#' && *line != '\0') {
       char *rest;
@@ -186,19 +192,22 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
       htt_command_t *command;
 
       cmd = apr_strtok(line, " ", &rest);
-      fprintf(stderr, "\nXXX %s: %s", cmd, rest);
+      fprintf(stderr, "\nXXX %s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
       command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
       if (!command) {
         /* not found */
         /* hook unknown function */
       }
       else {
+        const char *old_file_name = htt_get_cur_file_name(htt);
         status = command->compile(command, htt, rest);
+        htt_set_cur_file_name(htt, old_file_name);
       }
     }
+    ++htt->cur_line;
   }
 
-  return APR_SUCCESS;
+  return status;
 }
 
 /**
@@ -219,8 +228,8 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
             htt_status_str(htt->pool, status), status);
     htt_throw_error();
   }
-
-  return htt_interpret_file(htt, fp);
+  htt_set_cur_file_name(htt, args);
+  return htt_interpret_fp(htt, fp);
 }
 
 /************************************************************************
@@ -303,6 +312,46 @@ void htt_add_value(htt_t *htt, const char *key, const char *val) {
 }
 
 /**
+ * Store current file name
+ * @param htt IN instance
+ * @param name IN filename
+ */
+void htt_set_cur_file_name(htt_t *htt, const char *name) {
+  htt->cur_file = name;
+}
+
+/**
+ * Store current file name
+ * @param htt IN instance
+ * @param name IN filename
+ */
+const char *htt_get_cur_file_name(htt_t *htt) {
+  return htt->cur_file;
+}
+
+/**
+ * Compiles a simple command 
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_compile_line(htt_t *htt, htt_function_f function, char *args) {
+  return APR_SUCCESS;
+}
+
+/**
+ * Compiles a command with a body (if, loop, ...)
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_compile_body(htt_t *htt, htt_function_f function, char *args) {
+  return APR_SUCCESS;
+}
+
+/**
  * Add command
  * @param htt IN instance
  * @param name IN command name
@@ -329,7 +378,7 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
  * @param fp IN apr file pointer
  * @return apr status
  */
-apr_status_t htt_interpret_file(htt_t *htt, apr_file_t *fp) {
+apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp) {
   htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
   return htt_interpret(htt, bufreader);
 }
@@ -523,7 +572,8 @@ int main(int argc, const char *const argv[]) {
 
     /* interpret current file */
     /* TODO: new crafted interpreter for httest */
-    if ((status = htt_interpret_file(htt, fp)) != APR_SUCCESS) {
+    htt_set_cur_file_name(htt, cur_file);
+    if ((status = htt_interpret_fp(htt, fp)) != APR_SUCCESS) {
       htt_throw_error();
     }
 
