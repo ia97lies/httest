@@ -82,8 +82,27 @@ struct htt_s {
   apr_hash_t *commands;
 };
 
+typedef struct htt_command_s htt_command_t; 
+typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *params);
 typedef apr_status_t(*htt_function_f)(htt_worker_t *worker);
+struct htt_command_s {
+  const char *name;
+  const char *signature;
+  const char *short_desc;
+  const char *desc;
+#define HTT_COMMAND_NONE 0
+#define HTT_COMMAND_BODY 1
+  int type;
+  htt_compile_f compile;
+  htt_function_f function;
+};
 
+void htt_throw_error(); 
+void htt_throw_skip(); 
+void htt_add_command(htt_t *htt, const char *name, const char *signature, 
+                     const char *short_desc, const char *desc, int type,
+                     htt_compile_f compile, htt_function_f function); 
+apr_status_t htt_interpret_file(htt_t *htt, apr_file_t *fp);
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -148,6 +167,62 @@ static void usage(const char *progname) {
   fprintf(stdout, "\n");
 }
 
+/**
+ * Interpret reading from given bufreader 
+ * @param htt IN instance
+ * @param fp IN apr file pointer
+ * @return apr status
+ */
+static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
+  char *line;
+  apr_status_t status = APR_SUCCESS;
+
+  while (status == APR_SUCCESS && 
+         (status = htt_bufreader_read_line(bufreader, &line)) == APR_SUCCESS) {
+    for (; *line == ' ' || *line == '\t'; ++line);
+    if (*line != '#' && *line != '\0') {
+      char *rest;
+      char *cmd;
+      htt_command_t *command;
+
+      cmd = apr_strtok(line, " ", &rest);
+      fprintf(stderr, "\nXXX %s: %s", cmd, rest);
+      command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
+      if (!command) {
+        /* not found */
+        /* hook unknown function */
+      }
+      else {
+        status = command->compile(command, htt, rest);
+      }
+    }
+  }
+
+  return APR_SUCCESS;
+}
+
+/**
+ * Compile function for include. Just open file and and interpret.
+ * @param command IN command
+ * @param htt IN instance
+ * @param args IN argument string
+ */
+static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
+                                            char *args) {
+  apr_file_t *fp;
+  apr_status_t status;
+
+  apr_collapse_spaces(args, args);
+  if ((status = apr_file_open(&fp, args, APR_READ, APR_OS_DEFAULT, htt->pool)) 
+      != APR_SUCCESS) {
+    fprintf(stderr, "\nCould not open %s: %s (%d)", args,
+            htt_status_str(htt->pool, status), status);
+    htt_throw_error();
+  }
+
+  return htt_interpret_file(htt, fp);
+}
+
 /************************************************************************
  * Public 
  ***********************************************************************/
@@ -201,6 +276,9 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
   htt->defines = htt_store_make(pool);
+  htt->commands = apr_hash_make(pool);
+  htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
+                  HTT_COMMAND_NONE, htt_cmd_include_compile, NULL);
   return htt;
 }
 
@@ -231,8 +309,18 @@ void htt_add_value(htt_t *htt, const char *key, const char *val) {
  * @param type IN none | body
  * @param function IN function called by interpreter
  */
-void htt_add_command(htt_t *htt, const char *name, int type, 
-                     htt_function_f function) {
+void htt_add_command(htt_t *htt, const char *name, const char *signature, 
+                     const char *short_desc, const char *desc, int type,
+                     htt_compile_f compile, htt_function_f function) {
+  htt_command_t *command = apr_pcalloc(htt->pool, sizeof(*command));
+  command->name = name;
+  command->signature = signature;
+  command->short_desc = short_desc;
+  command->desc = desc;
+  command->type = type;
+  command->compile = compile;
+  command->function = function;
+  apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
 }
 
 /**
@@ -242,15 +330,8 @@ void htt_add_command(htt_t *htt, const char *name, int type,
  * @return apr status
  */
 apr_status_t htt_interpret_file(htt_t *htt, apr_file_t *fp) {
-  apr_status_t status;
   htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
-  char *line;
-
-  while ((status = htt_bufreader_read_line(bufreader, &line)) == APR_SUCCESS) {
-    fprintf(stderr, "\nXXX %s", line);
-  }
-
-  return APR_SUCCESS;
+  return htt_interpret(htt, bufreader);
 }
 
 /************************************************************************
@@ -429,9 +510,8 @@ int main(int argc, const char *const argv[]) {
         htt_throw_error();
       }
     }
-    else if ((status =
-              apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT,
-                            pool)) != APR_SUCCESS) {
+    else if ((status = apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT, 
+                                     pool)) != APR_SUCCESS) {
       fprintf(stderr, "\nCould not open %s: %s (%d)", cur_file,
 	      htt_status_str(pool, status), status);
       htt_throw_error();
