@@ -114,6 +114,12 @@ int htt_error = 0;
  * Private 
  ***********************************************************************/
 
+static apr_status_t htt_execute(htt_t *htt) {
+
+  return APR_SUCCESS;
+}
+
+
 /**
  * Interpret reading from given bufreader 
  * @param htt IN instance
@@ -161,7 +167,7 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
     htt_throw_error();
   }
 
-  return status;
+  return htt_execute(htt);
 }
 
 /**
