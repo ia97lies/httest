@@ -26,12 +26,13 @@
 #define HTT_CORE_H
 
 #include <apr_file_io.h>
+#include "htt_worker.h"
 
 typedef struct htt_s htt_t;
 typedef struct htt_command_s htt_command_t; 
 
 typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *params);
-typedef apr_status_t(*htt_function_f)();
+typedef apr_status_t(*htt_function_f)(htt_worker_t *worker, const char *raw);
 
 void htt_exit(); 
 void htt_no_output_exit(); 
@@ -45,7 +46,7 @@ const char *htt_get_cur_file_name(htt_t *htt);
 apr_status_t htt_compile_line(htt_t *htt, htt_function_f function, char *args); 
 apr_status_t htt_compile_body(htt_t *htt, htt_function_f function, char *args); 
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
-                     const char *short_desc, const char *desc, int type,
+                     const char *short_desc, const char *desc,
                      htt_compile_f compile, htt_function_f function); 
 apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp); 
 

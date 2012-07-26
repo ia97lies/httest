@@ -25,12 +25,15 @@
 #ifndef HTT_WORKER_H
 #define HTT_WORKER_H
 
+#include "htt_log.h"
+
 typedef struct htt_worker_s htt_worker_t;
 
-htt_worker_t *htt_worker_new(htt_worker_t *parent);
+htt_worker_t *htt_worker_new(htt_worker_t *parent, htt_log_t *log);
 htt_worker_t *htt_worker_get_parent(htt_worker_t *worker);
 void htt_worker_set_config(htt_worker_t *worker, const char *key, void *data);
 void  *htt_worker_get_config(htt_worker_t *worker, const char *key);
+htt_log_t *htt_worker_get_log(htt_worker_t *worker);
 void htt_worker_destroy(htt_worker_t *worker);
 
 #endif

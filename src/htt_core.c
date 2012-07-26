@@ -79,9 +79,6 @@ struct htt_command_s {
   const char *signature;
   const char *short_desc;
   const char *desc;
-#define HTT_COMMAND_NONE 0
-#define HTT_COMMAND_BODY 1
-  int type;
   htt_compile_f compile;
   htt_function_f function;
 };
@@ -114,7 +111,15 @@ int htt_error = 0;
  * Private 
  ***********************************************************************/
 
-static apr_status_t htt_execute(htt_t *htt) {
+static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled) {
+  int i;
+  apr_table_entry_t *e;
+  htt_compiled_t *exec;
+
+  e = (apr_table_entry_t *) apr_table_elts(compiled->body)->elts;
+  for (i = 0; i < apr_table_elts(compiled->body)->nelts; ++i) {
+    exec = (htt_compiled_t *)e[i].val;
+  }
 
   return APR_SUCCESS;
 }
@@ -167,7 +172,7 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
     htt_throw_error();
   }
 
-  return htt_execute(htt);
+  return htt_execute(htt, htt->compiled);
 }
 
 /**
@@ -215,6 +220,16 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
 /************************************************************************
  * Public 
  ***********************************************************************/
+
+/**
+ * Echo function
+ * @param worker IN worker
+ * @return APR_SUCCESS
+ */
+apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw) {
+  htt_log(htt_worker_get_log(worker), HTT_LOG_NONE, "%s", raw);
+  return APR_SUCCESS;
+}
 
 /**
  * Compiles a simple command 
@@ -312,13 +327,13 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->compiled->body = apr_table_make(pool, 20);
 
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
-                  HTT_COMMAND_NONE, htt_cmd_include_compile, NULL);
+                  htt_cmd_include_compile, NULL);
   htt_add_command(htt, "end", "", "", "end a open body", 
-                  HTT_COMMAND_NONE, htt_cmd_end_compile, NULL);
+                  htt_cmd_end_compile, NULL);
   htt_add_command(htt, "echo", "string", "<string>", "echo a string", 
-                  HTT_COMMAND_NONE, htt_cmd_line_compile, NULL);
+                  htt_cmd_line_compile, htt_cmd_echo_function);
   htt_add_command(htt, "body", "", "", "open a new body",
-                  HTT_COMMAND_BODY, htt_cmd_body_compile, NULL);
+                  htt_cmd_body_compile, NULL);
   return htt;
 }
 
@@ -370,14 +385,13 @@ const char *htt_get_cur_file_name(htt_t *htt) {
  * @param function IN function called by interpreter
  */
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
-                     const char *short_desc, const char *desc, int type,
+                     const char *short_desc, const char *desc,
                      htt_compile_f compile, htt_function_f function) {
   htt_command_t *command = apr_pcalloc(htt->pool, sizeof(*command));
   command->name = name;
   command->signature = signature;
   command->short_desc = short_desc;
   command->desc = desc;
-  command->type = type;
   command->compile = compile;
   command->function = function;
   apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
