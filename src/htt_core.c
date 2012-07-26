@@ -87,6 +87,8 @@ struct htt_command_s {
 };
 
 typedef struct htt_compiled_s {
+  const char *file;
+  int line;
   htt_function_f function;
   const char *args;
   apr_table_t *body;
@@ -98,7 +100,7 @@ struct htt_s {
   htt_log_t *log;
   const char *cur_file;
   int cur_line;
-  apr_hash_t *registrar;
+  apr_hash_t *commands;
   apr_array_header_t *stack;
   htt_compiled_t *compiled;
 };
@@ -133,7 +135,7 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
 
       cmd = apr_strtok(line, " ", &rest);
       fprintf(stderr, "\nXXX %s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
-      command = apr_hash_get(htt->registrar, cmd, APR_HASH_KEY_STRING);
+      command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
       if (!command) {
         /* not found */
         /* hook unknown function */
@@ -172,6 +174,10 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
   return htt_interpret_fp(htt, fp);
 }
 
+/************************************************************************
+ * Public 
+ ***********************************************************************/
+
 /**
  * Compiles a simple command 
  * @param htt IN instance
@@ -181,7 +187,13 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
  */
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  
+  htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
+  compiled->function = command->function;
+  compiled->args = args;
+  compiled->file = htt->cur_file;
+  compiled->line = htt->cur_line;
+  apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
+                 (void *)compiled);
   return APR_SUCCESS;
 }
 
@@ -196,10 +208,6 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt,
                                   char *args) {
   return APR_SUCCESS;
 }
-
-/************************************************************************
- * Public 
- ***********************************************************************/
 
 /**
  * verbose exit func
@@ -250,7 +258,7 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
   htt->defines = htt_store_make(pool);
-  htt->registrar = apr_hash_make(pool);
+  htt->commands = apr_hash_make(pool);
   htt->compiled = apr_pcalloc(pool, sizeof(htt_compiled_t));
   htt->compiled->body = apr_table_make(pool, 20);
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
@@ -314,7 +322,7 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command->type = type;
   command->compile = compile;
   command->function = function;
-  apr_hash_set(htt->registrar, name, APR_HASH_KEY_STRING, command);
+  apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
 }
 
 /**
