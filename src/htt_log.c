@@ -103,7 +103,7 @@ void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
     }
     else {
       tmp = apr_pvsprintf(pool, fmt, va);
-      apr_file_printf(log->out, "\n%s", log->prefix);
+      apr_file_printf(log->out, "\n%s%s", log->prefix, tmp);
     }
     va_end(va);
     apr_pool_destroy(pool);

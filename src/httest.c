@@ -277,7 +277,7 @@ int main(int argc, const char *const argv[]) {
 
   apr_file_open_stdin(&out, pool);
   apr_file_open_stdin(&err, pool);
-  htt_set_log(htt, out, err);
+  htt_set_log(htt, out, err, log_mode);
 
   /* do for all files (no wild card support) */
   while (flags & MAIN_FLAGS_USE_STDIN || argc - opt->ind) {

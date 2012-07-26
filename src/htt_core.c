@@ -134,11 +134,14 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
       htt_command_t *command;
 
       cmd = apr_strtok(line, " ", &rest);
-      fprintf(stderr, "\nXXX %s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
+      htt_log(htt->log, HTT_LOG_INFO, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
       command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
       if (!command) {
         /* not found */
         /* hook unknown function */
+        htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                      "Unknown command \"%s\"", cmd);
+        htt_throw_error();
       }
       else {
         const char *old_file_name = htt->cur_file;
@@ -149,6 +152,13 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
       }
     }
     ++htt->cur_line;
+  }
+
+  if (htt->stack->nelts != 1) {
+    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                  "Unclosed body on line %s:%d", htt->compiled->file, 
+                  htt->compiled->line);
+    htt_throw_error();
   }
 
   return status;
@@ -185,11 +195,14 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
                                         char *args) {
   htt->compiled = apr_array_pop(htt->stack);
-  if (htt->compiled) {
+  if (htt->compiled && htt->stack->nelts > 0) {
     return APR_SUCCESS;
   }
   else {
-    return APR_EINVAL;
+    apr_status_t status = APR_EINVAL;
+    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                  "too many closing \"end\"");
+    return status;
   }
 }
 
@@ -230,6 +243,7 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt,
   compiled->args = args;
   compiled->file = htt->cur_file;
   compiled->line = htt->cur_line;
+  compiled->body = apr_table_make(htt->pool, 20);
   apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
                  (void *)compiled);
   /* replace htt->compiled with the new one */
@@ -293,6 +307,12 @@ htt_t *htt_new(apr_pool_t *pool) {
 
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
                   HTT_COMMAND_NONE, htt_cmd_include_compile, NULL);
+  htt_add_command(htt, "end", "", "", "end a open body", 
+                  HTT_COMMAND_NONE, htt_cmd_end_compile, NULL);
+  htt_add_command(htt, "echo", "string", "<string>", "echo a string", 
+                  HTT_COMMAND_NONE, htt_cmd_line_compile, NULL);
+  htt_add_command(htt, "body", "", "", "open a new body",
+                  HTT_COMMAND_BODY, htt_cmd_body_compile, NULL);
   return htt;
 }
 
@@ -301,9 +321,11 @@ htt_t *htt_new(apr_pool_t *pool) {
  * @param htt IN instance
  * @param std IN standard out
  * @param err IN error out
+ * @param mode IN log mode
  */
-void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err) {
+void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
   htt->log = htt_log_new(htt->pool, std, err);
+  htt_log_set_mode(htt->log, mode);
 }
 
 /**

@@ -38,7 +38,7 @@ void htt_no_output_exit();
 void htt_throw_error(); 
 void htt_throw_skip(); 
 htt_t *htt_new(apr_pool_t *pool); 
-void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err); 
+void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode); 
 void htt_add_value(htt_t *htt, const char *key, const char *val); 
 void htt_set_cur_file_name(htt_t *htt, const char *name); 
 const char *htt_get_cur_file_name(htt_t *htt); 
