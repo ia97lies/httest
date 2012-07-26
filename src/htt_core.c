@@ -74,15 +74,6 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
-struct htt_s {
-  apr_pool_t *pool;
-  htt_store_t *defines;
-  htt_log_t *log;
-  apr_hash_t *commands;
-  const char *cur_file;
-  int cur_line;
-};
-
 struct htt_command_s {
   const char *name;
   const char *signature;
@@ -93,6 +84,23 @@ struct htt_command_s {
   int type;
   htt_compile_f compile;
   htt_function_f function;
+};
+
+typedef struct htt_compiled_s {
+  htt_function_f function;
+  const char *args;
+  apr_table_t *body;
+} htt_compiled_t;
+
+struct htt_s {
+  apr_pool_t *pool;
+  htt_store_t *defines;
+  htt_log_t *log;
+  const char *cur_file;
+  int cur_line;
+  apr_hash_t *registrar;
+  apr_array_header_t *stack;
+  htt_compiled_t *compiled;
 };
 
 /************************************************************************
@@ -125,7 +133,7 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
 
       cmd = apr_strtok(line, " ", &rest);
       fprintf(stderr, "\nXXX %s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
-      command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
+      command = apr_hash_get(htt->registrar, cmd, APR_HASH_KEY_STRING);
       if (!command) {
         /* not found */
         /* hook unknown function */
@@ -162,6 +170,31 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
   }
   htt_set_cur_file_name(htt, args);
   return htt_interpret_fp(htt, fp);
+}
+
+/**
+ * Compiles a simple command 
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
+                                  char *args) {
+  
+  return APR_SUCCESS;
+}
+
+/**
+ * Compiles a command with a body (if, loop, ...)
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
+                                  char *args) {
+  return APR_SUCCESS;
 }
 
 /************************************************************************
@@ -217,7 +250,9 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
   htt->defines = htt_store_make(pool);
-  htt->commands = apr_hash_make(pool);
+  htt->registrar = apr_hash_make(pool);
+  htt->compiled = apr_pcalloc(pool, sizeof(htt_compiled_t));
+  htt->compiled->body = apr_table_make(pool, 20);
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
                   HTT_COMMAND_NONE, htt_cmd_include_compile, NULL);
   return htt;
@@ -262,28 +297,6 @@ const char *htt_get_cur_file_name(htt_t *htt) {
 }
 
 /**
- * Compiles a simple command 
- * @param htt IN instance
- * @param function IN commands function
- * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
- */
-apr_status_t htt_compile_line(htt_t *htt, htt_function_f function, char *args) {
-  return APR_SUCCESS;
-}
-
-/**
- * Compiles a command with a body (if, loop, ...)
- * @param htt IN instance
- * @param function IN commands function
- * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
- */
-apr_status_t htt_compile_body(htt_t *htt, htt_function_f function, char *args) {
-  return APR_SUCCESS;
-}
-
-/**
  * Add command
  * @param htt IN instance
  * @param name IN command name
@@ -301,7 +314,7 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command->type = type;
   command->compile = compile;
   command->function = function;
-  apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
+  apr_hash_set(htt->registrar, name, APR_HASH_KEY_STRING, command);
 }
 
 /**
