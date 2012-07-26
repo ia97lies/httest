@@ -37,13 +37,14 @@ typedef struct htt_log_s htt_log_t;
 #define HTT_LOG_ALL_CMD 5
 #define HTT_LOG_DEBUG 6
 
-htt_log_t * htt_log_new(apr_pool_t *pool, FILE *std, FILE *err); 
+htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err); 
 void htt_log_set_mode(htt_log_t *log, int mode);
 void htt_log_set_prefix(htt_log_t *log, const char *prefix);
 void htt_log(htt_log_t *log, int log_mode, char *fmt, ...); 
 void htt_log_outbuf(htt_log_t *log, int mode, const char *buf, int len); 
 void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len); 
-void htt_log_error(htt_log_t *log, char *position, char *fmt, ...); 
+void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
+                   int pos, const char *fmt, ...); 
 
 #endif
 

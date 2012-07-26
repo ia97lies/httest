@@ -25,12 +25,13 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include "htt_util.h"
 #include "htt_log.h"
 
 struct htt_log_s {
   apr_pool_t *pool;
-  FILE *std; 
-  FILE *err; 
+  apr_file_t *out; 
+  apr_file_t *err; 
   int prev_mode;
   int mode;
   const char *prefix;
@@ -39,14 +40,14 @@ struct htt_log_s {
 /**
  * Create a new log instance
  * @param pool IN
- * @param std IN file desc for stdout
+ * @param out IN file desc for stdout
  * @param err IN file desc for errout
  * @return htt log instance
  */
-htt_log_t * htt_log_new(apr_pool_t *pool, FILE *std, FILE *err) {
+htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err) {
   htt_log_t *log = apr_pcalloc(pool, sizeof(*log));
   log->pool = pool;
-  log->std = std;
+  log->out = out;
   log->err = err;
   log->mode = HTT_LOG_INFO;;
   log->prefix = apr_pstrdup(pool, "");
@@ -98,13 +99,11 @@ void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
     va_start(va, fmt);
     if (log->mode == HTT_LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
-      fprintf(log->err, "\n%-88s", tmp);
-      fflush(log->err);
+      apr_file_printf(log->err, "\n%-88s", tmp);
     }
     else {
-      fprintf(stdout, "\n%s", log->prefix);
-      vfprintf(stdout, fmt, va);
-      fflush(stdout);
+      tmp = apr_pvsprintf(pool, fmt, va);
+      apr_file_printf(log->out, "\n%s", log->prefix);
     }
     va_end(va);
     apr_pool_destroy(pool);
@@ -127,7 +126,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
     int max_line_len;
     int line_len;
     char *null="<null>";
-    FILE *fd = log->std;
+    apr_file_t *fd = log->out;
     apr_pool_t *pool;
     char * outbuf;
 
@@ -141,7 +140,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
     }
 
     if (prefix) {
-      fprintf(fd, "\n%s%s", log->prefix, prefix);
+      apr_file_printf(fd, "\n%s%s", log->prefix, prefix);
     }
     
     /* find longest line */
@@ -201,8 +200,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
         }
         i++;
       }
-      fprintf(fd, "%s", outbuf);
-      fflush(fd);
+      apr_file_printf(fd, "%s", outbuf);
       outbuf[0] = 0;
     }
     
@@ -240,7 +238,23 @@ void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len) {
  * @param ... IN format parameters
  */
 
-void htt_log_error(htt_log_t *log, char *position, char *fmt, ...) {
+void htt_log_error(htt_log_t *log, apr_status_t status, const char *file, 
+                   int pos, const char *fmt, ...) {
+  if (log->mode >= HTT_LOG_ERR) {
+    char *tmp;
+    va_list va;
+    apr_pool_t *pool;
+
+    apr_pool_create(&pool, NULL);
+    va_start(va, fmt);
+    tmp = apr_pvsprintf(pool, fmt, va);
+    tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
+                       htt_status_str(pool, status), status, tmp);
+    apr_file_printf(log->err, "\n%-88s", tmp);
+    va_end(va);
+    apr_pool_destroy(pool);
+  }
+
 }
 
 

@@ -168,6 +168,8 @@ int main(int argc, const char *const argv[]) {
   apr_time_t time;
   char time_str[256];
   htt_t *htt;
+  apr_file_t *out;
+  apr_file_t *err;
 
   srand(apr_time_now()); 
   
@@ -181,7 +183,7 @@ int main(int argc, const char *const argv[]) {
   
   /* set default */
   htt = htt_new(pool);
-  htt_set_log(htt, stdout, stderr);
+
   log_mode = HTT_LOG_CMD;
   flags = MAIN_FLAGS_NONE;
 
@@ -272,6 +274,10 @@ int main(int argc, const char *const argv[]) {
   else {
     atexit(htt_exit);
   }
+
+  apr_file_open_stdin(&out, pool);
+  apr_file_open_stdin(&err, pool);
+  htt_set_log(htt, out, err);
 
   /* do for all files (no wild card support) */
   while (flags & MAIN_FLAGS_USE_STDIN || argc - opt->ind) {

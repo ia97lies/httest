@@ -141,9 +141,11 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
         /* hook unknown function */
       }
       else {
-        const char *old_file_name = htt_get_cur_file_name(htt);
+        const char *old_file_name = htt->cur_file;
+        int old_line = htt->cur_line;
         status = command->compile(command, htt, rest);
-        htt_set_cur_file_name(htt, old_file_name);
+        htt->cur_file =  old_file_name;
+        htt->cur_line = old_line;
       }
     }
     ++htt->cur_line;
@@ -166,12 +168,29 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
   apr_collapse_spaces(args, args);
   if ((status = apr_file_open(&fp, args, APR_READ, APR_OS_DEFAULT, htt->pool)) 
       != APR_SUCCESS) {
-    fprintf(stderr, "\nCould not open %s: %s (%d)", args,
-            htt_status_str(htt->pool, status), status);
+    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                  "Could not open include file \"%s\"", args);
     htt_throw_error();
   }
   htt_set_cur_file_name(htt, args);
   return htt_interpret_fp(htt, fp);
+}
+
+/**
+ * Get last body from stack
+ * @param command IN command
+ * @param htt IN instance
+ * @param args IN argument string
+ */
+static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
+                                        char *args) {
+  htt->compiled = apr_array_pop(htt->stack);
+  if (htt->compiled) {
+    return APR_SUCCESS;
+  }
+  else {
+    return APR_EINVAL;
+  }
 }
 
 /************************************************************************
@@ -206,6 +225,15 @@ apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt,
  */
 apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
+  htt_compiled_t *compiled = apr_array_push(htt->stack);
+  compiled->function = command->function;
+  compiled->args = args;
+  compiled->file = htt->cur_file;
+  compiled->line = htt->cur_line;
+  apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
+                 (void *)compiled);
+  /* replace htt->compiled with the new one */
+  htt->compiled = compiled;
   return APR_SUCCESS;
 }
 
@@ -259,8 +287,10 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->pool = pool;
   htt->defines = htt_store_make(pool);
   htt->commands = apr_hash_make(pool);
-  htt->compiled = apr_pcalloc(pool, sizeof(htt_compiled_t));
+  htt->stack = apr_array_make(pool, 5, sizeof(htt_compiled_t));
+  htt->compiled = apr_array_push(htt->stack); 
   htt->compiled->body = apr_table_make(pool, 20);
+
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
                   HTT_COMMAND_NONE, htt_cmd_include_compile, NULL);
   return htt;
@@ -272,7 +302,7 @@ htt_t *htt_new(apr_pool_t *pool) {
  * @param std IN standard out
  * @param err IN error out
  */
-void htt_set_log(htt_t *htt, FILE *std, FILE *err) {
+void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err) {
   htt->log = htt_log_new(htt->pool, std, err);
 }
 
