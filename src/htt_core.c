@@ -85,6 +85,7 @@ struct htt_command_s {
 };
 
 typedef struct htt_compiled_s {
+  const char *name;
   const char *file;
   int line;
   htt_function_f function;
@@ -114,21 +115,29 @@ int htt_error = 0;
 
 static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
                                 htt_worker_t *worker) {
+  apr_status_t status = APR_SUCCESS;
   int i;
   apr_table_entry_t *e;
   htt_compiled_t *exec;
 
   e = (apr_table_entry_t *) apr_table_elts(compiled->body)->elts;
-  for (i = 0; i < apr_table_elts(compiled->body)->nelts; ++i) {
+  for (i = 0; 
+       status == APR_SUCCESS && 
+       i < apr_table_elts(compiled->body)->nelts; 
+       ++i) {
     int doit = 1;
     exec = (htt_compiled_t *)e[i].val;
+    htt_log(htt->log, HTT_LOG_CMD, "%s:%d -> %s %s", exec->file, exec->line, 
+            exec->name, exec->args);
     if (exec->function) {
-      exec->function(worker, exec->args); 
+      status = exec->function(worker, exec->args); 
     }
     if (exec->body && doit) {
       htt_worker_t *child_worker = htt_worker_new(worker, 
                                                   htt_worker_get_log(worker));
-      return htt_execute(htt, exec, child_worker);
+      status = htt_execute(htt, exec, child_worker);
+      htt_log(htt->log, HTT_LOG_CMD, "%s:%d -> end", exec->file, exec->line);
+      return status;
     }
   }
 
@@ -156,7 +165,7 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
       htt_command_t *command;
 
       cmd = apr_strtok(line, " ", &rest);
-      htt_log(htt->log, HTT_LOG_INFO, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
+      htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
       command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
       if (!command) {
         /* not found */
@@ -264,6 +273,7 @@ apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw) {
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
   htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
+  compiled->name = command->name;
   compiled->function = command->function;
   compiled->args = args;
   compiled->file = htt->cur_file;
@@ -286,6 +296,7 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt,
                                   char *args) {
   htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
   htt_stack_push(htt->stack, compiled);
+  compiled->name = command->name;
   compiled->function = command->function;
   compiled->args = args;
   compiled->file = htt->cur_file;
