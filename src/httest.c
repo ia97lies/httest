@@ -330,10 +330,12 @@ int main(int argc, const char *const argv[]) {
       time = apr_time_now();
     }
 
-    /* interpret current file */
-    /* TODO: new crafted interpreter for httest */
     htt_set_cur_file_name(htt, cur_file);
-    if ((status = htt_interpret_fp(htt, fp)) != APR_SUCCESS) {
+    if ((status = htt_compile_fp(htt, fp)) != APR_SUCCESS) {
+      htt_throw_error();
+    }
+
+    if ((status = htt_run(htt)) != APR_SUCCESS) {
       htt_throw_error();
     }
 

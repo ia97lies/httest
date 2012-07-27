@@ -48,6 +48,7 @@ apr_status_t htt_compile_body(htt_t *htt, htt_function_f function, char *args);
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
                      htt_compile_f compile, htt_function_f function); 
-apr_status_t htt_interpret_fp(htt_t *htt, apr_file_t *fp); 
+apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp); 
+apr_status_t htt_run(htt_t *htt); 
 
 #endif
