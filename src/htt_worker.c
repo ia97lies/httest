@@ -42,7 +42,7 @@ struct htt_worker_s {
 htt_worker_t *htt_worker_new(htt_worker_t *parent, htt_log_t *log) {
   apr_pool_t *pool;
   
-  apr_pool_create(&pool, parent->pool);
+  apr_pool_create(&pool, parent ? parent->pool : NULL);
   htt_worker_t *worker = apr_pcalloc(pool, sizeof(*worker));
   worker->pool = pool;
   worker->parent = parent;
@@ -61,12 +61,21 @@ htt_worker_t *htt_worker_get_parent(htt_worker_t *worker) {
 }
 
 /**
- * Worker get log instance
+ * Worker get log
  * @param worker IN worker
- * @return log instance
+ * @return log
  */
 htt_log_t *htt_worker_get_log(htt_worker_t *worker) {
   return worker->log;
+}
+
+/**
+ * Worker get pool
+ * @param worker IN worker
+ * @return pool
+ */
+apr_pool_t *htt_worker_get_pool(htt_worker_t *worker) {
+  return worker->pool;
 }
 
 /**

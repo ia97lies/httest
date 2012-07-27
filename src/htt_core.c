@@ -111,14 +111,24 @@ int htt_error = 0;
  * Private 
  ***********************************************************************/
 
-static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled) {
+static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
+                                htt_worker_t *worker) {
   int i;
   apr_table_entry_t *e;
   htt_compiled_t *exec;
 
   e = (apr_table_entry_t *) apr_table_elts(compiled->body)->elts;
   for (i = 0; i < apr_table_elts(compiled->body)->nelts; ++i) {
+    int doit = 1;
     exec = (htt_compiled_t *)e[i].val;
+    if (exec->function) {
+      exec->function(worker, exec->args); 
+    }
+    if (exec->body && doit) {
+      htt_worker_t *child_worker = htt_worker_new(worker, 
+                                                  htt_worker_get_log(worker));
+      return htt_execute(htt, exec, child_worker);
+    }
   }
 
   return APR_SUCCESS;
@@ -135,6 +145,7 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
   char *line;
   apr_status_t status = APR_SUCCESS;
   htt->cur_line = 1;
+  htt_worker_t *worker;
 
   while (status == APR_SUCCESS && 
          htt_bufreader_read_line(bufreader, &line) == APR_SUCCESS) {
@@ -172,7 +183,8 @@ static apr_status_t htt_interpret(htt_t *htt, htt_bufreader_t *bufreader) {
     htt_throw_error();
   }
 
-  return htt_execute(htt, htt->compiled);
+  worker = htt_worker_new(NULL, htt->log);
+  return htt_execute(htt, htt->compiled, worker);
 }
 
 /**
@@ -205,7 +217,8 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
  */
 static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
                                         char *args) {
-  htt->compiled = apr_array_pop(htt->stack);
+  apr_array_pop(htt->stack);
+  htt->compiled = (void *)htt->stack->elts;
   if (htt->compiled && htt->stack->nelts > 0) {
     return APR_SUCCESS;
   }
@@ -260,6 +273,7 @@ apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt,
 apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
   htt_compiled_t *compiled = apr_array_push(htt->stack);
+  memset(compiled, 0, sizeof(*compiled));
   compiled->function = command->function;
   compiled->args = args;
   compiled->file = htt->cur_file;
