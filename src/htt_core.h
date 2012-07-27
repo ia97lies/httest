@@ -34,21 +34,115 @@ typedef struct htt_command_s htt_command_t;
 typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *params);
 typedef apr_status_t(*htt_function_f)(htt_worker_t *worker, const char *raw);
 
-void htt_exit(); 
-void htt_no_output_exit(); 
-void htt_throw_error(); 
-void htt_throw_skip(); 
-htt_t *htt_new(apr_pool_t *pool); 
-void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode); 
-void htt_add_value(htt_t *htt, const char *key, const char *val); 
-void htt_set_cur_file_name(htt_t *htt, const char *name); 
-const char *htt_get_cur_file_name(htt_t *htt); 
-apr_status_t htt_compile_line(htt_t *htt, htt_function_f function, char *args); 
-apr_status_t htt_compile_body(htt_t *htt, htt_function_f function, char *args); 
+/**
+ * Echo function
+ * @param worker IN worker
+ * @return APR_SUCCESS
+ */
+apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw);
+
+/**
+ * Compiles a simple command 
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
+                                  char *args);
+
+/**
+ * Compiles a command with a body (if, loop, ...)
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
+                                  char *args);
+
+/**
+ * verbose exit func
+ */
+void htt_exit();
+
+/**
+ * silent exit func
+ */
+void htt_no_output_exit();
+
+/**
+ * Throw error exception, terminate 
+ */
+void htt_throw_error();
+
+/**
+ * Throw skip exception, terminate
+ */
+void htt_throw_skip();
+
+/**
+ * Instanted a new interpreter
+ * @param pool IN
+ * @return new interpreter instance
+ */
+htt_t *htt_new(apr_pool_t *pool);
+
+/**
+ * Set log file handles
+ * @param htt IN instance
+ * @param std IN standard out
+ * @param err IN error out
+ * @param mode IN log mode
+ */
+void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode);
+
+/**
+ * Set values to pass to interpreter
+ * @param htt IN instance
+ * @param key IN key
+ * @param val IN value
+ */
+void htt_add_value(htt_t *htt, const char *key, const char *val);
+
+/**
+ * Store current file name
+ * @param htt IN instance
+ * @param name IN filename
+ */
+void htt_set_cur_file_name(htt_t *htt, const char *name);
+
+/**
+ * Store current file name
+ * @param htt IN instance
+ * @param name IN filename
+ */
+const char *htt_get_cur_file_name(htt_t *htt);
+
+/**
+ * Add command
+ * @param htt IN instance
+ * @param name IN command name
+ * @param type IN none | body
+ * @param function IN function called by interpreter
+ */
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
-                     htt_compile_f compile, htt_function_f function); 
-apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp); 
-apr_status_t htt_run(htt_t *htt); 
+                     htt_compile_f compile, htt_function_f function);
 
-#endif
+/**
+ * Interpret reading from given apr_file_t 
+ * @param htt IN instance
+ * @param fp IN apr file pointer
+ * @return apr status
+ */
+apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp);
+
+/**
+ * Run a compiled script
+ * @param htt IN
+ * @return apr status
+ */
+apr_status_t htt_run(htt_t *htt);
+
+ #endif

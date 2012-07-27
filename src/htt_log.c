@@ -37,13 +37,6 @@ struct htt_log_s {
   const char *prefix;
 };
 
-/**
- * Create a new log instance
- * @param pool IN
- * @param out IN file desc for stdout
- * @param err IN file desc for errout
- * @return htt log instance
- */
 htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err) {
   htt_log_t *log = apr_pcalloc(pool, sizeof(*log));
   log->pool = pool;
@@ -54,41 +47,19 @@ htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err) {
   return log;
 }
 
-/**
- * Set logger mode
- * @param log IN instance
- * @param mode IN 
- */
 void htt_log_set_mode(htt_log_t *log, int mode) {
   log->prev_mode = log->mode;
   log->mode = mode;
 }
 
-/**
- * Unset logger mode, take the old value
- * @param log IN instance
- * @param mode IN 
- */
 void htt_log_unset_mode(htt_log_t *log, int mode) {
   log->mode = log->prev_mode;
 }
 
-/**
- * Log formated text
- * @param log IN instance
- * @param prefix IN prefix i.e. spaces
- */
 void htt_log_set_prefix(htt_log_t *log, const char *prefix) {
   log->prefix = apr_pstrdup(log->pool, prefix);
 }
 
-/**
- * Log formated text
- * @param log IN instance
- * @param mode IN log mode
- * @param fmt IN format
- * @param ... IN format parameters
- */
 void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
   if (log->mode >= mode) {
     char *tmp;
@@ -110,14 +81,6 @@ void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
   }
 }
 
-/**
- * Log formated buffer
- * @param log IN instance
- * @param mode IN log mode
- * @param buf IN buffer to log
- * @param len IN buffer len to log 
- * @param prefix IN for input/output buffer
- */
 void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len, 
                  char *prefix) {
   if (log->mode >= mode) {
@@ -208,35 +171,13 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
   }
 }
 
-/**
- * Log formated output buffer
- * @param log IN instance
- * @param mode IN log mode
- * @param buf IN buffer to log
- * @param len IN buffer len to log 
- */
 void htt_log_outbuf(htt_log_t *log, int mode, const char *buf, int len) {
   htt_log_buf(log, mode, buf, len, ">");
 }
 
-/**
- * Log formated input buffer
- * @param log IN instance
- * @param mode IN log mode
- * @param buf IN buffer to log
- * @param len IN buffer len to log 
- */
 void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len) {
   htt_log_buf(log, mode, buf, len, "<");
 }
-
-/**
- * Log error
- * @param log IN instance
- * @param position IN file and line
- * @param fmt IN format
- * @param ... IN format parameters
- */
 
 void htt_log_error(htt_log_t *log, apr_status_t status, const char *file, 
                    int pos, const char *fmt, ...) {

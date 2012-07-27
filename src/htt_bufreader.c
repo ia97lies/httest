@@ -57,22 +57,20 @@ struct htt_bufreader_s {
  * Forward declaration 
  ***********************************************************************/
 
+/**
+ * Fill up buffer with data from file 
+ *
+ * @param self IN htt_bufreader object
+ *
+ * @return an apr status
+ */
 static apr_status_t htt_bufreader_fill(htt_bufreader_t * self); 
 
 
 /************************************************************************
- * Implementation
+ * Public
  ***********************************************************************/
 
-/**
- * New htt_bufreader object 
- *
- * @param self OUT htt_bufreader object
- * @param fp IN an open file to read
- * @param p IN pool
- *
- * @return an apr status
- */
 htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp) {
   apr_allocator_t *allocator;
   htt_bufreader_t *bufreader;
@@ -90,14 +88,6 @@ htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp) {
   return bufreader;
 }
 
-/**
- * read line from file 
- *
- * @param self IN htt_bufreader object
- * @param line OUT read line
- *
- * @return an apr status
- */
 apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
   char c;
   apr_size_t i;
@@ -138,15 +128,6 @@ apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
   return status;
 }
 
-/**
- * Read specifed block
- *
- * @param self IN htt_bufreader object
- * @param block IN a block to fill up
- * @param length INOUT length of block, on return length of filled bytes
- *
- * @return APR_SUCCESS else APR error
- */
 apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
                                   apr_size_t *length) {
   apr_status_t status;
@@ -182,15 +163,6 @@ apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
   return status;
 }
 
-/**
- * eof reader
- *
- * @param self IN htt_bufreader object
- * @param buf OUT data 
- * @param len OUT data len
- *
- * @return APR_SUCCESS else an APR error
- */
 apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
                                 char **buf, apr_size_t *len) {
   char *read;
@@ -225,13 +197,11 @@ apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
   }  
 }
 
-/**
- * Fill up buffer with data from file 
- *
- * @param self IN htt_bufreader object
- *
- * @return an apr status
- */
+
+/************************************************************************
+ * Private
+ ***********************************************************************/
+
 static apr_status_t htt_bufreader_fill(htt_bufreader_t * self) {
   self->i = 0;
   self->len = BLOCK_MAX;

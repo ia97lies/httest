@@ -24,12 +24,14 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include "htt_store.h"
 #include "htt_worker.h"
 
 struct htt_worker_s {
   apr_pool_t *pool;
   htt_worker_t *parent;
   htt_log_t *log;
+  htt_store_t *vars;
   apr_hash_t *config;
 }; 
 
@@ -47,6 +49,7 @@ htt_worker_t *htt_worker_new(htt_worker_t *parent, htt_log_t *log) {
   worker->pool = pool;
   worker->parent = parent;
   worker->log = log;
+  worker->vars = htt_store_new(pool);
   worker->config = apr_hash_make(pool);
   return worker;
 }
@@ -58,6 +61,20 @@ htt_worker_t *htt_worker_new(htt_worker_t *parent, htt_log_t *log) {
  */
 htt_worker_t *htt_worker_get_parent(htt_worker_t *worker) {
   return worker->parent;
+}
+
+/**
+ * Get godfather worker, mean the very first
+ * @param worker IN worker
+ * @return parent worker
+ */
+htt_worker_t *htt_worker_get_godfather(htt_worker_t *worker) {
+  htt_worker_t *cur = worker;
+
+  while (cur->parent) {
+    cur = cur->parent;
+  }
+  return cur;
 }
 
 /**
@@ -105,4 +122,14 @@ void  *htt_worker_get_config(htt_worker_t *worker, const char *name) {
 void htt_worker_destroy(htt_worker_t *worker) {
   apr_pool_destroy(worker->pool);
 }
+
+/**
+ * Return variable store
+ * @param worker IN worker
+ * @preturn variable store
+ */
+htt_store_t *htt_worker_get_vars(htt_worker_t *worker) {
+  return worker->vars;
+}
+
 

@@ -113,6 +113,13 @@ int htt_error = 0;
  * Private 
  ***********************************************************************/
 
+/**
+ * execute a compiled script 
+ * @param htt IN instance
+ * @param compiled IN compiled body
+ * @param worker IN worker for this body
+ * @return apr status
+ */
 static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
                                 htt_worker_t *worker) {
   apr_status_t status = APR_SUCCESS;
@@ -143,7 +150,6 @@ static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled,
 
   return APR_SUCCESS;
 }
-
 
 /**
  * Interpret reading from given bufreader 
@@ -195,16 +201,6 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
 }
 
 /**
- * Run a compiled script
- * @param htt IN
- * @return apr status
- */
-apr_status_t htt_run(htt_t *htt) {
-  htt_worker_t *worker = htt_worker_new(NULL, htt->log);
-  return htt_execute(htt, htt->compiled, worker);
-}
-
-/**
  * Compile function for include. Just open file and and interpret.
  * @param command IN command
  * @param htt IN instance
@@ -253,23 +249,11 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
  * Public 
  ***********************************************************************/
 
-/**
- * Echo function
- * @param worker IN worker
- * @return APR_SUCCESS
- */
 apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw) {
   htt_log(htt_worker_get_log(worker), HTT_LOG_NONE, "%s", raw);
   return APR_SUCCESS;
 }
 
-/**
- * Compiles a simple command 
- * @param htt IN instance
- * @param function IN commands function
- * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
- */
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
   htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
@@ -285,13 +269,6 @@ apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt,
   return APR_SUCCESS;
 }
 
-/**
- * Compiles a command with a body (if, loop, ...)
- * @param htt IN instance
- * @param function IN commands function
- * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
- */
 apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
   htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
@@ -313,9 +290,6 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt,
   return APR_SUCCESS;
 }
 
-/**
- * verbose exit func
- */
 void htt_exit() {
   if (htt_error == 0) {
     fprintf(stdout, " OK\n");
@@ -331,37 +305,23 @@ void htt_exit() {
   }
 }
 
-/**
- * silent exit func
- */
 void htt_no_output_exit() {
 }
 
-/**
- * Throw error exception, terminate 
- */
 void htt_throw_error() {
   htt_error = 1;
   exit(1);
 }
 
-/**
- * Throw skip exception, terminate
- */
 void htt_throw_skip() {
   htt_error = 1;
   exit(1);
 }
 
-/**
- * Instanted a new interpreter
- * @param pool IN
- * @return new interpreter instance
- */
 htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
-  htt->defines = htt_store_make(pool);
+  htt->defines = htt_store_new(pool);
   htt->commands = apr_hash_make(pool);
   htt->stack = htt_stack_new(pool);
   htt->compiled = apr_pcalloc(pool, sizeof(htt_compiled_t));
@@ -379,53 +339,23 @@ htt_t *htt_new(apr_pool_t *pool) {
   return htt;
 }
 
-/**
- * Set log file handles
- * @param htt IN instance
- * @param std IN standard out
- * @param err IN error out
- * @param mode IN log mode
- */
 void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
   htt->log = htt_log_new(htt->pool, std, err);
   htt_log_set_mode(htt->log, mode);
 }
 
-/**
- * Set values to pass to interpreter
- * @param htt IN instance
- * @param key IN key
- * @param val IN value
- */
 void htt_add_value(htt_t *htt, const char *key, const char *val) {
   htt_store_set(htt->defines, key, val);
 }
 
-/**
- * Store current file name
- * @param htt IN instance
- * @param name IN filename
- */
 void htt_set_cur_file_name(htt_t *htt, const char *name) {
   htt->cur_file = name;
 }
 
-/**
- * Store current file name
- * @param htt IN instance
- * @param name IN filename
- */
 const char *htt_get_cur_file_name(htt_t *htt) {
   return htt->cur_file;
 }
 
-/**
- * Add command
- * @param htt IN instance
- * @param name IN command name
- * @param type IN none | body
- * @param function IN function called by interpreter
- */
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
                      htt_compile_f compile, htt_function_f function) {
@@ -439,14 +369,13 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
 }
 
-/**
- * Interpret reading from given apr_file_t 
- * @param htt IN instance
- * @param fp IN apr file pointer
- * @return apr status
- */
 apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
   htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
   return htt_compile(htt, bufreader);
+}
+
+apr_status_t htt_run(htt_t *htt) {
+  htt_worker_t *worker = htt_worker_new(NULL, htt->log);
+  return htt_execute(htt, htt->compiled, worker);
 }
 

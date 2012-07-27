@@ -30,14 +30,73 @@
 
 typedef struct htt_store_s htt_store_t;
 
-htt_store_t *htt_store_make(apr_pool_t *pool);
+/**
+ * Create store for reusable entries without memory loss
+ * @param pool IN pool to alloc this store
+ * @return store
+ */
+htt_store_t *htt_store_new(apr_pool_t *pool);
+
+/**
+ * Get value from store
+ * @param store IN store hook
+ * @param name IN key
+ * @return value
+ */
 const char *htt_store_get(htt_store_t *store, const char *name);
+
+/**
+ * Gets a copy of value from store
+ * @param store IN store hook
+ * @param pool IN pool for value allocation
+ * @param name IN key
+ * @return value copy from your pool
+ */
 char *htt_store_get_copy(htt_store_t *store, apr_pool_t *pool, const char *name);
+
+/**
+ * Set name value, if allready exist delete old name value and reset them.
+ * @param store IN store hook
+ * @param name IN key
+ * @param value IN
+ */
 void htt_store_set(htt_store_t *store, const char *name, const char *value);
+
+/**
+ * Unset name value.
+ * @param store IN store hook
+ * @param name IN key
+ */
 void htt_store_unset(htt_store_t *store, const char *name);
-void htt_store_merge(htt_store_t *store, htt_store_t *other); 
-apr_size_t htt_store_get_size(htt_store_t *store); 
+
+/**
+ * Merge a foregin store into my store.
+ * @param store IN store hook
+ * @param other IN foreign store hook
+ */
+void htt_store_merge(htt_store_t *store, htt_store_t *other);
+
+/**
+ * Get number of key/values.
+ * @param store IN store hook
+ * @return count
+ */
+apr_size_t htt_store_get_size(htt_store_t *store);
+
+/**
+ * Copy store
+ * @param store IN store hook
+ * @param pool IN pool for new store 
+ * @return new store
+ */
 htt_store_t *htt_store_copy(htt_store_t *store, apr_pool_t *pool);
+
+/**
+ * Get table of key/values for iteration
+ * @param store IN store hook
+ * @param pool IN to allocate keys table
+ * @return table of key/values
+ */
 apr_table_t *htt_store_get_table(htt_store_t *store, apr_pool_t *pool);
 
 #endif

@@ -58,14 +58,14 @@ typedef struct htt_store_element_s {
  ***********************************************************************/
 
 /************************************************************************
- * Implementation
+ * Public 
  ***********************************************************************/
 /**
  * Create store for reusable entries without memory loss
  * @param pool IN pool to alloc this store
  * @return store
  */
-htt_store_t *htt_store_make(apr_pool_t *pool) {
+htt_store_t *htt_store_new(apr_pool_t *pool) {
   htt_store_t *store = apr_pcalloc(pool, sizeof(*store));
   store->pool = pool;
   store->hash = apr_hash_make(pool);
@@ -181,7 +181,7 @@ apr_size_t htt_store_get_size(htt_store_t *store) {
  * @return new store
  */
 htt_store_t *htt_store_copy(htt_store_t *store, apr_pool_t *pool) {
-  htt_store_t *copy = htt_store_make(pool);
+  htt_store_t *copy = htt_store_new(pool);
   htt_store_merge(copy, store);
   return copy;
 }

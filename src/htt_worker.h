@@ -26,16 +26,75 @@
 #define HTT_WORKER_H
 
 #include "htt_log.h"
+#include "htt_store.h"
 
 typedef struct htt_worker_s htt_worker_t;
 
+/**
+ * Create a new worker
+ * @param parent IN parent worker
+ * @param log IN log instance
+ * @return new worker object
+ */
 htt_worker_t *htt_worker_new(htt_worker_t *parent, htt_log_t *log);
+
+/**
+ * Get parent worker
+ * @param worker IN worker
+ * @return parent worker
+ */
 htt_worker_t *htt_worker_get_parent(htt_worker_t *worker);
-void htt_worker_set_config(htt_worker_t *worker, const char *key, void *data);
-void  *htt_worker_get_config(htt_worker_t *worker, const char *key);
+
+/**
+ * Get godfather worker, mean the very first
+ * @param worker IN worker
+ * @return parent worker
+ */
+htt_worker_t *htt_worker_get_godfather(htt_worker_t *worker);
+
+/**
+ * Worker get log
+ * @param worker IN worker
+ * @return log
+ */
 htt_log_t *htt_worker_get_log(htt_worker_t *worker);
+
+/**
+ * Worker get pool
+ * @param worker IN worker
+ * @return pool
+ */
 apr_pool_t *htt_worker_get_pool(htt_worker_t *worker);
+
+/**
+ * Set a named configuration to this worker
+ * @param worker IN worker
+ * @param name IN name for stored data
+ * @param data IN data to store
+ */
+void htt_worker_set_config(htt_worker_t *worker, const char *name, void *data);
+
+/**
+ * Get named configuraion form this worker
+ * @param worker IN worker
+ * @param name IN name for data
+ * @return data
+ */
+void  *htt_worker_get_config(htt_worker_t *worker, const char *name);
+
+/** 
+ * Destroy worker
+ * @param worker IN worker
+ */
 void htt_worker_destroy(htt_worker_t *worker);
+
+/**
+ * Return variable store
+ * @param worker IN worker
+ * @preturn variable store
+ */
+htt_store_t *htt_worker_get_vars(htt_worker_t *worker);
+
 
 #endif
 

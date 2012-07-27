@@ -27,9 +27,49 @@
 
 typedef struct htt_bufreader_s htt_bufreader_t;
 
+/**
+ * New htt_bufreader object 
+ *
+ * @param self OUT htt_bufreader object
+ * @param fp IN an open file to read
+ * @param p IN pool
+ *
+ * @return an apr status
+ */
 htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp);
-apr_status_t htt_bufreader_read_line(htt_bufreader_t * bufreader, char **line); 
-apr_status_t htt_bufreader_read_eof(htt_bufreader_t * bufreader, char **buf, 
-                                    apr_size_t *len); 
+
+/**
+ * read line from file 
+ *
+ * @param self IN htt_bufreader object
+ * @param line OUT read line
+ *
+ * @return an apr status
+ */
+apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line);
+
+/**
+ * Read specifed block
+ *
+ * @param self IN htt_bufreader object
+ * @param block IN a block to fill up
+ * @param length INOUT length of block, on return length of filled bytes
+ *
+ * @return APR_SUCCESS else APR error
+ */
+apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
+                                  apr_size_t *length);
+
+/**
+ * eof reader
+ *
+ * @param self IN htt_bufreader object
+ * @param buf OUT data 
+ * @param len OUT data len
+ *
+ * @return APR_SUCCESS else an APR error
+ */
+apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
+                                char **buf, apr_size_t *len);
 
 #endif

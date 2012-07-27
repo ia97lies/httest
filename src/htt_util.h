@@ -63,11 +63,70 @@
 # define ntoh64(x) (x)
 #endif
 
-char *htt_unescape(char *string, char **last); 
-char *htt_status_str(apr_pool_t * p, apr_status_t rc); 
-void htt_copyright(const char *progname); 
-char htt_x2c(const char *what); 
-void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool); 
-apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out, 
-                                  apr_pool_t *pool, int with_quotes);
+/**
+ * This function is taken from apr. The apr_tokenize_to_argv do remove
+ * all leftover "\", but this breaks up my httest completly.
+ *
+ * @param pool IN Context from which pool allocations will occur.
+ * @arg_str IN Input argument string for conversion to argv[].
+ * @argv_out IN Output location. This is a pointer to an array
+ *              of pointers to strings (ie. &(char *argv[]).
+ *              This value will be allocated from the contexts
+ *              pool and filled in with copies of the tokens
+ *              found during parsing of the arg_str. 
+ * @param with_quotes IN do not strip quotes from quoted string
+ *
+ * @return SUCCESS
+ */
+apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
+                                 apr_pool_t *pool, int with_quotes);
+
+/**
+ * @deprecitated: should do everything with new htt_get_args
+ * get a string starting/ending with a char, unescape this char if found as an 
+ * escape sequence.
+ *
+ * @param string IN <char><string with escaped <char>><char>
+ * @param last OUT pointer to next char after cutted string
+ *
+ * @return <string with unescaped <char>>
+ * @note: Example: "foo bar \"hallo velo\"" -> foo bar "hallo velo"
+ */
+char *htt_unescape(char *string, char **last);
+
+/**
+ * get the status string
+ *
+ * @param p IN pool
+ * @param rc IN status to print
+ *
+ * @return status string
+ */
+char *htt_status_str(apr_pool_t * p, apr_status_t rc);
+
+
+/**
+ * splits arguments into a table
+ *
+ * @param line IN string of params
+ * @param params INOUT table to store params
+ */
+void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool);
+
+/**
+ * display copyright information
+ *
+ * @param program name
+ */
+void htt_copyright(const char *progname);
+
+/**
+ * 2 hex digit number to char borowed from apache sourc
+ *
+ * @param what IN hex to convert
+ *
+ * @return char
+ */
+char htt_x2c(const char *what);
+
 #endif
