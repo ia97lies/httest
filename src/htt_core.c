@@ -173,11 +173,10 @@ static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled,
                                                   htt_worker_get_log(worker));
       status = htt_execute(htt, exec, child_worker);
       htt_log(htt->log, HTT_LOG_CMD, "%s:%d -> end", exec->file, exec->line);
-      return status;
     }
   }
 
-  return APR_SUCCESS;
+  return status;
 }
 
 static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
