@@ -138,6 +138,19 @@ static void usage(const char *progname) {
   fprintf(stdout, "\n");
 }
 
+/**
+ * display copyright information
+ *
+ * @param program name
+ */
+static void copyright(const char *progname) {
+  printf("%s " PACKAGE_VERSION "\n", progname);
+  printf("\nCopyright (C) 2006 Free Software Foundation, Inc.\n"
+         "This is free software; see the source for copying conditions.  There is NO\n"
+	 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
+  printf("\nWritten by Christian Liesch\n");
+}
+
 /************************************************************************
  * Main 
  ***********************************************************************/
@@ -196,7 +209,7 @@ int main(int argc, const char *const argv[]) {
       exit(0);
       break;
     case 'V':
-      htt_copyright("httest");
+      copyright("httest");
       exit(0);
       break;
     case 'n':

@@ -104,6 +104,42 @@ struct htt_s {
   htt_compiled_t *compiled;
 };
 
+/**
+ * execute a compiled script 
+ * @param htt IN instance
+ * @param compiled IN compiled body
+ * @param worker IN worker for this body
+ * @return apr status
+ */
+static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
+                                htt_worker_t *worker); 
+
+/**
+ * Interpret reading from given bufreader 
+ * @param htt IN instance
+ * @param fp IN apr file pointer
+ * @return apr status
+ */
+static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader); 
+
+/**
+ * Compile function for include. Just open file and and interpret.
+ * @param command IN command
+ * @param htt IN instance
+ * @param args IN argument string
+ */
+static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
+                                            char *args); 
+
+/**
+ * Get last body from stack
+ * @param command IN command
+ * @param htt IN instance
+ * @param args IN argument string
+ */
+static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
+                                        char *args); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -113,13 +149,6 @@ int htt_error = 0;
  * Private 
  ***********************************************************************/
 
-/**
- * execute a compiled script 
- * @param htt IN instance
- * @param compiled IN compiled body
- * @param worker IN worker for this body
- * @return apr status
- */
 static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
                                 htt_worker_t *worker) {
   apr_status_t status = APR_SUCCESS;
@@ -151,12 +180,6 @@ static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled,
   return APR_SUCCESS;
 }
 
-/**
- * Interpret reading from given bufreader 
- * @param htt IN instance
- * @param fp IN apr file pointer
- * @return apr status
- */
 static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
   char *line;
   apr_status_t status = APR_SUCCESS;
@@ -200,12 +223,6 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
   return APR_SUCCESS;
 }
 
-/**
- * Compile function for include. Just open file and and interpret.
- * @param command IN command
- * @param htt IN instance
- * @param args IN argument string
- */
 static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
                                             char *args) {
   apr_file_t *fp;
@@ -222,12 +239,6 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
   return htt_compile_fp(htt, fp);
 }
 
-/**
- * Get last body from stack
- * @param command IN command
- * @param htt IN instance
- * @param args IN argument string
- */
 static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
                                         char *args) {
   htt_stack_pop(htt->stack);

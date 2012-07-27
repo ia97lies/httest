@@ -49,21 +49,6 @@
  * Public 
  ***********************************************************************/
 
-/**
- * This function is taken from apr. The apr_tokenize_to_argv do remove
- * all leftover "\", but this breaks up my httest completly.
- *
- * @param pool IN Context from which pool allocations will occur.
- * @arg_str IN Input argument string for conversion to argv[].
- * @argv_out IN Output location. This is a pointer to an array
- *              of pointers to strings (ie. &(char *argv[]).
- *              This value will be allocated from the contexts
- *              pool and filled in with copies of the tokens
- *              found during parsing of the arg_str. 
- * @param with_quotes IN do not strip quotes from quoted string
- *
- * @return SUCCESS
- */
 apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
                                  apr_pool_t *pool, int with_quotes)
 {
@@ -149,77 +134,12 @@ apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
     return APR_SUCCESS;
 }
 
-/**
- * @deprecitated: should do everything with new htt_get_args
- * get a string starting/ending with a char, unescape this char if found as an 
- * escape sequence.
- *
- * @param string IN <char><string with escaped <char>><char>
- * @param last OUT pointer to next char after cutted string
- *
- * @return <string with unescaped <char>>
- * @note: Example: "foo bar \"hallo velo\"" -> foo bar "hallo velo"
- */
-char *htt_unescape(char *string, char **last) {
-  char *result;
-  char enclose;
-  apr_size_t i;
-  apr_size_t j;
-  apr_size_t len;
-
-  if (!string) {
-    return string;
-  }
-  
-  len = strlen(string);
-  
-  enclose = string[0];
-  result = string;
-  for (i = 1, j = 0; i < len; i++, j++) {
-    /* check if we have an escape char */
-    if (string[i] == '\\') {
-      /* lookahead */
-      ++i;
-      /* if lookahead is not \ or " store the \ too, else skip */
-      if (string[i] != '\\' && string[i] != enclose) {
-	result[j] = '\\';
-	++j;
-      }
-    }
-    /* break if we got the first char unescaped */
-    else if (string[i] == enclose) {
-      ++i;
-      break;
-    }
-    /* store char in result */
-    result[j] = string[i];
-  }
-  result[j] = 0;
-  *last = &string[i]; 
-  return result;
-}
-
-/**
- * get the status string
- *
- * @param p IN pool
- * @param rc IN status to print
- *
- * @return status string
- */
 char *htt_status_str(apr_pool_t * p, apr_status_t rc) {
   char *text = apr_pcalloc(p, 201);
   apr_strerror(rc, text, 200);
   return text;
 }
 
-
-/**
- * splits arguments into a table
- *
- * @param line IN string of params
- * @param params INOUT table to store params
- */
 void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool) {
   int i; 
   char **argv;
@@ -232,26 +152,6 @@ void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool) {
   }
 }
 
-/**
- * display copyright information
- *
- * @param program name
- */
-void htt_copyright(const char *progname) {
-  printf("%s " PACKAGE_VERSION "\n", progname);
-  printf("\nCopyright (C) 2006 Free Software Foundation, Inc.\n"
-         "This is free software; see the source for copying conditions.  There is NO\n"
-	 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
-  printf("\nWritten by Christian Liesch\n");
-}
-
-/**
- * 2 hex digit number to char borowed from apache sourc
- *
- * @param what IN hex to convert
- *
- * @return char
- */
 char htt_x2c(const char *what) {
   register char digit;
 

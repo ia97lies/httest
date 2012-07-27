@@ -82,19 +82,6 @@ apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
                                  apr_pool_t *pool, int with_quotes);
 
 /**
- * @deprecitated: should do everything with new htt_get_args
- * get a string starting/ending with a char, unescape this char if found as an 
- * escape sequence.
- *
- * @param string IN <char><string with escaped <char>><char>
- * @param last OUT pointer to next char after cutted string
- *
- * @return <string with unescaped <char>>
- * @note: Example: "foo bar \"hallo velo\"" -> foo bar "hallo velo"
- */
-char *htt_unescape(char *string, char **last);
-
-/**
  * get the status string
  *
  * @param p IN pool
