@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool util.
+ * Implementation of the HTTP Test Tool replacer.
  */
 
 /************************************************************************
@@ -31,8 +31,8 @@
 #include <apr_file_io.h>
 #include <apr_env.h>
 
-#include "defines.h"
-#include "replacer.h"
+#include "htt_defines.h"
+#include "htt_replacer.h"
 
 
 /************************************************************************
@@ -42,17 +42,24 @@
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
+/**
+ * Check if this is a function
+ * @param line IN line to replace stuff
+ * @param i IN position where to check function
+ * @return end of function
+ */
+static int htt_enhanced_function_detection(char *line, int i); 
 
 /************************************************************************
- * Implementation
+ * Private
  ***********************************************************************/
 
-static int my_enhanced_function_detection(char *line, int i) {
+static int htt_enhanced_function_detection(char *line, int i) {
   if (line[i] == '.') {
     int j = i;
     ++j;
-    if (strchr(VAR_ALLOWED_CHARS, line[j])) {
-      while (line[j] != 0 && strchr(VAR_ALLOWED_CHARS, line[j])) {
+    if (strchr(HTT_ALLOWED_CHARS, line[j])) {
+      while (line[j] != 0 && strchr(HTT_ALLOWED_CHARS, line[j])) {
 	++j;
       }
       if (line[j] == '(') {
@@ -77,6 +84,10 @@ static int my_enhanced_function_detection(char *line, int i) {
   return i;
 }
 
+/************************************************************************
+ * Public
+ ***********************************************************************/
+
 /**
  * replace vars and functions in given line 
  * @param p IN pool
@@ -85,7 +96,8 @@ static int my_enhanced_function_detection(char *line, int i) {
  * @param replacer IN replacer function
  * @return new line
  */
-char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
+char *htt_replacer(apr_pool_t * p, char *line, void *udata, 
+                   htt_replacer_f replace) {
   int i;
   int start;
   int line_end;
@@ -115,10 +127,10 @@ char *replacer(apr_pool_t * p, char *line, void *udata, replacer_f replace) {
       }
       else {
         start = i;
-        while (line[i] != 0 && strchr(VAR_ALLOWED_CHARS, line[i])) {
+        while (line[i] != 0 && strchr(HTT_ALLOWED_CHARS, line[i])) {
           ++i;
         }
-	i = my_enhanced_function_detection(line, i);
+	i = htt_enhanced_function_detection(line, i);
       }
       var_name = apr_pstrndup(p, &line[start], i - start);
       val = replace(udata, var_name);
