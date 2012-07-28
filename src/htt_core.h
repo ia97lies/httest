@@ -35,13 +35,6 @@ typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *p
 typedef apr_status_t(*htt_function_f)(htt_worker_t *worker, const char *raw);
 
 /**
- * Echo function
- * @param worker IN worker
- * @return APR_SUCCESS
- */
-apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw);
-
-/**
  * Compiles a simple command 
  * @param htt IN instance
  * @param function IN commands function

@@ -255,15 +255,14 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-/************************************************************************
- * Public 
- ***********************************************************************/
-
-apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw) {
+static apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw) {
   htt_log(htt_worker_get_log(worker), HTT_LOG_NONE, "%s", raw);
   return APR_SUCCESS;
 }
 
+/************************************************************************
+ * Public 
+ ***********************************************************************/
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
   htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
