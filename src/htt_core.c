@@ -67,6 +67,7 @@
 #include "htt_log.h"
 #include "htt_store.h"
 #include "htt_stack.h"
+#include "htt_executable.h"
 
 /************************************************************************
  * Defines 
@@ -85,16 +86,6 @@ struct htt_command_s {
   htt_cleanup_f cleanup;
 };
 
-typedef struct htt_compiled_s {
-  const char *name;
-  const char *file;
-  int line;
-  htt_function_f function;
-  htt_cleanup_f cleanup;
-  const char *args;
-  apr_table_t *body;
-} htt_compiled_t;
-
 struct htt_s {
   apr_pool_t *pool;
   htt_store_t *defines;
@@ -103,18 +94,8 @@ struct htt_s {
   int cur_line;
   apr_hash_t *commands;
   htt_stack_t *stack;
-  htt_compiled_t *compiled;
+  htt_executable_t *executable;
 };
-
-/**
- * execute a compiled script 
- * @param htt IN instance
- * @param compiled IN compiled body
- * @param worker IN worker for this body
- * @return apr status
- */
-static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
-                                htt_worker_t *worker); 
 
 /**
  * Interpret reading from given bufreader 
@@ -150,36 +131,6 @@ int htt_error = 0;
 /************************************************************************
  * Private 
  ***********************************************************************/
-
-static apr_status_t htt_execute(htt_t *htt, htt_compiled_t *compiled, 
-                                htt_worker_t *worker) {
-  apr_status_t status = APR_SUCCESS;
-  int i;
-  apr_table_entry_t *e;
-  htt_compiled_t *exec;
-
-  e = (apr_table_entry_t *) apr_table_elts(compiled->body)->elts;
-  for (i = 0; 
-       status == APR_SUCCESS && 
-       i < apr_table_elts(compiled->body)->nelts; 
-       ++i) {
-    int doit = 1;
-    exec = (htt_compiled_t *)e[i].val;
-    htt_log(htt->log, HTT_LOG_CMD, "%s:%d -> %s %s", exec->file, exec->line, 
-            exec->name, exec->args);
-    if (exec->function) {
-      status = exec->function(worker, exec->args); 
-    }
-    if (exec->body && doit) {
-      htt_worker_t *child_worker = htt_worker_new(worker, 
-                                                  htt_worker_get_log(worker));
-      status = htt_execute(htt, exec, child_worker);
-      htt_log(htt->log, HTT_LOG_CMD, "%s:%d -> end", exec->file, exec->line);
-    }
-  }
-
-  return status;
-}
 
 static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
   char *line;
@@ -217,8 +168,9 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
 
   if (htt_stack_elems(htt->stack) != 0) {
     htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
-                  "Unclosed body on line %s:%d", htt->compiled->file, 
-                  htt->compiled->line);
+                  "Unclosed body on line %s:%d", 
+                  htt_executable_get_file(htt->executable), 
+                  htt_executable_get_line(htt->executable));
     htt_throw_error();
   }
   return APR_SUCCESS;
@@ -243,10 +195,8 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
                                         char *args) {
   htt_stack_pop(htt->stack);
-  htt->compiled = htt_stack_top(htt->stack);
-  htt_log(htt->log, HTT_LOG_DEBUG, "pop compiled %x with body %x",
-          htt->compiled, htt->compiled->body);
-  if (htt->compiled && htt_stack_elems(htt->stack) >= 0) {
+  htt->executable = htt_stack_top(htt->stack);
+  if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
     return APR_SUCCESS;
   }
   else {
@@ -263,20 +213,15 @@ static apr_status_t htt_cmd_echo_function(htt_worker_t *worker,
   return APR_SUCCESS;
 }
 
-static htt_compiled_t *htt_cmd_compile(htt_command_t *command, htt_t* htt,
+static htt_executable_t *htt_cmd_compile(htt_command_t *command, htt_t* htt,
                                        char *args) {
-  htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
-  compiled->name = command->name;
-  compiled->function = command->function;
-  compiled->cleanup = command->cleanup;
-  compiled->args = args;
-  compiled->file = htt->cur_file;
-  compiled->line = htt->cur_line;
-  apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
-                 (void *)compiled);
-  htt_log(htt->log, HTT_LOG_DEBUG, "add %s: compiled %x into body %x",
-          htt->compiled, htt->compiled->body);
-  return compiled;
+  htt_executable_t *executable;
+
+  executable = htt_executable_new(htt->pool, command->name, command->function, 
+                                  command->cleanup, args, htt->cur_file, 
+                                  htt->cur_line);
+  htt_executable_add(htt->executable, executable);
+  return executable;
 }
 
 /************************************************************************
@@ -284,18 +229,15 @@ static htt_compiled_t *htt_cmd_compile(htt_command_t *command, htt_t* htt,
  ***********************************************************************/
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  htt_compiled_t *compiled = htt_cmd_compile(command, htt, args);
+  htt_cmd_compile(command, htt, args);
   return APR_SUCCESS;
 }
 
 apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  htt_compiled_t *compiled = htt_cmd_compile(command, htt, args);
-  htt_stack_push(htt->stack, compiled);
-  compiled->body = apr_table_make(htt->pool, 20);
-  htt->compiled = compiled;
-  htt_log(htt->log, HTT_LOG_DEBUG, "push compiled %x with body %x",
-          htt->compiled, htt->compiled->body);
+  htt_executable_t *executable = htt_cmd_compile(command, htt, args);
+  htt_stack_push(htt->stack, executable);
+  htt->executable = executable;
   return APR_SUCCESS;
 }
 
@@ -333,9 +275,9 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->defines = htt_store_new(pool);
   htt->commands = apr_hash_make(pool);
   htt->stack = htt_stack_new(pool);
-  htt->compiled = apr_pcalloc(pool, sizeof(htt_compiled_t));
-  htt_stack_push(htt->stack, htt->compiled);
-  htt->compiled->body = apr_table_make(pool, 20);
+  htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
+                                       NULL, NULL, NULL, 0);
+  htt_stack_push(htt->stack, htt->executable);
 
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
                   htt_cmd_include_compile, NULL, NULL);
@@ -387,6 +329,6 @@ apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
 
 apr_status_t htt_run(htt_t *htt) {
   htt_worker_t *worker = htt_worker_new(NULL, htt->log);
-  return htt_execute(htt, htt->compiled, worker);
+  return htt_execute(htt->executable, worker);
 }
 
