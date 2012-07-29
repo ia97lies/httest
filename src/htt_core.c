@@ -65,7 +65,6 @@
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
-#include "htt_store.h"
 #include "htt_stack.h"
 #include "htt_executable.h"
 
@@ -87,7 +86,6 @@ struct htt_command_s {
 
 struct htt_s {
   apr_pool_t *pool;
-  htt_store_t *defines;
   htt_log_t *log;
   const char *cur_file;
   int cur_line;
@@ -212,28 +210,26 @@ static apr_status_t htt_cmd_echo_function(htt_context_t *context,
   return APR_SUCCESS;
 }
 
-static htt_executable_t *htt_cmd_compile(htt_command_t *command, htt_t* htt,
-                                       char *args) {
-  htt_executable_t *executable;
-
-  executable = htt_executable_new(htt->pool, command->name, command->function, 
-                                  args, htt->cur_file, htt->cur_line);
-  htt_executable_add(htt->executable, executable);
-  return executable;
-}
-
 /************************************************************************
  * Public 
  ***********************************************************************/
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  htt_cmd_compile(command, htt, args);
+  htt_executable_t *executable;
+
+  executable = htt_executable_new(htt->pool, command->name, command->function, 
+                                  args, htt->cur_file, htt->cur_line);
+  htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
 }
 
 apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  htt_executable_t *executable = htt_cmd_compile(command, htt, args);
+  htt_executable_t *executable;
+
+  executable = htt_executable_new(htt->pool, command->name, command->function, 
+                                  args, htt->cur_file, htt->cur_line);
+  htt_executable_add(htt->executable, executable);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
   return APR_SUCCESS;
@@ -270,7 +266,6 @@ void htt_throw_skip() {
 htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
-  htt->defines = htt_store_new(pool);
   htt->commands = apr_hash_make(pool);
   htt->stack = htt_stack_new(pool);
   htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
@@ -294,7 +289,6 @@ void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
 }
 
 void htt_add_value(htt_t *htt, const char *key, const char *val) {
-  htt_store_set(htt->defines, key, val);
 }
 
 void htt_set_cur_file_name(htt_t *htt, const char *name) {

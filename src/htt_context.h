@@ -26,7 +26,6 @@
 #define HTT_CONTEXT_H
 
 #include "htt_log.h"
-#include "htt_store.h"
 
 typedef struct htt_context_s htt_context_t;
 
@@ -87,14 +86,6 @@ void  *htt_context_get_config(htt_context_t *context, const char *name);
  * @param context IN context
  */
 void htt_context_destroy(htt_context_t *context);
-
-/**
- * Return variable store
- * @param context IN context
- * @preturn variable store
- */
-htt_store_t *htt_context_get_vars(htt_context_t *context);
-
 
 #endif
 

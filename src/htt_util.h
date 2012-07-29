@@ -25,8 +25,6 @@
 #ifndef HTT_UTIL_H
 #define HTT_UTIL_H
 
-#include "htt_store.h"
-
 #define swap16(x) \
   ((((x) & 0x00ffU) << 8)| \
    (((x) & 0xff00U) >> 8))
@@ -91,21 +89,6 @@ apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
  */
 char *htt_status_str(apr_pool_t * p, apr_status_t rc);
 
-
-/**
- * splits arguments into a table
- *
- * @param line IN string of params
- * @param params INOUT table to store params
- */
-void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool);
-
-/**
- * display copyright information
- *
- * @param program name
- */
-void htt_copyright(const char *progname);
 
 /**
  * 2 hex digit number to char borowed from apache sourc

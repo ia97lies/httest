@@ -37,8 +37,8 @@ typedef struct htt_function_s htt_function_t;
  * @param value IN function to hold in this function variable
  * @return function instance 
  */
-htt_store_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
-                              htt_context_t *context);
+htt_function_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
+                                 htt_context_t *context);
 
 /**
  * Update function 

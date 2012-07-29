@@ -49,7 +49,7 @@ struct htt_function_s {
 /************************************************************************
  * Public 
  ***********************************************************************/
-htt_store_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
+htt_function_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
                               htt_context_t *context) {
   return NULL;
 }

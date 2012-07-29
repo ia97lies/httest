@@ -24,14 +24,12 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include "htt_store.h"
 #include "htt_context.h"
 
 struct htt_context_s {
   apr_pool_t *pool;
   htt_context_t *parent;
   htt_log_t *log;
-  htt_store_t *vars;
   apr_hash_t *config;
 }; 
 
@@ -49,7 +47,6 @@ htt_context_t *htt_context_new(htt_context_t *parent, htt_log_t *log) {
   context->pool = pool;
   context->parent = parent;
   context->log = log;
-  context->vars = htt_store_new(pool);
   context->config = apr_hash_make(pool);
   return context;
 }
@@ -121,15 +118,6 @@ void  *htt_context_get_config(htt_context_t *context, const char *name) {
  */
 void htt_context_destroy(htt_context_t *context) {
   apr_pool_destroy(context->pool);
-}
-
-/**
- * Return variable store
- * @param context IN context
- * @preturn variable store
- */
-htt_store_t *htt_context_get_vars(htt_context_t *context) {
-  return context->vars;
 }
 
 

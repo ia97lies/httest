@@ -140,18 +140,6 @@ char *htt_status_str(apr_pool_t * p, apr_status_t rc) {
   return text;
 }
 
-void htt_get_args(char *line, htt_store_t *params, apr_pool_t *pool) {
-  int i; 
-  char **argv;
-
-  if (htt_tokenize_to_argv(line, &argv, pool, 0) == APR_SUCCESS) {
-    for (i = 0; argv[i] != NULL; i++) {
-      /* store value by his index */
-      htt_store_set(params, apr_itoa(pool, i), argv[i]);
-    }
-  }
-}
-
 char htt_x2c(const char *what) {
   register char digit;
 
