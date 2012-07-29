@@ -25,6 +25,8 @@
 #ifndef HTT_EXECUTABLE_H
 #define HTT_EXECUTABLE_H
 
+#include "htt_core.h"
+
 typedef struct htt_executable_s htt_executable_t;
 
 /**
