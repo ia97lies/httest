@@ -39,8 +39,7 @@ typedef struct htt_executable_s htt_executable_t;
  * @return executable
  */
 htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
-                                     htt_function_f function,
-                                     htt_cleanup_f cleanup, char *args, 
+                                     htt_function_f function, char *args, 
                                      const char *file, int line);
 
 /**

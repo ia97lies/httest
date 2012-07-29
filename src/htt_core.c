@@ -83,7 +83,6 @@ struct htt_command_s {
   const char *desc;
   htt_compile_f compile;
   htt_function_f function;
-  htt_cleanup_f cleanup;
 };
 
 struct htt_s {
@@ -218,8 +217,7 @@ static htt_executable_t *htt_cmd_compile(htt_command_t *command, htt_t* htt,
   htt_executable_t *executable;
 
   executable = htt_executable_new(htt->pool, command->name, command->function, 
-                                  command->cleanup, args, htt->cur_file, 
-                                  htt->cur_line);
+                                  args, htt->cur_file, htt->cur_line);
   htt_executable_add(htt->executable, executable);
   return executable;
 }
@@ -276,17 +274,17 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->commands = apr_hash_make(pool);
   htt->stack = htt_stack_new(pool);
   htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
-                                       NULL, NULL, NULL, 0);
+                                       NULL, NULL, 0);
   htt_stack_push(htt->stack, htt->executable);
 
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
-                  htt_cmd_include_compile, NULL, NULL);
+                  htt_cmd_include_compile, NULL);
   htt_add_command(htt, "end", "", "", "end a open body", 
-                  htt_cmd_end_compile, NULL, NULL);
+                  htt_cmd_end_compile, NULL);
   htt_add_command(htt, "echo", "string", "<string>", "echo a string", 
-                  htt_cmd_line_compile, htt_cmd_echo_function, NULL);
+                  htt_cmd_line_compile, htt_cmd_echo_function);
   htt_add_command(htt, "body", "", "", "open a new body",
-                  htt_cmd_body_compile, NULL, NULL);
+                  htt_cmd_body_compile, NULL);
   return htt;
 }
 
@@ -309,8 +307,7 @@ const char *htt_get_cur_file_name(htt_t *htt) {
 
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
-                     htt_compile_f compile, htt_function_f function,
-                     htt_cleanup_f cleanup) {
+                     htt_compile_f compile, htt_function_f function) {
   htt_command_t *command = apr_pcalloc(htt->pool, sizeof(*command));
   command->name = name;
   command->signature = signature;
@@ -318,7 +315,6 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command->desc = desc;
   command->compile = compile;
   command->function = function;
-  command->cleanup = cleanup;
   apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
 }
 

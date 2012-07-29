@@ -49,7 +49,6 @@ struct htt_executable_s {
   const char *file;
   int line;
   htt_function_f function;
-  htt_cleanup_f cleanup;
   const char *args;
   apr_table_t *body;
 };
@@ -63,14 +62,12 @@ struct htt_executable_s {
  ***********************************************************************/
 
 htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
-                                     htt_function_f function,
-                                     htt_cleanup_f cleanup, char *args, 
+                                     htt_function_f function, char *args, 
                                      const char *file, int line) {
   htt_executable_t *executable = apr_pcalloc(pool, sizeof(*executable));
   executable->pool = pool;
   executable->name = name;
   executable->function = function;
-  executable->cleanup = cleanup;
   executable->args = args;
   executable->file = file;
   executable->line = line;
