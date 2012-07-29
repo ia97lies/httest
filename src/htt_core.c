@@ -82,6 +82,7 @@ struct htt_command_s {
   const char *desc;
   htt_compile_f compile;
   htt_function_f function;
+  htt_cleanup_f cleanup;
 };
 
 typedef struct htt_compiled_s {
@@ -89,6 +90,7 @@ typedef struct htt_compiled_s {
   const char *file;
   int line;
   htt_function_f function;
+  htt_cleanup_f cleanup;
   const char *args;
   apr_table_t *body;
 } htt_compiled_t;
@@ -242,7 +244,7 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
                                         char *args) {
   htt_stack_pop(htt->stack);
   htt->compiled = htt_stack_top(htt->stack);
-  htt_log(htt->log, HTT_LOG_DEBUG, "pop stack, compiled %x, compiled->body %x",
+  htt_log(htt->log, HTT_LOG_DEBUG, "pop compiled %x with body %x",
           htt->compiled, htt->compiled->body);
   if (htt->compiled && htt_stack_elems(htt->stack) >= 0) {
     return APR_SUCCESS;
@@ -255,9 +257,26 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-static apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw) {
+static apr_status_t htt_cmd_echo_function(htt_worker_t *worker, 
+                                          const char *raw) {
   htt_log(htt_worker_get_log(worker), HTT_LOG_NONE, "%s", raw);
   return APR_SUCCESS;
+}
+
+static htt_compiled_t *htt_cmd_compile(htt_command_t *command, htt_t* htt,
+                                       char *args) {
+  htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
+  compiled->name = command->name;
+  compiled->function = command->function;
+  compiled->cleanup = command->cleanup;
+  compiled->args = args;
+  compiled->file = htt->cur_file;
+  compiled->line = htt->cur_line;
+  apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
+                 (void *)compiled);
+  htt_log(htt->log, HTT_LOG_DEBUG, "add %s: compiled %x into body %x",
+          htt->compiled, htt->compiled->body);
+  return compiled;
 }
 
 /************************************************************************
@@ -265,36 +284,17 @@ static apr_status_t htt_cmd_echo_function(htt_worker_t *worker, const char *raw)
  ***********************************************************************/
 apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
-  compiled->name = command->name;
-  compiled->function = command->function;
-  compiled->args = args;
-  compiled->file = htt->cur_file;
-  compiled->line = htt->cur_line;
-  apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
-                 (void *)compiled);
-  htt_log(htt->log, HTT_LOG_DEBUG, "add line compiled %x, compiled->body %x",
-          htt->compiled, htt->compiled->body);
+  htt_compiled_t *compiled = htt_cmd_compile(command, htt, args);
   return APR_SUCCESS;
 }
 
 apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
                                   char *args) {
-  htt_compiled_t *compiled = apr_pcalloc(htt->pool, sizeof(*compiled));
+  htt_compiled_t *compiled = htt_cmd_compile(command, htt, args);
   htt_stack_push(htt->stack, compiled);
-  compiled->name = command->name;
-  compiled->function = command->function;
-  compiled->args = args;
-  compiled->file = htt->cur_file;
-  compiled->line = htt->cur_line;
   compiled->body = apr_table_make(htt->pool, 20);
-  apr_table_addn(htt->compiled->body, apr_pstrdup(htt->pool, ""), 
-                 (void *)compiled);
-  /* replace htt->compiled with the new one */
-  htt_log(htt->log, HTT_LOG_DEBUG, "add body compiled %x, compiled->body %x",
-          htt->compiled, htt->compiled->body);
   htt->compiled = compiled;
-  htt_log(htt->log, HTT_LOG_DEBUG, "push stack compiled %x, compiled->body %x",
+  htt_log(htt->log, HTT_LOG_DEBUG, "push compiled %x with body %x",
           htt->compiled, htt->compiled->body);
   return APR_SUCCESS;
 }
@@ -338,13 +338,13 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->compiled->body = apr_table_make(pool, 20);
 
   htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
-                  htt_cmd_include_compile, NULL);
+                  htt_cmd_include_compile, NULL, NULL);
   htt_add_command(htt, "end", "", "", "end a open body", 
-                  htt_cmd_end_compile, NULL);
+                  htt_cmd_end_compile, NULL, NULL);
   htt_add_command(htt, "echo", "string", "<string>", "echo a string", 
-                  htt_cmd_line_compile, htt_cmd_echo_function);
+                  htt_cmd_line_compile, htt_cmd_echo_function, NULL);
   htt_add_command(htt, "body", "", "", "open a new body",
-                  htt_cmd_body_compile, NULL);
+                  htt_cmd_body_compile, NULL, NULL);
   return htt;
 }
 
@@ -367,7 +367,8 @@ const char *htt_get_cur_file_name(htt_t *htt) {
 
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
-                     htt_compile_f compile, htt_function_f function) {
+                     htt_compile_f compile, htt_function_f function,
+                     htt_cleanup_f cleanup) {
   htt_command_t *command = apr_pcalloc(htt->pool, sizeof(*command));
   command->name = name;
   command->signature = signature;
@@ -375,6 +376,7 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command->desc = desc;
   command->compile = compile;
   command->function = function;
+  command->cleanup = cleanup;
   apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
 }
 

@@ -33,6 +33,7 @@ typedef struct htt_command_s htt_command_t;
 
 typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *params);
 typedef apr_status_t(*htt_function_f)(htt_worker_t *worker, const char *raw);
+typedef apr_status_t(*htt_cleanup_f)(htt_worker_t *worker);
 
 /**
  * Compiles a simple command 
@@ -121,7 +122,8 @@ const char *htt_get_cur_file_name(htt_t *htt);
  */
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
-                     htt_compile_f compile, htt_function_f function);
+                     htt_compile_f compile, htt_function_f function,
+                     htt_cleanup_f);
 
 /**
  * Interpret reading from given apr_file_t 
