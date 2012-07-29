@@ -67,10 +67,10 @@ void htt_executable_add(htt_executable_t *executable,
 /**
  * Execute an executable
  * @param executable IN 
- * @param worker IN executable context
+ * @param context IN executable context
  * @return apr status
  */
-apr_status_t htt_execute(htt_executable_t *executable, htt_worker_t *worker); 
+apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context); 
 
 
 #endif

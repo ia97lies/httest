@@ -6,41 +6,39 @@
 ++ Simplify
 - Syntax lower case
 - Remove underscores before local commands
-- No brakets and stuff, keep the test simple and readable
+- No brakets and stuff keep the syntax clean and simple
 
 ++ Performance
-- Design parser with a precompile step to increase script performance
+- Design parser with a compile step to increase script performance
 - Command lookup O(1)
 
 ++ Architecture
 - Still want modules
-- Very small core
+- Small core
 
-+++ Parser Object
-- htt_object
-  - name
-- htt_command -> htt_object
-  - interpreter
-  - list of htt_command
-- htt_thread -> htt_command
-  - thread context
-  - list of htt->thread
+++ Structure
+- Composite
+  - line, body of lines 
+  - An executable do hold variables and other executables
+  - to execute a executable a context is needed
+- Variables
+  - Strings
+  - Function is a executable with its context
 
-+++ Narrative
-- Global context is same as thread context
-- Compile step lookup commands and translate into faster format (a tree)
-- On compilation all thread, function, ... will be created
-- Global starts interpret
-- Global starts all clients/servers/deamons/... and wait on it
-- client/server/... do start interpret
-- client/server/... can also start threads and wait on it
-- bodies can contain other bodies
-
-++ Samples
-+++ First
+++ Sample
 function foo a b c : d e
-  debug a b c
+  echo a b c
   return "bla" "bli" 
+end
+
+function foo i
+  local j = i
+  function count
+    incr j 2
+    return j
+  end
+
+  return count
 end
 
 client
@@ -52,10 +50,14 @@ client
   wait
 
   if $foo =~ foo.*
-    debug bla
+    echo bla
   else
-    debug bli
+    echo bli
   end
+
+  foo 100 counter
+  counter result
+  echo $result
 end
 
 server 8080

@@ -206,9 +206,9 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-static apr_status_t htt_cmd_echo_function(htt_worker_t *worker, 
+static apr_status_t htt_cmd_echo_function(htt_context_t *context, 
                                           const char *raw) {
-  htt_log(htt_worker_get_log(worker), HTT_LOG_NONE, "%s", raw);
+  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", raw);
   return APR_SUCCESS;
 }
 
@@ -324,7 +324,7 @@ apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
 }
 
 apr_status_t htt_run(htt_t *htt) {
-  htt_worker_t *worker = htt_worker_new(NULL, htt->log);
-  return htt_execute(htt->executable, worker);
+  htt_context_t *context = htt_context_new(NULL, htt->log);
+  return htt_execute(htt->executable, context);
 }
 

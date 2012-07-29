@@ -35,7 +35,7 @@
 #include <apr_strings.h>
 
 #include "htt_core.h"
-#include "htt_worker.h"
+#include "htt_context.h"
 #include "htt_executable.h"
 #include "htt_log.h"
 
@@ -91,7 +91,7 @@ int htt_executable_get_line(htt_executable_t *executable) {
   return executable->line;
 }
 
-apr_status_t htt_execute(htt_executable_t *executable, htt_worker_t *worker) {
+apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
   apr_status_t status = APR_SUCCESS;
   int i;
   apr_table_entry_t *e;
@@ -104,16 +104,17 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_worker_t *worker) {
        ++i) {
     int doit = 1;
     exec = (htt_executable_t *)e[i].val;
-    htt_log(htt_worker_get_log(worker), HTT_LOG_CMD, "%s:%d -> %s %s", 
+    htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, exec->args);
     if (exec->function) {
-      status = exec->function(worker, exec->args); 
+      status = exec->function(context, exec->args); 
     }
     if (exec->body && doit) {
-      htt_worker_t *child_worker = htt_worker_new(worker, 
-                                                  htt_worker_get_log(worker));
-      status = htt_execute(exec, child_worker);
-      htt_log(htt_worker_get_log(worker), HTT_LOG_CMD, "%s:%d -> end", 
+      htt_context_t *child_context;
+      
+      child_context= htt_context_new(context, htt_context_get_log(context));
+      status = htt_execute(exec, child_context);
+      htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
               exec->file, exec->line);
     }
   }
