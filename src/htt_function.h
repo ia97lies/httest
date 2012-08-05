@@ -44,24 +44,29 @@ htt_function_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
  * Update function 
  * @param function IN
  * @param value IN new function, replace the old, no memory loss 
- * @return value
  */
-const char *htt_function_update(htt_function_t *function, 
-                                htt_executable_t *executable,
-                                htt_context_t *context); 
+void htt_function_update(htt_function_t *function, htt_executable_t *executable,
+                         htt_context_t *context); 
 
 /**
  * Get executable 
  * @param function IN
  * @return executable
  */
-const char *htt_function_get_executable(htt_function_t *function);
+htt_executable_t *htt_function_get_executable(htt_function_t *function);
 
 /**
  * Get context
  * @param function IN
  * @return context
  */
-const char *htt_function_get_context(htt_function_t *function);
+htt_context_t *htt_function_get_context(htt_function_t *function);
+
+/**
+ * Test if a pointer is a function type
+ * @param void IN possible string pointer
+ * @return 1 if it is a string type
+ */
+int htt_isa_type_function(void *type);
 
 #endif

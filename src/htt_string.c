@@ -37,12 +37,14 @@
 
 #include "htt_string.h"
 
-
 /************************************************************************
  * Definitions 
  ***********************************************************************/
 struct htt_string_s {
+#define HTT_STRING_T 1
+  int type;
   apr_pool_t *pool;
+  const char *value;
 };
 
 /************************************************************************
@@ -53,19 +55,33 @@ struct htt_string_s {
  * Public 
  ***********************************************************************/
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
-  return NULL;
+  apr_pool_t *mypool;
+  apr_pool_create(&mypool, pool);
+  htt_string_t *string = apr_pcalloc(pool, sizeof(*string));
+  string->pool = mypool;
+  string->value = apr_pstrdup(mypool, value);
+  return string;
 }
 
-const char *htt_string_update(htt_string_t *string, const char *value) {
-  return NULL;
+void htt_string_update(htt_string_t *string, const char *value) {
+  apr_pool_t *mypool;
+  apr_pool_t *pool = apr_pool_parent_get(string->pool);
+  apr_pool_destroy(string->pool);
+  apr_pool_create(&mypool, pool);
+  string->pool = mypool;
+  string->value = apr_pstrdup(mypool, value);
 }
 
 const char *htt_string_get(htt_string_t *string) {
-  return NULL;
+  return string->value;
 }
 
-const char *htt_string_copy(htt_string_t *string) {
-  return NULL;
+const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool) {
+  return apr_pstrdup(pool, string->value);
 }
 
+int htt_isa_string(void *type) {
+  htt_string_t *string = type;
+  return (string->type == HTT_STRING_T);
+}
 

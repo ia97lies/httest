@@ -32,6 +32,8 @@
 #include <apr.h>
 #include <apr_pools.h>
 
+#include "htt_context.h"
+#include "htt_executable.h"
 #include "htt_function.h"
 
 
@@ -39,7 +41,10 @@
  * Definitions 
  ***********************************************************************/
 struct htt_function_s {
-  apr_pool_t *pool;
+#define HTT_FUNCTION_T 2
+  int type;
+  htt_executable_t *executable;
+  htt_context_t *context;
 };
 
 /************************************************************************
@@ -51,20 +56,30 @@ struct htt_function_s {
  ***********************************************************************/
 htt_function_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
                               htt_context_t *context) {
-  return NULL;
+  htt_function_t *function = apr_pcalloc(pool, sizeof(*function));
+  function->executable = executable;
+  function->context = context;
+  return function;
 }
 
-const char *htt_function_update(htt_function_t *function, 
+void htt_function_update(htt_function_t *function, 
                                 htt_executable_t *executable,
                                 htt_context_t *context) {
-  return NULL;
+  htt_context_destroy(function->context);
+  function->executable = executable;
+  function->context = context;
 }
 
-const char *htt_function_get_executable(htt_function_t *function) {
-  return NULL;
+htt_executable_t *htt_function_get_executable(htt_function_t *function) {
+  return function->executable;
 }
 
-const char *htt_function_get_context(htt_function_t *function) {
-  return NULL;
+htt_context_t *htt_function_get_context(htt_function_t *function) {
+  return function->context;
+}
+
+int htt_isa_function(void *type) {
+  htt_function_t *function = type;
+  return (function->type == HTT_FUNCTION_T);
 }
 

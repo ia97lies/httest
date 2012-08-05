@@ -65,8 +65,10 @@
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
+#include "htt_store.h"
 #include "htt_stack.h"
 #include "htt_executable.h"
+#include "htt_string.h"
 
 /************************************************************************
  * Defines 
@@ -86,6 +88,7 @@ struct htt_command_s {
 
 struct htt_s {
   apr_pool_t *pool;
+  htt_store_t *defines;
   htt_log_t *log;
   const char *cur_file;
   int cur_line;
@@ -266,6 +269,7 @@ void htt_throw_skip() {
 htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
+  htt->defines = htt_store_new(pool);
   htt->commands = apr_hash_make(pool);
   htt->stack = htt_stack_new(pool);
   htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
@@ -289,6 +293,8 @@ void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
 }
 
 void htt_add_value(htt_t *htt, const char *key, const char *val) {
+  htt_string_t *string = htt_string_new(htt->pool, val);
+  htt_store_set(htt->defines, key, string);
 }
 
 void htt_set_cur_file_name(htt_t *htt, const char *name) {

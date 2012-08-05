@@ -41,9 +41,8 @@ htt_string_t *htt_string_new(apr_pool_t *pool, const char *value);
  * Update string value
  * @param string IN
  * @param value IN new string, replace the old, no memory loss 
- * @return value
  */
-const char *htt_string_update(htt_string_t *string, const char *value);
+void htt_string_update(htt_string_t *string, const char *value);
 
 /**
  * Get string value
@@ -58,6 +57,13 @@ const char *htt_string_get(htt_string_t *string);
  * @param pool IN
  * @return a copy of the string
  */
-const char *htt_string_copy(htt_string_t *string);
+const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool);
+
+/**
+ * Test if a pointer is a string type
+ * @param void IN possible string pointer
+ * @return 1 if it is a string type
+ */
+int htt_isa_type_string(void *type);
 
 #endif
