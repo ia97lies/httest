@@ -112,6 +112,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
        status == APR_SUCCESS && 
        i < apr_table_elts(executable->body)->nelts; 
        ++i) {
+    htt_context_t *child_context = NULL;
     int doit = 1;
     exec = (htt_executable_t *)e[i].val;
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
@@ -119,13 +120,20 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     if (exec->function) {
       status = exec->function(exec, context); 
     }
-    if (exec->body && doit) {
-      htt_context_t *child_context;
-      
-      child_context= htt_context_new(context, htt_context_get_log(context));
+    /* TODO: get doit decision from executed function 
+     * -> lambda function (closure)
+     */
+    while (exec->body && doit) {
+      if (!child_context) { 
+        child_context= htt_context_new(context, htt_context_get_log(context));
+      }
       status = htt_execute(exec, child_context);
       htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
               exec->file, exec->line);
+      /* TODO: get doit decision from executed function 
+       * -> lambda function (closure)
+       */
+      doit = 0;
     }
   }
 
