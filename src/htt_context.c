@@ -35,12 +35,6 @@ struct htt_context_s {
   apr_hash_t *config;
 }; 
 
-/**
- * Create a new context
- * @param parent IN parent context
- * @param log IN log instance
- * @return new context object
- */
 htt_context_t *htt_context_new(htt_context_t *parent, htt_log_t *log) {
   apr_pool_t *pool;
   
@@ -50,23 +44,14 @@ htt_context_t *htt_context_new(htt_context_t *parent, htt_log_t *log) {
   context->parent = parent;
   context->log = log;
   context->config = apr_hash_make(pool);
+  context->vars = htt_store_new(pool);
   return context;
 }
 
-/**
- * Get parent context
- * @param context IN context
- * @return parent context
- */
 htt_context_t *htt_context_get_parent(htt_context_t *context) {
   return context->parent;
 }
 
-/**
- * Get godfather context, mean the very first
- * @param context IN context
- * @return parent context
- */
 htt_context_t *htt_context_get_godfather(htt_context_t *context) {
   htt_context_t *cur = context;
 
@@ -76,65 +61,38 @@ htt_context_t *htt_context_get_godfather(htt_context_t *context) {
   return cur;
 }
 
-/**
- * Context get log
- * @param context IN context
- * @return log
- */
 htt_log_t *htt_context_get_log(htt_context_t *context) {
   return context->log;
 }
 
-/**
- * Context get pool
- * @param context IN context
- * @return pool
- */
 apr_pool_t *htt_context_get_pool(htt_context_t *context) {
   return context->pool;
 }
 
-/**
- * Context set variables
- * @param context IN context
- */
 void htt_context_set_vars(htt_context_t *context, htt_store_t *vars) {
   context->vars = vars;
 }
 
-/**
- * Context get variables
- * @param context IN context
- * @return store of variables
- */
-htt_store_t *htt_context_get_vars(htt_context_t *context) {
-  return context->vars;
+void *htt_context_get_var(htt_context_t *context, const char *variable) {
+  htt_context_t *top = context;
+  void *elem = NULL;
+
+  while (top && !elem) {
+    elem = htt_store_get(top->vars, variable);
+    top = htt_context_get_parent(top);
+  }
+
+  return elem;
 }
 
-/**
- * Set a named configuration to this context
- * @param context IN context
- * @param name IN name for stored data
- * @param data IN data to store
- */
 void htt_context_set_config(htt_context_t *context, const char *name, void *data) {
   apr_hash_set(context->config, name, APR_HASH_KEY_STRING, data);
 }
 
-/**
- * Get named configuraion form this context
- * @param context IN context
- * @param name IN name for data
- * @return data
- */
 void  *htt_context_get_config(htt_context_t *context, const char *name) {
   return apr_hash_get(context->config, name, APR_HASH_KEY_STRING);
 }
 
-/** 
- * Destroy context
- * @param context IN context
- */
 void htt_context_destroy(htt_context_t *context) {
   apr_pool_destroy(context->pool);
 }

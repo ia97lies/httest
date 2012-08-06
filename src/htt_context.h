@@ -73,11 +73,12 @@ apr_pool_t *htt_context_get_pool(htt_context_t *context);
 void htt_context_set_vars(htt_context_t *context, htt_store_t *vars); 
 
 /**
- * Context get variables
+ * Get variable in the context chain from the top most
  * @param context IN context
- * @return store of variables
+ * @param variable IN variable name
+ * @return variable value or NULL
  */
-htt_store_t *htt_context_get_vars(htt_context_t *context); 
+void *htt_context_get_var(htt_context_t *context, const char *variable); 
 
 /**
  * Set a named configuration to this context
