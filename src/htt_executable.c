@@ -49,8 +49,9 @@ struct htt_executable_s {
   const char *file;
   int line;
   htt_function_f function;
-  const char *args;
+  const char *raw;
   apr_table_t *body;
+  apr_hash_t *config;
 };
 
 /************************************************************************
@@ -62,15 +63,16 @@ struct htt_executable_s {
  ***********************************************************************/
 
 htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
-                                     htt_function_f function, char *args, 
+                                     htt_function_f function, char *raw, 
                                      const char *file, int line) {
   htt_executable_t *executable = apr_pcalloc(pool, sizeof(*executable));
   executable->pool = pool;
   executable->name = name;
   executable->function = function;
-  executable->args = args;
+  executable->raw = raw;
   executable->file = file;
   executable->line = line;
+  executable->config = apr_hash_make(pool);
   return executable;
 }
 
@@ -91,6 +93,10 @@ int htt_executable_get_line(htt_executable_t *executable) {
   return executable->line;
 }
 
+apr_hash_t *htt_executable_get_config(htt_executable_t *executable) {
+  return executable->config;
+}
+
 apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
   apr_status_t status = APR_SUCCESS;
   int i;
@@ -105,9 +111,9 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     int doit = 1;
     exec = (htt_executable_t *)e[i].val;
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
-            exec->file, exec->line, exec->name, exec->args);
+            exec->file, exec->line, exec->name, exec->raw);
     if (exec->function) {
-      status = exec->function(context, exec->args); 
+      status = exec->function(context, exec->raw); 
     }
     if (exec->body && doit) {
       htt_context_t *child_context;

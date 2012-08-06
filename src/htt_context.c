@@ -24,10 +24,12 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include "htt_store.h"
 #include "htt_context.h"
 
 struct htt_context_s {
   apr_pool_t *pool;
+  htt_store_t *vars;
   htt_context_t *parent;
   htt_log_t *log;
   apr_hash_t *config;
@@ -75,7 +77,7 @@ htt_context_t *htt_context_get_godfather(htt_context_t *context) {
 }
 
 /**
- * Worker get log
+ * Context get log
  * @param context IN context
  * @return log
  */
@@ -84,12 +86,29 @@ htt_log_t *htt_context_get_log(htt_context_t *context) {
 }
 
 /**
- * Worker get pool
+ * Context get pool
  * @param context IN context
  * @return pool
  */
 apr_pool_t *htt_context_get_pool(htt_context_t *context) {
   return context->pool;
+}
+
+/**
+ * Context set variables
+ * @param context IN context
+ */
+void htt_context_set_vars(htt_context_t *context, htt_store_t *vars) {
+  context->vars = vars;
+}
+
+/**
+ * Context get variables
+ * @param context IN context
+ * @return store of variables
+ */
+htt_store_t *htt_context_get_vars(htt_context_t *context) {
+  return context->vars;
 }
 
 /**

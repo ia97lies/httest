@@ -71,7 +71,18 @@ void *htt_stack_top(htt_stack_t *stack) {
   }
 }
 
+void *htt_stack_index(htt_stack_t *stack, int i) {
+  if (i > stack->sp) {
+    return NULL;
+  }
+  else {
+    apr_table_entry_t *e;
+    e = (apr_table_entry_t *) apr_table_elts(stack->table)->elts;
+    return e[stack->sp - i].val;
+  }
+}
+
 int htt_stack_elems(htt_stack_t *stack) {
-  return stack->sp;
+  return stack->sp + 1;
 }
 

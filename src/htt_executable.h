@@ -25,6 +25,7 @@
 #ifndef HTT_EXECUTABLE_H
 #define HTT_EXECUTABLE_H
 
+#include <apr_hash.h>
 #include "htt_core.h"
 
 typedef struct htt_executable_s htt_executable_t;
@@ -57,6 +58,13 @@ const char *htt_executable_get_file(htt_executable_t *executable);
  * @return line 
  */
 int htt_executable_get_line(htt_executable_t *executable); 
+
+/**
+ * Get configuration of executable
+ * @param executable IN
+ * @return config hash
+ */
+apr_hash_t *htt_executable_get_config(htt_executable_t *executable); 
 
 /**
  * Add a executable to an executable (body)

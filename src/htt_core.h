@@ -124,6 +124,14 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
                      htt_compile_f compile, htt_function_f function);
 
 /**
+ * Get registered command
+ * @param htt IN instance
+ * @param cmd IN command name
+ * @return found command or NULL
+ */
+htt_command_t *htt_get_command(htt_t *htt, const char *cmd); 
+
+/**
  * Interpret reading from given apr_file_t 
  * @param htt IN instance
  * @param fp IN apr file pointer

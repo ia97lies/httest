@@ -33,9 +33,6 @@
 #endif
 #include "defines.h"
 
-/* Use STACK from openssl to sort commands */
-#include <openssl/ssl.h>
-
 #include <apr.h>
 #include <apr_signal.h>
 #include <apr_strings.h>
@@ -92,7 +89,6 @@ struct htt_s {
   htt_log_t *log;
   const char *cur_file;
   int cur_line;
-  apr_hash_t *commands;
   htt_stack_t *stack;
   htt_executable_t *executable;
 };
@@ -147,10 +143,8 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
 
       cmd = apr_strtok(line, " ", &rest);
       htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
-      command = apr_hash_get(htt->commands, cmd, APR_HASH_KEY_STRING);
+      command = htt_get_command(htt, cmd);
       if (!command) {
-        /* not found */
-        /* hook unknown function */
         htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
                       "Unknown command \"%s\"", cmd);
         htt_throw_error();
@@ -166,7 +160,7 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
     ++htt->cur_line;
   }
 
-  if (htt_stack_elems(htt->stack) != 0) {
+  if (htt_stack_elems(htt->stack) != 1) {
     htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
                   "Unclosed body on line %s:%d", 
                   htt_executable_get_file(htt->executable), 
@@ -270,7 +264,6 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_t *htt = apr_pcalloc(pool, sizeof(*htt));
   htt->pool = pool;
   htt->defines = htt_store_new(pool);
-  htt->commands = apr_hash_make(pool);
   htt->stack = htt_stack_new(pool);
   htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
                                        NULL, NULL, 0);
@@ -315,7 +308,25 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command->desc = desc;
   command->compile = compile;
   command->function = function;
-  apr_hash_set(htt->commands, name, APR_HASH_KEY_STRING, command);
+  apr_hash_set(htt_executable_get_config(htt->executable), name, 
+               APR_HASH_KEY_STRING, command);
+}
+
+htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
+  htt_command_t *command;
+  htt_executable_t *top = htt->executable;
+  int i = 1;
+
+  command = apr_hash_get(htt_executable_get_config(top), cmd, 
+                         APR_HASH_KEY_STRING);
+  top = htt_stack_index(htt->stack, i);
+  while (top && !command) {
+    command = apr_hash_get(htt_executable_get_config(top), cmd, 
+                           APR_HASH_KEY_STRING);
+    top = htt_stack_index(htt->stack, ++i);
+  }
+
+  return command;
 }
 
 apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
@@ -325,6 +336,7 @@ apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
 
 apr_status_t htt_run(htt_t *htt) {
   htt_context_t *context = htt_context_new(NULL, htt->log);
+  htt_context_set_vars(context, htt->defines);
   return htt_execute(htt->executable, context);
 }
 

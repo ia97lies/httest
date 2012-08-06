@@ -56,6 +56,14 @@ void *htt_stack_pop(htt_stack_t *stack);
 void *htt_stack_top(htt_stack_t *stack);
 
 /**
+ * Get element by index start from the top
+ * @param stack IN stack
+ * @param i IN index
+ * @return element
+ */
+void *htt_stack_index(htt_stack_t *stack, int i);
+
+/**
  * Number of elements on stack
  * @param stack IN stack
  * @return number of elements
