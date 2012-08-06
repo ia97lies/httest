@@ -27,12 +27,13 @@
 
 #include <apr_file_io.h>
 #include "htt_context.h"
+#include "htt_executable.h"
 
 typedef struct htt_s htt_t;
 typedef struct htt_command_s htt_command_t; 
 
-typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, char *params);
-typedef apr_status_t(*htt_function_f)(htt_context_t *context, const char *raw);
+typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, 
+                                     char *params);
 
 /**
  * Compiles a simple command 

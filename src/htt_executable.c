@@ -93,6 +93,10 @@ int htt_executable_get_line(htt_executable_t *executable) {
   return executable->line;
 }
 
+const char *htt_executable_get_raw(htt_executable_t *executable) {
+  return executable->raw;
+}
+
 apr_hash_t *htt_executable_get_config(htt_executable_t *executable) {
   return executable->config;
 }
@@ -113,7 +117,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, exec->raw);
     if (exec->function) {
-      status = exec->function(context, exec->raw); 
+      status = exec->function(exec, context); 
     }
     if (exec->body && doit) {
       htt_context_t *child_context;

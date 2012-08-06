@@ -201,9 +201,9 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-static apr_status_t htt_cmd_echo_function(htt_context_t *context, 
-                                          const char *raw) {
-  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", raw);
+static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
+                                          htt_context_t *context) {
+  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", htt_executable_get_raw(executable));
   return APR_SUCCESS;
 }
 

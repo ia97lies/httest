@@ -26,9 +26,12 @@
 #define HTT_EXECUTABLE_H
 
 #include <apr_hash.h>
-#include "htt_core.h"
+#include "htt_context.h"
 
 typedef struct htt_executable_s htt_executable_t;
+
+typedef apr_status_t(*htt_function_f)(htt_executable_t *executable, 
+                                      htt_context_t *context);
 
 /**
  * Create a new executable
@@ -36,13 +39,13 @@ typedef struct htt_executable_s htt_executable_t;
  * @param name IN name of function
  * @param function IN function
  * @param cleanup IN cleanup after function has done work
- * @param args IN
+ * @param raw IN the raw args line
  * @param file IN filename
  * @param line IN line number
  * @return executable
  */
 htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
-                                     htt_function_f function, char *args, 
+                                     htt_function_f function, char *raw, 
                                      const char *file, int line);
 
 /**
@@ -58,6 +61,13 @@ const char *htt_executable_get_file(htt_executable_t *executable);
  * @return line 
  */
 int htt_executable_get_line(htt_executable_t *executable); 
+
+/**
+ * Get raw line no resolve
+ * @param executable IN executable
+ * @return raw string
+ */
+const char *htt_executable_get_raw(htt_executable_t *executable);
 
 /**
  * Get configuration of executable
