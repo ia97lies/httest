@@ -64,6 +64,6 @@ const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool);
  * @param void IN possible string pointer
  * @return 1 if it is a string type
  */
-int htt_isa_type_string(void *type);
+int htt_isa_string(void *type);
 
 #endif

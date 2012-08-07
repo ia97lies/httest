@@ -140,8 +140,9 @@ apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt,
                                   char *args) {
   htt_executable_t *executable;
 
-  executable = htt_executable_new(htt->pool, command->name, command->function, 
-                                  args, htt->cur_file, htt->cur_line);
+  executable = htt_executable_new(htt->pool, command->name, command->signature,
+                                  command->function, args, htt->cur_file, 
+                                  htt->cur_line);
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
 }
@@ -150,8 +151,9 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt,
                                   char *args) {
   htt_executable_t *executable;
 
-  executable = htt_executable_new(htt->pool, command->name, command->function, 
-                                  args, htt->cur_file, htt->cur_line);
+  executable = htt_executable_new(htt->pool, command->name, command->signature, 
+                                  command->function, args, htt->cur_file, 
+                                  htt->cur_line);
   htt_executable_add(htt->executable, executable);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
@@ -192,14 +194,14 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->defines = htt_store_new(pool);
   htt->stack = htt_stack_new(pool);
   htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
-                                       NULL, NULL, 0);
+                                       NULL, NULL, NULL, 0);
   htt_stack_push(htt->stack, htt->executable);
 
-  htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
+  htt_add_command(htt, "include", "file*", "<file>", "include a htt file", 
                   htt_cmd_include_compile, NULL);
-  htt_add_command(htt, "end", "", "", "end a open body", 
+  htt_add_command(htt, "end", NULL, "", "end a open body", 
                   htt_cmd_end_compile, NULL);
-  htt_add_command(htt, "echo", "string", "<string>", "echo a string", 
+  htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
                   htt_cmd_line_compile, htt_cmd_echo_function);
   htt_add_command(htt, "body", "", "", "open a new body",
                   htt_cmd_body_compile, NULL);
@@ -345,7 +347,7 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
                                           htt_context_t *context) {
   htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", 
-          htt_executable_get_raw(executable));
+          htt_context_get_line(context));
   return APR_SUCCESS;
 }
 

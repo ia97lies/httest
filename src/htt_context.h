@@ -99,8 +99,25 @@ void *htt_context_get_var(htt_context_t *context, const char *variable);
  * @param name IN name for stored data
  * @param data IN data to store
  */
-void htt_context_set_config(htt_context_t *context, const char *name, void *data);
+void htt_context_set_config(htt_context_t *context, const char *name, 
+                            void *data);
 
+/**
+ * Set a resolved line
+ * @param context IN context
+ * @param signature IN rules to handle resolved line
+ * @param line IN resolved line
+ */
+void htt_context_set_line(htt_context_t *context, const char *signature, 
+                          const char *line); 
+
+/**
+ * Return a resolved line, may become obsolete if handling signatures
+ * @param context IN context
+ * @return resolved line
+ */
+const char *htt_context_get_line(htt_context_t *context); 
+ 
 /**
  * Get named configuraion form this context
  * @param context IN context

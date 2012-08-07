@@ -45,6 +45,7 @@ typedef apr_status_t(*htt_function_f)(htt_executable_t *executable,
  * @return executable
  */
 htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
+                                     const char *signature, 
                                      htt_function_f function, char *raw, 
                                      const char *file, int line);
 

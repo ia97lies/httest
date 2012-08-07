@@ -67,6 +67,6 @@ htt_context_t *htt_function_get_context(htt_function_t *function);
  * @param void IN possible string pointer
  * @return 1 if it is a string type
  */
-int htt_isa_type_function(void *type);
+int htt_isa_function(void *type);
 
 #endif

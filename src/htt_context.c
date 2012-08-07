@@ -33,6 +33,7 @@ struct htt_context_s {
   htt_store_t *vars;
   htt_context_t *parent;
   htt_log_t *log;
+  const char *line;
   apr_hash_t *config;
 }; 
 
@@ -94,6 +95,18 @@ void *htt_context_get_var(htt_context_t *context, const char *variable) {
   }
 
   return elem;
+}
+
+void htt_context_set_line(htt_context_t *context, const char *signature, 
+                          const char *line) {
+  /** TODO: handle signature and split line with the rule of signature */
+  /* if signature is NULL place the hole line in the first  parameter */
+  context->line = line;
+}
+
+const char *htt_context_get_line(htt_context_t *context) {
+  /** TODO: handle signature, maybe this function becoms obsolete */
+  return context->line;
 }
 
 void htt_context_set_config(htt_context_t *context, const char *name, void *data) {

@@ -57,6 +57,7 @@ struct htt_function_s {
 htt_function_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
                               htt_context_t *context) {
   htt_function_t *function = apr_pcalloc(pool, sizeof(*function));
+  function->type = HTT_FUNCTION_T;
   function->executable = executable;
   function->context = context;
   return function;

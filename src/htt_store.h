@@ -53,5 +53,12 @@ void htt_store_set(htt_store_t *store, const char *key, void *value);
  */
 void *htt_store_get(htt_store_t *store, const char *key);
 
+/**
+ * Get a value by index, it is a fifo list
+ * @param store IN
+ * @param index IN 
+ * @return value
+ */
+void *htt_store_index(htt_store_t *store, int index);
 
 #endif

@@ -58,6 +58,7 @@ htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
   apr_pool_t *mypool;
   apr_pool_create(&mypool, pool);
   htt_string_t *string = apr_pcalloc(pool, sizeof(*string));
+  string->type = HTT_STRING_T;
   string->pool = mypool;
   string->value = apr_pstrdup(mypool, value);
   return string;
@@ -82,6 +83,6 @@ const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool) {
 
 int htt_isa_string(void *type) {
   htt_string_t *string = type;
-  return (string->type == HTT_STRING_T);
+  return (string && string->type == HTT_STRING_T);
 }
 
