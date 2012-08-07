@@ -26,6 +26,15 @@
 #define HTT_REPLACER_H
 
 typedef const char *htt_replacer_f(void *udata, const char *name);
+
+/**
+ * replace vars and functions in given line 
+ * @param p IN pool
+ * @param line IN line where to replace the vars with values
+ * @param udata IN user data
+ * @param replacer IN replacer function
+ * @return new line
+ */
 char *htt_replacer(apr_pool_t * p, char *line, void *udata, 
                    htt_replacer_f replace);
 

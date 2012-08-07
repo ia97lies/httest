@@ -115,6 +115,8 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     htt_context_t *child_context = NULL;
     int doit = 1;
     exec = (htt_executable_t *)e[i].val;
+    htt_context_flush_tmp(context);
+    /* TODO: replace */
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, exec->raw);
     if (exec->function) {
@@ -134,6 +136,9 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
        * -> lambda function (closure)
        */
       doit = 0;
+    }
+    if (child_context) {
+      htt_context_destroy(child_context);
     }
   }
 

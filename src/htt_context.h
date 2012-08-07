@@ -67,6 +67,19 @@ htt_log_t *htt_context_get_log(htt_context_t *context);
 apr_pool_t *htt_context_get_pool(htt_context_t *context);
 
 /**
+ * Get context temporary pool
+ * @param context IN context
+ * @return temporary pool
+ */
+apr_pool_t *htt_context_get_tmp_pool(htt_context_t *context); 
+
+/**
+ * Flush temporary data
+ * @param context IN context
+ */
+void htt_context_flush_tmp(htt_context_t *context); 
+
+/**
  * Context set variables
  * @param context IN context
  */

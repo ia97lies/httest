@@ -51,51 +51,8 @@
 static int htt_enhanced_function_detection(char *line, int i); 
 
 /************************************************************************
- * Private
- ***********************************************************************/
-
-static int htt_enhanced_function_detection(char *line, int i) {
-  if (line[i] == '.') {
-    int j = i;
-    ++j;
-    if (strchr(HTT_ALLOWED_CHARS, line[j])) {
-      while (line[j] != 0 && strchr(HTT_ALLOWED_CHARS, line[j])) {
-	++j;
-      }
-      if (line[j] == '(') {
-	while (line[j] != 0 && line[j] != ')') {
-	  ++j;
-	}
-	if (line[j] == ')') {
-	  ++j;
-	}
-	i = j;
-      }
-    }
-  }
-  else if (line[i] == '(') {
-    while (line[i] != 0 && line[i] != ')') {
-      ++i;
-    }
-    if (line[i] == ')') {
-      ++i;
-    }
-  }
-  return i;
-}
-
-/************************************************************************
  * Public
  ***********************************************************************/
-
-/**
- * replace vars and functions in given line 
- * @param p IN pool
- * @param line IN line where to replace the vars with values
- * @param udata IN user data
- * @param replacer IN replacer function
- * @return new line
- */
 char *htt_replacer(apr_pool_t * p, char *line, void *udata, 
                    htt_replacer_f replace) {
   int i;
@@ -152,5 +109,38 @@ char *htt_replacer(apr_pool_t * p, char *line, void *udata,
     }
   }
   return new_line;
+}
+
+/************************************************************************
+ * Private
+ ***********************************************************************/
+static int htt_enhanced_function_detection(char *line, int i) {
+  if (line[i] == '.') {
+    int j = i;
+    ++j;
+    if (strchr(HTT_ALLOWED_CHARS, line[j])) {
+      while (line[j] != 0 && strchr(HTT_ALLOWED_CHARS, line[j])) {
+	++j;
+      }
+      if (line[j] == '(') {
+	while (line[j] != 0 && line[j] != ')') {
+	  ++j;
+	}
+	if (line[j] == ')') {
+	  ++j;
+	}
+	i = j;
+      }
+    }
+  }
+  else if (line[i] == '(') {
+    while (line[i] != 0 && line[i] != ')') {
+      ++i;
+    }
+    if (line[i] == ')') {
+      ++i;
+    }
+  }
+  return i;
 }
 

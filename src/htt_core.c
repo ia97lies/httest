@@ -119,93 +119,19 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
                                         char *args); 
 
+/**
+ * Simple echo command 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param apr status
+ */
+static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
+                                          htt_context_t *context); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
 int htt_error = 0;
-
-/************************************************************************
- * Private 
- ***********************************************************************/
-
-static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
-  char *line;
-  apr_status_t status = APR_SUCCESS;
-  htt->cur_line = 1;
-
-  while (status == APR_SUCCESS && 
-         htt_bufreader_read_line(bufreader, &line) == APR_SUCCESS) {
-    for (; *line == ' ' || *line == '\t'; ++line);
-    if (*line != '#' && *line != '\0') {
-      char *rest;
-      char *cmd;
-      htt_command_t *command;
-
-      cmd = apr_strtok(line, " ", &rest);
-      htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
-      command = htt_get_command(htt, cmd);
-      if (!command) {
-        htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
-                      "Unknown command \"%s\"", cmd);
-        htt_throw_error();
-      }
-      else {
-        const char *old_file_name = htt->cur_file;
-        int old_line = htt->cur_line;
-        status = command->compile(command, htt, rest);
-        htt->cur_file =  old_file_name;
-        htt->cur_line = old_line;
-      }
-    }
-    ++htt->cur_line;
-  }
-
-  if (htt_stack_elems(htt->stack) != 1) {
-    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
-                  "Unclosed body on line %s:%d", 
-                  htt_executable_get_file(htt->executable), 
-                  htt_executable_get_line(htt->executable));
-    htt_throw_error();
-  }
-  return APR_SUCCESS;
-}
-
-static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
-                                            char *args) {
-  apr_file_t *fp;
-  apr_status_t status;
-
-  apr_collapse_spaces(args, args);
-  if ((status = apr_file_open(&fp, args, APR_READ, APR_OS_DEFAULT, htt->pool)) 
-      != APR_SUCCESS) {
-    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
-                  "Could not open include file \"%s\"", args);
-    htt_throw_error();
-  }
-  htt_set_cur_file_name(htt, args);
-  return htt_compile_fp(htt, fp);
-}
-
-static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
-                                        char *args) {
-  htt_stack_pop(htt->stack);
-  htt->executable = htt_stack_top(htt->stack);
-  if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
-    return APR_SUCCESS;
-  }
-  else {
-    apr_status_t status = APR_EINVAL;
-    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
-                  "Too many closing \"end\"");
-    return status;
-  }
-}
-
-static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
-                                          htt_context_t *context) {
-  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", htt_executable_get_raw(executable));
-  return APR_SUCCESS;
-}
 
 /************************************************************************
  * Public 
@@ -338,5 +264,88 @@ apr_status_t htt_run(htt_t *htt) {
   htt_context_t *context = htt_context_new(NULL, htt->log);
   htt_context_set_vars(context, htt->defines);
   return htt_execute(htt->executable, context);
+}
+
+/************************************************************************
+ * Private 
+ ***********************************************************************/
+static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
+  char *line;
+  apr_status_t status = APR_SUCCESS;
+  htt->cur_line = 1;
+
+  while (status == APR_SUCCESS && 
+         htt_bufreader_read_line(bufreader, &line) == APR_SUCCESS) {
+    for (; *line == ' ' || *line == '\t'; ++line);
+    if (*line != '#' && *line != '\0') {
+      char *rest;
+      char *cmd;
+      htt_command_t *command;
+
+      cmd = apr_strtok(line, " ", &rest);
+      htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
+      command = htt_get_command(htt, cmd);
+      if (!command) {
+        htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                      "Unknown command \"%s\"", cmd);
+        htt_throw_error();
+      }
+      else {
+        const char *old_file_name = htt->cur_file;
+        int old_line = htt->cur_line;
+        status = command->compile(command, htt, rest);
+        htt->cur_file =  old_file_name;
+        htt->cur_line = old_line;
+      }
+    }
+    ++htt->cur_line;
+  }
+
+  if (htt_stack_elems(htt->stack) != 1) {
+    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                  "Unclosed body on line %s:%d", 
+                  htt_executable_get_file(htt->executable), 
+                  htt_executable_get_line(htt->executable));
+    htt_throw_error();
+  }
+  return APR_SUCCESS;
+}
+
+static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
+                                            char *args) {
+  apr_file_t *fp;
+  apr_status_t status;
+
+  apr_collapse_spaces(args, args);
+  if ((status = apr_file_open(&fp, args, APR_READ, APR_OS_DEFAULT, htt->pool)) 
+      != APR_SUCCESS) {
+    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                  "Could not open include file \"%s\"", args);
+    htt_throw_error();
+  }
+  htt_set_cur_file_name(htt, args);
+  return htt_compile_fp(htt, fp);
+}
+
+static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
+                                        char *args) {
+  htt_stack_pop(htt->stack);
+  htt->executable = htt_stack_top(htt->stack);
+  if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
+    return APR_SUCCESS;
+  }
+  else {
+    apr_status_t status = APR_EINVAL;
+    htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
+                  "Too many closing \"end\"");
+    return status;
+  }
+}
+
+static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
+                                          htt_context_t *context) {
+  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", 
+          htt_executable_get_raw(executable));
+  return APR_SUCCESS;
 }
 

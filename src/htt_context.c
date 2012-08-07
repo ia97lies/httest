@@ -29,6 +29,7 @@
 
 struct htt_context_s {
   apr_pool_t *pool;
+  apr_pool_t *tmp_pool;
   htt_store_t *vars;
   htt_context_t *parent;
   htt_log_t *log;
@@ -40,6 +41,7 @@ htt_context_t *htt_context_new(htt_context_t *parent, htt_log_t *log) {
   
   apr_pool_create(&pool, parent ? parent->pool : NULL);
   htt_context_t *context = apr_pcalloc(pool, sizeof(*context));
+  apr_pool_create(&context->tmp_pool, pool);
   context->pool = pool;
   context->parent = parent;
   context->log = log;
@@ -67,6 +69,15 @@ htt_log_t *htt_context_get_log(htt_context_t *context) {
 
 apr_pool_t *htt_context_get_pool(htt_context_t *context) {
   return context->pool;
+}
+
+apr_pool_t *htt_context_get_tmp_pool(htt_context_t *context) {
+  return context->tmp_pool;
+}
+
+void htt_context_flush_tmp(htt_context_t *context) {
+  apr_pool_destroy(context->tmp_pool);
+  apr_pool_create(&context->tmp_pool, context->pool);
 }
 
 void htt_context_set_vars(htt_context_t *context, htt_store_t *vars) {
