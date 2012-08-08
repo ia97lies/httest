@@ -123,10 +123,29 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
  * Simple echo command 
  * @param executable IN executable
  * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
  * @param apr status
  */
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
-                                       htt_context_t *context); 
+                                       htt_context_t *context,
+                                       apr_pool_t *ptmp, htt_store_t *params, 
+                                       htt_store_t *retvars, char *line);
+
+/**
+ * Set command 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_set_function(htt_executable_t *executable, 
+                                      htt_context_t *context,
+                                      apr_pool_t *ptmp, htt_store_t *params, 
+                                      htt_store_t *retvars, char *line); 
 
 /************************************************************************
  * Globals 
@@ -203,6 +222,8 @@ htt_t *htt_new(apr_pool_t *pool) {
                   _cmd_end_compile, NULL);
   htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
                   htt_cmd_line_compile, _cmd_echo_function);
+  htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
+                  htt_cmd_line_compile, _cmd_set_function);
   htt_add_command(htt, "body", "", "", "open a new body",
                   htt_cmd_body_compile, NULL);
   return htt;
@@ -345,9 +366,22 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
 }
 
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
-                                       htt_context_t *context) {
-  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", 
-          htt_context_get_line(context));
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_store_t *params, 
+                                       htt_store_t *retvars, char *line) {
+  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", line);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_set_function(htt_executable_t *executable, 
+                                      htt_context_t *context, 
+                                      apr_pool_t *ptmp, htt_store_t *params, 
+                                      htt_store_t *retvars, char *line) {
+  char *key;
+  char *val;
+
+  key = apr_strtok(line, "=", &val);
+
   return APR_SUCCESS;
 }
 

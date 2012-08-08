@@ -55,7 +55,15 @@ htt_store_t *htt_store_new(apr_pool_t *pool) {
 }
 
 void htt_store_set(htt_store_t *store, const char *key, void *value) {
-  apr_hash_set(store->hash, key, APR_HASH_KEY_STRING, value);
+  void *elem = apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
+  
+  if (elem) {
+    apr_hash_set(store->hash, key, APR_HASH_KEY_STRING, value);
+  }
+  else {
+    apr_hash_set(store->hash, apr_pstrdup(store->pool, key), 
+                 APR_HASH_KEY_STRING, value);
+  }
 }
 
 void *htt_store_get(htt_store_t *store, const char *key) {

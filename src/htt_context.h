@@ -67,23 +67,19 @@ htt_log_t *htt_context_get_log(htt_context_t *context);
 apr_pool_t *htt_context_get_pool(htt_context_t *context);
 
 /**
- * Get context temporary pool
- * @param context IN context
- * @return temporary pool
- */
-apr_pool_t *htt_context_get_tmp_pool(htt_context_t *context); 
-
-/**
- * Flush temporary data
- * @param context IN context
- */
-void htt_context_flush_tmp(htt_context_t *context); 
-
-/**
  * Context set variables
  * @param context IN context
  */
 void htt_context_set_vars(htt_context_t *context, htt_store_t *vars); 
+
+/**
+ * Set variable in the context chain from the top most
+ * @param context IN context
+ * @param variable IN variable name
+ * @param value IN variable value
+ */
+void htt_context_set_var(htt_context_t *context, const char *variable,
+                         const char *value); 
 
 /**
  * Get variable in the context chain from the top most
@@ -102,22 +98,6 @@ void *htt_context_get_var(htt_context_t *context, const char *variable);
 void htt_context_set_config(htt_context_t *context, const char *name, 
                             void *data);
 
-/**
- * Set a resolved line
- * @param context IN context
- * @param signature IN rules to handle resolved line
- * @param line IN resolved line
- */
-void htt_context_set_line(htt_context_t *context, const char *signature, 
-                          const char *line); 
-
-/**
- * Return a resolved line, may become obsolete if handling signatures
- * @param context IN context
- * @return resolved line
- */
-const char *htt_context_get_line(htt_context_t *context); 
- 
 /**
  * Get named configuraion form this context
  * @param context IN context
