@@ -23,10 +23,17 @@
  */
 
 #include <apr_pools.h>
+#include <apr_strings.h>
 #include <apr_hash.h>
 #include "htt_store.h"
 #include "htt_context.h"
+#include "htt_replacer.h"
+#include "htt_string.h"
+#include "htt_function.h"
 
+/************************************************************************
+ * Definitions 
+ ***********************************************************************/
 struct htt_context_s {
   apr_pool_t *pool;
   apr_pool_t *tmp_pool;
@@ -37,6 +44,17 @@ struct htt_context_s {
   apr_hash_t *config;
 }; 
 
+/**
+ * Replacer to resolve variables in a line
+ * @param udata IN context pointer
+ * @param name IN name of variable to resolve
+ * @return variable value
+ */
+static const char *_context_replacer(void *udata, const char *name); 
+
+/************************************************************************
+ * Public
+ ***********************************************************************/
 htt_context_t *htt_context_new(htt_context_t *parent, htt_log_t *log) {
   apr_pool_t *pool;
   
@@ -99,9 +117,13 @@ void *htt_context_get_var(htt_context_t *context, const char *variable) {
 
 void htt_context_set_line(htt_context_t *context, const char *signature, 
                           const char *line) {
+  char *new_line;
   /** TODO: handle signature and split line with the rule of signature */
   /* if signature is NULL place the hole line in the first  parameter */
-  context->line = line;
+  /* resolve it */
+  new_line = apr_pstrdup(context->tmp_pool, line);
+  context->line = htt_replacer(context->tmp_pool, new_line, context, 
+                               _context_replacer);
 }
 
 const char *htt_context_get_line(htt_context_t *context) {
@@ -121,4 +143,18 @@ void htt_context_destroy(htt_context_t *context) {
   apr_pool_destroy(context->pool);
 }
 
+/************************************************************************
+ * Private
+ ***********************************************************************/
+static const char *_context_replacer(void *udata, const char *name) {
+  htt_context_t *context = udata;
+  htt_string_t *string;
 
+  string = htt_context_get_var(context, name); 
+  if (htt_isa_string(string)) {
+    return htt_string_get(string);
+  }
+  else {
+    return NULL;
+  }
+}

@@ -99,7 +99,7 @@ struct htt_s {
  * @param fp IN apr file pointer
  * @return apr status
  */
-static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader); 
+static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader); 
 
 /**
  * Compile function for include. Just open file and and interpret.
@@ -107,8 +107,8 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader);
  * @param htt IN instance
  * @param args IN argument string
  */
-static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
-                                            char *args); 
+static apr_status_t _cmd_include_compile(htt_command_t *command, htt_t *htt,
+                                         char *args); 
 
 /**
  * Get last body from stack
@@ -116,8 +116,8 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
  * @param htt IN instance
  * @param args IN argument string
  */
-static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
-                                        char *args); 
+static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
+                                     char *args); 
 
 /**
  * Simple echo command 
@@ -125,8 +125,8 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
  * @param context IN running context
  * @param apr status
  */
-static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
-                                          htt_context_t *context); 
+static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
+                                       htt_context_t *context); 
 
 /************************************************************************
  * Globals 
@@ -198,11 +198,11 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_stack_push(htt->stack, htt->executable);
 
   htt_add_command(htt, "include", "file*", "<file>", "include a htt file", 
-                  htt_cmd_include_compile, NULL);
+                  _cmd_include_compile, NULL);
   htt_add_command(htt, "end", NULL, "", "end a open body", 
-                  htt_cmd_end_compile, NULL);
+                  _cmd_end_compile, NULL);
   htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
-                  htt_cmd_line_compile, htt_cmd_echo_function);
+                  htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "body", "", "", "open a new body",
                   htt_cmd_body_compile, NULL);
   return htt;
@@ -259,7 +259,7 @@ htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
 
 apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
   htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
-  return htt_compile(htt, bufreader);
+  return _compile(htt, bufreader);
 }
 
 apr_status_t htt_run(htt_t *htt) {
@@ -271,7 +271,7 @@ apr_status_t htt_run(htt_t *htt) {
 /************************************************************************
  * Private 
  ***********************************************************************/
-static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
+static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
   char *line;
   apr_status_t status = APR_SUCCESS;
   htt->cur_line = 1;
@@ -313,8 +313,8 @@ static apr_status_t htt_compile(htt_t *htt, htt_bufreader_t *bufreader) {
   return APR_SUCCESS;
 }
 
-static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
-                                            char *args) {
+static apr_status_t _cmd_include_compile(htt_command_t *command, htt_t *htt,
+                                         char *args) {
   apr_file_t *fp;
   apr_status_t status;
 
@@ -329,8 +329,8 @@ static apr_status_t htt_cmd_include_compile(htt_command_t *command, htt_t *htt,
   return htt_compile_fp(htt, fp);
 }
 
-static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
-                                        char *args) {
+static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
+                                     char *args) {
   htt_stack_pop(htt->stack);
   htt->executable = htt_stack_top(htt->stack);
   if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
@@ -344,8 +344,8 @@ static apr_status_t htt_cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-static apr_status_t htt_cmd_echo_function(htt_executable_t *executable, 
-                                          htt_context_t *context) {
+static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
+                                       htt_context_t *context) {
   htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", 
           htt_context_get_line(context));
   return APR_SUCCESS;

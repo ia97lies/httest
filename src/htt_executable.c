@@ -38,7 +38,6 @@
 #include "htt_context.h"
 #include "htt_executable.h"
 #include "htt_log.h"
-#include "htt_replacer.h"
 #include "htt_string.h"
 #include "htt_function.h"
 
@@ -57,14 +56,6 @@ struct htt_executable_s {
   apr_table_t *body;
   apr_hash_t *config;
 };
-
-/**
- * Replacer to resolve variables in a line
- * @param udata IN context pointer
- * @param name IN name of variable to resolve
- * @return variable value
- */
-static const char *htt_executable_replacer(void *udata, const char *name); 
 
 /************************************************************************
  * Globals 
@@ -124,18 +115,13 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
        status == APR_SUCCESS && 
        i < apr_table_elts(executable->body)->nelts; 
        ++i) {
-    char *line;
     htt_context_t *child_context = NULL;
     int doit = 1;
     exec = (htt_executable_t *)e[i].val;
     htt_context_flush_tmp(context);
-    line = apr_pstrdup(htt_context_get_tmp_pool(context), exec->raw);
-    line = htt_replacer(htt_context_get_tmp_pool(context), line, context,
-                        htt_executable_replacer);
-    /** TODO: maybe a decission should be made how to handle a line */
-    htt_context_set_line(context, exec->signature, line);
+    htt_context_set_line(context, exec->signature, exec->raw);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
-            exec->file, exec->line, exec->name, line);
+            exec->file, exec->line, exec->name, htt_context_get_line(context));
     if (exec->function) {
       status = exec->function(exec, context); 
     }
@@ -162,18 +148,3 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
   return status;
 }
 
-/************************************************************************
- * Private
- ***********************************************************************/
-static const char *htt_executable_replacer(void *udata, const char *name) {
-  htt_context_t *context = udata;
-  htt_string_t *string;
-
-  string = htt_context_get_var(context, name); 
-  if (htt_isa_string(string)) {
-    return htt_string_get(string);
-  }
-  else {
-    return NULL;
-  }
-}

@@ -27,6 +27,7 @@
  ***********************************************************************/
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_strings.h>
 #include "htt_store.h"
 
 /************************************************************************
@@ -61,6 +62,3 @@ void *htt_store_get(htt_store_t *store, const char *key) {
   return apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
 }
 
-void *htt_store_index(htt_store_t *store, int index) {
-  return NULL;
-}
