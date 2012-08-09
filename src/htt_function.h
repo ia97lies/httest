@@ -69,4 +69,10 @@ htt_context_t *htt_function_get_context(htt_function_t *function);
  */
 int htt_isa_function(void *type);
 
+/**
+ * Function destructor
+ * @param function IN
+ */
+void htt_function_free(void *function);
+
 #endif

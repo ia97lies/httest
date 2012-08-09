@@ -43,6 +43,7 @@
 struct htt_function_s {
 #define HTT_FUNCTION_T 2
   int type;
+  apr_pool_t *pool;
   htt_executable_t *executable;
   htt_context_t *context;
 };
@@ -55,20 +56,17 @@ struct htt_function_s {
  * Public 
  ***********************************************************************/
 htt_function_t *htt_function_new(apr_pool_t *pool, htt_executable_t *executable,
-                              htt_context_t *context) {
-  htt_function_t *function = apr_pcalloc(pool, sizeof(*function));
+                                 htt_context_t *context) {
+  apr_pool_t *mypool;
+
+  apr_pool_create(&mypool, pool);
+  htt_function_t *function = apr_pcalloc(mypool, sizeof(*function));
+  function->pool = pool;
   function->type = HTT_FUNCTION_T;
   function->executable = executable;
+  /* TODO: potential memory loss, do need a reference counter for context */
   function->context = context;
   return function;
-}
-
-void htt_function_update(htt_function_t *function, 
-                                htt_executable_t *executable,
-                                htt_context_t *context) {
-  htt_context_destroy(function->context);
-  function->executable = executable;
-  function->context = context;
 }
 
 htt_executable_t *htt_function_get_executable(htt_function_t *function) {
@@ -84,3 +82,7 @@ int htt_isa_function(void *type) {
   return (function->type == HTT_FUNCTION_T);
 }
 
+void htt_function_free(void *vfunction) {
+  htt_function_t *function = vfunction;
+  apr_pool_destroy(function->pool);
+}

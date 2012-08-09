@@ -38,6 +38,11 @@ struct htt_store_s {
   apr_hash_t *hash;
 };
 
+typedef struct htt_elem_s {
+  htt_destructor_f destructor;
+  void *elem;
+} htt_elem_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -54,19 +59,31 @@ htt_store_t *htt_store_new(apr_pool_t *pool) {
   return store;
 }
 
-void htt_store_set(htt_store_t *store, const char *key, void *value) {
-  void *elem = apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
+void htt_store_set(htt_store_t *store, const char *key, void *value, 
+                   htt_destructor_f destructor) {
+  htt_elem_t *e = apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
   
-  if (elem) {
-    apr_hash_set(store->hash, key, APR_HASH_KEY_STRING, value);
+  if (e) {
+    e->destructor(e->elem);
+    e->elem = value;
+    e->destructor = destructor;
   }
   else {
+    e = apr_pcalloc(store->pool, sizeof(*e));
+    e->elem = value;
+    e->destructor = destructor;
     apr_hash_set(store->hash, apr_pstrdup(store->pool, key), 
-                 APR_HASH_KEY_STRING, value);
+                 APR_HASH_KEY_STRING, e);
   }
 }
 
 void *htt_store_get(htt_store_t *store, const char *key) {
-  return apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
+  htt_elem_t *e = apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
+  if (e) {
+    return e->elem;
+  }
+  else {
+    return NULL;
+  }
 }
 

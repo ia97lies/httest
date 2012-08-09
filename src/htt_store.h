@@ -29,6 +29,8 @@
 
 typedef struct htt_store_s htt_store_t;
 
+typedef void(*htt_destructor_f)(void *e); 
+
 /**
  * Create a store variable
  * @param pool IN parent pool for inheritance
@@ -42,8 +44,10 @@ htt_store_t *htt_store_new(apr_pool_t *pool);
  * @param store IN
  * @param key IN
  * @param value IN
+ * @param destructor IN destructor for value NULL if none
  */
-void htt_store_set(htt_store_t *store, const char *key, void *value);
+void htt_store_set(htt_store_t *store, const char *key, void *value,
+                   htt_destructor_f);
 
 /**
  * Get a value

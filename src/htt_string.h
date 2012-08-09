@@ -38,13 +38,6 @@ typedef struct htt_string_s htt_string_t;
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value);
 
 /**
- * Update string value
- * @param string IN
- * @param value IN new string, replace the old, no memory loss 
- */
-void htt_string_update(htt_string_t *string, const char *value);
-
-/**
  * Get string value
  * @param string IN
  * @return value
@@ -65,5 +58,11 @@ const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool);
  * @return 1 if it is a string type
  */
 int htt_isa_string(void *type);
+
+/**
+ * Free string
+ * @param string IN
+ */
+void htt_string_free(void *string); 
 
 #endif

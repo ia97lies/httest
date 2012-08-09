@@ -231,7 +231,7 @@ static apr_status_t _split_line_to_params(apr_pool_t *pool,
       htt_string_t *string;
       val = apr_strtok(NULL, " ", &restline);
       string = htt_string_new(pool, val);
-      htt_store_set(cur, key, string);
+      htt_store_set(cur, key, string, htt_string_free);
     }
   } 
 

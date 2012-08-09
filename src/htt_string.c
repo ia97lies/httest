@@ -57,20 +57,11 @@ struct htt_string_s {
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
   apr_pool_t *mypool;
   apr_pool_create(&mypool, pool);
-  htt_string_t *string = apr_pcalloc(pool, sizeof(*string));
+  htt_string_t *string = apr_pcalloc(mypool, sizeof(*string));
   string->type = HTT_STRING_T;
   string->pool = mypool;
   string->value = apr_pstrdup(mypool, value);
   return string;
-}
-
-void htt_string_update(htt_string_t *string, const char *value) {
-  apr_pool_t *mypool;
-  apr_pool_t *pool = apr_pool_parent_get(string->pool);
-  apr_pool_destroy(string->pool);
-  apr_pool_create(&mypool, pool);
-  string->pool = mypool;
-  string->value = apr_pstrdup(mypool, value);
 }
 
 const char *htt_string_get(htt_string_t *string) {
@@ -84,5 +75,10 @@ const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool) {
 int htt_isa_string(void *type) {
   htt_string_t *string = type;
   return (string && string->type == HTT_STRING_T);
+}
+
+void htt_string_free(void *vstring) {
+  htt_string_t *string = vstring;
+  apr_pool_destroy(string->pool);
 }
 

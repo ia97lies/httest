@@ -236,7 +236,7 @@ void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
 
 void htt_add_value(htt_t *htt, const char *key, const char *val) {
   htt_string_t *string = htt_string_new(htt->pool, val);
-  htt_store_set(htt->defines, key, string);
+  htt_store_set(htt->defines, key, string, htt_string_free);
 }
 
 void htt_set_cur_file_name(htt_t *htt, const char *name) {
@@ -377,11 +377,10 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_store_t *params, 
                                       htt_store_t *retvars, char *line) {
-  char *key;
-  char *val;
-
-  key = apr_strtok(line, "=", &val);
-
+  /* get first the right context */
+  /* use the pool of this context to copy line */
+  /* split copy into key value */
+  /* store it */
   return APR_SUCCESS;
 }
 
