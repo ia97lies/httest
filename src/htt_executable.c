@@ -128,6 +128,10 @@ apr_hash_t *htt_executable_get_config(htt_executable_t *executable) {
   return executable->config;
 }
 
+htt_function_f htt_executable_get_function(htt_executable_t *executable) {
+  return executable->function;
+}
+
 apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
   apr_status_t status = APR_SUCCESS;
   int i;
@@ -143,28 +147,31 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     int doit = 1;
     char *line;
     apr_pool_t *ptmp;
+    htt_store_t *retvars; 
     htt_store_t *params = NULL;
-    htt_store_t *retvars = NULL;
+    htt_function_t *closure = NULL;
     exec = (htt_executable_t *)e[i].val;
 
     apr_pool_create(&ptmp, htt_context_get_pool(context));
+    retvars = htt_store_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
     if (exec->signature) {
       apr_status_t status;
-      retvars = htt_store_new(ptmp);
       if ((status = _split_line_to_params(ptmp, exec->signature, line, &params,
                                           &retvars)) != APR_SUCCESS) {
       }
     }
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
+    if (exec->body) {
+      child_context= htt_context_new(context, htt_context_get_log(context));
+    }
     if (exec->function) {
       if (exec->body) {
-        child_context= htt_context_new(context, htt_context_get_log(context));
         status = exec->function(exec, child_context, ptmp, params, retvars, 
                                 line); 
-        htt_function_t *closure = htt_store_get(retvars, "__closure");
+        closure = htt_store_get(retvars, "__closure");
         if (!htt_isa_function(closure)) {
           htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
                   "Expect a closure"); 
@@ -180,6 +187,10 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     /* TODO: get doit decision from executed function 
      * -> lambda function (closure)
      */
+    if (closure) {
+      /** pass params, retvars */
+      htt_function_call(closure, ptmp);
+    }
     while (exec->body && doit) {
       status = htt_execute(exec, child_context);
       htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 

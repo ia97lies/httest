@@ -77,6 +77,11 @@ htt_context_t *htt_function_get_context(htt_function_t *function) {
   return function->context;
 }
 
+apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp) {
+  htt_function_f f = htt_executable_get_function(function->executable);
+  return f(function->executable, function->context, ptmp, NULL, NULL, NULL);
+}
+
 int htt_isa_function(void *type) {
   htt_function_t *function = type;
   return (function->type == HTT_FUNCTION_T);

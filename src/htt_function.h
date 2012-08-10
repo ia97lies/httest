@@ -63,6 +63,14 @@ htt_executable_t *htt_function_get_executable(htt_function_t *function);
 htt_context_t *htt_function_get_context(htt_function_t *function);
 
 /**
+ * Execute a function with its context
+ * @param function IN
+ * @param ptmp IN temporary pool
+ * @return apr status
+ */
+apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp);
+
+/**
  * Test if a pointer is a function type
  * @param void IN possible string pointer
  * @return 1 if it is a string type

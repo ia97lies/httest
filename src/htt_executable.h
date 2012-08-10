@@ -88,6 +88,13 @@ void htt_executable_add(htt_executable_t *executable,
                         htt_executable_t *addition);
 
 /**
+ * Get function from executable
+ * @param executable IN
+ * @return function
+ */
+htt_function_f htt_executable_get_function(htt_executable_t *executable);
+
+/**
  * Execute an executable
  * @param executable IN 
  * @param context IN executable context
