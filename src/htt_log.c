@@ -66,7 +66,7 @@ void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
     va_list va;
     apr_pool_t *pool;
 
-    apr_pool_create(&pool, NULL);
+    apr_pool_create(&pool, log->pool);
     va_start(va, fmt);
     if (log->mode == HTT_LOG_ERROR) {
       tmp = apr_pvsprintf(pool, fmt, va);
@@ -134,7 +134,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
       line_len = 0;
     }
     
-    apr_pool_create(&pool, NULL);
+    apr_pool_create(&pool, log->pool);
     outbuf = apr_pcalloc(pool, max_line_len + 100);
 
     /* log lines */
@@ -186,7 +186,7 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
     va_list va;
     apr_pool_t *pool;
 
-    apr_pool_create(&pool, NULL);
+    apr_pool_create(&pool, log->pool);
     va_start(va, fmt);
     tmp = apr_pvsprintf(pool, fmt, va);
     tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
