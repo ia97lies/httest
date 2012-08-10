@@ -66,9 +66,12 @@ htt_context_t *htt_function_get_context(htt_function_t *function);
  * Execute a function with its context
  * @param function IN
  * @param ptmp IN temporary pool
+ * @param params IN input parameters
+ * @param retvars IN return parameters
  * @return apr status
  */
-apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp);
+apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp, 
+                               htt_store_t *params, htt_store_t *retvars); 
 
 /**
  * Test if a pointer is a function type

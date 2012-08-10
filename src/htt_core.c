@@ -95,6 +95,10 @@ struct htt_s {
   htt_executable_t *executable;
 };
 
+typedef struct _loop_config_s {
+  int i;
+} _loop_config_t;
+
 /**
  * Interpret reading from given bufreader 
  * @param htt IN instance
@@ -419,18 +423,41 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
     vars = htt_context_get_vars(cur);
   }
   string = htt_string_new(htt_context_get_pool(cur), val);
-  htt_store_set(vars, apr_pstrdup(htt_context_get_pool(cur), key), string,
-                htt_string_free);
+  htt_store_set(vars, key, string, htt_string_free);
   return APR_SUCCESS;
+}
+
+static _loop_config_t *_loop_get_config(htt_context_t *context) {
+  _loop_config_t *config;
+
+  config = htt_context_get_config(context, "_loop_config");
+  if (config == NULL) {
+    config = apr_pcalloc(htt_context_get_pool(context), sizeof(*config));
+    htt_context_set_config(context, 
+                           apr_pstrdup(htt_context_get_pool(context), 
+                                       "_loop_config"), config);
+  }
+  return config;
 }
 
 static apr_status_t _loop_closure(htt_executable_t *executable, 
                                   htt_context_t *context, apr_pool_t *ptmp, 
                                   htt_store_t *params, htt_store_t *retvars, 
                                   char *line) {
-  /* TODO: return 1 as long as count is not reached else 0 */
-  htt_string_t *retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
-  htt_store_set(retvars, apr_pstrdup(ptmp, "__closure"), retval, htt_string_free);
+  htt_string_t *retval;
+  _loop_config_t *config;
+  htt_string_t *count = htt_store_get(htt_context_get_vars(context), "count");
+  if (htt_isa_string(count)) {
+    config = _loop_get_config(context);
+    ++config->i;
+    if (config->i > apr_atoi64(htt_string_get(count))) {
+      retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
+    }
+    else {
+      retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "1"));
+    }
+  }
+  htt_store_set(retvars, "__doit", retval, htt_string_free);
   return APR_SUCCESS;
 }
 
@@ -463,16 +490,12 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   loop_context= htt_context_new(context, htt_context_get_log(context));
   loop_vars = htt_context_get_vars(loop_context);
   count_str = htt_string_new(htt_context_get_pool(loop_context), count);
-  htt_store_set(loop_vars, 
-                apr_pstrdup(htt_context_get_pool(loop_context), "count"), 
-                count_str, htt_string_free);
+  htt_store_set(loop_vars, "count", count_str, htt_string_free);
 
   loop_closure = htt_function_new(htt_context_get_pool(loop_context), 
                                   loop_executable, loop_context);
   /* this must return a closure */
-  htt_store_set(retvars, 
-                apr_pstrdup(htt_context_get_pool(loop_context), "__closure"), 
-                loop_closure, htt_function_free);
+  htt_store_set(retvars, "__closure", loop_closure, htt_function_free);
   return APR_SUCCESS;
 }
 

@@ -81,6 +81,14 @@ static apr_status_t _split_line_to_params(apr_pool_t *pool,
                                           htt_store_t **params,
                                           htt_store_t **retvars);
 
+/**
+ * Check if closure returns 1 or 0
+ * @param closure IN closure for eval doit
+ * @param ptmp IN 
+ * @return 0 or 1
+ */
+static int _doit(htt_function_t *closure, apr_pool_t *ptmp); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -144,7 +152,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
        i < apr_table_elts(executable->body)->nelts; 
        ++i) {
     htt_context_t *child_context = NULL;
-    int doit = 1;
+    int doit = 0;
     char *line;
     apr_pool_t *ptmp;
     htt_store_t *retvars; 
@@ -181,24 +189,21 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       }
       else {
         status = exec->function(exec, context, ptmp, params, retvars, line); 
+        /* TODO: store revars if any */
       }
     }
     apr_pool_destroy(ptmp);
-    /* TODO: get doit decision from executed function 
-     * -> lambda function (closure)
-     */
     if (closure) {
-      /** pass params, retvars */
-      htt_function_call(closure, ptmp);
+      doit = _doit(closure, ptmp);
+    }
+    else {
+      doit = 1;
     }
     while (exec->body && doit) {
       status = htt_execute(exec, child_context);
       htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
               exec->file, exec->line);
-      /* TODO: get doit decision from executed function 
-       * -> lambda function (closure)
-       */
-      doit = 0;
+      doit = _doit(closure, ptmp);
     }
     if (child_context) {
       htt_context_destroy(child_context);
@@ -259,3 +264,20 @@ static apr_status_t _split_line_to_params(apr_pool_t *pool,
 
   return APR_SUCCESS;
 }
+
+static int _doit(htt_function_t *closure, apr_pool_t *ptmp) {
+  int doit = 0;
+  if (closure) {
+    htt_string_t *ret;
+    htt_store_t *retvars;
+    htt_context_t *context = htt_function_get_context(closure);
+    retvars = htt_store_new(htt_context_get_pool(context));
+    htt_function_call(closure, ptmp, NULL, retvars);
+    ret = htt_store_get(retvars, "__doit");
+    if (htt_isa_string(ret) && strcmp(htt_string_get(ret), "1") == 0) {
+      doit = 1;
+    }
+  }
+  return doit;
+}
+
