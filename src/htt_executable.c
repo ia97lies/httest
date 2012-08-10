@@ -160,16 +160,27 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (exec->function) {
-      status = exec->function(exec, context, ptmp, params, retvars, line); 
+      if (exec->body) {
+        child_context= htt_context_new(context, htt_context_get_log(context));
+        status = exec->function(exec, child_context, ptmp, params, retvars, 
+                                line); 
+        htt_function_t *closure = htt_store_get(retvars, "__closure");
+        if (!htt_isa_function(closure)) {
+          htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
+                  "Expect a closure"); 
+          return APR_EGENERAL;
+
+        }
+      }
+      else {
+        status = exec->function(exec, context, ptmp, params, retvars, line); 
+      }
     }
     apr_pool_destroy(ptmp);
     /* TODO: get doit decision from executed function 
      * -> lambda function (closure)
      */
     while (exec->body && doit) {
-      if (!child_context) { 
-        child_context= htt_context_new(context, htt_context_get_log(context));
-      }
       status = htt_execute(exec, child_context);
       htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
               exec->file, exec->line);

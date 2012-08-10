@@ -65,6 +65,8 @@
 #include "htt_store.h"
 #include "htt_stack.h"
 #include "htt_executable.h"
+#include "htt_context.h"
+#include "htt_function.h"
 #include "htt_string.h"
 
 /************************************************************************
@@ -147,6 +149,20 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
                                       apr_pool_t *ptmp, htt_store_t *params, 
                                       htt_store_t *retvars, char *line); 
 
+/**
+ * Loop command
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_loop_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_store_t *params, 
+                                       htt_store_t *retvars, char *line);
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -224,8 +240,10 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
                   htt_cmd_line_compile, _cmd_set_function);
-  htt_add_command(htt, "body", "", "", "open a new body",
+  htt_add_command(htt, "body", NULL, "", "open a new body",
                   htt_cmd_body_compile, NULL);
+  htt_add_command(htt, "loop", NULL, "", "open a new body",
+                  htt_cmd_body_compile, _cmd_loop_function);
   return htt;
 }
 
@@ -306,7 +324,8 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
       htt_command_t *command;
 
       cmd = apr_strtok(line, " ", &rest);
-      htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, htt->cur_line, cmd, rest);
+      htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, 
+              htt->cur_line, cmd, rest);
       command = htt_get_command(htt, cmd);
       if (!command) {
         htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
@@ -402,6 +421,58 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
   string = htt_string_new(htt_context_get_pool(cur), val);
   htt_store_set(vars, apr_pstrdup(htt_context_get_pool(cur), key), string,
                 htt_string_free);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _loop_closure(htt_executable_t *executable, 
+                                  htt_context_t *context, apr_pool_t *ptmp, 
+                                  htt_store_t *params, htt_store_t *retvars, 
+                                  char *line) {
+  /* TODO: return 1 as long as count is not reached else 0 */
+  htt_string_t *retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
+  htt_store_set(retvars, apr_pstrdup(ptmp, "__closure"), retval, htt_string_free);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_loop_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_store_t *params, 
+                                       htt_store_t *retvars, char *line) {
+  htt_function_t *loop_closure;
+  htt_context_t *loop_context;
+  htt_executable_t *loop_executable;
+  htt_store_t *loop_vars;
+  htt_string_t *count_str;
+
+  char *count;
+  char *index;
+
+  count = apr_strtok(line, " ", &index);
+
+  if (!count || !count[0]) {
+      htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
+              "Expect a count");
+    return APR_EGENERAL;
+  }
+
+  loop_executable = htt_executable_new(htt_context_get_pool(context), 
+                                       "_loop_closure", NULL, _loop_closure, 
+                                       NULL, 
+                                       htt_executable_get_file(executable), 
+                                       htt_executable_get_line(executable));
+  loop_context= htt_context_new(context, htt_context_get_log(context));
+  loop_vars = htt_context_get_vars(loop_context);
+  count_str = htt_string_new(htt_context_get_pool(loop_context), count);
+  htt_store_set(loop_vars, 
+                apr_pstrdup(htt_context_get_pool(loop_context), "count"), 
+                count_str, htt_string_free);
+
+  loop_closure = htt_function_new(htt_context_get_pool(loop_context), 
+                                  loop_executable, loop_context);
+  /* this must return a closure */
+  htt_store_set(retvars, 
+                apr_pstrdup(htt_context_get_pool(loop_context), "__closure"), 
+                loop_closure, htt_function_free);
   return APR_SUCCESS;
 }
 

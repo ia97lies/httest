@@ -219,7 +219,7 @@ int main(int argc, const char *const argv[]) {
       log_mode = HTT_LOG_NONE;
       break;
     case 'e':
-      log_mode = HTT_LOG_ERR;
+      log_mode = HTT_LOG_ERROR;
       break;
     case 'p':
       log_mode = HTT_LOG_DEBUG;

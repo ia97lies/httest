@@ -1,5 +1,12 @@
                                                          -*- coding: utf-8 -*-
   
+Changes with httest 3.0.0
+  *) httest: Alpha status of the brand new httest
+
+  *) httest: Rewrite core and implement a easier and more powerful test
+             language.
+
+
 Changes with httest 2.2.8
   *) httest: Workaround for cert loading problem if server is threaded.
 
@@ -8,8 +15,10 @@ Changes with httest 2.2.8
   
   *) tools: htcolor Perl script to color httest output.
 
+
 Changes with httest 2.2.7
   *) httest: Performance improvments around receiving and sending data.
+
 
 Changes with httest 2.2.6
   *) httest: New RAMPUP command to control the start fo CLIENTS.
@@ -23,6 +32,7 @@ Changes with httest 2.2.6
 
   *) httest: Bugfixed possible coredump with lua blocks.
 
+
 Changes with httest 2.2.5
   *) httest: Performance module for distributed client support.
 
@@ -30,8 +40,10 @@ Changes with httest 2.2.5
 
   *) httest: Improved log performance with multi-threaded tests.
 
+
 Changes with httest 2.2.4
   *) httest: Bugfix possible segfault with _SSL:TRACE
+
 
 Changes with httest 2.2.3
   *) httest: Openssl 1.0.1 support.
@@ -43,16 +55,19 @@ Changes with httest 2.2.3
   *) httest: Get server cert also on "_SSL:RENEG_CERT" and do verification of
   this cert only on "_SSL:RENEG_CERT verify" 
 
+
 Changes with httest 2.2.2
   *) httest: New SSL command to set cipher suite.
 
   *) httest: Expect/match/grep SSL handshake messages.
+
 
 Changes with httest 2.2.1
   *) httest: New XPath command to query parts of the HTML document.
 
   *) httest: New variable scope GLOBAL. This variable are shared among all
              threads.
+
 
 Changes with httest 2.2.0
   *) general: Forked from httest 2.1.19
@@ -67,6 +82,7 @@ Changes with httest 2.2.0
   *) httest: Add _ASSERT "<expression>" command for arithmetical assertions,
              cleaner and better readable than _IF ... _ELSE ... _END
 	     constructs.
+
 
 Changes with httest 2.1.18
   *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.

@@ -11,3 +11,9 @@
 - On execution every running body do have a htt_context_t
 - A htt_context_t do exist until end of a body
 - Variables, parameters and return values are hold in context.
+
+++Closure
+- Call a function which return a closure function
+- A closure is a tuple of htt_executable_t and htt_context_t
+- The closures htt_context_t is a child of the callers htt_context_t
+- All variables needed must be a local variable in the closure htt_context_t!

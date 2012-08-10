@@ -68,7 +68,7 @@ void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
 
     apr_pool_create(&pool, NULL);
     va_start(va, fmt);
-    if (log->mode == HTT_LOG_ERR) {
+    if (log->mode == HTT_LOG_ERROR) {
       tmp = apr_pvsprintf(pool, fmt, va);
       apr_file_printf(log->err, "\n%-88s", tmp);
     }
@@ -98,7 +98,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
       len = strlen(buf);
     }
     
-    if (mode == HTT_LOG_ERR) {
+    if (mode == HTT_LOG_ERROR) {
       fd = log->err;
     }
 
@@ -181,7 +181,7 @@ void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len) {
 
 void htt_log_error(htt_log_t *log, apr_status_t status, const char *file, 
                    int pos, const char *fmt, ...) {
-  if (log->mode >= HTT_LOG_ERR) {
+  if (log->mode >= HTT_LOG_ERROR) {
     char *tmp;
     va_list va;
     apr_pool_t *pool;

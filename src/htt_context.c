@@ -37,8 +37,6 @@
 struct htt_context_s {
   apr_pool_t *pool;
   htt_store_t *vars;
-  htt_store_t *params;
-  htt_store_t *returns;
   htt_context_t *parent;
   htt_log_t *log;
   const char *line;

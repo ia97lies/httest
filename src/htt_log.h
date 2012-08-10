@@ -30,7 +30,7 @@
 typedef struct htt_log_s htt_log_t;
 
 #define HTT_LOG_NONE 0
-#define HTT_LOG_ERR 1
+#define HTT_LOG_ERROR 1
 #define HTT_LOG_WARN 2
 #define HTT_LOG_INFO 3
 #define HTT_LOG_CMD 4
