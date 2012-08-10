@@ -377,10 +377,31 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_store_t *params, 
                                       htt_store_t *retvars, char *line) {
-  /* get first the right context */
-  /* use the pool of this context to copy line */
-  /* split copy into key value */
-  /* store it */
+  char *key;
+  char *val;
+  htt_store_t *vars;
+  htt_context_t *cur = context;
+  htt_string_t *string;
+ 
+  key = apr_strtok(line, "=", &val);
+  while (*val == ' ') ++val;
+  apr_collapse_spaces(key, key);
+  vars = htt_context_get_vars(cur);
+  while (cur && !htt_store_get(vars, key)) {
+    cur = htt_context_get_parent(cur);
+    if (cur) {
+      vars = htt_context_get_vars(cur);
+    }
+  } 
+  if (!cur) {
+    cur = htt_context_get_godfather(context);
+  }
+  if (!vars) {
+    vars = htt_context_get_vars(cur);
+  }
+  string = htt_string_new(htt_context_get_pool(cur), val);
+  htt_store_set(vars, apr_pstrdup(htt_context_get_pool(cur), key), string,
+                htt_string_free);
   return APR_SUCCESS;
 }
 

@@ -73,13 +73,11 @@ apr_pool_t *htt_context_get_pool(htt_context_t *context);
 void htt_context_set_vars(htt_context_t *context, htt_store_t *vars); 
 
 /**
- * Set variable in the context chain from the top most
+ * Context get variables
  * @param context IN context
- * @param variable IN variable name
- * @param value IN variable value
+ * @return variables
  */
-void htt_context_set_var(htt_context_t *context, const char *variable,
-                         const char *value); 
+htt_store_t *htt_context_get_vars(htt_context_t *context); 
 
 /**
  * Get variable in the context chain from the top most
