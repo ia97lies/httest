@@ -43,7 +43,7 @@ client
   _Host: localhost:8080
   _
   expect . foo.*
-  match . "foo(.*) (.*)" bl fasel
+  match . "foo(.*) (.*)" a b
   wait
 
   if $foo =~ foo.*
