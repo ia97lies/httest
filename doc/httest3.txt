@@ -47,6 +47,7 @@ client
   _Host: localhost:8080
   _
   expect . foo.*
+  match . "foo(.*) (.*)" -> bar fasel
   wait
 
   if $foo =~ foo.*
