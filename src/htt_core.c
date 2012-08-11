@@ -93,6 +93,7 @@ struct htt_s {
   int cur_line;
   htt_stack_t *stack;
   htt_executable_t *executable;
+  apr_hash_t *config;
 };
 
 typedef struct _loop_config_s {
@@ -404,6 +405,24 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
 
 apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
                                    char *args) {
+  htt_executable_t *executable;
+  char *name;
+  char *signature;
+  char *line = apr_pstrdup(htt->pool, args);
+
+  name = apr_strtok(line, " ", &signature);
+  while (*signature == ' ') ++signature;
+  htt_add_command(htt, name, signature, NULL, NULL, htt_cmd_line_compile, 
+  /* TODO: register a function which calls at the end htt_execute */
+                  NULL);
+  executable = htt_executable_new(htt->pool, command->name, command->signature, 
+                                  command->function, args, htt->cur_file, 
+                                  htt->cur_line);
+  htt_executable_add(htt->executable, executable);
+  htt_stack_push(htt->stack, executable);
+  htt->executable = executable;
+  return APR_SUCCESS;
+
   return APR_SUCCESS;
 }
 
