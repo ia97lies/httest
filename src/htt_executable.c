@@ -67,21 +67,6 @@ struct htt_executable_s {
 static const char *_context_replacer(void *udata, const char *name); 
 
 /**
- * Split line into parameters
- * @param pool IN pool for allocation
- * @param signature IN parameter signature
- * @param line IN resolved line
- * @param params OUT parameters
- * @param retvars OUT return value parameters
- * @return apr status
- */
-static apr_status_t _split_line_to_params(apr_pool_t *pool,
-                                          const char *signature, 
-                                          const char *line,
-                                          htt_store_t **params,
-                                          htt_store_t **retvars);
-
-/**
  * Check if closure returns 1 or 0
  * @param closure IN closure for eval doit
  * @param ptmp IN 
@@ -155,21 +140,16 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     int doit = 0;
     char *line;
     apr_pool_t *ptmp;
-    htt_store_t *retvars; 
+    htt_stack_t *retvars; 
     htt_store_t *params = NULL;
     htt_function_t *closure = NULL;
     exec = (htt_executable_t *)e[i].val;
 
     apr_pool_create(&ptmp, htt_context_get_pool(context));
-    retvars = htt_store_new(ptmp);
+    retvars = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
-    if (exec->signature) {
-      apr_status_t status;
-      if ((status = _split_line_to_params(ptmp, exec->signature, line, &params,
-                                          &retvars)) != APR_SUCCESS) {
-      }
-    }
+    /* TODO: handle signature */
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (exec->body) {
@@ -179,7 +159,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       if (exec->body) {
         status = exec->function(exec, child_context, ptmp, params, retvars, 
                                 line); 
-        closure = htt_store_get(retvars, "__closure");
+        closure = htt_stack_top(retvars);
         if (!htt_isa_function(closure)) {
           htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
                   "Expect a closure"); 
@@ -229,51 +209,15 @@ static const char *_context_replacer(void *udata, const char *name) {
   }
 }
 
-static apr_status_t _split_line_to_params(apr_pool_t *pool,
-                                          const char *signature, 
-                                          const char *line,
-                                          htt_store_t **params,
-                                          htt_store_t **retvars) {
-  char *key;
-  char *rest;
-  char *val;
-  char *restline;
-
-  char *sigcopy = apr_pstrdup(pool, signature);
-  char *linecopy = apr_pstrdup(pool, line);
-  htt_store_t *cur = htt_store_new(pool);
-
-  *params = cur;
-  *retvars = NULL;
-
-  key = apr_strtok(sigcopy, " ", &rest);
-  val = apr_strtok(linecopy, " ", &restline);
-  while (key && val) {
-    key = apr_strtok(NULL, " ", &rest);
-    if (strcmp(key, ":") == 0) {
-      cur = htt_store_new(pool);
-      *retvars = cur;
-    }
-    else {
-      htt_string_t *string;
-      val = apr_strtok(NULL, " ", &restline);
-      string = htt_string_new(pool, val);
-      htt_store_set(cur, key, string, htt_string_free);
-    }
-  } 
-
-  return APR_SUCCESS;
-}
-
 static int _doit(htt_function_t *closure, apr_pool_t *ptmp) {
   int doit = 0;
   if (closure) {
     htt_string_t *ret;
-    htt_store_t *retvars;
+    htt_stack_t *retvars;
     htt_context_t *context = htt_function_get_context(closure);
-    retvars = htt_store_new(htt_context_get_pool(context));
+    retvars = htt_stack_new(htt_context_get_pool(context));
     htt_function_call(closure, ptmp, NULL, retvars);
-    ret = htt_store_get(retvars, "__doit");
+    ret = htt_stack_top(retvars);
     if (htt_isa_string(ret) && strcmp(htt_string_get(ret), "1") == 0) {
       doit = 1;
     }

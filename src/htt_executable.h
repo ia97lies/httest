@@ -26,6 +26,8 @@
 #define HTT_EXECUTABLE_H
 
 #include <apr_hash.h>
+#include "htt_store.h"
+#include "htt_stack.h"
 #include "htt_context.h"
 
 typedef struct htt_executable_s htt_executable_t;
@@ -33,7 +35,7 @@ typedef struct htt_executable_s htt_executable_t;
 typedef apr_status_t(*htt_function_f)(htt_executable_t *executable, 
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_store_t *params, 
-                                      htt_store_t *retvars, char *line);
+                                      htt_stack_t *retvars, char *line);
 
 /**
  * Create a new executable

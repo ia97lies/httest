@@ -78,7 +78,7 @@ htt_context_t *htt_function_get_context(htt_function_t *function) {
 }
 
 apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp, 
-                               htt_store_t *params, htt_store_t *retvars) {
+                               htt_store_t *params, htt_stack_t *retvars) {
   htt_function_f f = htt_executable_get_function(function->executable);
   return f(function->executable, function->context, ptmp, params, retvars, 
            NULL);

@@ -137,7 +137,7 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
                                        htt_context_t *context,
                                        apr_pool_t *ptmp, htt_store_t *params, 
-                                       htt_store_t *retvars, char *line);
+                                       htt_stack_t *retvars, char *line);
 
 /**
  * Set command 
@@ -151,7 +151,7 @@ static apr_status_t _cmd_echo_function(htt_executable_t *executable,
 static apr_status_t _cmd_set_function(htt_executable_t *executable, 
                                       htt_context_t *context,
                                       apr_pool_t *ptmp, htt_store_t *params, 
-                                      htt_store_t *retvars, char *line); 
+                                      htt_stack_t *retvars, char *line); 
 
 /**
  * Loop command
@@ -165,7 +165,7 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
 static apr_status_t _cmd_loop_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_store_t *params, 
-                                       htt_store_t *retvars, char *line);
+                                       htt_stack_t *retvars, char *line);
 
 /************************************************************************
  * Globals 
@@ -236,7 +236,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                                        NULL, NULL, NULL, 0);
   htt_stack_push(htt->stack, htt->executable);
 
-  htt_add_command(htt, "include", "file*", "<file>", "include a htt file", 
+  htt_add_command(htt, "include", "file", "<file>", "include a htt file", 
                   _cmd_include_compile, NULL);
   htt_add_command(htt, "end", NULL, "", "end a open body", 
                   _cmd_end_compile, NULL);
@@ -391,7 +391,7 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_store_t *params, 
-                                       htt_store_t *retvars, char *line) {
+                                       htt_stack_t *retvars, char *line) {
   htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", line);
   return APR_SUCCESS;
 }
@@ -399,7 +399,7 @@ static apr_status_t _cmd_echo_function(htt_executable_t *executable,
 static apr_status_t _cmd_set_function(htt_executable_t *executable, 
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_store_t *params, 
-                                      htt_store_t *retvars, char *line) {
+                                      htt_stack_t *retvars, char *line) {
   char *key;
   char *val;
   htt_store_t *vars;
@@ -442,7 +442,7 @@ static _loop_config_t *_loop_get_config(htt_context_t *context) {
 
 static apr_status_t _loop_closure(htt_executable_t *executable, 
                                   htt_context_t *context, apr_pool_t *ptmp, 
-                                  htt_store_t *params, htt_store_t *retvars, 
+                                  htt_store_t *params, htt_stack_t *retvars, 
                                   char *line) {
   htt_string_t *retval;
   _loop_config_t *config;
@@ -456,15 +456,15 @@ static apr_status_t _loop_closure(htt_executable_t *executable,
     else {
       retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "1"));
     }
+    htt_stack_push(retvars, retval);
   }
-  htt_store_set(retvars, "__doit", retval, htt_string_free);
   return APR_SUCCESS;
 }
 
 static apr_status_t _cmd_loop_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_store_t *params, 
-                                       htt_store_t *retvars, char *line) {
+                                       htt_stack_t *retvars, char *line) {
   htt_function_t *loop_closure;
   htt_context_t *loop_context;
   htt_executable_t *loop_executable;
@@ -495,7 +495,7 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   loop_closure = htt_function_new(htt_context_get_pool(loop_context), 
                                   loop_executable, loop_context);
   /* this must return a closure */
-  htt_store_set(retvars, "__closure", loop_closure, htt_function_free);
+  htt_stack_push(retvars, loop_closure);
   return APR_SUCCESS;
 }
 
