@@ -10,7 +10,9 @@
 - As long the closure returns 1 the body will be executed
 - On execution every running body do have a htt_context_t
 - A htt_context_t do exist until end of a body
-- Variables, parameters and return values are hold in context.
+- Variables hold in context.
+- Parameters are hold as key/value pairs in a map
+- Return variables are hold in a stack
 
 ++Closure
 - Call a function which return a closure function

@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool store.
+ * Implementation of the HTTP Test Tool map.
  */
 
 /************************************************************************
@@ -28,12 +28,12 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_strings.h>
-#include "htt_store.h"
+#include "htt_map.h"
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-struct htt_store_s {
+struct htt_map_s {
   apr_pool_t *pool;
   apr_hash_t *hash;
 };
@@ -50,18 +50,18 @@ typedef struct htt_elem_s {
 /************************************************************************
  * Public 
  ***********************************************************************/
-htt_store_t *htt_store_new(apr_pool_t *pool) {
+htt_map_t *htt_map_new(apr_pool_t *pool) {
   apr_pool_t *mypool;
   apr_pool_create(&mypool, pool);
-  htt_store_t *store = apr_pcalloc(mypool, sizeof(*store));
-  store->pool = mypool;
-  store->hash = apr_hash_make(mypool);
-  return store;
+  htt_map_t *map = apr_pcalloc(mypool, sizeof(*map));
+  map->pool = mypool;
+  map->hash = apr_hash_make(mypool);
+  return map;
 }
 
-void htt_store_set(htt_store_t *store, const char *key, void *value, 
+void htt_map_set(htt_map_t *map, const char *key, void *value, 
                    htt_destructor_f destructor) {
-  htt_elem_t *e = apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
+  htt_elem_t *e = apr_hash_get(map->hash, key, APR_HASH_KEY_STRING);
   
   if (e) {
     e->destructor(e->elem);
@@ -69,16 +69,16 @@ void htt_store_set(htt_store_t *store, const char *key, void *value,
     e->destructor = destructor;
   }
   else {
-    e = apr_pcalloc(store->pool, sizeof(*e));
+    e = apr_pcalloc(map->pool, sizeof(*e));
     e->elem = value;
     e->destructor = destructor;
-    apr_hash_set(store->hash, apr_pstrdup(store->pool, key), 
+    apr_hash_set(map->hash, apr_pstrdup(map->pool, key), 
                  APR_HASH_KEY_STRING, e);
   }
 }
 
-void *htt_store_get(htt_store_t *store, const char *key) {
-  htt_elem_t *e = apr_hash_get(store->hash, key, APR_HASH_KEY_STRING);
+void *htt_map_get(htt_map_t *map, const char *key) {
+  htt_elem_t *e = apr_hash_get(map->hash, key, APR_HASH_KEY_STRING);
   if (e) {
     return e->elem;
   }

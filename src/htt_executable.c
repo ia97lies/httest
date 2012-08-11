@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool store.
+ * Implementation of the HTTP Test Tool executable.
  */
 
 /************************************************************************
@@ -141,7 +141,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     char *line;
     apr_pool_t *ptmp;
     htt_stack_t *retvars; 
-    htt_store_t *params = NULL;
+    htt_map_t *params = NULL;
     htt_function_t *closure = NULL;
     exec = (htt_executable_t *)e[i].val;
 

@@ -19,42 +19,42 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool store.
+ * Interface of the HTTP Test Tool map.
  */
 
-#ifndef HTT_STORE_H
-#define HTT_STORE_H
+#ifndef HTT_MAP_H
+#define HTT_MAP_H
 
 #include <apr_pools.h>
 
-typedef struct htt_store_s htt_store_t;
+typedef struct htt_map_s htt_map_t;
 
 typedef void(*htt_destructor_f)(void *e); 
 
 /**
- * Create a store variable
+ * Create a map variable
  * @param pool IN parent pool for inheritance
- * @param value IN store to hold in this store variable
- * @return store instance 
+ * @param value IN map to hold in this map variable
+ * @return map instance 
  */
-htt_store_t *htt_store_new(apr_pool_t *pool);
+htt_map_t *htt_map_new(apr_pool_t *pool);
 
 /**
  * Set a value
- * @param store IN
+ * @param map IN
  * @param key IN
  * @param value IN
  * @param destructor IN destructor for value NULL if none
  */
-void htt_store_set(htt_store_t *store, const char *key, void *value,
+void htt_map_set(htt_map_t *map, const char *key, void *value,
                    htt_destructor_f);
 
 /**
  * Get a value
- * @param store IN
+ * @param map IN
  * @param key IN
  * @return value
  */
-void *htt_store_get(htt_store_t *store, const char *key);
+void *htt_map_get(htt_map_t *map, const char *key);
 
 #endif

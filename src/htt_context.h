@@ -25,7 +25,7 @@
 #ifndef HTT_CONTEXT_H
 #define HTT_CONTEXT_H
 
-#include "htt_store.h"
+#include "htt_map.h"
 #include "htt_log.h"
 
 typedef struct htt_context_s htt_context_t;
@@ -70,14 +70,14 @@ apr_pool_t *htt_context_get_pool(htt_context_t *context);
  * Context set variables
  * @param context IN context
  */
-void htt_context_set_vars(htt_context_t *context, htt_store_t *vars); 
+void htt_context_set_vars(htt_context_t *context, htt_map_t *vars); 
 
 /**
  * Context get variables
  * @param context IN context
  * @return variables
  */
-htt_store_t *htt_context_get_vars(htt_context_t *context); 
+htt_map_t *htt_context_get_vars(htt_context_t *context); 
 
 /**
  * Get variable in the context chain from the top most

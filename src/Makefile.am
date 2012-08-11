@@ -6,7 +6,7 @@ dist_man_MANS = httest.1
 #		htproxy.1 htntlm.1 htremote.1
 
 httest_SOURCES = \
-	httest.c htt_core.c htt_context.c htt_executable.c htt_store.c \
+	httest.c htt_core.c htt_context.c htt_executable.c htt_map.c \
 	htt_log.c htt_util.c htt_stack.c htt_bufreader.c htt_replacer.c \
 	htt_string.c htt_function.c
 
@@ -28,7 +28,7 @@ httest_SOURCES = \
 
 noinst_HEADERS = \
 	defines.h htt_core.h htt_context.h htt_executable.h htt_log.h \
-	htt_store.h htt_util.h htt_stack.h htt_bufreader.h htt_replacer.h \
+	htt_map.h htt_util.h htt_stack.h htt_bufreader.h htt_replacer.h \
 	htt_string.h htt_function.h
 #	file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 #	module.h transport.h store.h eval.h replacer.h tcp_module.h \

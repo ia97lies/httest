@@ -65,7 +65,7 @@
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
-#include "htt_store.h"
+#include "htt_map.h"
 
 /************************************************************************
  * Defines 

@@ -25,7 +25,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
-#include "htt_store.h"
+#include "htt_map.h"
 #include "htt_context.h"
 #include "htt_replacer.h"
 #include "htt_string.h"
@@ -36,7 +36,7 @@
  ***********************************************************************/
 struct htt_context_s {
   apr_pool_t *pool;
-  htt_store_t *vars;
+  htt_map_t *vars;
   htt_context_t *parent;
   htt_log_t *log;
   const char *line;
@@ -55,7 +55,7 @@ htt_context_t *htt_context_new(htt_context_t *parent, htt_log_t *log) {
   context->parent = parent;
   context->log = log;
   context->config = apr_hash_make(pool);
-  context->vars = htt_store_new(pool);
+  context->vars = htt_map_new(pool);
   return context;
 }
 
@@ -80,11 +80,11 @@ apr_pool_t *htt_context_get_pool(htt_context_t *context) {
   return context->pool;
 }
 
-void htt_context_set_vars(htt_context_t *context, htt_store_t *vars) {
+void htt_context_set_vars(htt_context_t *context, htt_map_t *vars) {
   context->vars = vars;
 }
 
-htt_store_t *htt_context_get_vars(htt_context_t *context) {
+htt_map_t *htt_context_get_vars(htt_context_t *context) {
   return context->vars;
 }
 
@@ -93,7 +93,7 @@ void *htt_context_get_var(htt_context_t *context, const char *variable) {
   void *elem = NULL;
 
   while (top && !elem) {
-    elem = htt_store_get(top->vars, variable);
+    elem = htt_map_get(top->vars, variable);
     top = htt_context_get_parent(top);
   }
 

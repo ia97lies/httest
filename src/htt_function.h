@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool store.
+ * Interface of the HTTP Test Tool function type.
  */
 
 #ifndef HTT_FUNCTION_H
@@ -71,7 +71,7 @@ htt_context_t *htt_function_get_context(htt_function_t *function);
  * @return apr status
  */
 apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp, 
-                               htt_store_t *params, htt_stack_t *retvars); 
+                               htt_map_t *params, htt_stack_t *retvars); 
 
 /**
  * Test if a pointer is a function type
