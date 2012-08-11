@@ -26,11 +26,7 @@
   - Function is a executable with its context
 
 ++ Sample
-function foo a b c : d e
-  echo a b c
-  return "bla" "bli" 
-end
-
+# comment here
 function foo i
   local j = i
   function count
@@ -47,7 +43,7 @@ client
   _Host: localhost:8080
   _
   expect . foo.*
-  match . "foo(.*) (.*)" -> bar fasel
+  match . "foo(.*) (.*)" bl fasel
   wait
 
   if $foo =~ foo.*
@@ -58,6 +54,10 @@ client
 
   foo 100 counter
   counter result
+  # result should be 102
+  echo $result
+  counter result
+  # result should be 104
   echo $result
 end
 

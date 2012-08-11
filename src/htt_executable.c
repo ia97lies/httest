@@ -148,6 +148,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_create(&ptmp, htt_context_get_pool(context));
     retvars = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
+    /* TODO: split call params from return */
     line = htt_replacer(ptmp, line, context, _context_replacer);
     /* TODO: handle signature */
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
