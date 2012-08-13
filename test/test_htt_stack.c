@@ -64,10 +64,35 @@ int main(int argc, const char *const argv[]) {
   }
   stack = htt_stack_new(pool);
 
-  fprintf(stdout, "Push/pop one element\n");
+  fprintf(stdout, "Push/pop 1 element\n");
   htt_stack_push(stack, test_data[0]);
   data = htt_stack_top(stack);
   assert(strcmp(data, test_data[0]) == 0);
+  assert(htt_stack_elems(stack) == 1);
+  data = htt_stack_index(stack, 0);
+  assert(strcmp(data, test_data[0]) == 0);
+  data = htt_stack_pop(stack);
+  assert(strcmp(data, test_data[0]) == 0);
+  assert(htt_stack_elems(stack) == 0);
+
+  fprintf(stdout, "Push/pop 40 element\n");
+  for (i = 0; i < 40; i++) {
+    htt_stack_push(stack, test_data[i]);
+    data = htt_stack_top(stack);
+    assert(strcmp(data, test_data[i]) == 0);
+    assert(htt_stack_elems(stack) == i + 1);
+  }
+  for (i = 0; i < 40; i++) {
+    data = htt_stack_index(stack, i);
+    assert(strcmp(data, test_data[39 - i]) == 0);
+  }
+  data = htt_stack_index(stack, 40);
+  assert(data == NULL);
+  for (i = 39; i >= 0; i--) {
+    data = htt_stack_pop(stack);
+    assert(strcmp(data, test_data[i]) == 0);
+  }
+  assert(htt_stack_elems(stack) == 0);
 
   return 0;
 }
