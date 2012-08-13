@@ -53,12 +53,21 @@
 int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   htt_stack_t *stack;
+  char *test_data[50];
+  char *data;
   int i;
 
-  /** init store */
   apr_app_initialize(&argc, &argv, NULL);
   apr_pool_create(&pool, NULL);
+  for (i = 0; i < 50; i++) {
+    test_data[i] = apr_psprintf(pool, "%d", i);
+  }
   stack = htt_stack_new(pool);
+
+  fprintf(stdout, "Push/pop one element\n");
+  htt_stack_push(stack, test_data[0]);
+  data = htt_stack_top(stack);
+  assert(strcmp(data, test_data[0]) == 0);
 
   return 0;
 }
