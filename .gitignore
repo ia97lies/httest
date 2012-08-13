@@ -30,3 +30,4 @@ httest-*/
 .project
 .sonar
 nginx.pid
+test/test_htt_stack
