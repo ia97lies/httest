@@ -25,25 +25,28 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
+#include <assert.h>
 #include "htt_stack.h"
+
+#define HTT_STACK_LIMIT 50
 
 struct htt_stack_s {
   apr_pool_t *pool;
-  apr_table_t *table;
+  void *table[HTT_STACK_LIMIT];
   int sp;
 };
 
 htt_stack_t * htt_stack_new(apr_pool_t *pool) {
   htt_stack_t *stack = apr_pcalloc(pool, sizeof(*stack));
-  stack->table = apr_table_make(pool, 10);
   stack->pool = pool;
   stack->sp = -1;
   return stack;
 }
 
 void htt_stack_push(htt_stack_t *stack, void *elem) {
-  apr_table_addn(stack->table, apr_pstrdup(stack->pool, ""), elem);
   ++stack->sp;
+  assert(stack->sp < HTT_STACK_LIMIT);
+  stack->table[stack->sp] = elem;
 }
 
 void *htt_stack_pop(htt_stack_t *stack) {
@@ -51,10 +54,7 @@ void *htt_stack_pop(htt_stack_t *stack) {
     return NULL;
   }
   else {
-    void *elem;
-    apr_table_entry_t *e;
-    e = (apr_table_entry_t *) apr_table_elts(stack->table)->elts;
-    elem = e[stack->sp].val;
+    void *elem = stack->table[stack->sp];
     --stack->sp;
     return elem;
   }
@@ -65,9 +65,7 @@ void *htt_stack_top(htt_stack_t *stack) {
     return NULL;
   }
   else {
-    apr_table_entry_t *e;
-    e = (apr_table_entry_t *) apr_table_elts(stack->table)->elts;
-    return e[stack->sp].val;
+    return stack->table[stack->sp];
   }
 }
 
@@ -76,9 +74,7 @@ void *htt_stack_index(htt_stack_t *stack, int i) {
     return NULL;
   }
   else {
-    apr_table_entry_t *e;
-    e = (apr_table_entry_t *) apr_table_elts(stack->table)->elts;
-    return e[stack->sp - i].val;
+    return stack->table[stack->sp - i];
   }
 }
 
