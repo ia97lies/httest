@@ -288,8 +288,8 @@ int main(int argc, const char *const argv[]) {
     atexit(htt_exit);
   }
 
-  apr_file_open_stdin(&out, pool);
-  apr_file_open_stdin(&err, pool);
+  apr_file_open_stdout(&out, pool);
+  apr_file_open_stderr(&err, pool);
   htt_set_log(htt, out, err, log_mode);
 
   /* do for all files (no wild card support) */
