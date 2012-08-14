@@ -32,49 +32,6 @@
 typedef struct htt_s htt_t;
 typedef struct htt_command_s htt_command_t; 
 
-typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, 
-                                     char *params);
-
-/**
- * Compiles a simple command 
- * @param htt IN instance
- * @param function IN commands function
- * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
- */
-apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
-                                  char *args);
-
-/**
- * Compiles a command with a body (if, loop, ...)
- * @param htt IN instance
- * @param function IN commands function
- * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
- */
-apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
-                                  char *args);
-
-/**
- * verbose exit func
- */
-void htt_exit();
-
-/**
- * silent exit func
- */
-void htt_no_output_exit();
-
-/**
- * Throw error exception, terminate 
- */
-void htt_throw_error();
-
-/**
- * Throw skip exception, terminate
- */
-void htt_throw_skip();
-
 /**
  * Instanted a new interpreter
  * @param pool IN
@@ -114,6 +71,36 @@ void htt_set_cur_file_name(htt_t *htt, const char *name);
 const char *htt_get_cur_file_name(htt_t *htt);
 
 /**
+ * Compile interface
+ * @param command IN command hook
+ * @param htt IN httest instance
+ * @param params IN line after command
+ * @return apr status
+ */
+typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, 
+                                     char *params);
+
+/**
+ * Compiles a simple command 
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
+                                  char *args);
+
+/**
+ * Compiles a command with a body (if, loop, ...)
+ * @param htt IN instance
+ * @param function IN commands function
+ * @param args IN commands arguments
+ * @param APR_SUCCESS on successfull compilation
+ */
+apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
+                                  char *args);
+
+/**
  * Add command
  * @param htt IN instance
  * @param name IN command name
@@ -146,5 +133,25 @@ apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp);
  * @return apr status
  */
 apr_status_t htt_run(htt_t *htt);
+
+/**
+ * verbose exit func
+ */
+void htt_exit();
+
+/**
+ * silent exit func
+ */
+void htt_no_output_exit();
+
+/**
+ * Throw error exception, terminate 
+ */
+void htt_throw_error();
+
+/**
+ * Throw skip exception, terminate
+ */
+void htt_throw_skip();
 
  #endif

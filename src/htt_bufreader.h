@@ -25,25 +25,31 @@
 #ifndef HTT_BUFREADER_H
 #define HTT_BUFREADER_H
 
+#include <apr_file_io.h>
+
 typedef struct htt_bufreader_s htt_bufreader_t;
 
 /**
  * New htt_bufreader object 
- *
- * @param self OUT htt_bufreader object
+ * @param pool IN pool
  * @param fp IN an open file to read
- * @param p IN pool
- *
  * @return an apr status
  */
 htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp);
 
 /**
+ * New htt_bufreader object 
+ * @param pool IN pool
+ * @param buf IN buffer to read
+ * @param len IN buffer len
+ * @return an apr status
+ */
+htt_bufreader_t *htt_bufreader_buf_new(apr_pool_t * pool, const char *buf, 
+                                       apr_size_t len); 
+/**
  * read line from file 
- *
  * @param self IN htt_bufreader object
  * @param line OUT read line
- *
  * @return an apr status
  */
 apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line);

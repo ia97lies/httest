@@ -339,6 +339,11 @@ htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
   return command;
 }
 
+apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len) {
+  htt_bufreader_t *bufreader = htt_bufreader_buf_new(htt->pool, buf, len);
+  return _compile(htt, bufreader);
+}
+
 apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
   htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
   return _compile(htt, bufreader);

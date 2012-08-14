@@ -33,7 +33,7 @@
 #include <apr_file_io.h>
 #include <apr_buckets.h>
 
-#include "defines.h"
+#include "htt_defines.h"
 #include "htt_bufreader.h"
 
 
@@ -49,7 +49,7 @@ struct htt_bufreader_s {
   apr_size_t len;
   apr_bucket_alloc_t *alloc;
   apr_bucket_brigade *line;
-  char buf[BLOCK_MAX + 1];
+  char *buf;
 };
 
 
@@ -59,32 +59,51 @@ struct htt_bufreader_s {
 
 /**
  * Fill up buffer with data from file 
- *
  * @param self IN htt_bufreader object
- *
  * @return an apr status
  */
-static apr_status_t htt_bufreader_fill(htt_bufreader_t * self); 
+static apr_status_t _bufreader_fill(htt_bufreader_t * self); 
 
+/**
+ * Check fp and read file
+ * @param self IN htt_bufreader object
+ * @return apr status
+ */
+static apr_status_t _file_read(htt_bufreader_t *self);
+
+/**
+ * Check end of file
+ * @param self IN htt_bufreader object
+ * @return APR_EOF if end of file
+ */
+static apr_status_t _file_eof(htt_bufreader_t *self);
+
+/**
+ * Create a plain bufreader
+ * @param pool IN pool
+ * @return bufreader
+ */
+static htt_bufreader_t *_bufreader_new(apr_pool_t * pool); 
 
 /************************************************************************
  * Public
  ***********************************************************************/
 
 htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp) {
-  apr_allocator_t *allocator;
-  htt_bufreader_t *bufreader;
-
-  bufreader = apr_pcalloc(pool, sizeof(htt_bufreader_t));
+  htt_bufreader_t *bufreader = _bufreader_new(pool);
   bufreader->fp = fp;
-  bufreader->alloc = apr_bucket_alloc_create(pool);
-  bufreader->line = apr_brigade_create(pool, bufreader->alloc);
-  allocator = apr_pool_allocator_get(pool);
-  apr_allocator_max_free_set(allocator, 1024*1024);
-  bufreader->pool = pool;
-  bufreader->status = APR_SUCCESS;
-  apr_pool_create(&bufreader->pool, pool);
+  bufreader->buf = apr_pcalloc(bufreader->pool, HTT_BLOCK_MAX + 1); 
+  bufreader->len = HTT_BLOCK_MAX;
 
+  return bufreader;
+}
+
+htt_bufreader_t *htt_bufreader_buf_new(apr_pool_t * pool, const char *buf, 
+                                       apr_size_t len) { 
+  htt_bufreader_t *bufreader = _bufreader_new(pool);
+  bufreader->buf = apr_pcalloc(bufreader->pool, len);
+  memcpy(bufreader->buf, buf, len);
+  bufreader->len = len;
   return bufreader;
 }
 
@@ -98,9 +117,9 @@ apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
 
   i = 0;
   c = 0;
-  while (leave_loop == 0 && (status = apr_file_eof(self->fp)) != APR_EOF) {    
+  while (leave_loop == 0 && (status = _file_eof(self)) != APR_EOF) {    
     if (self->i >= self->len) {
-      if ((status = htt_bufreader_fill(self)) != APR_SUCCESS) {
+      if ((status = _bufreader_fill(self)) != APR_SUCCESS) {
         break;
       }
     }
@@ -141,7 +160,7 @@ apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
   i = 0;
   while (i < len) {
     if (self->i >= self->len) {
-      if ((status = htt_bufreader_fill(self)) != APR_SUCCESS) {
+      if ((status = _bufreader_fill(self)) != APR_SUCCESS) {
         break;
       }
     }
@@ -177,13 +196,13 @@ apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
 
   bb = apr_brigade_create(self->pool, self->alloc);
 
-  read = apr_pcalloc(self->pool, BLOCK_MAX);
+  read = apr_pcalloc(self->pool, HTT_BLOCK_MAX);
   do {
-    block = BLOCK_MAX;
+    block = HTT_BLOCK_MAX;
     status = htt_bufreader_read_block(self, read, &block);
     b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
     APR_BRIGADE_INSERT_TAIL(bb, b);
-    read = apr_pcalloc(self->pool, BLOCK_MAX);
+    read = apr_pcalloc(self->pool, HTT_BLOCK_MAX);
   } while (status == APR_SUCCESS); 
 
   apr_brigade_pflatten(bb, buf, len, self->pool);
@@ -202,15 +221,52 @@ apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
  * Private
  ***********************************************************************/
 
-static apr_status_t htt_bufreader_fill(htt_bufreader_t * self) {
+static htt_bufreader_t *_bufreader_new(apr_pool_t * pool) {
+  apr_allocator_t *allocator;
+  htt_bufreader_t *bufreader;
+  apr_pool_t *bpool;
+
+  apr_pool_create(&bpool, pool);
+  bufreader = apr_pcalloc(bpool, sizeof(htt_bufreader_t));
+  bufreader->pool = bpool;
+  bufreader->alloc = apr_bucket_alloc_create(bufreader->pool);
+  bufreader->line = apr_brigade_create(bufreader->pool, bufreader->alloc);
+  allocator = apr_pool_allocator_get(bufreader->pool);
+  apr_allocator_max_free_set(allocator, 1024*1024);
+  bufreader->status = APR_SUCCESS;
+
+  return bufreader;
+}
+
+static apr_status_t _bufreader_fill(htt_bufreader_t * self) {
   self->i = 0;
-  self->len = BLOCK_MAX;
 
   if (self->status != APR_SUCCESS) {
     return self->status;
   }
 
-  self->status = apr_file_read(self->fp, self->buf, &self->len);
+  self->status = _file_read(self);
   return self->status;
+}
+
+static apr_status_t _file_read(htt_bufreader_t *self) {
+  if (self->fp) {
+    return apr_file_read(self->fp, self->buf, &self->len);
+  }
+  else {
+    return APR_EOF;
+  }
+}
+
+static apr_status_t _file_eof(htt_bufreader_t *self) {
+  if (self->fp) {
+    return apr_file_eof(self->fp);
+  }
+  else if (self->i >= self->len) {
+    return APR_EOF;
+  }
+  else {
+    return APR_SUCCESS;
+  }
 }
 
