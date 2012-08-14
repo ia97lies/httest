@@ -93,6 +93,7 @@ htt_bufreader_t *htt_bufreader_file_new(apr_pool_t * pool, apr_file_t * fp) {
   htt_bufreader_t *bufreader = _bufreader_new(pool);
   bufreader->fp = fp;
   bufreader->buf = apr_pcalloc(bufreader->pool, HTT_BLOCK_MAX + 1); 
+  bufreader->i = HTT_BLOCK_MAX;
   bufreader->len = HTT_BLOCK_MAX;
 
   return bufreader;
