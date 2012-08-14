@@ -50,6 +50,17 @@
 /************************************************************************
  * Implementation 
  ***********************************************************************/
+char *global_buf = "";
+
+static apr_status_t _cmd_mock_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line) {
+  global_buf = apr_pstrcat(htt_context_get_pool(executable), global_buf, line, 
+                           "\n", NULL);
+  return APR_SUCCESS;
+}
+
 int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   apr_file_t *out;
@@ -64,6 +75,20 @@ int main(int argc, const char *const argv[]) {
   apr_file_open_stdout(&out, pool);
   apr_file_open_stderr(&err, pool);
   htt_set_log(htt, out, err, HTT_LOG_NONE);
+
+  htt_add_command(htt, "mock", NULL, "<string>", "put string in a buffer", 
+                  htt_cmd_line_compile, _cmd_mock_function);
+
+  fprintf(stdout, "Run single mock command\n");
+  {
+    apr_status_t status;
+    char *buf = "mock this line";
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    fprintf(stdout, "Result: %s", global_buf);
+  }
 
   return 0;
 }

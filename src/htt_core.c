@@ -363,8 +363,8 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
   apr_status_t status = APR_SUCCESS;
   htt->cur_line = 1;
 
-  while (status == APR_SUCCESS && 
-         htt_bufreader_read_line(bufreader, &line) == APR_SUCCESS) {
+  while (status == APR_SUCCESS) { 
+    status = htt_bufreader_read_line(bufreader, &line);
     for (; *line == ' ' || *line == '\t'; ++line);
     if (*line != '#' && *line != '\0') {
       char *rest;
