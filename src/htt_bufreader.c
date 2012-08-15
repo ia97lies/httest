@@ -141,9 +141,7 @@ apr_status_t htt_bufreader_read_line(htt_bufreader_t * bufreader, char **line) {
 
   apr_brigade_pflatten(bufreader->line, line, &i, bufreader->pool);
 
-  if (i == 0) {
-    *line[0] = 0;
-  }
+  (*line)[i] = 0;
 
   while (**line == ' ' || **line == '\t') {
     ++*line;
