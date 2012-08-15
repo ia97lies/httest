@@ -59,24 +59,24 @@ struct htt_bufreader_s {
 
 /**
  * Fill up buffer with data from file 
- * @param self IN htt_bufreader object
+ * @param bufreader IN htt_bufreader object
  * @return an apr status
  */
-static apr_status_t _bufreader_fill(htt_bufreader_t * self); 
+static apr_status_t _bufreader_fill(htt_bufreader_t * bufreader); 
 
 /**
  * Check fp and read file
- * @param self IN htt_bufreader object
+ * @param bufreader IN htt_bufreader object
  * @return apr status
  */
-static apr_status_t _file_read(htt_bufreader_t *self);
+static apr_status_t _file_read(htt_bufreader_t *bufreader);
 
 /**
  * Check end of file
- * @param self IN htt_bufreader object
+ * @param bufreader IN htt_bufreader object
  * @return APR_EOF if end of file
  */
-static apr_status_t _file_eof(htt_bufreader_t *self);
+static apr_status_t _file_eof(htt_bufreader_t *bufreader);
 
 /**
  * Create a plain bufreader
@@ -108,7 +108,7 @@ htt_bufreader_t *htt_bufreader_buf_new(apr_pool_t * pool, const char *buf,
   return bufreader;
 }
 
-apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
+apr_status_t htt_bufreader_read_line(htt_bufreader_t * bufreader, char **line) {
   char c;
   apr_size_t i;
   apr_status_t status = APR_SUCCESS;
@@ -118,28 +118,32 @@ apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
 
   i = 0;
   c = 0;
-  while (leave_loop == 0 && (status = _file_eof(self)) != APR_EOF) {    
-    if (self->i >= self->len) {
-      if ((status = _bufreader_fill(self)) != APR_SUCCESS) {
+  apr_brigade_cleanup(bufreader->line);
+  while (leave_loop == 0 && (status = _file_eof(bufreader)) != APR_EOF) {    
+    if (bufreader->i >= bufreader->len) {
+      if ((status = _bufreader_fill(bufreader)) != APR_SUCCESS) {
         break;
       }
     }
 
-    if (self->i < self->len) {
-      c = self->buf[self->i];
+    if (bufreader->i < bufreader->len) {
+      c = bufreader->buf[bufreader->i];
       if (c == '\r' || c == '\n') {
 	c='\0';
 	leave_loop=1;
       }
-      apr_brigade_putc(self->line, NULL, NULL, c);
-      self->i++;
+      apr_brigade_putc(bufreader->line, NULL, NULL, c);
+      bufreader->i++;
       i++;
 
     }
   }
 
-  apr_brigade_pflatten(self->line, line, &i, self->pool);
-  apr_brigade_cleanup(self->line);
+  apr_brigade_pflatten(bufreader->line, line, &i, bufreader->pool);
+
+  if (i == 0) {
+    *line[0] = 0;
+  }
 
   while (**line == ' ' || **line == '\t') {
     ++*line;
@@ -148,8 +152,8 @@ apr_status_t htt_bufreader_read_line(htt_bufreader_t * self, char **line) {
   return status;
 }
 
-apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
-                                  apr_size_t *length) {
+apr_status_t htt_bufreader_read_block(htt_bufreader_t * bufreader, char *block,
+                                      apr_size_t *length) {
   apr_status_t status;
   int i;
   int len = *length;
@@ -160,22 +164,22 @@ apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
 
   i = 0;
   while (i < len) {
-    if (self->i >= self->len) {
-      if ((status = _bufreader_fill(self)) != APR_SUCCESS) {
+    if (bufreader->i >= bufreader->len) {
+      if ((status = _bufreader_fill(bufreader)) != APR_SUCCESS) {
         break;
       }
     }
 
-    block[i] = self->buf[self->i];
+    block[i] = bufreader->buf[bufreader->i];
     ++i;
-    ++self->i;
+    ++bufreader->i;
   }
 
   /* on eof we like to get the bytes recvieved so far */
-  while (i < len && self->i < self->len) {
-    block[i] = self->buf[self->i];
+  while (i < len && bufreader->i < bufreader->len) {
+    block[i] = bufreader->buf[bufreader->i];
     ++i;
-    ++self->i;
+    ++bufreader->i;
   }
 
   *length = i;
@@ -183,7 +187,7 @@ apr_status_t htt_bufreader_read_block(htt_bufreader_t * self, char *block,
   return status;
 }
 
-apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
+apr_status_t htt_bufreader_read_eof(htt_bufreader_t * bufreader,
                                 char **buf, apr_size_t *len) {
   char *read;
   apr_size_t block;
@@ -195,18 +199,18 @@ apr_status_t htt_bufreader_read_eof(htt_bufreader_t * self,
   *buf = NULL;
   (*len) = 0;
 
-  bb = apr_brigade_create(self->pool, self->alloc);
+  bb = apr_brigade_create(bufreader->pool, bufreader->alloc);
 
-  read = apr_pcalloc(self->pool, HTT_BLOCK_MAX);
+  read = apr_pcalloc(bufreader->pool, HTT_BLOCK_MAX);
   do {
     block = HTT_BLOCK_MAX;
-    status = htt_bufreader_read_block(self, read, &block);
-    b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
+    status = htt_bufreader_read_block(bufreader, read, &block);
+    b = apr_bucket_pool_create(read, block, bufreader->pool, bufreader->alloc);
     APR_BRIGADE_INSERT_TAIL(bb, b);
-    read = apr_pcalloc(self->pool, HTT_BLOCK_MAX);
+    read = apr_pcalloc(bufreader->pool, HTT_BLOCK_MAX);
   } while (status == APR_SUCCESS); 
 
-  apr_brigade_pflatten(bb, buf, len, self->pool);
+  apr_brigade_pflatten(bb, buf, len, bufreader->pool);
   apr_brigade_destroy(bb);
 
   if (status == APR_SUCCESS || status == APR_EOF) {
@@ -239,31 +243,33 @@ static htt_bufreader_t *_bufreader_new(apr_pool_t * pool) {
   return bufreader;
 }
 
-static apr_status_t _bufreader_fill(htt_bufreader_t * self) {
-  self->i = 0;
+static apr_status_t _bufreader_fill(htt_bufreader_t * bufreader) {
+  bufreader->i = 0;
 
-  if (self->status != APR_SUCCESS) {
-    return self->status;
+  if (bufreader->status != APR_SUCCESS) {
+    return bufreader->status;
   }
 
-  self->status = _file_read(self);
-  return self->status;
+  bufreader->status = _file_read(bufreader);
+  return bufreader->status;
 }
 
-static apr_status_t _file_read(htt_bufreader_t *self) {
-  if (self->fp) {
-    return apr_file_read(self->fp, self->buf, &self->len);
+static apr_status_t _file_read(htt_bufreader_t *bufreader) {
+  if (bufreader->fp) {
+    return apr_file_read(bufreader->fp, bufreader->buf, &bufreader->len);
   }
   else {
+    bufreader->len = 0;
+    bufreader->i = 0;
     return APR_EOF;
   }
 }
 
-static apr_status_t _file_eof(htt_bufreader_t *self) {
-  if (self->fp) {
-    return apr_file_eof(self->fp);
+static apr_status_t _file_eof(htt_bufreader_t *bufreader) {
+  if (bufreader->fp) {
+    return apr_file_eof(bufreader->fp);
   }
-  else if (self->i >= self->len) {
+  else if (bufreader->i >= bufreader->len) {
     return APR_EOF;
   }
   else {

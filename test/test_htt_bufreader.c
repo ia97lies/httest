@@ -58,7 +58,7 @@ int main(int argc, const char *const argv[]) {
   apr_app_initialize(&argc, &argv, NULL);
   apr_pool_create(&pool, NULL);
 
-  fprintf(stdout, "Read line in small data set\n");
+  fprintf(stdout, "Read line in small data set... ");
   {
     char *data;
     const char *test_data = "foo bar\nbla bla";
@@ -73,8 +73,9 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_EOF);
     assert(data[0] == 0);
   }
+  fprintf(stdout, "ok\n");
 
-  fprintf(stdout, "Read line in big data set\n");
+  fprintf(stdout, "Read line in big data set... ");
   {
     char *cur;
     char *data;
@@ -99,8 +100,8 @@ int main(int argc, const char *const argv[]) {
     status = htt_bufreader_read_line(bufreader, &data);
     assert(status == APR_EOF);
     assert(strcmp(data, ref) == 0);
-
   }
+  fprintf(stdout, "ok\n");
 
   return 0;
 }
