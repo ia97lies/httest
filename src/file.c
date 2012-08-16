@@ -223,6 +223,7 @@ apr_status_t bufreader_read_eof(bufreader_t * self,
   apr_brigade_pflatten(bb, buf, len, self->pool);
   apr_brigade_destroy(bb);
 
+  (*buf)[*len] = 0;
   if (status == APR_SUCCESS || status == APR_EOF) {
     return APR_SUCCESS;
   }
