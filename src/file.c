@@ -136,6 +136,7 @@ apr_status_t bufreader_read_line(bufreader_t * self, char **line) {
   apr_brigade_pflatten(self->line, line, &i, self->pool);
   apr_brigade_cleanup(self->line);
 
+  (*line)[i] = 0;
   while (**line == ' ' || **line == '\t') {
     ++*line;
   }
