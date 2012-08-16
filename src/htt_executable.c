@@ -35,6 +35,7 @@
 #include <apr_strings.h>
 
 #include "htt_core.h"
+#include "htt_util.h"
 #include "htt_replacer.h"
 #include "htt_context.h"
 #include "htt_executable.h"
@@ -73,6 +74,16 @@ static const char *_context_replacer(void *udata, const char *name);
  * @return 0 or 1
  */
 static int _doit(htt_function_t *closure, apr_pool_t *ptmp); 
+
+/**
+ * Handle signature with given line
+ * @param pool IN pool to alloc params map
+ * @param signature IN parameter signature
+ * @param line IN line
+ * @return map of parameters
+ */
+htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature, 
+                             char *line);
 
 /************************************************************************
  * Globals 
@@ -149,7 +160,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     retvars = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
-    /* TODO: handle signature */
+    params = _handle_signature(ptmp, exec->signature, line);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (exec->body) {
@@ -223,5 +234,32 @@ static int _doit(htt_function_t *closure, apr_pool_t *ptmp) {
     }
   }
   return doit;
+}
+
+htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature, 
+                             char *line) {
+  if (signature) {
+    char *cur;
+    char *rest;
+    char **argv;
+    char *copy = apr_pstrdup(pool, signature);
+    int i = 0;
+    htt_map_t *params = htt_map_new(pool);
+
+    htt_tokenize_to_argv(line, &argv, pool, 0);
+
+    cur = apr_strtok(copy, " ", &rest);
+    while (cur) {
+      htt_string_t *string = NULL;
+      cur = apr_strtok(NULL, " ", &rest);
+      if (argv[i]) {
+        string = htt_string_new(pool, argv[i]);
+        htt_map_set(params, cur, string, htt_string_free);
+      }
+    }
+
+    return params;
+  }
+  return NULL;
 }
 

@@ -80,6 +80,13 @@ void htt_context_set_vars(htt_context_t *context, htt_map_t *vars);
 htt_map_t *htt_context_get_vars(htt_context_t *context); 
 
 /**
+ * Merge a given var map to my context
+ * @param context IN context
+ * @param vars IN vars to merge
+ */
+void htt_context_merge_vars(htt_context_t *context, htt_map_t *vars);
+
+/**
  * Get variable in the context chain from the top most
  * @param context IN context
  * @param variable IN variable name

@@ -483,7 +483,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
                                            htt_context_t *context, 
                                            apr_pool_t *ptmp, htt_map_t *params, 
                                            htt_stack_t *retvars, char *line) {
-  /* map params to context vars */
+  htt_context_merge_vars(context, params);
   return htt_execute(executable, context);
 }
 

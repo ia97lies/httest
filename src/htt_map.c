@@ -87,3 +87,5 @@ void *htt_map_get(htt_map_t *map, const char *key) {
   }
 }
 
+void htt_map_merge(htt_map_t *parent, htt_map_t *child) {
+}
