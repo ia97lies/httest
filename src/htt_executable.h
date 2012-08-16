@@ -75,11 +75,23 @@ int htt_executable_get_line(htt_executable_t *executable);
 const char *htt_executable_get_raw(htt_executable_t *executable);
 
 /**
- * Get configuration of executable
- * @param executable IN
- * @return config hash
+ * Set a named configuration
+ * @param context IN context
+ * @param name IN name for stored data
+ * @param data IN data to store
  */
-apr_hash_t *htt_executable_get_config(htt_executable_t *executable); 
+void htt_executable_set_config(htt_executable_t *executable, const char *name, 
+                               void *data);
+
+/**
+ * Get named configuraion
+ * @param context IN context
+ * @param name IN name for data
+ * @return data
+ */
+void  *htt_executable_get_config(htt_executable_t *executable, 
+                                 const char *name);
+
 
 /**
  * Add a executable to an executable (body)

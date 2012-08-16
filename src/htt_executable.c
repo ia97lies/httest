@@ -128,8 +128,14 @@ const char *htt_executable_get_raw(htt_executable_t *executable) {
   return executable->raw;
 }
 
-apr_hash_t *htt_executable_get_config(htt_executable_t *executable) {
-  return executable->config;
+void htt_executable_set_config(htt_executable_t *executable, const char *name,
+                               void *data) {
+  apr_hash_set(executable->config, name, APR_HASH_KEY_STRING, data);
+}
+
+void  *htt_executable_get_config(htt_executable_t *executable, 
+                                 const char *name) {
+  return apr_hash_get(executable->config, name, APR_HASH_KEY_STRING);
 }
 
 htt_function_f htt_executable_get_function(htt_executable_t *executable) {

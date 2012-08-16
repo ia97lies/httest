@@ -130,17 +130,7 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
                                      char *args); 
 
 /**
- * Define a new function and register it
- * @param command IN command
- * @param htt IN instance
- * @param args IN argument string
- * @return apr status
- */
-static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt, 
-                                          char *args);
-
-/**
- * Add defined function 
+ * Compile function 
  * @param command IN command
  * @param htt IN instance
  * @param args IN argument string
@@ -293,7 +283,7 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "body", NULL, "", "open a new body",
                   htt_cmd_body_compile, NULL);
   htt_add_command(htt, "function", NULL, "<parameter>*", "define a function",
-                  _cmd_func_def_compile, NULL);
+                  _cmd_function_compile, _cmd_function_function);
   htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
                   htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
@@ -333,8 +323,7 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command->desc = desc;
   command->compile = compile;
   command->function = function;
-  apr_hash_set(htt_executable_get_config(htt->executable), name, 
-               APR_HASH_KEY_STRING, command);
+  htt_executable_set_config(htt->executable, name, command);
 }
 
 htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
@@ -342,12 +331,10 @@ htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
   htt_executable_t *top = htt->executable;
   int i = 1;
 
-  command = apr_hash_get(htt_executable_get_config(top), cmd, 
-                         APR_HASH_KEY_STRING);
+  command = htt_executable_get_config(top, cmd);
   top = htt_stack_index(htt->stack, i);
   while (top && !command) {
-    command = apr_hash_get(htt_executable_get_config(top), cmd, 
-                           APR_HASH_KEY_STRING);
+    command = htt_executable_get_config(top, cmd);
     top = htt_stack_index(htt->stack, ++i);
   }
 
@@ -436,6 +423,7 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
                                      char *args) {
   htt_stack_pop(htt->stack);
   htt->executable = htt_stack_top(htt->stack);
+  /* TODO: test if this a function and register */
   if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
     return APR_SUCCESS;
   }
@@ -447,35 +435,24 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt, 
+static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
                                           char *args) {
   htt_executable_t *executable;
   char *name;
   char *signature;
   char *line = apr_pstrdup(htt->pool, args);
-  htt_command_t *new_command = apr_pcalloc(htt->pool, sizeof(*command));
+
+  name = apr_strtok(line, " ", &signature);
+  if (name) apr_collapse_spaces(name, name);
+  while (signature && *signature == ' ') ++signature;
+  fprintf(stderr, "XXX: %s %s\n", name, signature);
 
   executable = htt_executable_new(htt->pool, command->name, command->signature, 
                                   command->function, args, htt->cur_file, 
                                   htt->cur_line);
-  name = apr_strtok(line, " ", &signature);
-  apr_collapse_spaces(name, name);
-  while (*signature == ' ') ++signature;
-  new_command->name = name;
-  new_command->signature = signature;
-  new_command->compile = _cmd_function_compile;
-  new_command->function = _cmd_function_function;
-  new_command->user_data = executable;
-  apr_hash_set(htt_executable_get_config(htt->executable), name, 
-               APR_HASH_KEY_STRING, new_command);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
-  return APR_SUCCESS;
-}
 
-static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
-                                          char *args) {
-  htt_executable_add(htt->executable, command->user_data);
   return APR_SUCCESS;
 }
 
@@ -483,7 +460,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
                                            htt_context_t *context, 
                                            apr_pool_t *ptmp, htt_map_t *params, 
                                            htt_stack_t *retvars, char *line) {
-  htt_context_merge_vars(context, params);
+  if (params) htt_context_merge_vars(context, params);
   return htt_execute(executable, context);
 }
 

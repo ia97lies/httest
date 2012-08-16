@@ -86,7 +86,7 @@ apr_status_t htt_function_call(htt_function_t *function, apr_pool_t *ptmp,
 
 int htt_isa_function(void *type) {
   htt_function_t *function = type;
-  return (function->type == HTT_FUNCTION_T);
+  return (function && function->type == HTT_FUNCTION_T);
 }
 
 void htt_function_free(void *vfunction) {
