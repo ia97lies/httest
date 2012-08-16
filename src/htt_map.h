@@ -59,9 +59,9 @@ void *htt_map_get(htt_map_t *map, const char *key);
 
 /**
  * Merge maps together
- * @param parent IN my map
- * @param child IN new map
+ * @param map IN my map
+ * @param add IN new map
  */
-void htt_map_merge(htt_map_t *parent, htt_map_t *child); 
+void htt_map_merge(htt_map_t *map, htt_map_t *add); 
 
 #endif

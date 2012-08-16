@@ -87,5 +87,7 @@ void *htt_map_get(htt_map_t *map, const char *key) {
   }
 }
 
-void htt_map_merge(htt_map_t *parent, htt_map_t *child) {
+void htt_map_merge(htt_map_t *map, htt_map_t *add) {
+  apr_hash_overlay(map->pool, map->hash, add->hash);
 }
+
