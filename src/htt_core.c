@@ -175,6 +175,19 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
                                       htt_context_t *context,
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line); 
+/**
+ * Local command 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_local_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line); 
 
 /**
  * Loop command
@@ -285,6 +298,8 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
                   htt_cmd_line_compile, _cmd_set_function);
+  htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
+                  htt_cmd_line_compile, _cmd_local_function);
   htt_add_command(htt, "loop", NULL, "", "open a new body",
                   htt_cmd_body_compile, _cmd_loop_function);
   return htt;
@@ -508,6 +523,24 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
   }
   string = htt_string_new(htt_context_get_pool(cur), val);
   htt_map_set(vars, key, string, htt_string_free);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_local_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line) {
+  char *var;
+  char *rest;
+  htt_map_t *vars;
+
+  htt_string_t *string = htt_string_new(htt_context_get_pool(context), "");
+  vars = htt_context_get_vars(context);
+  var = apr_strtok(line, " ", &rest);
+  while (var) {
+    htt_map_set(vars, var, string, htt_string_free);
+    var = apr_strtok(NULL, " ", &rest);
+  }
   return APR_SUCCESS;
 }
 

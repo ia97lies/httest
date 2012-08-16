@@ -81,7 +81,7 @@ static htt_t * _test_reset() {
   apr_file_open_stderr(&err, pool);
 
   htt = htt_new(pool);
-  htt_set_log(htt, out, err, HTT_LOG_DEBUG);
+  htt_set_log(htt, out, err, HTT_LOG_NONE);
   htt_add_command(htt, "mock", NULL, "<string>", "put string in a buffer", 
                   htt_cmd_line_compile, _cmd_mock_function);
   return htt;
@@ -166,10 +166,7 @@ int main(int argc, const char *const argv[]) {
   htt = _test_reset();
   fprintf(stdout, "set a variable in the same scope... ");
   {
-    htt_bufreader_t *bufreader;
     apr_status_t status;
-    int i;
-    char *line;
     char *buf = apr_pstrdup(pool, 
         "set i = foo\n\
          mock this line $i");
@@ -185,10 +182,7 @@ int main(int argc, const char *const argv[]) {
   htt = _test_reset();
   fprintf(stdout, "set a variable in foreign scope... ");
   {
-    htt_bufreader_t *bufreader;
     apr_status_t status;
-    int i;
-    char *line;
     char *buf = apr_pstrdup(pool, 
         "body\n\
            set i = foo\n\
@@ -200,6 +194,81 @@ int main(int argc, const char *const argv[]) {
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
     assert(strcmp(global_buf, "this line foo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "set a variable in a function... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo\n\
+           set i = foo\n\
+         end\n\
+         foo\n\
+         mock this line $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this line foo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "set a local variable in a function... ");
+  {
+    apr_status_t status;
+    htt_bufreader_t *bufreader;
+    char *line;
+    char *buf = apr_pstrdup(pool, 
+        "function foo\n\
+           local i\n\
+           set i = foo\n\
+           mock local $i\n\
+         end\n\
+         foo\n\
+         mock this line $i\n\
+         set i = myfoo\n\
+         mock this line $i\n\
+         foo\n");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    bufreader = htt_bufreader_buf_new(pool, global_buf, strlen(global_buf));
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(line, "local foo") == 0);
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(line, "this line $i") == 0);
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(line, "this line myfoo") == 0);
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(line, "local foo") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "function parameter... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo a b c\n\
+           mock this: $a $b\n\
+         end\n\
+         foo hallo velo\n");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this: hallo velo\n") == 0);
   }
   fprintf(stdout, "ok\n");
 
