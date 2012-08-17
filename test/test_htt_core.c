@@ -259,7 +259,7 @@ int main(int argc, const char *const argv[]) {
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
-        "function foo a b c\n\
+        "function foo a b\n\
            mock this: $a $b\n\
          end\n\
          foo hallo velo\n");

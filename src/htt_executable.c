@@ -99,6 +99,7 @@ htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
   htt_executable_t *executable = apr_pcalloc(pool, sizeof(*executable));
   executable->pool = pool;
   executable->name = name;
+  executable->signature = signature;
   executable->function = function;
   executable->raw = raw;
   executable->file = file;
@@ -114,6 +115,17 @@ void htt_executable_add(htt_executable_t *executable,
   }
   apr_table_addn(executable->body, apr_pstrdup(executable->pool, ""), 
                  (void *)addition);
+}
+
+void htt_executable_dump(htt_executable_t *executable) {
+  fprintf(stderr, "executable(%p): name=\"%s\", signature=\"%s\", "
+          "function=\"%p\", raw=\"%s\", body=\"%p\"\n", executable, 
+          executable->name, executable->signature, executable->function, 
+          executable->raw, executable->body);
+};
+
+void htt_executable_set_raw(htt_executable_t *executable, char *raw) {
+  executable->raw = raw;
 }
 
 const char *htt_executable_get_file(htt_executable_t *executable) {
@@ -161,10 +173,12 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
     params = _handle_signature(ptmp, exec->signature, line);
+    htt_executable_dump(exec);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (exec->body) {
       child_context= htt_context_new(context, htt_context_get_log(context));
+      if (params) htt_context_merge_vars(child_context, params);
     }
     if (exec->function) {
       if (exec->body) {
@@ -251,11 +265,13 @@ htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature,
     cur = apr_strtok(copy, " ", &rest);
     while (cur) {
       htt_string_t *string = NULL;
-      cur = apr_strtok(NULL, " ", &rest);
       if (argv[i]) {
+        fprintf(stderr, "XXX %s = %s\n", cur, argv[i]);
         string = htt_string_new(pool, argv[i]);
         htt_map_set(params, cur, string, htt_string_free);
       }
+      cur = apr_strtok(NULL, " ", &rest);
+      ++i;
     }
 
     return params;

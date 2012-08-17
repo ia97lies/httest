@@ -203,20 +203,6 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line);
 
-/**
- * function command
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_function_function(htt_executable_t *executable, 
-                                           htt_context_t *context, 
-                                           apr_pool_t *ptmp, htt_map_t *params, 
-                                           htt_stack_t *retvars, char *line); 
-
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -455,16 +441,14 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt,
   char *line = apr_pstrdup(htt->pool, args);
   htt_command_t *new_command = apr_pcalloc(htt->pool, sizeof(*command));
 
-  executable = htt_executable_new(htt->pool, command->name, command->signature, 
-                                  command->function, args, htt->cur_file, 
-                                  htt->cur_line);
   name = apr_strtok(line, " ", &signature);
   apr_collapse_spaces(name, name);
   while (*signature == ' ') ++signature;
+  executable = htt_executable_new(htt->pool, name, signature, NULL, signature, 
+                                  htt->cur_file, htt->cur_line);
   new_command->name = name;
   new_command->signature = signature;
   new_command->compile = _cmd_function_compile;
-  new_command->function = _cmd_function_function;
   new_command->user_data = executable;
   apr_hash_set(htt_executable_get_config(htt->executable), name, 
                APR_HASH_KEY_STRING, new_command);
@@ -475,16 +459,10 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt,
 
 static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
                                           char *args) {
+  htt_executable_t *executable = command->user_data;
+  htt_executable_set_raw(executable, args);
   htt_executable_add(htt->executable, command->user_data);
   return APR_SUCCESS;
-}
-
-static apr_status_t _cmd_function_function(htt_executable_t *executable, 
-                                           htt_context_t *context, 
-                                           apr_pool_t *ptmp, htt_map_t *params, 
-                                           htt_stack_t *retvars, char *line) {
-  htt_context_merge_vars(context, params);
-  return htt_execute(executable, context);
 }
 
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 

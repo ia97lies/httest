@@ -54,6 +54,20 @@ htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
                                      const char *file, int line);
 
 /**
+ * Dump entries for debug purpose
+ * @param executable IN 
+ */
+void htt_executable_dump(htt_executable_t *executable); 
+
+
+/**
+ * Set raw
+ * @param executable IN
+ * @param raw IN
+ */
+void htt_executable_set_raw(htt_executable_t *executable, char *raw);
+
+/**
  * Get file name of this executable
  * @param executable IN
  * @return file name
