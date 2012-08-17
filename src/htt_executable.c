@@ -183,7 +183,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
             exec->file, exec->line, exec->name, line);
     if (exec->body) {
       child_context= htt_context_new(context, htt_context_get_log(context));
-      if (params) htt_context_merge_vars(child_context, params);
     }
     if (exec->function) {
       if (exec->body) {
