@@ -204,7 +204,9 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     }
     apr_pool_destroy(ptmp);
     if (closure) {
+      apr_pool_create(&ptmp, htt_context_get_pool(context));
       doit = _doit(closure, ptmp);
+      apr_pool_destroy(ptmp);
     }
     else {
       doit = 1;
@@ -213,7 +215,9 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       status = htt_execute(exec, child_context);
       htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
               exec->file, exec->line);
+      apr_pool_create(&ptmp, htt_context_get_pool(context));
       doit = _doit(closure, ptmp);
+      apr_pool_destroy(ptmp);
     }
     if (child_context) {
       htt_context_destroy(child_context);
