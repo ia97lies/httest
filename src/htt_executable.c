@@ -173,7 +173,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
     params = _handle_signature(ptmp, exec->signature, line);
-    htt_executable_dump(exec);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (exec->body) {
@@ -266,7 +265,6 @@ htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature,
     while (cur) {
       htt_string_t *string = NULL;
       if (argv[i]) {
-        fprintf(stderr, "XXX %s = %s\n", cur, argv[i]);
         string = htt_string_new(pool, argv[i]);
         htt_map_set(params, cur, string, htt_string_free);
       }
