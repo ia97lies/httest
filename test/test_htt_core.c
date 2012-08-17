@@ -259,7 +259,7 @@ int main(int argc, const char *const argv[]) {
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
-        "function foo a b c\n\
+        "function foo a b\n\
            mock this: $a $b\n\
          end\n\
          foo hallo velo\n");
@@ -268,7 +268,6 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    fprintf(stderr, "XXX: %s\n", global_buf);
     assert(strcmp(global_buf, "this: hallo velo\n") == 0);
   }
   fprintf(stdout, "ok\n");

@@ -1,0 +1,7 @@
+
+function foo p1 p2
+  echo this is foo with params "$p1" and "$p2"
+end
+
+foo "first one" "and second one"
+
