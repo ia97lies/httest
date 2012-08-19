@@ -471,7 +471,7 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt,
                                           char *args) {
   htt_executable_t *executable;
   executable = htt_executable_new(htt->pool, command->name, command->signature,
-                                  _cmd_function_function, command->signature, 
+                                  _cmd_function_function, NULL, 
                                   htt->cur_file, htt->cur_line);
   htt_executable_set_raw(executable, args);
   htt_executable_set_config(executable, "__executable", command->user_data);
@@ -483,12 +483,15 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
                                            htt_context_t *context, 
                                            apr_pool_t *ptmp, htt_map_t *params, 
                                            htt_stack_t *retvars, char *line) {
+  apr_status_t status;
   htt_executable_t *_executable;
   htt_context_t *child_context;
   _executable = htt_executable_get_config(executable, "__executable");
   child_context= htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
-  return htt_execute(_executable, child_context);
+  status = htt_execute(_executable, child_context);
+  htt_context_destroy(child_context);
+  return status;
 }
 
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 

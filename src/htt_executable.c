@@ -70,10 +70,9 @@ static const char *_context_replacer(void *udata, const char *name);
 /**
  * Check if closure returns 1 or 0
  * @param closure IN closure for eval doit
- * @param ptmp IN 
  * @return 0 or 1
  */
-static int _doit(htt_function_t *closure, apr_pool_t *ptmp); 
+static int _doit(htt_function_t *closure); 
 
 /**
  * Handle signature with given line
@@ -181,46 +180,40 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     params = _handle_signature(ptmp, exec->signature, line);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
-    if (exec->body) {
-      child_context= htt_context_new(context, htt_context_get_log(context));
+    if (!exec->body) {
+      if (exec->function) {
+        status = exec->function(exec, context, ptmp, params, retvars, line); 
+        /* TODO: store revars if any */
+      }
     }
-    if (exec->function) {
-      if (exec->body) {
+    else {
+      child_context= htt_context_new(context, htt_context_get_log(context));
+      if (exec->function) {
         status = exec->function(exec, child_context, ptmp, params, retvars, 
                                 line); 
         closure = htt_stack_top(retvars);
         if (!htt_isa_function(closure)) {
           htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
                   "Expect a closure"); 
+          apr_pool_destroy(ptmp);
           return APR_EGENERAL;
-
         }
       }
-      else {
-        status = exec->function(exec, context, ptmp, params, retvars, line); 
-        /* TODO: store revars if any */
+      if (closure) {
+        doit = _doit(closure);
       }
-    }
-    apr_pool_destroy(ptmp);
-    if (closure) {
-      apr_pool_create(&ptmp, htt_context_get_pool(context));
-      doit = _doit(closure, ptmp);
-      apr_pool_destroy(ptmp);
-    }
-    else {
-      doit = 1;
-    }
-    while (exec->body && doit) {
-      status = htt_execute(exec, child_context);
-      htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
-              exec->file, exec->line);
-      apr_pool_create(&ptmp, htt_context_get_pool(context));
-      doit = _doit(closure, ptmp);
-      apr_pool_destroy(ptmp);
-    }
-    if (child_context) {
+      else {
+        doit = 1;
+      }
+      while (exec->body && doit) {
+        status = htt_execute(exec, child_context);
+        htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
+                exec->file, exec->line);
+        doit = _doit(closure);
+      }
       htt_context_destroy(child_context);
     }
+    apr_pool_destroy(ptmp);
   }
 
   return status;
@@ -242,18 +235,21 @@ static const char *_context_replacer(void *udata, const char *name) {
   }
 }
 
-static int _doit(htt_function_t *closure, apr_pool_t *ptmp) {
+static int _doit(htt_function_t *closure) {
   int doit = 0;
   if (closure) {
+    apr_pool_t *pool;
     htt_string_t *ret;
     htt_stack_t *retvars;
     htt_context_t *context = htt_function_get_context(closure);
-    retvars = htt_stack_new(htt_context_get_pool(context));
-    htt_function_call(closure, ptmp, NULL, retvars);
+    apr_pool_create(&pool, htt_context_get_pool(context));
+    retvars = htt_stack_new(pool);
+    htt_function_call(closure, pool, NULL, retvars);
     ret = htt_stack_top(retvars);
     if (htt_isa_string(ret) && strcmp(htt_string_get(ret), "1") == 0) {
       doit = 1;
     }
+    apr_pool_destroy(pool);
   }
   return doit;
 }
