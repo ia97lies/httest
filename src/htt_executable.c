@@ -264,7 +264,7 @@ htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature,
     int i = 0;
     htt_map_t *params = htt_map_new(pool);
 
-    htt_tokenize_to_argv(line, &argv, pool, 0);
+    htt_util_to_argv(line, &argv, pool, 0);
 
     cur = apr_strtok(copy, " ", &rest);
     while (cur) {

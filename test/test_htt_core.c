@@ -180,6 +180,22 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
+  fprintf(stdout, "set a variable with quotes... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = \"foo\"\n\
+         mock this line $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this line foo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
   fprintf(stdout, "set a variable in foreign scope... ");
   {
     apr_status_t status;

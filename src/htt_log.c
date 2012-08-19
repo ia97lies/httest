@@ -190,7 +190,7 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
     va_start(va, fmt);
     tmp = apr_pvsprintf(pool, fmt, va);
     tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
-                       htt_status_str(pool, status), status, tmp);
+                       htt_util_status_str(pool, status), status, tmp);
     apr_file_printf(log->err, "\n%-88s", tmp);
     va_end(va);
     apr_pool_destroy(pool);

@@ -64,7 +64,6 @@
 /**
  * This function is taken from apr. The apr_tokenize_to_argv do remove
  * all leftover "\", but this breaks up my httest completly.
- *
  * @param pool IN Context from which pool allocations will occur.
  * @arg_str IN Input argument string for conversion to argv[].
  * @argv_out IN Output location. This is a pointer to an array
@@ -73,30 +72,35 @@
  *              pool and filled in with copies of the tokens
  *              found during parsing of the arg_str. 
  * @param with_quotes IN do not strip quotes from quoted string
- *
  * @return SUCCESS
  */
-apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
-                                 apr_pool_t *pool, int with_quotes);
+apr_status_t htt_util_to_argv(const char *arg_str, char ***argv_out,
+                              apr_pool_t *pool, int with_quotes);
 
 /**
  * get the status string
- *
  * @param p IN pool
  * @param rc IN status to print
- *
  * @return status string
  */
-char *htt_status_str(apr_pool_t * p, apr_status_t rc);
+char *htt_util_status_str(apr_pool_t * p, apr_status_t rc);
 
 
 /**
  * 2 hex digit number to char borowed from apache sourc
- *
  * @param what IN hex to convert
- *
  * @return char
  */
-char htt_x2c(const char *what);
+char htt_util_x2c(const char *what);
 
+/**
+ * get a string starting/ending with " or ', unescape this char if found as an 
+ * escape sequence.
+ * @param string IN "|'<string with escaped "|'>"|'
+ * @param last OUT pointer to next char after cutted string
+ * @return <string with unescaped <char>>
+ * @note: Example: "foo bar \"hallo velo\"" -> foo bar "hallo velo"
+ */
+char *htt_util_unescape(char *string, char **last);
+ 
 #endif

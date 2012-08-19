@@ -310,7 +310,7 @@ int main(int argc, const char *const argv[]) {
       time = apr_time_now();
       if ((status = apr_ctime(time_str, time)) != APR_SUCCESS) {
 	fprintf(stderr, "Could not format time: %s (%d)\n", 
-	        htt_status_str(pool, status), status);
+	        htt_util_status_str(pool, status), status);
         htt_throw_error();
       }
       if (!(flags & MAIN_FLAGS_NO_OUTPUT)) {
@@ -328,14 +328,14 @@ int main(int argc, const char *const argv[]) {
     if (flags & MAIN_FLAGS_USE_STDIN) {
       if ((status = apr_file_open_stdin(&fp, pool)) != APR_SUCCESS) {
 	fprintf(stderr, "Could not open stdin: %s (%d)\n", 
-	        htt_status_str(pool, status), status);
+	        htt_util_status_str(pool, status), status);
         htt_throw_error();
       }
     }
     else if ((status = apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT, 
                                      pool)) != APR_SUCCESS) {
       fprintf(stderr, "\nCould not open %s: %s (%d)", cur_file,
-	      htt_status_str(pool, status), status);
+	      htt_util_status_str(pool, status), status);
       htt_throw_error();
     }
 

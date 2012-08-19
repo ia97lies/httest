@@ -49,8 +49,8 @@
  * Public 
  ***********************************************************************/
 
-apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
-                                 apr_pool_t *pool, int with_quotes)
+apr_status_t htt_util_to_argv(const char *arg_str, char ***argv_out,
+                              apr_pool_t *pool, int with_quotes)
 {
     const char *cp;
     const char *ct;
@@ -134,13 +134,13 @@ apr_status_t htt_tokenize_to_argv(const char *arg_str, char ***argv_out,
     return APR_SUCCESS;
 }
 
-char *htt_status_str(apr_pool_t * p, apr_status_t rc) {
+char *htt_util_status_str(apr_pool_t * p, apr_status_t rc) {
   char *text = apr_pcalloc(p, 201);
   apr_strerror(rc, text, 200);
   return text;
 }
 
-char htt_x2c(const char *what) {
+char htt_util_x2c(const char *what) {
   register char digit;
 
 #if !APR_CHARSET_EBCDIC
@@ -160,5 +160,47 @@ char htt_x2c(const char *what) {
 			      0xFF & strtol(xstr, NULL, 16));
 #endif /*APR_CHARSET_EBCDIC*/
   return (digit);
+}
+
+char *htt_util_unescape(char *string, char **last) {
+  char *result;
+  char enclose;
+  apr_size_t i;
+  apr_size_t j;
+  apr_size_t len;
+
+  if (!string) {
+    return string;
+  }
+
+  len = strlen(string);
+
+  enclose = string[0];
+  result = string;
+  if (enclose != '"' || enclose != '\'') {
+    return result;
+  } 
+  for (i = 1, j = 0; i < len; i++, j++) {
+    /* check if we have an escape char */
+    if (string[i] == '\\') {
+      /* lookahead */
+      ++i;
+      /* if lookahead is not \ or " store the \ too, else skip */
+      if (string[i] != '\\' && string[i] != enclose) {
+        result[j] = '\\';
+        ++j;
+      }
+    }
+    /* break if we got the first char unescaped */
+    else if (string[i] == enclose) {
+      ++i;
+      break;
+    }
+    /* store char in result */
+    result[j] = string[i];
+  }
+  result[j] = 0;
+  *last = &string[i];
+  return result;
 }
 
