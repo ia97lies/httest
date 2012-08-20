@@ -32,6 +32,7 @@
 
 typedef struct htt_executable_s htt_executable_t;
 
+#define HTT_STATUS_BREAK -1
 typedef apr_status_t(*htt_function_f)(htt_executable_t *executable, 
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 

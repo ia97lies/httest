@@ -177,7 +177,7 @@ char *htt_util_unescape(char *string, char **last) {
 
   enclose = string[0];
   result = string;
-  if (enclose != '"' || enclose != '\'') {
+  if (enclose != '"' && enclose != '\'') {
     return result;
   } 
   for (i = 1, j = 0; i < len; i++, j++) {

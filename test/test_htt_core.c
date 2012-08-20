@@ -196,6 +196,70 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
+  fprintf(stdout, "set a variable with quotes and spaces... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = \"  foo\"\n\
+         mock this line $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this line   foo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "set a variable with quotes and escaped quotes... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = \"foo\\\"bar\\\"\"\n\
+         mock this line $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this line foo\"bar\"\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "set a variable with single quotes... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = 'foo'\n\
+         mock this line $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this line foo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "set a variable with single quotes and escaped quotes... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = 'foo\\'bar\\''\n\
+         mock this line $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "this line foo\'bar\'\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
   fprintf(stdout, "set a variable in foreign scope... ");
   {
     apr_status_t status;
@@ -276,7 +340,7 @@ int main(int argc, const char *const argv[]) {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
         "function foo a b\n\
-           mock this: $a $b\n\
+           mock $a $b\n\
          end\n\
          foo hallo velo\n");
     global_buf = NULL;
@@ -284,7 +348,27 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    assert(strcmp(global_buf, "this: hallo velo\n") == 0);
+    assert(strcmp(global_buf, "hallo velo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "function return parameter... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo : a b\n\
+           set a = hallo\n\
+           set b = velo\n\
+         end\n\
+         foo c d\n\
+         mock $c $d");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "hallo velo\n") == 0);
   }
   fprintf(stdout, "ok\n");
 

@@ -515,9 +515,7 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
  
   key = apr_strtok(line, "=", &val);
   while (*val == ' ') ++val;
-fprintf(stderr, "XXX1: %s\n", val);
   val = htt_util_unescape(val, &rest);
-fprintf(stderr, "XXX2: %s\n", val);
   apr_collapse_spaces(key, key);
   vars = htt_context_get_vars(cur);
   while (cur && !htt_map_get(vars, key)) {

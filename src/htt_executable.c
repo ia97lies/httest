@@ -79,10 +79,10 @@ static int _doit(htt_function_t *closure);
  * @param pool IN pool to alloc params map
  * @param signature IN parameter signature
  * @param line IN line
- * @return map of parameters
+ * @param params OUT map of parameters
  */
-htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature, 
-                             char *line);
+void _handle_signature(apr_pool_t *pool, const char *signature, 
+                       char *line, htt_map_t **params);
 
 /************************************************************************
  * Globals 
@@ -177,13 +177,13 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     retvars = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
-    params = _handle_signature(ptmp, exec->signature, line);
+    _handle_signature(ptmp, exec->signature, line, &params);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (!exec->body) {
       if (exec->function) {
         status = exec->function(exec, context, ptmp, params, retvars, line); 
-        /* TODO: store revars if any */
+        /* TODO: store retvars if any */
       }
     }
     else {
@@ -205,7 +205,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       else {
         doit = 1;
       }
-      while (exec->body && doit) {
+      while (status == APR_SUCCESS && exec->body && doit) {
         status = htt_execute(exec, child_context);
         htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> end", 
                 exec->file, exec->line);
@@ -254,31 +254,31 @@ static int _doit(htt_function_t *closure) {
   return doit;
 }
 
-htt_map_t *_handle_signature(apr_pool_t *pool, const char *signature, 
-                             char *line) {
+void _handle_signature(apr_pool_t *pool, const char *signature, 
+                       char *line, htt_map_t **params) {
+  *params = NULL;
   if (signature) {
     char *cur;
     char *rest;
     char **argv;
     char *copy = apr_pstrdup(pool, signature);
     int i = 0;
-    htt_map_t *params = htt_map_new(pool);
+    *params = htt_map_new(pool);
 
     htt_util_to_argv(line, &argv, pool, 0);
 
     cur = apr_strtok(copy, " ", &rest);
-    while (cur) {
-      htt_string_t *string = NULL;
+    while (cur && strcmp(cur, ":") != 0) {
       if (argv[i]) {
-        string = htt_string_new(pool, argv[i]);
-        htt_map_set(params, cur, string, htt_string_free);
+        htt_string_t *string = htt_string_new(pool, argv[i]);
+        htt_map_set(*params, cur, string, htt_string_free);
+        ++i;
+      }
+      else {
+        htt_map_set(*params, cur, NULL, NULL);
       }
       cur = apr_strtok(NULL, " ", &rest);
-      ++i;
     }
-
-    return params;
   }
-  return NULL;
 }
 
