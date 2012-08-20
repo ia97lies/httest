@@ -104,6 +104,27 @@ void *htt_context_get_var(htt_context_t *context, const char *variable) {
   return elem;
 }
 
+void htt_context_set_var(htt_context_t *context, const char *variable, 
+                         void *value, htt_destructor_f destructor) {
+  htt_map_t *vars;
+  htt_context_t *cur = context;
+
+  vars = htt_context_get_vars(cur);
+  while (cur && !htt_map_get(vars, variable)) {
+    cur = htt_context_get_parent(cur);
+    if (cur) {
+      vars = htt_context_get_vars(cur);
+    }
+  } 
+  if (!cur) {
+    cur = htt_context_get_godfather(context);
+  }
+  if (!vars) {
+    vars = htt_context_get_vars(cur);
+  }
+  htt_map_set(vars, variable, value, destructor);
+}
+
 void htt_context_set_config(htt_context_t *context, const char *name, void *data) {
   apr_hash_set(context->config, name, APR_HASH_KEY_STRING, data);
 }

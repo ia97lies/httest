@@ -517,21 +517,8 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
   while (*val == ' ') ++val;
   val = htt_util_unescape(val, &rest);
   apr_collapse_spaces(key, key);
-  vars = htt_context_get_vars(cur);
-  while (cur && !htt_map_get(vars, key)) {
-    cur = htt_context_get_parent(cur);
-    if (cur) {
-      vars = htt_context_get_vars(cur);
-    }
-  } 
-  if (!cur) {
-    cur = htt_context_get_godfather(context);
-  }
-  if (!vars) {
-    vars = htt_context_get_vars(cur);
-  }
   string = htt_string_new(htt_context_get_pool(cur), val);
-  htt_map_set(vars, key, string, htt_string_free);
+  htt_context_set_var(context, key, string, htt_string_free);
   return APR_SUCCESS;
 }
 

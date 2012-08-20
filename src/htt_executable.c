@@ -80,9 +80,10 @@ static int _doit(htt_function_t *closure);
  * @param signature IN parameter signature
  * @param line IN line
  * @param params OUT map of parameters
+ * @param retvars OUT return parameters
  */
 void _handle_signature(apr_pool_t *pool, const char *signature, 
-                       char *line, htt_map_t **params);
+                       char *line, htt_map_t **params, htt_stack_t **retvars); 
 
 /************************************************************************
  * Globals 
@@ -168,30 +169,38 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     int doit = 0;
     char *line;
     apr_pool_t *ptmp;
-    htt_stack_t *retvars; 
+    htt_stack_t *retvals; 
+    htt_stack_t *retvars = NULL; 
     htt_map_t *params = NULL;
     htt_function_t *closure = NULL;
     exec = (htt_executable_t *)e[i].val;
 
     apr_pool_create(&ptmp, htt_context_get_pool(context));
-    retvars = htt_stack_new(ptmp);
+    retvals = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
     line = htt_replacer(ptmp, line, context, _context_replacer);
-    _handle_signature(ptmp, exec->signature, line, &params);
+    _handle_signature(ptmp, exec->signature, line, &params, &retvars);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
     if (!exec->body) {
       if (exec->function) {
-        status = exec->function(exec, context, ptmp, params, retvars, line); 
-        /* TODO: store retvars if any */
+        status = exec->function(exec, context, ptmp, params, retvals, line); 
+        /* variables and values are in the same order on the stack */
+        if (retvars) {
+          char *varname;
+          varname = htt_stack_pop(retvars);
+          while (varname) {
+            varname = htt_stack_pop(retvars);
+          }
+        }
       }
     }
     else {
       child_context= htt_context_new(context, htt_context_get_log(context));
       if (exec->function) {
-        status = exec->function(exec, child_context, ptmp, params, retvars, 
+        status = exec->function(exec, child_context, ptmp, params, retvals, 
                                 line); 
-        closure = htt_stack_top(retvars);
+        closure = htt_stack_top(retvals);
         if (!htt_isa_function(closure)) {
           htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
                   "Expect a closure"); 
@@ -240,12 +249,12 @@ static int _doit(htt_function_t *closure) {
   if (closure) {
     apr_pool_t *pool;
     htt_string_t *ret;
-    htt_stack_t *retvars;
+    htt_stack_t *retvals;
     htt_context_t *context = htt_function_get_context(closure);
     apr_pool_create(&pool, htt_context_get_pool(context));
-    retvars = htt_stack_new(pool);
-    htt_function_call(closure, pool, NULL, retvars);
-    ret = htt_stack_top(retvars);
+    retvals = htt_stack_new(pool);
+    htt_function_call(closure, pool, NULL, retvals);
+    ret = htt_stack_top(retvals);
     if (htt_isa_string(ret) && strcmp(htt_string_get(ret), "1") == 0) {
       doit = 1;
     }
@@ -255,8 +264,9 @@ static int _doit(htt_function_t *closure) {
 }
 
 void _handle_signature(apr_pool_t *pool, const char *signature, 
-                       char *line, htt_map_t **params) {
+                       char *line, htt_map_t **params, htt_stack_t **retvars) {
   *params = NULL;
+  *retvars = NULL;
   if (signature) {
     char *cur;
     char *rest;
@@ -264,6 +274,7 @@ void _handle_signature(apr_pool_t *pool, const char *signature,
     char *copy = apr_pstrdup(pool, signature);
     int i = 0;
     *params = htt_map_new(pool);
+    *retvars = htt_stack_new(pool);
 
     htt_util_to_argv(line, &argv, pool, 0);
 
@@ -278,6 +289,10 @@ void _handle_signature(apr_pool_t *pool, const char *signature,
         htt_map_set(*params, cur, NULL, NULL);
       }
       cur = apr_strtok(NULL, " ", &rest);
+    }
+    while (argv[i]) {
+      htt_stack_push(*retvars, argv[i]);
+      ++i;
     }
   }
 }
