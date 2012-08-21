@@ -57,7 +57,8 @@ void *htt_map_get(htt_map_t *map, const char *key);
  * Merge maps together
  * @param map IN my map
  * @param add IN new map
+ * @param pool IN pool to realloc entries
  */
-void htt_map_merge(htt_map_t *map, htt_map_t *add); 
+void htt_map_merge(htt_map_t *map, htt_map_t *add, apr_pool_t *pool); 
 
 #endif

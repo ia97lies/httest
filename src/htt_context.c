@@ -89,7 +89,7 @@ htt_map_t *htt_context_get_vars(htt_context_t *context) {
 }
 
 void htt_context_merge_vars(htt_context_t *context, htt_map_t *vars) {
-  htt_map_merge(context->vars, vars);
+  htt_map_merge(context->vars, vars, context->pool);
 }
 
 void *htt_context_get_var(htt_context_t *context, const char *variable) {

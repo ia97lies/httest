@@ -85,7 +85,20 @@ void *htt_map_get(htt_map_t *map, const char *key) {
   }
 }
 
-void htt_map_merge(htt_map_t *map, htt_map_t *add) {
-  map->hash = apr_hash_overlay(map->pool, map->hash, add->hash);
+void htt_map_merge(htt_map_t *map, htt_map_t *add, apr_pool_t *pool) {
+  apr_hash_index_t *i;
+  const void *key;
+  htt_object_t *obj;
+  htt_elem_t *e;
+
+  if (!map || !add) {
+    return;
+  }
+
+  for (i = apr_hash_first(add->pool, add->hash); i; i = apr_hash_next(i)) {
+    apr_hash_this(i, &key, NULL, (void **)&e);
+    obj = e->elem;
+    htt_map_set(map, key, obj->clone(obj, pool));
+  }
 }
 

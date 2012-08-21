@@ -63,7 +63,9 @@ htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
   string->obj.pool = mypool;
   string->obj.destructor = htt_string_free;
   string->obj.clone = htt_string_clone;
-  string->value = apr_pstrdup(mypool, value);
+  if (value) {
+    string->value = apr_pstrdup(mypool, value);
+  }
   return string;
 }
 
@@ -77,7 +79,12 @@ const char *htt_string_get(htt_string_t *string) {
 }
 
 const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool) {
-  return apr_pstrdup(pool, string->value);
+  if (string->value) {
+    return apr_pstrdup(pool, string->value);
+  }
+  else {
+    return NULL;
+  }
 }
 
 int htt_isa_string(void *type) {
