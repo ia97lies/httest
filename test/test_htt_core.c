@@ -353,7 +353,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "function return parameter... ");
+  fprintf(stdout, "function return... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -368,8 +368,67 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    fprintf(stderr, "XXX: %s\n", global_buf);
     assert(strcmp(global_buf, "hallo velo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "function return too many parameter... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo : a b r\n\
+           set a = hallo\n\
+           set b = velo\n\
+           set r = any\n\
+         end\n\
+         foo c d\n\
+         mock $c $d");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "hallo velo\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "function return too many variable... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo : a b\n\
+           set a = hallo\n\
+           set b = velo\n\
+         end\n\
+         foo c d e\n\
+         mock $c $d $e");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "hallo velo $e\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "function return single parameter single variable... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo : a\n\
+           set a = hallo\n\
+         end\n\
+         foo c\n\
+         mock $c");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "hallo\n") == 0);
   }
   fprintf(stdout, "ok\n");
 

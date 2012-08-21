@@ -74,8 +74,12 @@ void *htt_stack_index(htt_stack_t *stack, int i) {
     return NULL;
   }
   else {
-    return stack->table[stack->sp - i];
+    return stack->table[i];
   }
+}
+
+int htt_stack_sp(htt_stack_t *stack) {
+  return stack->sp;
 }
 
 int htt_stack_elems(htt_stack_t *stack) {

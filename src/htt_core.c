@@ -349,13 +349,13 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
 htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
   htt_command_t *command;
   htt_executable_t *top = htt->executable;
-  int i = 1;
+  int i = htt_stack_sp(htt->stack);
 
   command = htt_executable_get_config(top, cmd);
   top = htt_stack_index(htt->stack, i);
   while (top && !command) {
     command = htt_executable_get_config(top, cmd);
-    top = htt_stack_index(htt->stack, ++i);
+    top = htt_stack_index(htt->stack, --i);
   }
 
   return command;

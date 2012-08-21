@@ -88,7 +88,7 @@ int main(int argc, const char *const argv[]) {
     }
     for (i = 0; i < 40; i++) {
       data = htt_stack_index(stack, i);
-      assert(strcmp(data, test_data[39 - i]) == 0);
+      assert(strcmp(data, test_data[i]) == 0);
     }
     data = htt_stack_index(stack, 40);
     assert(data == NULL);

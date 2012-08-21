@@ -192,15 +192,18 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       if (exec->function) {
         status = exec->function(exec, context, ptmp, params, retvals, line); 
         if (retvars) {
+          apr_pool_t *pool;
           char *varname;
           htt_object_t *val;
-          varname = htt_stack_pop(retvars);
-          val = htt_stack_pop(retvals);
+          int i = 0;
+          pool = htt_context_get_pool(context);
+          varname = htt_stack_index(retvars, i);
+          val = htt_stack_index(retvals, i);
           while (val && varname) {
-            htt_object_t *clone = val->clone(val, htt_context_get_pool(context));
-            htt_context_set_var(context, varname, clone);
-            varname = htt_stack_pop(retvars);
-            val = htt_stack_pop(retvals);
+            htt_context_set_var(context, varname, val->clone(val, pool));
+            ++i;
+            varname = htt_stack_index(retvars, i);
+            val = htt_stack_index(retvals, i);
           }
         }
       }
