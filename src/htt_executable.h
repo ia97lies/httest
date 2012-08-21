@@ -90,6 +90,13 @@ int htt_executable_get_line(htt_executable_t *executable);
 const char *htt_executable_get_raw(htt_executable_t *executable);
 
 /**
+ * Get signatur
+ * @param exeuctabl IN executable
+ * @return signature
+ */
+const char *htt_executable_get_signature(htt_executable_t *executable); 
+
+/**
  * Set a named configuration
  * @param context IN context
  * @param name IN name for stored data

@@ -40,6 +40,7 @@
 #include "htt_context.h"
 #include "htt_executable.h"
 #include "htt_log.h"
+#include "htt_object.h"
 #include "htt_string.h"
 #include "htt_function.h"
 
@@ -82,8 +83,9 @@ static int _doit(htt_function_t *closure);
  * @param params OUT map of parameters
  * @param retvars OUT return parameters
  */
-void _handle_signature(apr_pool_t *pool, const char *signature, 
-                       char *line, htt_map_t **params, htt_stack_t **retvars); 
+static void _handle_signature(apr_pool_t *pool, const char *signature, 
+                              char *line, htt_map_t **params, 
+                              htt_stack_t **retvars); 
 
 /************************************************************************
  * Globals 
@@ -140,6 +142,10 @@ const char *htt_executable_get_raw(htt_executable_t *executable) {
   return executable->raw;
 }
 
+const char *htt_executable_get_signature(htt_executable_t *executable) {
+  return executable->signature;
+}
+
 void htt_executable_set_config(htt_executable_t *executable, const char *name,
                                void *data) {
   apr_hash_set(executable->config, name, APR_HASH_KEY_STRING, data);
@@ -185,12 +191,16 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     if (!exec->body) {
       if (exec->function) {
         status = exec->function(exec, context, ptmp, params, retvals, line); 
-        /* variables and values are in the same order on the stack */
         if (retvars) {
           char *varname;
+          htt_object_t *val;
           varname = htt_stack_pop(retvars);
-          while (varname) {
+          val = htt_stack_pop(retvals);
+          while (val && varname) {
+            htt_object_t *clone = val->clone(val, htt_context_get_pool(context));
+            htt_context_set_var(context, varname, clone);
             varname = htt_stack_pop(retvars);
+            val = htt_stack_pop(retvals);
           }
         }
       }
@@ -263,8 +273,9 @@ static int _doit(htt_function_t *closure) {
   return doit;
 }
 
-void _handle_signature(apr_pool_t *pool, const char *signature, 
-                       char *line, htt_map_t **params, htt_stack_t **retvars) {
+static void _handle_signature(apr_pool_t *pool, const char *signature, 
+                              char *line, htt_map_t **params, 
+                              htt_stack_t **retvars) {
   *params = NULL;
   *retvars = NULL;
   if (signature) {

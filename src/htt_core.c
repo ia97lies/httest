@@ -66,6 +66,7 @@
 #include "htt_stack.h"
 #include "htt_executable.h"
 #include "htt_context.h"
+#include "htt_object.h"
 #include "htt_function.h"
 #include "htt_string.h"
 
@@ -101,6 +102,15 @@ typedef struct _loop_config_s {
   int i;
 } _loop_config_t;
 
+/**
+ * Get return vals with given signature
+ * @param context IN 
+ * @param signature IN parameter mapped to local body
+ * @param retvals INOUT fill return values in this stack
+ * @param pool IN
+ */
+static void _get_retvals(htt_context_t *context, const char *signature,
+                         htt_stack_t *retvals, apr_pool_t *pool); 
 /**
  * Interpret reading from given bufreader 
  * @param htt IN instance
@@ -482,7 +492,7 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t _cmd_function_function(htt_executable_t *executable, 
                                            htt_context_t *context, 
                                            apr_pool_t *ptmp, htt_map_t *params, 
-                                           htt_stack_t *retvars, char *line) {
+                                           htt_stack_t *retvals, char *line) {
   apr_status_t status;
   htt_executable_t *_executable;
   htt_context_t *child_context;
@@ -490,6 +500,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   child_context= htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
   status = htt_execute(_executable, child_context);
+  _get_retvals(context, htt_executable_get_signature(_executable), retvals, ptmp);
   htt_context_destroy(child_context);
   return status;
 }
@@ -609,5 +620,29 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   /* this must return a closure */
   htt_stack_push(retvars, loop_closure);
   return APR_SUCCESS;
+}
+
+static void _get_retvals(htt_context_t *context, const char *signature,
+                         htt_stack_t *retvals, apr_pool_t *pool) {
+  if (retvals && signature) {
+    char *cur;
+    char *rest;
+    char *copy = apr_pstrdup(pool, signature);
+
+    cur = apr_strtok(copy, " ", &rest);
+    while (cur && strcmp(cur, ":") != 0) {
+      cur = apr_strtok(NULL, " ", &rest);
+    }
+    if (cur && strcmp(cur, ":") == 0) {
+      cur = apr_strtok(NULL, " ", &rest);
+      while (cur) {
+        htt_object_t *val = htt_context_get_var(context, cur);
+        if (val) {
+          htt_stack_push(retvals, val->clone(val, pool));
+        }
+        cur = apr_strtok(NULL, " ", &rest);
+      }
+    }
+  }
 }
 
