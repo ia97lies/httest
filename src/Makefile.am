@@ -27,7 +27,7 @@ httest_SOURCES = \
 #	htntlm.c util.c store.c
 
 noinst_HEADERS = \
-	defines.h htt_core.h htt_context.h htt_executable.h htt_log.h \
+	defines.h htt_object.h htt_core.h htt_context.h htt_executable.h htt_log.h \
 	htt_map.h htt_util.h htt_stack.h htt_bufreader.h htt_replacer.h \
 	htt_string.h htt_function.h
 #	file.h socket.h regex.h util.h ssl.h worker.h conf.h \

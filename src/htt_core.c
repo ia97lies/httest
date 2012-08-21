@@ -312,7 +312,7 @@ void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
 
 void htt_add_value(htt_t *htt, const char *key, const char *val) {
   htt_string_t *string = htt_string_new(htt->pool, val);
-  htt_map_set(htt->defines, key, string, htt_string_free);
+  htt_map_set(htt->defines, key, string);
 }
 
 void htt_set_cur_file_name(htt_t *htt, const char *name) {
@@ -509,7 +509,6 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
   char *key;
   char *val;
   char *rest;
-  htt_map_t *vars;
   htt_context_t *cur = context;
   htt_string_t *string;
  
@@ -518,7 +517,7 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
   val = htt_util_unescape(val, &rest);
   apr_collapse_spaces(key, key);
   string = htt_string_new(htt_context_get_pool(cur), val);
-  htt_context_set_var(context, key, string, htt_string_free);
+  htt_context_set_var(context, key, string);
   return APR_SUCCESS;
 }
 
@@ -530,11 +529,11 @@ static apr_status_t _cmd_local_function(htt_executable_t *executable,
   char *rest;
   htt_map_t *vars;
 
-  htt_string_t *string = htt_string_new(htt_context_get_pool(context), "");
   vars = htt_context_get_vars(context);
   var = apr_strtok(line, " ", &rest);
   while (var) {
-    htt_map_set(vars, var, string, htt_string_free);
+    htt_string_t *string = htt_string_new(htt_context_get_pool(context), NULL);
+    htt_map_set(vars, var, string);
     var = apr_strtok(NULL, " ", &rest);
   }
   return APR_SUCCESS;
@@ -603,7 +602,7 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   loop_context= htt_context_new(context, htt_context_get_log(context));
   loop_vars = htt_context_get_vars(loop_context);
   count_str = htt_string_new(htt_context_get_pool(loop_context), count);
-  htt_map_set(loop_vars, "count", count_str, htt_string_free);
+  htt_map_set(loop_vars, "count", count_str);
 
   loop_closure = htt_function_new(htt_context_get_pool(loop_context), 
                                   loop_executable, loop_context);

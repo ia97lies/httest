@@ -105,7 +105,7 @@ void *htt_context_get_var(htt_context_t *context, const char *variable) {
 }
 
 void htt_context_set_var(htt_context_t *context, const char *variable, 
-                         void *value, htt_destructor_f destructor) {
+                         void *value) {
   htt_map_t *vars;
   htt_context_t *cur = context;
 
@@ -122,7 +122,7 @@ void htt_context_set_var(htt_context_t *context, const char *variable,
   if (!vars) {
     vars = htt_context_get_vars(cur);
   }
-  htt_map_set(vars, variable, value, destructor);
+  htt_map_set(vars, variable, value);
 }
 
 void htt_context_set_config(htt_context_t *context, const char *name, void *data) {

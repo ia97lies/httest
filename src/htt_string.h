@@ -38,6 +38,14 @@ typedef struct htt_string_s htt_string_t;
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value);
 
 /**
+ * Clone a string variable
+ * @param string IN string to clone
+ * @param pool IN parent pool for inheritance
+ * @return string instance 
+ */
+void *htt_string_clone(void *string, apr_pool_t *pool); 
+
+/**
  * Get string value
  * @param string IN
  * @return value

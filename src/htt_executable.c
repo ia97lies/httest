@@ -282,13 +282,21 @@ void _handle_signature(apr_pool_t *pool, const char *signature,
     while (cur && strcmp(cur, ":") != 0) {
       if (argv[i]) {
         htt_string_t *string = htt_string_new(pool, argv[i]);
-        htt_map_set(*params, cur, string, htt_string_free);
+        htt_map_set(*params, cur, string);
         ++i;
       }
       else {
-        htt_map_set(*params, cur, NULL, NULL);
+        htt_map_set(*params, cur, NULL);
       }
       cur = apr_strtok(NULL, " ", &rest);
+    }
+    if (cur && strcmp(cur, ":") != 0) {
+      cur = apr_strtok(NULL, " ", &rest);
+      while (cur) {
+        htt_string_t *string = htt_string_new(pool, NULL);
+        htt_map_set(*params, cur, string);
+        cur = apr_strtok(NULL, " ", &rest);
+      }
     }
     while (argv[i]) {
       htt_stack_push(*retvars, argv[i]);

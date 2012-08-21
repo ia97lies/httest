@@ -35,6 +35,7 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "htt_object.h"
 #include "htt_string.h"
 
 /************************************************************************
@@ -42,8 +43,7 @@
  ***********************************************************************/
 struct htt_string_s {
 #define HTT_STRING_T 1
-  int type;
-  apr_pool_t *pool;
+  htt_object_t obj;
   const char *value;
 };
 
@@ -56,12 +56,20 @@ struct htt_string_s {
  ***********************************************************************/
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
   apr_pool_t *mypool;
+  htt_string_t *string;
   apr_pool_create(&mypool, pool);
-  htt_string_t *string = apr_pcalloc(mypool, sizeof(*string));
-  string->type = HTT_STRING_T;
-  string->pool = mypool;
+  string = apr_pcalloc(mypool, sizeof(*string));
+  string->obj.type = HTT_STRING_T;
+  string->obj.pool = mypool;
+  string->obj.destructor = htt_string_free;
+  string->obj.clone = htt_string_clone;
   string->value = apr_pstrdup(mypool, value);
   return string;
+}
+
+void *htt_string_clone(void *vstring, apr_pool_t *pool) {
+  htt_string_t *string = vstring;
+  return htt_string_new(pool, string->value);
 }
 
 const char *htt_string_get(htt_string_t *string) {
@@ -74,11 +82,11 @@ const char *htt_string_copy(htt_string_t *string, apr_pool_t *pool) {
 
 int htt_isa_string(void *type) {
   htt_string_t *string = type;
-  return (string && string->type == HTT_STRING_T);
+  return (string && string->obj.type == HTT_STRING_T);
 }
 
 void htt_string_free(void *vstring) {
   htt_string_t *string = vstring;
-  apr_pool_destroy(string->pool);
+  apr_pool_destroy(string->obj.pool);
 }
 

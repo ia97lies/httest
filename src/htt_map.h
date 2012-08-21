@@ -29,8 +29,6 @@
 
 typedef struct htt_map_s htt_map_t;
 
-typedef void(*htt_destructor_f)(void *e); 
-
 /**
  * Create a map variable
  * @param pool IN parent pool for inheritance
@@ -43,11 +41,9 @@ htt_map_t *htt_map_new(apr_pool_t *pool);
  * Set a value
  * @param map IN
  * @param key IN
- * @param value IN
- * @param destructor IN destructor for value NULL if none
+ * @param value IN a subtype of htt_object_t
  */
-void htt_map_set(htt_map_t *map, const char *key, void *value,
-                   htt_destructor_f);
+void htt_map_set(htt_map_t *map, const char *key, void *value);
 
 /**
  * Get a value

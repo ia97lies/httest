@@ -28,6 +28,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_strings.h>
+#include "htt_object.h"
 #include "htt_map.h"
 
 /************************************************************************
@@ -39,7 +40,6 @@ struct htt_map_s {
 };
 
 typedef struct htt_elem_s {
-  htt_destructor_f destructor;
   void *elem;
 } htt_elem_t;
 
@@ -59,19 +59,17 @@ htt_map_t *htt_map_new(apr_pool_t *pool) {
   return map;
 }
 
-void htt_map_set(htt_map_t *map, const char *key, void *value, 
-                   htt_destructor_f destructor) {
+void htt_map_set(htt_map_t *map, const char *key, void *value) {
   htt_elem_t *e = apr_hash_get(map->hash, key, APR_HASH_KEY_STRING);
   
   if (e) {
-    e->destructor(e->elem);
+    htt_object_t *obj = e->elem;
+    obj->destructor(obj);
     e->elem = value;
-    e->destructor = destructor;
   }
   else {
     e = apr_pcalloc(map->pool, sizeof(*e));
     e->elem = value;
-    e->destructor = destructor;
     apr_hash_set(map->hash, apr_pstrdup(map->pool, key), 
                  APR_HASH_KEY_STRING, e);
   }
