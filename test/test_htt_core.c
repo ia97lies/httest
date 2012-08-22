@@ -472,7 +472,7 @@ int main(int argc, const char *const argv[]) {
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
-        "set i = eval(1 + 2)\n\
+        "set i = $eval(1 + 2)\n\
          mock $i");
     global_buf = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));

@@ -60,6 +60,12 @@ struct htt_executable_s {
   apr_hash_t *config;
 };
 
+typedef struct _context_replacer_s {
+  htt_executable_t *executable;
+  htt_context_t *context;
+  apr_pool_t *ptmp;
+} _context_replacer_t;
+
 /**
  * Replacer to resolve variables in a line
  * @param udata IN context pointer
@@ -175,6 +181,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     int doit = 0;
     char *line;
     apr_pool_t *ptmp;
+    _context_replacer_t *replacer_ctx;
     htt_stack_t *retvals; 
     htt_stack_t *retvars = NULL; 
     htt_map_t *params = NULL;
@@ -184,7 +191,11 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_create(&ptmp, htt_context_get_pool(context));
     retvals = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
-    line = htt_replacer(ptmp, line, context, _context_replacer);
+    replacer_ctx = apr_pcalloc(ptmp, sizeof(*replacer_ctx));
+    replacer_ctx->executable = executable;
+    replacer_ctx->context = context;
+    replacer_ctx->ptmp = ptmp;
+    line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
     _handle_signature(ptmp, exec->signature, line, &params, &retvars);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
             exec->file, exec->line, exec->name, line);
@@ -245,15 +256,21 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
  * Private
  ***********************************************************************/
 static const char *_context_replacer(void *udata, const char *name) {
-  htt_context_t *context = udata;
+  _context_replacer_t *replacer_ctx = udata;
+  htt_context_t *context = replacer_ctx->context;
   htt_string_t *string;
 
-  string = htt_context_get_var(context, name); 
-  if (htt_isa_string(string)) {
-    return htt_string_get(string);
+  if (strchr(name, '(')) {
+    return NULL;
   }
   else {
-    return NULL;
+    string = htt_context_get_var(context, name); 
+    if (htt_isa_string(string)) {
+      return htt_string_get(string);
+    }
+    else {
+      return NULL;
+    }
   }
 }
 

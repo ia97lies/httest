@@ -518,7 +518,8 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   child_context= htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
   status = htt_execute(_executable, child_context);
-  _get_retvals(child_context, htt_executable_get_signature(_executable), retvals, ptmp);
+  _get_retvals(child_context, htt_executable_get_signature(_executable), 
+               retvals, ptmp);
   htt_context_destroy(child_context);
   return status;
 }
@@ -650,7 +651,8 @@ static apr_status_t _cmd_eval_function(htt_executable_t *executable,
   apr_status_t status;
   htt_eval_t *eval = htt_eval_new(ptmp);
   expression = htt_map_get(params, "expression");
-  if ((status = htt_eval(eval, htt_string_get(expression), &result)) == APR_SUCCESS) {
+  if ((status = htt_eval(eval, htt_string_get(expression), &result)) 
+      == APR_SUCCESS) {
     string = htt_string_new(ptmp, apr_psprintf(ptmp, "%ld", result));
     htt_stack_push(retvars, string);
   }
