@@ -467,6 +467,22 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "function resolve... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = eval(1 + 2)\n\
+         mock $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "3\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 
