@@ -304,7 +304,7 @@ static void _handle_signature(apr_pool_t *pool, const char *signature,
       }
       cur = apr_strtok(NULL, " ", &rest);
     }
-    if (cur && strcmp(cur, ":") != 0) {
+    if (cur && strcmp(cur, ":") == 0) {
       cur = apr_strtok(NULL, " ", &rest);
       while (cur) {
         htt_string_t *string = htt_string_new(pool, NULL);

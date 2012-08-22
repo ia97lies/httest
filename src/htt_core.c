@@ -500,7 +500,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   child_context= htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
   status = htt_execute(_executable, child_context);
-  _get_retvals(context, htt_executable_get_signature(_executable), retvals, ptmp);
+  _get_retvals(child_context, htt_executable_get_signature(_executable), retvals, ptmp);
   htt_context_destroy(child_context);
   return status;
 }
