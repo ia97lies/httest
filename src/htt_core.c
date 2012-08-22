@@ -69,6 +69,7 @@
 #include "htt_object.h"
 #include "htt_function.h"
 #include "htt_string.h"
+#include "htt_eval.h"
 
 /************************************************************************
  * Defines 
@@ -227,6 +228,20 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
                                            apr_pool_t *ptmp, htt_map_t *params, 
                                            htt_stack_t *retvars, char *line); 
 
+/**
+ * Eval math expressions
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_eval_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -312,6 +327,9 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_line_compile, _cmd_local_function);
   htt_add_command(htt, "loop", NULL, "", "open a new body",
                   htt_cmd_body_compile, _cmd_loop_function);
+  htt_add_command(htt, "eval", "expression : result", "<expression> <result>", 
+                  "Evaluate <expression> and store it in <result>",
+                  htt_cmd_line_compile, _cmd_eval_function);
   return htt;
 }
 
@@ -621,6 +639,23 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   htt_stack_push(retvars, loop_closure);
   return APR_SUCCESS;
 }
+
+static apr_status_t _cmd_eval_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line) {
+  long result;
+  htt_string_t *string;
+  htt_string_t *expression;
+  apr_status_t status;
+  htt_eval_t *eval = htt_eval_new(ptmp);
+  expression = htt_map_get(params, "expression");
+  if ((status = htt_eval(eval, htt_string_get(expression), &result)) == APR_SUCCESS) {
+    string = htt_string_new(ptmp, apr_psprintf(ptmp, "%ld", result));
+    htt_stack_push(retvars, string);
+  }
+  return status;
+} 
 
 static void _get_retvals(htt_context_t *context, const char *signature,
                          htt_stack_t *retvals, apr_pool_t *pool) {

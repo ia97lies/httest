@@ -432,6 +432,41 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "function return parameter must be local... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo : a\n\
+           set a = hallo\n\
+         end\n\
+         foo c\n\
+         mock $a");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "$a\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "eval simple... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "eval \"1 + 2\" r\n\
+         mock $r");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "3\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 
