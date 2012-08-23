@@ -113,11 +113,26 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
 
 /**
  * Get registered command
- * @param htt IN instance
+ * TODO: Refactor, command should be in its own file, but difficult
+ * @param executable IN 
  * @param cmd IN command name
  * @return found command or NULL
  */
-htt_command_t *htt_get_command(htt_t *htt, const char *cmd); 
+htt_command_t *htt_get_command(htt_executable_t *executable, const char *cmd); 
+
+/**
+ * Get function of command
+ * @param command IN command
+ * @return function
+ */
+htt_function_f htt_get_command_function(htt_command_t *command); 
+
+/**
+ * Get signature of command
+ * @param command IN command
+ * @return signature
+ */
+const char *htt_get_command_signature(htt_command_t *command); 
 
 /**
  * Interpret reading from given apr_file_t 

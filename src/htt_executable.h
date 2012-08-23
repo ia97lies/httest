@@ -41,6 +41,7 @@ typedef apr_status_t(*htt_function_f)(htt_executable_t *executable,
 /**
  * Create a new executable
  * @param pool IN
+ * @param parent IN parent executable need for on the fly command lookup
  * @param name IN name of function
  * @param function IN function
  * @param cleanup IN cleanup after function has done work
@@ -49,8 +50,8 @@ typedef apr_status_t(*htt_function_f)(htt_executable_t *executable,
  * @param line IN line number
  * @return executable
  */
-htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
-                                     const char *signature, 
+htt_executable_t *htt_executable_new(apr_pool_t *pool, htt_executable_t *parent,
+                                     const char *name, const char *signature, 
                                      htt_function_f function, char *raw, 
                                      const char *file, int line);
 
@@ -67,6 +68,13 @@ void htt_executable_dump(htt_executable_t *executable);
  * @param raw IN
  */
 void htt_executable_set_raw(htt_executable_t *executable, char *raw);
+
+/**
+ * Get parent of this executable
+ * @param executable IN
+ * @return parent
+ */
+htt_executable_t *htt_executable_get_parent(htt_executable_t *executable);
 
 /**
  * Get file name of this executable

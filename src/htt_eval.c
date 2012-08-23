@@ -523,10 +523,12 @@ static apr_status_t _parse(htt_eval_t * hook, long *val) {
  ***********************************************************************/
 
 htt_eval_t *htt_eval_new(apr_pool_t * pool) {
-  htt_eval_t *hook = apr_pcalloc(pool, sizeof(*hook));
-  hook->pool = pool; 
+  apr_pool_t *mypool;
+  apr_pool_create(&mypool, pool);
+  htt_eval_t *hook = apr_pcalloc(mypool, sizeof(*hook));
+  hook->pool = mypool; 
   hook->stack = SKM_sk_new_null(long);
-  hook->delimiter = apr_pstrdup(pool, "+-*/=<>!()");
+  hook->delimiter = apr_pstrdup(mypool, "+-*/=<>!()");
 
   return hook;
 }
@@ -545,5 +547,10 @@ apr_status_t htt_eval(htt_eval_t * hook, const char *line, long *val) {
   }
   /* get result from stack */
   return APR_SUCCESS;
+}
+
+void htt_eval_free(htt_eval_t *eval) {
+  SKM_sk_free(long, eval->stack);
+  apr_pool_destroy(eval->pool);
 }
 

@@ -45,4 +45,10 @@ htt_eval_t *htt_eval_new(apr_pool_t * pool);
  */
 apr_status_t htt_eval(htt_eval_t * eval, const char *line, long *val); 
 
+/**
+ * Free eval internals 
+ * @param hook IN eval instance
+ */
+void htt_eval_free(htt_eval_t * eval); 
+
 #endif

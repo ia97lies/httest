@@ -254,9 +254,9 @@ apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt,
                                   char *args) {
   htt_executable_t *executable;
 
-  executable = htt_executable_new(htt->pool, command->name, command->signature,
-                                  command->function, args, htt->cur_file, 
-                                  htt->cur_line);
+  executable = htt_executable_new(htt->pool, htt->executable, command->name, 
+                                  command->signature, command->function, args, 
+                                  htt->cur_file, htt->cur_line);
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
 }
@@ -265,9 +265,9 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt,
                                   char *args) {
   htt_executable_t *executable;
 
-  executable = htt_executable_new(htt->pool, command->name, command->signature, 
-                                  command->function, args, htt->cur_file, 
-                                  htt->cur_line);
+  executable = htt_executable_new(htt->pool, htt->executable, command->name, 
+                                  command->signature, command->function, args, 
+                                  htt->cur_file, htt->cur_line);
   htt_executable_add(htt->executable, executable);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
@@ -307,7 +307,7 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt->pool = pool;
   htt->defines = htt_map_new(pool);
   htt->stack = htt_stack_new(pool);
-  htt->executable = htt_executable_new(pool, apr_pstrdup(pool, "global"), NULL,
+  htt->executable = htt_executable_new(pool, NULL, apr_pstrdup(pool, "global"), NULL,
                                        NULL, NULL, NULL, 0);
   htt_stack_push(htt->stack, htt->executable);
 
@@ -364,19 +364,24 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   htt_executable_set_config(htt->executable, name, command);
 }
 
-htt_command_t *htt_get_command(htt_t *htt, const char *cmd) {
-  htt_command_t *command;
-  htt_executable_t *top = htt->executable;
-  int i = htt_stack_sp(htt->stack);
+htt_command_t *htt_get_command(htt_executable_t *executable, const char *cmd) {
+  htt_command_t *command = NULL;
+  htt_executable_t *cur = executable;
 
-  command = htt_executable_get_config(top, cmd);
-  top = htt_stack_index(htt->stack, i);
-  while (top && !command) {
-    command = htt_executable_get_config(top, cmd);
-    top = htt_stack_index(htt->stack, --i);
+  command = htt_executable_get_config(cur, cmd);
+  while (cur && !command) {
+    command = htt_executable_get_config(cur, cmd);
+    cur = htt_executable_get_parent(cur);
   }
-
   return command;
+}
+
+htt_function_f htt_get_command_function(htt_command_t *command) {
+  return command->function;
+}
+
+const char *htt_get_command_signature(htt_command_t *command) {
+  return command->signature;
 }
 
 apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len) {
@@ -414,7 +419,7 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
       cmd = apr_strtok(line, " ", &rest);
       htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, 
               htt->cur_line, cmd, rest);
-      command = htt_get_command(htt, cmd);
+      command = htt_get_command(htt->executable, cmd);
       if (!command) {
         htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
                       "Unknown command \"%s\"", cmd);
@@ -483,8 +488,9 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt,
   name = apr_strtok(line, " ", &signature);
   apr_collapse_spaces(name, name);
   while (*signature == ' ') ++signature;
-  executable = htt_executable_new(htt->pool, name, signature, NULL, signature, 
-                                  htt->cur_file, htt->cur_line);
+  executable = htt_executable_new(htt->pool, htt->executable, name, signature, 
+                                  NULL, signature, htt->cur_file, 
+                                  htt->cur_line);
   new_command->name = name;
   new_command->signature = signature;
   new_command->compile = _cmd_function_compile;
@@ -498,9 +504,9 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt,
 static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
                                           char *args) {
   htt_executable_t *executable;
-  executable = htt_executable_new(htt->pool, command->name, command->signature,
-                                  _cmd_function_function, NULL, 
-                                  htt->cur_file, htt->cur_line);
+  executable = htt_executable_new(htt->pool, htt->executable, command->name, 
+                                  command->signature, _cmd_function_function, 
+                                  NULL, htt->cur_file, htt->cur_line);
   htt_executable_set_raw(executable, args);
   htt_executable_set_config(executable, "__executable", command->user_data);
   htt_executable_add(htt->executable, executable);
@@ -625,8 +631,8 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   }
 
   loop_executable = htt_executable_new(htt_context_get_pool(context), 
-                                       "_loop_closure", NULL, _loop_closure, 
-                                       NULL, 
+                                       executable, "_loop_closure", NULL,
+                                       _loop_closure, NULL, 
                                        htt_executable_get_file(executable), 
                                        htt_executable_get_line(executable));
   loop_context= htt_context_new(context, htt_context_get_log(context));
@@ -656,6 +662,7 @@ static apr_status_t _cmd_eval_function(htt_executable_t *executable,
     string = htt_string_new(ptmp, apr_psprintf(ptmp, "%ld", result));
     htt_stack_push(retvars, string);
   }
+  htt_eval_free(eval);
   return status;
 } 
 

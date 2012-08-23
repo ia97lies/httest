@@ -49,6 +49,7 @@
  * Definitions 
  ***********************************************************************/
 struct htt_executable_s {
+  htt_executable_t *parent;
   apr_pool_t *pool;
   const char *name;
   const char *file;
@@ -100,12 +101,13 @@ static void _handle_signature(apr_pool_t *pool, const char *signature,
 /************************************************************************
  * Public 
  ***********************************************************************/
-htt_executable_t *htt_executable_new(apr_pool_t *pool, const char *name,
-                                     const char *signature, 
+htt_executable_t *htt_executable_new(apr_pool_t *pool, htt_executable_t *parent, 
+                                     const char *name, const char *signature, 
                                      htt_function_f function, char *raw, 
                                      const char *file, int line) {
   htt_executable_t *executable = apr_pcalloc(pool, sizeof(*executable));
   executable->pool = pool;
+  executable->parent = parent;
   executable->name = name;
   executable->signature = signature;
   executable->function = function;
@@ -134,6 +136,10 @@ void htt_executable_dump(htt_executable_t *executable) {
 
 void htt_executable_set_raw(htt_executable_t *executable, char *raw) {
   executable->raw = raw;
+}
+
+htt_executable_t *htt_executable_get_parent(htt_executable_t *executable) {
+  return executable->parent;
 }
 
 const char *htt_executable_get_file(htt_executable_t *executable) {
@@ -261,6 +267,27 @@ static const char *_context_replacer(void *udata, const char *name) {
   htt_string_t *string;
 
   if (strchr(name, '(')) {
+    char *rest;
+    char *func;
+    char *line;
+    htt_function_f function;
+    const char *signature;
+    htt_map_t *params;
+    htt_stack_t *retvars;
+    htt_stack_t *retvals;
+    htt_command_t *command;
+    htt_executable_t *executable = replacer_ctx->executable;
+    apr_pool_t *ptmp = replacer_ctx->ptmp;
+    char *copy = apr_pstrdup(ptmp, name);
+    func = apr_strtok(copy, "(", &rest);
+    line = apr_strtok(NULL, ")", &rest); 
+    command = htt_get_command(executable, func);
+    function = htt_get_command_function(command);
+    signature = htt_get_command_signature(command);
+    _handle_signature(ptmp, signature, line, &params, &retvars);
+    function(executable, context, ptmp, params, retvals, line); 
+    if (retvals) {
+    }
     return NULL;
   }
   else {
