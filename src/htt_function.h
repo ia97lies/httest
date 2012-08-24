@@ -26,8 +26,8 @@
 #define HTT_FUNCTION_H
 
 #include <apr_pools.h>
-#include <htt_executable.h>
-#include <htt_context.h>
+#include "htt_executable.h"
+#include "htt_context.h"
 
 typedef struct htt_function_s htt_function_t;
 

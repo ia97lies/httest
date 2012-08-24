@@ -70,6 +70,7 @@
 #include "htt_function.h"
 #include "htt_string.h"
 #include "htt_eval.h"
+#include "htt_command.h"
 
 /************************************************************************
  * Defines 
@@ -78,16 +79,6 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
-struct htt_command_s {
-  const char *name;
-  const char *signature;
-  const char *short_desc;
-  const char *desc;
-  void *user_data;
-  htt_compile_f compile;
-  htt_function_f function;
-};
-
 struct htt_s {
   apr_pool_t *pool;
   htt_map_t *defines;
@@ -123,42 +114,34 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader);
 /**
  * Compile function for include. Just open file and and interpret.
  * @param command IN command
- * @param htt IN instance
  * @param args IN argument string
  * @return apr status
  */
-static apr_status_t _cmd_include_compile(htt_command_t *command, htt_t *htt,
-                                         char *args); 
+static apr_status_t _cmd_include_compile(htt_command_t *command, char *args); 
 
 /**
  * Get last body from stack
  * @param command IN command
- * @param htt IN instance
  * @param args IN argument string
  * @return apr status
  */
-static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
-                                     char *args); 
+static apr_status_t _cmd_end_compile(htt_command_t *command, char *args); 
 
 /**
  * Define a new function and register it
  * @param command IN command
- * @param htt IN instance
  * @param args IN argument string
  * @return apr status
  */
-static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt, 
-                                          char *args);
+static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args);
 
 /**
  * Add defined function 
  * @param command IN command
- * @param htt IN instance
  * @param args IN argument string
  * @return apr status
  */
-static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
-                                          char *args); 
+static apr_status_t _cmd_function_compile(htt_command_t *command, char *args); 
 /**
  * Simple echo command 
  * @param executable IN executable
@@ -250,23 +233,27 @@ int htt_error = 0;
 /************************************************************************
  * Public 
  ***********************************************************************/
-apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
-                                  char *args) {
+apr_status_t htt_cmd_line_compile(htt_command_t *command, char *args) {
   htt_executable_t *executable;
+  htt_t *htt = htt_command_get_config(command, "htt");
 
-  executable = htt_executable_new(htt->pool, htt->executable, command->name, 
-                                  command->signature, command->function, args, 
+  executable = htt_executable_new(htt->pool, htt->executable, 
+                                  htt_command_get_name(command), 
+                                  htt_command_get_signature(command), 
+                                  htt_command_get_function(command), args, 
                                   htt->cur_file, htt->cur_line);
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
 }
 
-apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
-                                  char *args) {
+apr_status_t htt_cmd_body_compile(htt_command_t *command, char *args) {
   htt_executable_t *executable;
+  htt_t *htt = htt_command_get_config(command, "htt");
 
-  executable = htt_executable_new(htt->pool, htt->executable, command->name, 
-                                  command->signature, command->function, args, 
+  executable = htt_executable_new(htt->pool, htt->executable, 
+                                  htt_command_get_name(command), 
+                                  htt_command_get_signature(command), 
+                                  htt_command_get_function(command), args, 
                                   htt->cur_file, htt->cur_line);
   htt_executable_add(htt->executable, executable);
   htt_stack_push(htt->stack, executable);
@@ -354,13 +341,10 @@ const char *htt_get_cur_file_name(htt_t *htt) {
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
                      const char *short_desc, const char *desc,
                      htt_compile_f compile, htt_function_f function) {
-  htt_command_t *command = apr_pcalloc(htt->pool, sizeof(*command));
-  command->name = name;
-  command->signature = signature;
-  command->short_desc = short_desc;
-  command->desc = desc;
-  command->compile = compile;
-  command->function = function;
+  htt_command_t *command;
+  command = htt_command_new(htt->pool, name, signature, short_desc, desc,
+                            compile, function);
+  htt_command_set_config(command, "htt", htt);
   htt_executable_set_config(htt->executable, name, command);
 }
 
@@ -374,14 +358,6 @@ htt_command_t *htt_get_command(htt_executable_t *executable, const char *cmd) {
     cur = htt_executable_get_parent(cur);
   }
   return command;
-}
-
-htt_function_f htt_get_command_function(htt_command_t *command) {
-  return command->function;
-}
-
-const char *htt_get_command_signature(htt_command_t *command) {
-  return command->signature;
 }
 
 apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len) {
@@ -428,7 +404,7 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
       else {
         const char *old_file_name = htt->cur_file;
         int old_line = htt->cur_line;
-        status = command->compile(command, htt, rest);
+        status = htt_command_compile(command, rest);
         htt->cur_file =  old_file_name;
         htt->cur_line = old_line;
       }
@@ -446,10 +422,10 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
   return APR_SUCCESS;
 }
 
-static apr_status_t _cmd_include_compile(htt_command_t *command, htt_t *htt,
-                                         char *args) {
+static apr_status_t _cmd_include_compile(htt_command_t *command, char *args) {
   apr_file_t *fp;
   apr_status_t status;
+  htt_t *htt = htt_command_get_config(command, "htt");
 
   apr_collapse_spaces(args, args);
   if ((status = apr_file_open(&fp, args, APR_READ, APR_OS_DEFAULT, htt->pool)) 
@@ -462,8 +438,8 @@ static apr_status_t _cmd_include_compile(htt_command_t *command, htt_t *htt,
   return htt_compile_fp(htt, fp);
 }
 
-static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
-                                     char *args) {
+static apr_status_t _cmd_end_compile(htt_command_t *command, char *args) {
+  htt_t *htt = htt_command_get_config(command, "htt");
   htt_stack_pop(htt->stack);
   htt->executable = htt_stack_top(htt->stack);
   if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
@@ -477,13 +453,13 @@ static apr_status_t _cmd_end_compile(htt_command_t *command, htt_t *htt,
   }
 }
 
-static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt, 
-                                          char *args) {
+static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args) {
+  htt_t *htt = htt_command_get_config(command, "htt");
   htt_executable_t *executable;
   char *name;
   char *signature;
   char *line = apr_pstrdup(htt->pool, args);
-  htt_command_t *new_command = apr_pcalloc(htt->pool, sizeof(*command));
+  htt_command_t *new_command;
 
   name = apr_strtok(line, " ", &signature);
   apr_collapse_spaces(name, name);
@@ -491,24 +467,27 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, htt_t *htt,
   executable = htt_executable_new(htt->pool, htt->executable, name, signature, 
                                   NULL, signature, htt->cur_file, 
                                   htt->cur_line);
-  new_command->name = name;
-  new_command->signature = signature;
-  new_command->compile = _cmd_function_compile;
-  new_command->user_data = executable;
+  new_command = htt_command_new(htt->pool, name, signature, NULL, NULL,
+                                _cmd_function_compile, NULL);
+  htt_command_set_config(new_command, "htt", htt);
+  htt_command_set_config(new_command, "executable", executable);
   htt_executable_set_config(htt->executable, name, new_command);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
   return APR_SUCCESS;
 }
 
-static apr_status_t _cmd_function_compile(htt_command_t *command, htt_t *htt, 
-                                          char *args) {
+static apr_status_t _cmd_function_compile(htt_command_t *command, char *args) {
+  htt_t *htt = htt_command_get_config(command, "htt");
   htt_executable_t *executable;
-  executable = htt_executable_new(htt->pool, htt->executable, command->name, 
-                                  command->signature, _cmd_function_function, 
-                                  NULL, htt->cur_file, htt->cur_line);
+  executable = htt_executable_new(htt->pool, htt->executable, 
+                                  htt_command_get_name(command), 
+                                  htt_command_get_signature(command), 
+                                  _cmd_function_function, NULL, htt->cur_file,
+                                  htt->cur_line);
   htt_executable_set_raw(executable, args);
-  htt_executable_set_config(executable, "__executable", command->user_data);
+  htt_executable_set_config(executable, "__executable", 
+                            htt_command_get_config(command, "executable"));
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
 }

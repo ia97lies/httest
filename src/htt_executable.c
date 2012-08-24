@@ -283,8 +283,8 @@ static const char *_context_replacer(void *udata, const char *name) {
     line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
     command = htt_get_command(executable, func);
     if (command) {
-      function = htt_get_command_function(command);
-      signature = htt_get_command_signature(command);
+      function = htt_command_get_function(command);
+      signature = htt_command_get_signature(command);
       _handle_signature(ptmp, signature, line, &params, NULL);
       function(executable, context, ptmp, params, retvals, line); 
       if (retvals) {

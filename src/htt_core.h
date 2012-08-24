@@ -28,6 +28,7 @@
 #include <apr_file_io.h>
 #include "htt_context.h"
 #include "htt_executable.h"
+#include "htt_command.h"
 
 typedef struct htt_s htt_t;
 typedef struct htt_command_s htt_command_t; 
@@ -71,34 +72,20 @@ void htt_set_cur_file_name(htt_t *htt, const char *name);
 const char *htt_get_cur_file_name(htt_t *htt);
 
 /**
- * Compile interface
- * @param command IN command hook
- * @param htt IN httest instance
- * @param params IN line after command
- * @return apr status
- */
-typedef apr_status_t(*htt_compile_f)(htt_command_t *command, htt_t *htt, 
-                                     char *params);
-
-/**
  * Compiles a simple command 
- * @param htt IN instance
- * @param function IN commands function
+ * @param command IN command instance
  * @param args IN commands arguments
  * @param APR_SUCCESS on successfull compilation
  */
-apr_status_t htt_cmd_line_compile(htt_command_t *command, htt_t *htt, 
-                                  char *args);
+apr_status_t htt_cmd_line_compile(htt_command_t *command, char *args);
 
 /**
  * Compiles a command with a body (if, loop, ...)
- * @param htt IN instance
- * @param function IN commands function
+ * @param command IN command instance
  * @param args IN commands arguments
  * @param APR_SUCCESS on successfull compilation
  */
-apr_status_t htt_cmd_body_compile(htt_command_t *command, htt_t *htt, 
-                                  char *args);
+apr_status_t htt_cmd_body_compile(htt_command_t *command, char *args);
 
 /**
  * Add command
