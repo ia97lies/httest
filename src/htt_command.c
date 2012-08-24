@@ -37,8 +37,6 @@
 
 #include "htt_command.h"
 #include "htt_executable.h"
-#include "htt_compile_interface.h"
-#include "htt_function_interface.h"
 
 /************************************************************************
  * Definitions 
