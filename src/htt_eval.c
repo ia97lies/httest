@@ -513,7 +513,12 @@ static apr_status_t _parse(htt_eval_t * hook, long *val) {
   long *result;
   apr_status_t status = _parse_equalit(hook);
   result = SKM_sk_pop(long, hook->stack);
-  *val = *result;
+  if (result) {
+    *val = *result;
+  }
+  else {
+    status = APR_EINVAL;
+  }
   return status;
 }
 

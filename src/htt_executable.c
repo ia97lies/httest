@@ -280,6 +280,7 @@ static const char *_context_replacer(void *udata, const char *name) {
     char *copy = apr_pstrdup(ptmp, name);
     func = apr_strtok(copy, "(", &rest);
     line = apr_strtok(NULL, ")", &rest); 
+    line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
     command = htt_get_command(executable, func);
     if (command) {
       function = htt_get_command_function(command);
