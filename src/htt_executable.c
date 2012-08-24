@@ -273,20 +273,25 @@ static const char *_context_replacer(void *udata, const char *name) {
     htt_function_f function;
     const char *signature;
     htt_map_t *params;
-    htt_stack_t *retvars;
-    htt_stack_t *retvals;
     htt_command_t *command;
     htt_executable_t *executable = replacer_ctx->executable;
     apr_pool_t *ptmp = replacer_ctx->ptmp;
+    htt_stack_t *retvals = htt_stack_new(ptmp);
     char *copy = apr_pstrdup(ptmp, name);
     func = apr_strtok(copy, "(", &rest);
     line = apr_strtok(NULL, ")", &rest); 
     command = htt_get_command(executable, func);
-    function = htt_get_command_function(command);
-    signature = htt_get_command_signature(command);
-    _handle_signature(ptmp, signature, line, &params, &retvars);
-    function(executable, context, ptmp, params, retvals, line); 
-    if (retvals) {
+    if (command) {
+      function = htt_get_command_function(command);
+      signature = htt_get_command_signature(command);
+      _handle_signature(ptmp, signature, line, &params, NULL);
+      function(executable, context, ptmp, params, retvals, line); 
+      if (retvals) {
+        htt_string_t *string = htt_stack_pop(retvals);
+        if (htt_isa_string(string)) {
+          return htt_string_get(string);
+        }
+      }
     }
     return NULL;
   }
@@ -324,7 +329,9 @@ static void _handle_signature(apr_pool_t *pool, const char *signature,
                               char *line, htt_map_t **params, 
                               htt_stack_t **retvars) {
   *params = NULL;
-  *retvars = NULL;
+  if (retvars) {
+    *retvars = NULL;
+  }
   if (signature) {
     char *cur;
     char *rest;
@@ -332,7 +339,6 @@ static void _handle_signature(apr_pool_t *pool, const char *signature,
     char *copy = apr_pstrdup(pool, signature);
     int i = 0;
     *params = htt_map_new(pool);
-    *retvars = htt_stack_new(pool);
 
     htt_util_to_argv(line, &argv, pool, 0);
 
@@ -348,17 +354,20 @@ static void _handle_signature(apr_pool_t *pool, const char *signature,
       }
       cur = apr_strtok(NULL, " ", &rest);
     }
-    if (cur && strcmp(cur, ":") == 0) {
-      cur = apr_strtok(NULL, " ", &rest);
-      while (cur) {
-        htt_string_t *string = htt_string_new(pool, NULL);
-        htt_map_set(*params, cur, string);
+    if (retvars) {
+      *retvars = htt_stack_new(pool);
+      if (cur && strcmp(cur, ":") == 0) {
         cur = apr_strtok(NULL, " ", &rest);
+        while (cur) {
+          htt_string_t *string = htt_string_new(pool, NULL);
+          htt_map_set(*params, cur, string);
+          cur = apr_strtok(NULL, " ", &rest);
+        }
       }
-    }
-    while (argv[i]) {
-      htt_stack_push(*retvars, argv[i]);
-      ++i;
+      while (argv[i]) {
+        htt_stack_push(*retvars, argv[i]);
+        ++i;
+      }
     }
   }
 }
