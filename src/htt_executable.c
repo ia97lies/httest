@@ -302,6 +302,7 @@ static const char *_context_replacer(void *udata, const char *name) {
       return htt_string_get(string);
     }
     else {
+      /* TODO: lookup env vars */
       return NULL;
     }
   }
