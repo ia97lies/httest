@@ -62,6 +62,36 @@ htt_executable_t *htt_executable_new(apr_pool_t *pool, htt_executable_t *parent,
  */
 void htt_executable_dump(htt_executable_t *executable); 
 
+/**
+ * Set stack of parameters
+ * @param executable IN
+ * @param params IN
+ */
+void htt_executable_set_params(htt_executable_t *executable, 
+                               htt_stack_t *params); 
+
+/**
+ * Set stack of return variable
+ * @param executable IN
+ * @param params IN
+ */
+void htt_executable_set_retvars(htt_executable_t *executable, 
+                                htt_stack_t *retvars); 
+
+/**
+ * Get stack of parameter variables
+ * @param executable IN
+ * @return stack of parameters 
+ */
+htt_stack_t *htt_executable_get_params(htt_executable_t *executable); 
+
+/**
+ * Get stack of return variables
+ * @param executable IN
+ * @return stack of return variables 
+ */
+htt_stack_t *htt_executable_get_retvars(htt_executable_t *executable); 
+
 
 /**
  * Set raw

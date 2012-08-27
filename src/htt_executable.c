@@ -55,6 +55,8 @@ struct htt_executable_s {
   const char *file;
   int line;
   const char *signature;
+  htt_stack_t *params;
+  htt_stack_t *retvars;
   htt_function_f function;
   const char *raw;
   apr_table_t *body;
@@ -133,6 +135,24 @@ void htt_executable_dump(htt_executable_t *executable) {
           executable->name, executable->signature, executable->function, 
           executable->raw, executable->body);
 };
+
+void htt_executable_set_params(htt_executable_t *executable, 
+                               htt_stack_t *params) {
+  executable->params = params;
+}
+
+void htt_executable_set_retvars(htt_executable_t *executable, 
+                                htt_stack_t *retvars) {
+  executable->retvars = retvars;
+}
+
+htt_stack_t *htt_executable_get_params(htt_executable_t *executable) {
+  return executable->params;
+}
+
+htt_stack_t *htt_executable_get_retvars(htt_executable_t *executable) {
+  return executable->retvars;
+}
 
 void htt_executable_set_raw(htt_executable_t *executable, char *raw) {
   executable->raw = raw;
@@ -327,6 +347,7 @@ static int _doit(htt_function_t *closure) {
   return doit;
 }
 
+/** TODO: Use executables params and retvars instead of signature!!! */
 static void _handle_signature(apr_pool_t *pool, const char *signature, 
                               char *line, htt_map_t **params, 
                               htt_stack_t **retvars) {

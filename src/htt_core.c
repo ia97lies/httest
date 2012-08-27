@@ -97,11 +97,11 @@ typedef struct _loop_config_s {
 /**
  * Get return vals with given signature
  * @param context IN 
- * @param signature IN parameter mapped to local body
+ * @param retvars IN stack of return variables
  * @param retvals INOUT fill return values in this stack
  * @param pool IN
  */
-static void _get_retvals(htt_context_t *context, const char *signature,
+static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
                          htt_stack_t *retvals, apr_pool_t *pool); 
 /**
  * Interpret reading from given bufreader 
@@ -242,6 +242,8 @@ apr_status_t htt_cmd_line_compile(htt_command_t *command, char *args) {
                                   htt_command_get_signature(command), 
                                   htt_command_get_function(command), args, 
                                   htt->cur_file, htt->cur_line);
+  htt_executable_set_params(executable, htt_command_get_params(command));
+  htt_executable_set_retvars(executable, htt_command_get_retvars(command));
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
 }
@@ -255,6 +257,8 @@ apr_status_t htt_cmd_body_compile(htt_command_t *command, char *args) {
                                   htt_command_get_signature(command), 
                                   htt_command_get_function(command), args, 
                                   htt->cur_file, htt->cur_line);
+  htt_executable_set_params(executable, htt_command_get_params(command));
+  htt_executable_set_retvars(executable, htt_command_get_retvars(command));
   htt_executable_add(htt->executable, executable);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
@@ -464,11 +468,13 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args) {
   name = apr_strtok(line, " ", &signature);
   apr_collapse_spaces(name, name);
   while (*signature == ' ') ++signature;
+  new_command = htt_command_new(htt->pool, name, signature, NULL, NULL,
+                                _cmd_function_compile, NULL);
   executable = htt_executable_new(htt->pool, htt->executable, name, signature, 
                                   NULL, signature, htt->cur_file, 
                                   htt->cur_line);
-  new_command = htt_command_new(htt->pool, name, signature, NULL, NULL,
-                                _cmd_function_compile, NULL);
+  htt_executable_set_params(executable, htt_command_get_params(new_command));
+  htt_executable_set_retvars(executable, htt_command_get_retvars(new_command));
   htt_command_set_config(new_command, "htt", htt);
   htt_command_set_config(new_command, "executable", executable);
   htt_executable_set_config(htt->executable, name, new_command);
@@ -503,7 +509,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   child_context= htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
   status = htt_execute(_executable, child_context);
-  _get_retvals(child_context, htt_executable_get_signature(_executable), 
+  _get_retvals(child_context, htt_executable_get_retvars(_executable), 
                retvals, ptmp);
   htt_context_destroy(child_context);
   return status;
@@ -645,25 +651,20 @@ static apr_status_t _cmd_eval_function(htt_executable_t *executable,
   return status;
 } 
 
-static void _get_retvals(htt_context_t *context, const char *signature,
+static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
                          htt_stack_t *retvals, apr_pool_t *pool) {
-  if (retvals && signature) {
+  if (retvals && retvars) {
+    int i;
     char *cur;
-    char *rest;
-    char *copy = apr_pstrdup(pool, signature);
-
-    cur = apr_strtok(copy, " ", &rest);
-    while (cur && strcmp(cur, ":") != 0) {
-      cur = apr_strtok(NULL, " ", &rest);
-    }
-    if (cur && strcmp(cur, ":") == 0) {
-      cur = apr_strtok(NULL, " ", &rest);
-      while (cur) {
+    
+    for (i = 0; i < htt_stack_elems(retvars); i++) {
+      cur = htt_stack_index(retvars, i);
+      fprintf(stderr, "XXX %d :-> %s\n", i, cur);
+      if (cur) {
         htt_object_t *val = htt_context_get_var(context, cur);
         if (val) {
           htt_stack_push(retvals, val->clone(val, pool));
         }
-        cur = apr_strtok(NULL, " ", &rest);
       }
     }
   }

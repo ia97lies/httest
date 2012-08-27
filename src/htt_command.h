@@ -101,6 +101,20 @@ const char *htt_command_get_desc(htt_command_t *command);
 htt_function_f htt_command_get_function(htt_command_t *command); 
 
 /**
+ * Get defined parameters (signature)
+ * @param command IN
+ * @return stack of parameters
+ */
+htt_stack_t *htt_command_get_params(htt_command_t *command); 
+
+/**
+ * Get defined return variables (signature)
+ * @param command IN
+ * @return stack of return variables
+ */
+htt_stack_t *htt_command_get_retvars(htt_command_t *command); 
+
+/**
  * Compiles given command
  * @param command IN
  * @param args IN args
