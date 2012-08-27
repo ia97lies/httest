@@ -491,6 +491,8 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, char *args) {
                                   htt_command_get_signature(command), 
                                   _cmd_function_function, NULL, htt->cur_file,
                                   htt->cur_line);
+  htt_executable_set_params(executable, htt_command_get_params(command));
+  htt_executable_set_retvars(executable, htt_command_get_retvars(command));
   htt_executable_set_raw(executable, args);
   htt_executable_set_config(executable, "__executable", 
                             htt_command_get_config(command, "executable"));
@@ -659,7 +661,6 @@ static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
     
     for (i = 0; i < htt_stack_elems(retvars); i++) {
       cur = htt_stack_index(retvars, i);
-      fprintf(stderr, "XXX %d :-> %s\n", i, cur);
       if (cur) {
         htt_object_t *val = htt_context_get_var(context, cur);
         if (val) {

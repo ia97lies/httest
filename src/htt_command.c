@@ -136,8 +136,8 @@ static void _handle_signature(htt_command_t *command) {
     command->retvars = htt_stack_new(command->pool);
     cur = apr_strtok(copy, " ", &rest);
     while (cur && strcmp(cur, ":") != 0) {
-      cur = apr_strtok(NULL, " ", &rest);
       htt_stack_push(command->params, cur);
+      cur = apr_strtok(NULL, " ", &rest);
     }
     if (cur && strcmp(cur, ":") == 0) {
       cur = apr_strtok(NULL, " ", &rest);
