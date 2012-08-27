@@ -29,6 +29,7 @@
 #include "htt_context.h"
 #include "htt_replacer.h"
 #include "htt_string.h"
+#include "htt_object.h"
 #include "htt_function.h"
 
 /************************************************************************
@@ -108,6 +109,7 @@ void htt_context_set_var(htt_context_t *context, const char *variable,
                          void *value) {
   htt_map_t *vars;
   htt_context_t *cur = context;
+  htt_object_t *obj = value;
 
   vars = htt_context_get_vars(cur);
   while (cur && !htt_map_get(vars, variable)) {
@@ -122,7 +124,7 @@ void htt_context_set_var(htt_context_t *context, const char *variable,
   if (!vars) {
     vars = htt_context_get_vars(cur);
   }
-  htt_map_set(vars, variable, value);
+  htt_map_set(vars, variable, obj->clone(obj, cur->pool));
 }
 
 void htt_context_set_config(htt_context_t *context, const char *name, void *data) {

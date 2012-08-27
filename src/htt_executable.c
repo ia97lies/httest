@@ -235,11 +235,10 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
           char *varname;
           htt_object_t *val;
           int i = 0;
-          pool = htt_context_get_pool(context);
           varname = htt_stack_index(retvars, i);
           val = htt_stack_index(retvals, i);
           while (val && varname) {
-            htt_context_set_var(context, varname, val->clone(val, pool));
+            htt_context_set_var(context, varname, val);
             ++i;
             varname = htt_stack_index(retvars, i);
             val = htt_stack_index(retvals, i);
