@@ -231,7 +231,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       if (exec->function) {
         status = exec->function(exec, context, ptmp, params, retvals, line); 
         if (retvars) {
-          apr_pool_t *pool;
           char *varname;
           htt_object_t *val;
           int i = 0;
@@ -292,7 +291,6 @@ static const char *_context_replacer(void *udata, const char *name) {
     char *func;
     char *line;
     htt_function_f function;
-    const char *signature;
     htt_map_t *params;
     htt_command_t *command;
     htt_executable_t *executable = replacer_ctx->executable;
@@ -305,7 +303,6 @@ static const char *_context_replacer(void *udata, const char *name) {
     command = htt_get_command(executable, func);
     if (command) {
       function = htt_command_get_function(command);
-      signature = htt_command_get_signature(command);
       _handle_signature(ptmp, htt_command_get_params(command), 
                         htt_command_get_retvars(command), line, &params, NULL);
       function(executable, context, ptmp, params, retvals, line); 
