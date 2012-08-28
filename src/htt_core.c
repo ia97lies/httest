@@ -626,6 +626,9 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   loop_vars = htt_context_get_vars(loop_context);
   count_str = htt_string_new(htt_context_get_pool(loop_context), count);
   htt_map_set(loop_vars, "count", count_str);
+  if (index) {
+    htt_map_set(loop_vars, "index", index);
+  }
 
   loop_closure = htt_function_new(htt_context_get_pool(loop_context), 
                                   loop_executable, loop_context);

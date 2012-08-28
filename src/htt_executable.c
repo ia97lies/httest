@@ -208,7 +208,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     int doit = 0;
     char *line;
     apr_pool_t *ptmp;
-    _context_replacer_t *replacer_ctx;
+    _context_replacer_t replacer_ctx;
     htt_stack_t *retvals; 
     htt_stack_t *retvars = NULL; 
     htt_map_t *params = NULL;
@@ -218,11 +218,10 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_create(&ptmp, htt_context_get_pool(context));
     retvals = htt_stack_new(ptmp);
     line = apr_pstrdup(ptmp, exec->raw);
-    replacer_ctx = apr_pcalloc(ptmp, sizeof(*replacer_ctx));
-    replacer_ctx->executable = executable;
-    replacer_ctx->context = context;
-    replacer_ctx->ptmp = ptmp;
-    line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
+    replacer_ctx.executable = executable;
+    replacer_ctx.context = context;
+    replacer_ctx.ptmp = ptmp;
+    line = htt_replacer(ptmp, line, &replacer_ctx, _context_replacer);
     _handle_signature(ptmp, exec->params, exec->retvars, line, &params, 
                       &retvars);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
@@ -232,15 +231,15 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
         status = exec->function(exec, context, ptmp, params, retvals, line); 
         if (retvars) {
           char *varname;
-          htt_object_t *val;
+          htt_object_t *value;
           int i = 0;
           varname = htt_stack_index(retvars, i);
-          val = htt_stack_index(retvals, i);
-          while (val && varname) {
-            htt_context_set_var(context, varname, val);
+          value = htt_stack_index(retvals, i);
+          while (value && varname) {
+            htt_context_set_var(context, varname, value);
             ++i;
             varname = htt_stack_index(retvars, i);
-            val = htt_stack_index(retvals, i);
+            value = htt_stack_index(retvals, i);
           }
         }
       }
