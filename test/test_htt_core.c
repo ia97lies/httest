@@ -164,6 +164,28 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
+  fprintf(stdout, "loop function incr global... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set g = 0\n\
+         function foo\n\
+           eval $g+1 g\n\
+         end\n\
+         loop 10 \n\
+           foo\n\
+         end\n\
+         mock $g");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "10\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
   fprintf(stdout, "set a variable in the same scope... ");
   {
     apr_status_t status;
@@ -519,6 +541,36 @@ int main(int argc, const char *const argv[]) {
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
     assert(strcmp(global_buf, "3\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "loop with index... ");
+  {
+    int i;
+    htt_bufreader_t *bufreader;
+    apr_status_t status;
+    char *line;
+    char *buf = apr_pstrdup(pool, 
+        "loop 10 i\n\
+           mock $i\n\
+         end");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "3\n") == 0);
+    bufreader = htt_bufreader_buf_new(pool, global_buf, strlen(global_buf));
+    for (i = 0; i < 10; i++) {
+      status = htt_bufreader_read_line(bufreader, &line);
+      assert(status == APR_SUCCESS);
+      assert(strcmp(line, apr_psprintf(pool, "%d\n", i+1)) == 0);
+    }
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_EOF);
+    assert(line[0] == 0);
+
   }
   fprintf(stdout, "ok\n");
 
