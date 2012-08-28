@@ -125,6 +125,7 @@ void htt_context_set_var(htt_context_t *context, const char *variable,
     vars = htt_context_get_vars(cur);
   }
   htt_map_set(vars, variable, obj->clone(obj, cur->pool));
+  obj->destructor(obj);
 }
 
 void htt_context_set_config(htt_context_t *context, const char *name, void *data) {

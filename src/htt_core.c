@@ -581,9 +581,19 @@ static apr_status_t _loop_closure(htt_executable_t *executable,
                                   char *line) {
   htt_string_t *retval;
   _loop_config_t *config;
+  htt_string_t *index = htt_map_get(htt_context_get_vars(context), "index");
   htt_string_t *count = htt_map_get(htt_context_get_vars(context), "count");
   if (htt_isa_string(count)) {
     config = _loop_get_config(context);
+    if (index) {
+      htt_context_t *parent = htt_context_get_parent(context);
+      htt_string_t *index_val;
+      index_val = htt_string_new(htt_context_get_pool(parent), 
+                                 apr_ltoa(htt_context_get_pool(parent), 
+                                          config->i));
+      htt_map_set(htt_context_get_vars(parent), htt_string_get(index), 
+                  index_val);
+    }
     ++config->i;
     if (config->i > apr_atoi64(htt_string_get(count))) {
       retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
@@ -605,6 +615,7 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   htt_executable_t *loop_executable;
   htt_map_t *loop_vars;
   htt_string_t *count_str;
+  htt_string_t *index_str;
 
   char *count;
   char *index;
@@ -626,8 +637,9 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   loop_vars = htt_context_get_vars(loop_context);
   count_str = htt_string_new(htt_context_get_pool(loop_context), count);
   htt_map_set(loop_vars, "count", count_str);
-  if (index) {
-    htt_map_set(loop_vars, "index", index);
+  if (index && index[0]) {
+    index_str = htt_string_new(htt_context_get_pool(loop_context), index);
+    htt_map_set(loop_vars, "index", index_str);
   }
 
   loop_closure = htt_function_new(htt_context_get_pool(loop_context), 

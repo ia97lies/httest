@@ -560,12 +560,12 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    assert(strcmp(global_buf, "3\n") == 0);
+    fprintf(stderr, "XXX %s\n", global_buf);
     bufreader = htt_bufreader_buf_new(pool, global_buf, strlen(global_buf));
     for (i = 0; i < 10; i++) {
       status = htt_bufreader_read_line(bufreader, &line);
       assert(status == APR_SUCCESS);
-      assert(strcmp(line, apr_psprintf(pool, "%d\n", i+1)) == 0);
+      assert(strcmp(line, apr_psprintf(pool, "%d", i)) == 0);
     }
     status = htt_bufreader_read_line(bufreader, &line);
     assert(status == APR_EOF);
