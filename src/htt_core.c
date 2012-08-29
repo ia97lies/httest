@@ -90,9 +90,9 @@ struct htt_s {
   apr_hash_t *config;
 };
 
-typedef struct _loop_config_s {
+typedef struct _counter_config_s {
   int i;
-} _loop_config_t;
+} _counter_config_t;
 
 /**
  * Get return vals with given signature
@@ -196,6 +196,20 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line);
+
+/**
+ * if command
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_if_function(htt_executable_t *executable, 
+                                     htt_context_t *context, apr_pool_t *ptmp, 
+                                     htt_map_t *params, htt_stack_t *retvars,
+                                     char *line);
 
 /**
  * Function command
@@ -316,8 +330,10 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_line_compile, _cmd_set_function);
   htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
                   htt_cmd_line_compile, _cmd_local_function);
-  htt_add_command(htt, "loop", NULL, "", "open a new body",
+  htt_add_command(htt, "loop", NULL, "", "loop a body",
                   htt_cmd_body_compile, _cmd_loop_function);
+  htt_add_command(htt, "if", NULL, "", "conditional body",
+                  htt_cmd_body_compile, _cmd_if_function);
   htt_add_command(htt, "eval", "expression : result", "<expression> <result>", 
                   "Evaluate <expression> and store it in <result>",
                   htt_cmd_line_compile, _cmd_eval_function);
@@ -562,15 +578,15 @@ static apr_status_t _cmd_local_function(htt_executable_t *executable,
   return APR_SUCCESS;
 }
 
-static _loop_config_t *_loop_get_config(htt_context_t *context) {
-  _loop_config_t *config;
+static _counter_config_t *_counter_get_config(htt_context_t *context) {
+  _counter_config_t *config;
 
-  config = htt_context_get_config(context, "_loop_config");
+  config = htt_context_get_config(context, "_counter_config");
   if (config == NULL) {
     config = apr_pcalloc(htt_context_get_pool(context), sizeof(*config));
     htt_context_set_config(context, 
                            apr_pstrdup(htt_context_get_pool(context), 
-                                       "_loop_config"), config);
+                                       "_counter_config"), config);
   }
   return config;
 }
@@ -580,12 +596,12 @@ static apr_status_t _loop_closure(htt_executable_t *executable,
                                   htt_map_t *params, htt_stack_t *retvars, 
                                   char *line) {
   htt_string_t *retval;
-  _loop_config_t *config;
+  _counter_config_t *config;
   htt_string_t *index = htt_map_get(htt_context_get_vars(context), "index");
   htt_string_t *count = htt_map_get(htt_context_get_vars(context), "count");
   if (htt_isa_string(count)) {
-    config = _loop_get_config(context);
-    if (index) {
+    config = _counter_get_config(context);
+    if (htt_isa_string(index)) {
       htt_context_t *parent = htt_context_get_parent(context);
       htt_string_t *index_val;
       index_val = htt_string_new(htt_context_get_pool(parent), 
@@ -646,6 +662,76 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
                                   loop_executable, loop_context);
   /* this must return a closure */
   htt_stack_push(retvars, loop_closure);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _if_closure(htt_executable_t *executable, 
+                                  htt_context_t *context, apr_pool_t *ptmp, 
+                                  htt_map_t *params, htt_stack_t *retvars, 
+                                  char *line) {
+  htt_string_t *retval;
+  _counter_config_t *config;
+  htt_string_t *cond = htt_map_get(htt_context_get_vars(context), "cond");
+
+    config = _counter_get_config(context);
+    if (config->i == 0) {
+      if (htt_isa_string(cond)) {
+        retval = htt_string_new(ptmp, apr_pstrdup(ptmp, htt_string_get(cond)));
+      }
+    }
+    else {
+      /** TODO: throw error */
+      retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
+    }
+    htt_stack_push(retvars, retval);
+    ++config->i;
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_if_function(htt_executable_t *executable, 
+                                     htt_context_t *context, apr_pool_t *ptmp, 
+                                     htt_map_t *params, htt_stack_t *retvars, 
+                                     char *line) {
+  htt_function_t *if_closure;
+  htt_context_t *if_context;
+  htt_executable_t *if_executable;
+  htt_map_t *if_vars;
+  htt_string_t *cond;
+  char **argv;
+  htt_util_to_argv(line, &argv, ptmp, 0);
+
+  if (argv[0]) {
+    if (apr_atoi64(argv[0]) != 0) {
+      fprintf(stderr, "FALSE: %s\n", argv[0]);
+      cond = htt_string_new(ptmp, argv[0]);
+    }
+    else {
+      fprintf(stderr, "TRUE: %s\n", argv[0]);
+      cond = htt_string_new(ptmp, argv[0]);
+    }
+  }
+  else {
+    htt_log_error(htt_context_get_log(context), APR_EGENERAL, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Missing condition in if");
+    htt_throw_error();
+  }
+
+  if_executable = htt_executable_new(htt_context_get_pool(context), 
+                                     executable, "_if_closure", NULL,
+                                     _if_closure, NULL, 
+                                     htt_executable_get_file(executable), 
+                                     htt_executable_get_line(executable));
+  if_context= htt_context_new(context, htt_context_get_log(context));
+  if_vars = htt_context_get_vars(if_context);
+  htt_map_set(if_vars, "cond", cond);
+
+  if_closure = htt_function_new(htt_context_get_pool(if_context), 
+                                if_executable, if_context);
+  /* this must return a closure */
+  htt_stack_push(retvars, if_closure);
   return APR_SUCCESS;
 }
 

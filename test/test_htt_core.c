@@ -560,7 +560,6 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    fprintf(stderr, "XXX %s\n", global_buf);
     bufreader = htt_bufreader_buf_new(pool, global_buf, strlen(global_buf));
     for (i = 0; i < 10; i++) {
       status = htt_bufreader_read_line(bufreader, &line);
@@ -571,6 +570,48 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_EOF);
     assert(line[0] == 0);
 
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "if expression... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = 0\n\
+         if $eval($i==0)\n\
+           mock $i==0\n\
+         end\n\
+         if $eval($i==1)\n\
+           mock $i==1\n\
+         end");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "0==0\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "if expression 2... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set i = 10\n\
+         if $eval($i>0)\n\
+           mock $i>0\n\
+         end\n\
+         if $eval($i>10)\n\
+           mock $i>10\n\
+         end");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "10>0\n") == 0);
   }
   fprintf(stdout, "ok\n");
 
