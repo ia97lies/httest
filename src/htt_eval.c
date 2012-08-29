@@ -35,10 +35,13 @@
  * => result is 1
  *
  * EBNF Description
- * equalit    = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
+ * bexpression= bterm {or bterm};
+ * bterm      = bfactor {and bfactor};
+ * bfactor    = [not] condition;
+ * condition  = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
  * expression = term  {"+" term};
  * term       = factor {"*" factor};
- * factor     = constant | "(" expression ")";
+ * factor     = constant | "(" bexpression ")";
  * constant   = digit {digit};
  * digit      = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
  *
@@ -73,7 +76,6 @@ enum {
   MATH_DIV,
   MATH_MOD,
   MATH_POWER,
-  MATH_NOT,
   MATH_EQ,
   MATH_NE,
   MATH_BT,
@@ -84,12 +86,14 @@ enum {
   MATH_PARENT_R,
   MATH_NUM,
   MATH_EOF,
+  MATH_NOT,
+  MATH_AND,
+  MATH_OR,
   MATH_ERR
 } _token_e;
 
 struct htt_eval_s {
   apr_pool_t *pool;
-  const char *delimiter;
   STACK_OF(long) *stack;
   const char *line;
   apr_size_t i;
@@ -150,9 +154,9 @@ static char _peek_char(htt_eval_t *hook) {
  * @param hook IN eval instance
  * @return lookahead char or \0 if end of line
  */
-static char _lookahead(htt_eval_t *hook) {
-  if (hook->i < hook->len) {
-    return hook->line[hook->i+1];
+static char _lookahead(htt_eval_t *hook, int ahead) {
+  if (hook->i+ahead < hook->len) {
+    return hook->line[hook->i+ahead];
   }
   else {
     return '\0';
@@ -181,8 +185,41 @@ static int _get_next_token(htt_eval_t *hook) {
   _skip_space(hook);
   while ((c = _peek_char(hook))) {
     switch (c) {
+    case 'a':
+      if (_lookahead(hook,1) == 'n' && _lookahead(hook,2) == 'd') {
+	_next_char(hook);
+	_next_char(hook);
+	_next_char(hook);
+        return MATH_AND;
+      }
+      else {
+	return MATH_ERR;
+      }
+      break;
+    case 'o':
+      if (_lookahead(hook,1) == 'r') {
+	_next_char(hook);
+	_next_char(hook);
+	_next_char(hook);
+        return MATH_OR;
+      }
+      else {
+	return MATH_ERR;
+      }
+      break;
+    case 'n':
+      if (_lookahead(hook,1) == 'o' && _lookahead(hook,2) == 't') {
+	_next_char(hook);
+	_next_char(hook);
+	_next_char(hook);
+        return MATH_NOT;
+      }
+      else {
+	return MATH_ERR;
+      }
+      break;
     case '=':
-      if (_lookahead(hook) == '=') {
+      if (_lookahead(hook,1) == '=') {
 	_next_char(hook);
 	_next_char(hook);
 	return MATH_EQ;
@@ -192,7 +229,7 @@ static int _get_next_token(htt_eval_t *hook) {
       }
       break;
     case '<': 
-      if (_lookahead(hook) == '=') {
+      if (_lookahead(hook,1) == '=') {
 	_next_char(hook);
 	_next_char(hook);
 	return MATH_LE;
@@ -203,7 +240,7 @@ static int _get_next_token(htt_eval_t *hook) {
       }
       break;
     case '>': 
-      if (_lookahead(hook) == '=') {
+      if (_lookahead(hook,1) == '=') {
 	_next_char(hook);
 	_next_char(hook);
 	return MATH_BE;
@@ -215,12 +252,12 @@ static int _get_next_token(htt_eval_t *hook) {
       break;
     case '!': 
       _next_char(hook);
-      if (_lookahead(hook) == '=') {
+      if (_lookahead(hook,1) == '=') {
 	_next_char(hook);
 	return MATH_NE;
       }
       else {
-	return MATH_NOT;
+	return MATH_ERR;
       }
       break;
     case '+': 
@@ -445,11 +482,11 @@ static apr_status_t _parse_expression(htt_eval_t *hook) {
 }
 
 /**
- * equalit    = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
+ * condition    = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_equalit(htt_eval_t *hook) {
+static apr_status_t _parse_condition(htt_eval_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -511,7 +548,7 @@ static apr_status_t _parse_equalit(htt_eval_t *hook) {
  */
 static apr_status_t _parse(htt_eval_t * hook, long *val) {
   long *result;
-  apr_status_t status = _parse_equalit(hook);
+  apr_status_t status = _parse_condition(hook);
   result = SKM_sk_pop(long, hook->stack);
   if (result) {
     *val = *result;
@@ -533,7 +570,6 @@ htt_eval_t *htt_eval_new(apr_pool_t * pool) {
   htt_eval_t *hook = apr_pcalloc(mypool, sizeof(*hook));
   hook->pool = mypool; 
   hook->stack = SKM_sk_new_null(long);
-  hook->delimiter = apr_pstrdup(mypool, "+-*/=<>!()");
 
   return hook;
 }
