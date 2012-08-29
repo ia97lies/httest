@@ -703,11 +703,9 @@ static apr_status_t _cmd_if_function(htt_executable_t *executable,
 
   if (argv[0]) {
     if (apr_atoi64(argv[0]) != 0) {
-      fprintf(stderr, "FALSE: %s\n", argv[0]);
       cond = htt_string_new(ptmp, argv[0]);
     }
     else {
-      fprintf(stderr, "TRUE: %s\n", argv[0]);
       cond = htt_string_new(ptmp, argv[0]);
     }
   }
