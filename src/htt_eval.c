@@ -102,7 +102,11 @@ struct htt_eval_s {
   int cur_token;
 };
 
+static apr_status_t _parse_bexpression(htt_eval_t *hook);
+static apr_status_t _parse_bterm(htt_eval_t *hook);
+static apr_status_t _parse_bfactor(htt_eval_t *hook);
 static apr_status_t _parse_expression(htt_eval_t *hook);
+static apr_status_t _parse_condition(htt_eval_t *hook);
 static apr_status_t _parse_term(htt_eval_t *hook);
 static apr_status_t _parse_factor(htt_eval_t *hook);
 
@@ -330,6 +334,86 @@ static int _peek_token(htt_eval_t *hook) {
     return hook->cur_token;
   }
 }
+  
+/**
+ * bterm = bfactor { and bfactor }
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t _parse_bterm(htt_eval_t *hook) {
+  int token; 
+  apr_status_t status;
+  long *right;
+  long *left;
+  long *result;
+  
+  if ((status = _parse_bfactor(hook)) != APR_SUCCESS) {
+    return status;
+  }
+
+  token = _peek_token(hook);
+  while (token != MATH_EOF) {
+    if (token == MATH_AND) {
+      _get_token(hook);
+    }
+    else {
+      return APR_SUCCESS;
+    }
+   
+    if ((status = _parse_bfactor(hook)) != APR_SUCCESS) {
+      return status;
+    }
+
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
+    result = apr_pcalloc(hook->pool, sizeof(*result));
+    *result = *left && *right;
+    SKM_sk_push(long, hook->stack, result);
+ 
+    token = _peek_token(hook);
+  }
+  return APR_SUCCESS;
+}
+
+/**
+ * bexpression = bterm { or bterm }
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t _parse_bexpression(htt_eval_t *hook) {
+  int token; 
+  apr_status_t status;
+  long *right;
+  long *left;
+  long *result;
+  
+  if ((status = _parse_bterm(hook)) != APR_SUCCESS) {
+    return status;
+  }
+
+  token = _peek_token(hook);
+  while (token != MATH_EOF) {
+    if (token == MATH_OR) {
+      _get_token(hook);
+    }
+    else {
+      return APR_SUCCESS;
+    }
+    
+    if ((status = _parse_bterm(hook)) != APR_SUCCESS) {
+      return status;
+    }
+
+    right = SKM_sk_pop(long, hook->stack);
+    left = SKM_sk_pop(long, hook->stack);
+    result = apr_pcalloc(hook->pool, sizeof(*result));
+    *result = *left || *right;
+    SKM_sk_push(long, hook->stack, result);
+
+    token = _peek_token(hook);
+  }
+  return APR_SUCCESS;
+}
 
 /**
  * factor = constant | "(" expression ")";
@@ -360,7 +444,7 @@ static apr_status_t _parse_factor(htt_eval_t *hook) {
     break;
   case MATH_PARENT_L:
     token = _get_token(hook);
-    status = _parse_expression(hook);
+    status = _parse_bexpression(hook);
     token = _peek_token(hook);
     if (token != MATH_PARENT_R) {
       return APR_EINVAL;
@@ -373,7 +457,7 @@ static apr_status_t _parse_factor(htt_eval_t *hook) {
     break;
   }
 }
- 
+
 /**
  * term = factor { "*"|"/" factor }
  * @param hook IN math object
@@ -482,6 +566,44 @@ static apr_status_t _parse_expression(htt_eval_t *hook) {
 }
 
 /**
+ * bfactor = [not] condition
+ * @param hook IN math object
+ * return APR_SUCCESS or APR_EINVAL
+ */
+static apr_status_t _parse_bfactor(htt_eval_t *hook) {
+  int token; 
+  apr_status_t status;
+  long *right;
+  long *result;
+  int not = 0;
+  
+  token = _peek_token(hook);
+  if (token != MATH_EOF) {
+    if (token == MATH_NOT) {
+      _get_token(hook);
+      not = 1;
+    }
+    
+    if ((status = _parse_condition(hook)) != APR_SUCCESS) {
+      return status;
+    }
+
+    if (not) {
+      right = SKM_sk_pop(long, hook->stack);
+      result = apr_pcalloc(hook->pool, sizeof(*result));
+      if (*right) {
+        *result = 0;
+      }
+      else {
+        *result = 1;
+      }
+      SKM_sk_push(long, hook->stack, result);
+    }
+  }
+  return APR_SUCCESS;
+}
+
+/**
  * condition    = expression ["==" | "!=" | ">" | ">=" | "<" | "<=" expression];
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
@@ -548,7 +670,7 @@ static apr_status_t _parse_condition(htt_eval_t *hook) {
  */
 static apr_status_t _parse(htt_eval_t * hook, long *val) {
   long *result;
-  apr_status_t status = _parse_condition(hook);
+  apr_status_t status = _parse_bexpression(hook);
   result = SKM_sk_pop(long, hook->stack);
   if (result) {
     *val = *result;
