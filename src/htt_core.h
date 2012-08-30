@@ -165,4 +165,9 @@ void htt_throw_error();
  */
 void htt_throw_skip();
 
+/**
+ * Throw ok exception, terminate
+ */
+void htt_throw_ok(); 
+
  #endif

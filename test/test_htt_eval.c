@@ -53,14 +53,9 @@
 int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
   htt_eval_t *eval;
-  char *test_data[50];
-  int i;
 
   apr_app_initialize(&argc, &argv, NULL);
   apr_pool_create(&pool, NULL);
-  for (i = 0; i < 50; i++) {
-    test_data[i] = apr_psprintf(pool, "%d", i);
-  }
   eval = htt_eval_new(pool);
 
   fprintf(stdout, "1 + 1 ");
@@ -191,6 +186,37 @@ int main(int argc, const char *const argv[]) {
     assert(result == 0);
   }
   fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "2 > 1 or 1 > 2 ");
+  {
+    long result;
+    apr_status_t status;
+    status = htt_eval(eval, "2 > 1 or 1 > 2", &result);
+    assert(status == APR_SUCCESS);
+    assert(result == 1);
+  }
+  fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "(2 > 1 or 1 > 2) and 1 ");
+  {
+    long result;
+    apr_status_t status;
+    status = htt_eval(eval, "(2 > 1 or 1 > 2) and 1", &result);
+    assert(status == APR_SUCCESS);
+    assert(result == 1);
+  }
+  fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "(2 > 1 or 1 > 2) and 0 ");
+  {
+    long result;
+    apr_status_t status;
+    status = htt_eval(eval, "(2 > 1 or 1 > 2) and 0", &result);
+    assert(status == APR_SUCCESS);
+    assert(result == 0);
+  }
+  fprintf(stdout, "ok\n");
+
 
   return 0;
 }

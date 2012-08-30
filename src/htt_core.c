@@ -239,6 +239,20 @@ static apr_status_t _cmd_eval_function(htt_executable_t *executable,
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line); 
 
+/**
+ * Exit
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_exit_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -303,8 +317,13 @@ void htt_throw_error() {
 }
 
 void htt_throw_skip() {
-  htt_error = 1;
-  exit(1);
+  htt_error = 2;
+  exit(2);
+}
+
+void htt_throw_ok() {
+  htt_error = 0;
+  exit(0);
 }
 
 htt_t *htt_new(apr_pool_t *pool) {
@@ -337,6 +356,9 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "eval", "expression : result", "<expression> <result>", 
                   "Evaluate <expression> and store it in <result>",
                   htt_cmd_line_compile, _cmd_eval_function);
+  htt_add_command(htt, "exit", NULL, "", 
+                  "terminate script either with success, failed or skipped",
+                  htt_cmd_line_compile, _cmd_exit_function);
   return htt;
 }
 
@@ -750,6 +772,26 @@ static apr_status_t _cmd_eval_function(htt_executable_t *executable,
   }
   htt_eval_free(eval);
   return status;
+} 
+
+static apr_status_t _cmd_exit_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line) {
+  apr_collapse_spaces(line, line);
+  if (strcmp(line, "fail") == 0) {
+    htt_throw_error();
+  }
+  else if (strcmp(line, "ok") == 0) {
+    htt_throw_ok();
+  }
+  else if (strcmp(line, "skip") == 0) {
+    htt_throw_skip();
+  }
+  else {
+    htt_throw_error();
+  }
+  return APR_SUCCESS;;
 } 
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
