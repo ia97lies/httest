@@ -12,7 +12,7 @@ augroup filetypedetect
 
 " Httest scripts. If you have allready a filetypes.vim do add the following
 " line
-au BufNewFile,BufRead *.htt,*.htb,*.man		setf htt
+au BufNewFile,BufRead *.ht3,*.hb3,*.ma3		setf ht3
 
 augroup END
 
