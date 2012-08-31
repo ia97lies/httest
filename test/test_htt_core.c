@@ -708,53 +708,28 @@ int main(int argc, const char *const argv[]) {
     apr_proc_t proc;
     apr_status_t status;
 
-    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
-      apr_status_t status;
       char *buf = apr_pstrdup(pool, 
           "assert $eval(\"1 == 1\")");
       global_buf = NULL;
       status = htt_compile_buf(htt, buf, strlen(buf));
       assert(status == APR_SUCCESS);
       status = htt_run(htt);
-      exit(0);
-    }
-    else if (status == APR_INPARENT) {
-      int exitcode;
-      apr_exit_why_e exitwhy;
-      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
-      assert(status == APR_CHILD_DONE);
-      assert(exitcode == 0);
-    }
-    else {
-      assert(0);
-    }
+      assert(status == APR_SUCCESS);
   }
   fprintf(stdout, "ok\n");
+
   fprintf(stdout, "assert $eval(\"1 == 2\") ...");
   {
     apr_proc_t proc;
     apr_status_t status;
 
-    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
-      apr_status_t status;
       char *buf = apr_pstrdup(pool, 
           "assert $eval(\"1 == 2\")");
       global_buf = NULL;
       status = htt_compile_buf(htt, buf, strlen(buf));
       assert(status == APR_SUCCESS);
       status = htt_run(htt);
-      exit(0);
-    }
-    else if (status == APR_INPARENT) {
-      int exitcode;
-      apr_exit_why_e exitwhy;
-      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
-      assert(status == APR_CHILD_DONE);
-      assert(exitcode == 1);
-    }
-    else {
-      assert(0);
-    }
+      assert(status == APR_EINVAL);
   }
   fprintf(stdout, "ok\n");
 
@@ -763,16 +738,32 @@ int main(int argc, const char *const argv[]) {
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
-        "set bar=barfoo\n\
+        "set bar=foobar\n\
          req var://bar\n\
-         expect . \".*foo\"\n\
+         expect . \"foo.*\"\n\
          wait");
     global_buf = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    assert(strcmp(global_buf, "10>0\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "req expect wait, fail... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set bar=barfoo\n\
+         req var://bar\n\
+         expect . \"foo.+\"\n\
+         wait");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_EINVAL);
   }
   fprintf(stdout, "ok\n");
 
