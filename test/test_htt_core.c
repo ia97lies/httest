@@ -36,6 +36,10 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <apr_thread_proc.h>
+#if APR_HAVE_STDLIB_H
+#include <stdlib.h> /* for exit() */
+#endif
 
 #include "htt_core.h"
 #include "htt_log.h"
@@ -612,6 +616,118 @@ int main(int argc, const char *const argv[]) {
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
     assert(strcmp(global_buf, "10>0\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "exit ok ...");
+  {
+    apr_proc_t proc;
+    apr_status_t status;
+
+    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
+      apr_status_t status;
+      char *buf = apr_pstrdup(pool, 
+          "exit ok");
+      global_buf = NULL;
+      status = htt_compile_buf(htt, buf, strlen(buf));
+      assert(status == APR_SUCCESS);
+      status = htt_run(htt);
+      exit(1);
+    }
+    else if (status == APR_INPARENT) {
+      int exitcode;
+      apr_exit_why_e exitwhy;
+      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
+      assert(status == APR_CHILD_DONE);
+      assert(exitcode == 0);
+    }
+    else {
+      assert(0);
+    }
+  }
+  fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "exit fail ...");
+  {
+    apr_proc_t proc;
+    apr_status_t status;
+
+    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
+      apr_status_t status;
+      char *buf = apr_pstrdup(pool, 
+          "exit fail");
+      global_buf = NULL;
+      status = htt_compile_buf(htt, buf, strlen(buf));
+      assert(status == APR_SUCCESS);
+      status = htt_run(htt);
+      exit(0);
+    }
+    else if (status == APR_INPARENT) {
+      int exitcode;
+      apr_exit_why_e exitwhy;
+      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
+      assert(status == APR_CHILD_DONE);
+      assert(exitcode == 1);
+    }
+    else {
+      assert(0);
+    }
+  }
+  fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "exit skip ...");
+  {
+    apr_proc_t proc;
+    apr_status_t status;
+
+    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
+      apr_status_t status;
+      char *buf = apr_pstrdup(pool, 
+          "exit skip");
+      global_buf = NULL;
+      status = htt_compile_buf(htt, buf, strlen(buf));
+      assert(status == APR_SUCCESS);
+      status = htt_run(htt);
+      exit(0);
+    }
+    else if (status == APR_INPARENT) {
+      int exitcode;
+      apr_exit_why_e exitwhy;
+      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
+      assert(status == APR_CHILD_DONE);
+      assert(exitcode == 2);
+    }
+    else {
+      assert(0);
+    }
+  }
+  fprintf(stdout, "ok\n");
+
+  fprintf(stdout, "assert $eval(\"1 == 2\") ...");
+  {
+    apr_proc_t proc;
+    apr_status_t status;
+
+    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
+      apr_status_t status;
+      char *buf = apr_pstrdup(pool, 
+          "assert $eval(\"1 == 2\")");
+      global_buf = NULL;
+      status = htt_compile_buf(htt, buf, strlen(buf));
+      assert(status == APR_SUCCESS);
+      status = htt_run(htt);
+      exit(0);
+    }
+    else if (status == APR_INPARENT) {
+      int exitcode;
+      apr_exit_why_e exitwhy;
+      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
+      assert(status == APR_CHILD_DONE);
+      assert(exitcode == 0);
+    }
+    else {
+      assert(0);
+    }
   }
   fprintf(stdout, "ok\n");
 
