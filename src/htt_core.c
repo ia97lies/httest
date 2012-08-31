@@ -267,6 +267,48 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line); 
 
+/**
+ * req 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_req_function(htt_executable_t *executable, 
+                                      htt_context_t *context, 
+                                      apr_pool_t *ptmp, htt_map_t *params, 
+                                      htt_stack_t *retvars, char *line); 
+
+/**
+ * wait
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line); 
+
+/**
+ * expect 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_expect_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -378,6 +420,17 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "assert", NULL, "0|1 use $eval(\"<expression>\")", 
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
+  htt_add_command(htt, "req", NULL, "<scheme>://<target> <params>",
+                  "req connects to a resource",
+                  htt_cmd_line_compile, _cmd_req_function);
+  htt_add_command(htt, "wait", NULL, "[<n>]",
+                  "wait for an answer from an requested resource, "
+                  "optional could say how many bytes <n>",
+                  htt_cmd_line_compile, _cmd_wait_function);
+  htt_add_command(htt, "expect", NULL, "[<n>]",
+                  "wait for an answer from an requested resource, "
+                  "optional could say how many bytes <n>",
+                  htt_cmd_line_compile, _cmd_expect_function);
   return htt;
 }
 
@@ -810,7 +863,7 @@ static apr_status_t _cmd_exit_function(htt_executable_t *executable,
   else {
     htt_throw_error();
   }
-  return APR_SUCCESS;;
+  return APR_SUCCESS;
 } 
 
 static apr_status_t _cmd_assert_function(htt_executable_t *executable, 
@@ -819,9 +872,33 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line) {
   apr_collapse_spaces(line, line);
   if (strcmp(line, "1") != 0) {
-    htt_throw_error();
+    return APR_EINVAL;
   }
-  return APR_SUCCESS;;
+  return APR_SUCCESS;
+} 
+
+static apr_status_t _cmd_req_function(htt_executable_t *executable, 
+                                      htt_context_t *context, 
+                                      apr_pool_t *ptmp, htt_map_t *params, 
+                                      htt_stack_t *retvars, char *line) {
+  /** TODO: hook */
+  return APR_SUCCESS;
+} 
+
+static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line) {
+  /** TODO: hook */
+  return APR_SUCCESS;
+} 
+
+static apr_status_t _cmd_expect_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  /** TODO: hook */
+  return APR_SUCCESS;
 } 
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
