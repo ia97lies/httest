@@ -703,6 +703,33 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  fprintf(stdout, "assert $eval(\"1 == 1\") ...");
+  {
+    apr_proc_t proc;
+    apr_status_t status;
+
+    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
+      apr_status_t status;
+      char *buf = apr_pstrdup(pool, 
+          "assert $eval(\"1 == 1\")");
+      global_buf = NULL;
+      status = htt_compile_buf(htt, buf, strlen(buf));
+      assert(status == APR_SUCCESS);
+      status = htt_run(htt);
+      exit(0);
+    }
+    else if (status == APR_INPARENT) {
+      int exitcode;
+      apr_exit_why_e exitwhy;
+      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
+      assert(status == APR_CHILD_DONE);
+      assert(exitcode == 0);
+    }
+    else {
+      assert(0);
+    }
+  }
+  fprintf(stdout, "ok\n");
   fprintf(stdout, "assert $eval(\"1 == 2\") ...");
   {
     apr_proc_t proc;
@@ -723,7 +750,7 @@ int main(int argc, const char *const argv[]) {
       apr_exit_why_e exitwhy;
       status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
       assert(status == APR_CHILD_DONE);
-      assert(exitcode == 0);
+      assert(exitcode == 1);
     }
     else {
       assert(0);

@@ -253,6 +253,20 @@ static apr_status_t _cmd_exit_function(htt_executable_t *executable,
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line); 
 
+/**
+ * Assert
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_assert_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -349,16 +363,21 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_line_compile, _cmd_set_function);
   htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
                   htt_cmd_line_compile, _cmd_local_function);
-  htt_add_command(htt, "loop", NULL, "", "loop a body",
+  htt_add_command(htt, "loop", NULL, 
+                  "<n> [<variable>]", "loop a body <n> times, if <variable> "
+                  "is defined <n> will be stored in <variable>",
                   htt_cmd_body_compile, _cmd_loop_function);
-  htt_add_command(htt, "if", NULL, "", "conditional body",
+  htt_add_command(htt, "if", NULL, "0|1 $eval(\"<expression>\")", "do body if 1",
                   htt_cmd_body_compile, _cmd_if_function);
-  htt_add_command(htt, "eval", "expression : result", "<expression> <result>", 
-                  "Evaluate <expression> and store it in <result>",
+  htt_add_command(htt, "eval", "expression : result", "<expression> <variable>", 
+                  "Evaluate <expression> and store it in <variable>",
                   htt_cmd_line_compile, _cmd_eval_function);
   htt_add_command(htt, "exit", NULL, "", 
                   "terminate script either with success, failed or skipped",
                   htt_cmd_line_compile, _cmd_exit_function);
+  htt_add_command(htt, "assert", NULL, "0|1 use $eval(\"<expression>\")", 
+                  "assert throw exception if 0",
+                  htt_cmd_line_compile, _cmd_assert_function);
   return htt;
 }
 
@@ -789,6 +808,17 @@ static apr_status_t _cmd_exit_function(htt_executable_t *executable,
     htt_throw_skip();
   }
   else {
+    htt_throw_error();
+  }
+  return APR_SUCCESS;;
+} 
+
+static apr_status_t _cmd_assert_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  apr_collapse_spaces(line, line);
+  if (strcmp(line, "1") != 0) {
     htt_throw_error();
   }
   return APR_SUCCESS;;
