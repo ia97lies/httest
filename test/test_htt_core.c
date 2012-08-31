@@ -758,6 +758,24 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "req expect wait... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set bar=barfoo\n\
+         req var://bar\n\
+         expect . \".*foo\"\n\
+         wait");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "10>0\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 
