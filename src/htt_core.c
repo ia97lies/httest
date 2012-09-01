@@ -69,7 +69,7 @@
 #include "htt_object.h"
 #include "htt_function.h"
 #include "htt_string.h"
-#include "htt_eval.h"
+#include "htt_expr.h"
 #include "htt_command.h"
 
 /************************************************************************
@@ -234,7 +234,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
  * @param line IN unsplitted but resolved line
  * @param apr status
  */
-static apr_status_t _cmd_eval_function(htt_executable_t *executable, 
+static apr_status_t _cmd_expr_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line); 
@@ -409,15 +409,15 @@ htt_t *htt_new(apr_pool_t *pool) {
                   "<n> [<variable>]", "loop a body <n> times, if <variable> "
                   "is defined <n> will be stored in <variable>",
                   htt_cmd_body_compile, _cmd_loop_function);
-  htt_add_command(htt, "if", NULL, "0|1 $eval(\"<expression>\")", "do body if 1",
+  htt_add_command(htt, "if", NULL, "0|1 $expr(\"<expression>\")", "do body if 1",
                   htt_cmd_body_compile, _cmd_if_function);
-  htt_add_command(htt, "eval", "expression : result", "<expression> <variable>", 
+  htt_add_command(htt, "expr", "expression : result", "<expression> <variable>", 
                   "Evaluate <expression> and store it in <variable>",
-                  htt_cmd_line_compile, _cmd_eval_function);
+                  htt_cmd_line_compile, _cmd_expr_function);
   htt_add_command(htt, "exit", NULL, "", 
                   "terminate script either with success, failed or skipped",
                   htt_cmd_line_compile, _cmd_exit_function);
-  htt_add_command(htt, "assert", NULL, "0|1 use $eval(\"<expression>\")", 
+  htt_add_command(htt, "assert", NULL, "0|1 use $expr(\"<expression>\")", 
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
   htt_add_command(htt, "req", NULL, "<scheme>://<target> <params>",
@@ -489,6 +489,18 @@ apr_status_t htt_run(htt_t *htt) {
   htt_context_set_vars(context, htt->defines);
   return htt_execute(htt->executable, context);
 }
+
+/************************************************************************
+ * Hooks 
+ ***********************************************************************/
+APR_HOOK_STRUCT(
+  APR_HOOK_LINK(request)
+)
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, request, 
+                                      (htt_executable_t *executable, 
+                                       htt_context_t *context, char *line), 
+				      (executable, context, line), APR_SUCCESS);
 
 /************************************************************************
  * Private 
@@ -827,7 +839,7 @@ static apr_status_t _cmd_if_function(htt_executable_t *executable,
   return APR_SUCCESS;
 }
 
-static apr_status_t _cmd_eval_function(htt_executable_t *executable, 
+static apr_status_t _cmd_expr_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
@@ -835,14 +847,14 @@ static apr_status_t _cmd_eval_function(htt_executable_t *executable,
   htt_string_t *string;
   htt_string_t *expression;
   apr_status_t status;
-  htt_eval_t *eval = htt_eval_new(ptmp);
+  htt_expr_t *expr = htt_expr_new(ptmp);
   expression = htt_map_get(params, "expression");
-  if ((status = htt_eval(eval, htt_string_get(expression), &result)) 
+  if ((status = htt_expr(expr, htt_string_get(expression), &result)) 
       == APR_SUCCESS) {
     string = htt_string_new(ptmp, apr_psprintf(ptmp, "%ld", result));
     htt_stack_push(retvars, string);
   }
-  htt_eval_free(eval);
+  htt_expr_free(expr);
   return status;
 } 
 
@@ -882,6 +894,7 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
   /** TODO: hook */
+  htt_run_request(executable, context, line);
   return APR_SUCCESS;
 } 
 

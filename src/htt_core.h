@@ -26,6 +26,7 @@
 #define HTT_CORE_H
 
 #include <apr_file_io.h>
+#include <apr_hooks.h>
 #include "htt_context.h"
 #include "htt_executable.h"
 #include "htt_command.h"
@@ -170,4 +171,9 @@ void htt_throw_skip();
  */
 void htt_throw_ok(); 
 
- #endif
+# define HTT_DECLARE(type)    type
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, request,
+                          (htt_executable_t *executable, 
+                           htt_context_t *context, char *line));
+
+#endif

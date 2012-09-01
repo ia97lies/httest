@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool eval.
+ * Interface of the HTTP Test Tool expr.
  */
 
 #ifndef HTT_EVAL_H
@@ -27,28 +27,28 @@
 
 #include <apr_pools.h>
 
-typedef struct htt_eval_s htt_eval_t;
+typedef struct htt_expr_s htt_expr_t;
 
 /**
  * Create new instance of evaluator
  * @param pool IN pool
- * @return eval instance
+ * @return expr instance
  */
-htt_eval_t *htt_eval_new(apr_pool_t * pool); 
+htt_expr_t *htt_expr_new(apr_pool_t * pool); 
 
 /**
  * Evaluate math expression 
- * @param hook IN eval instance
+ * @param hook IN expr instance
  * @param line IN line to parse
  * @param val OUT result
  * @return APR_SUCCESS or APR_EINVAL
  */
-apr_status_t htt_eval(htt_eval_t * eval, const char *line, long *val); 
+apr_status_t htt_expr(htt_expr_t * expr, const char *line, long *val); 
 
 /**
- * Free eval internals 
- * @param hook IN eval instance
+ * Free expr internals 
+ * @param hook IN expr instance
  */
-void htt_eval_free(htt_eval_t * eval); 
+void htt_expr_free(htt_expr_t * expr); 
 
 #endif

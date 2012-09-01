@@ -174,7 +174,7 @@ int main(int argc, const char *const argv[]) {
     char *buf = apr_pstrdup(pool, 
         "set g = 0\n\
          function foo\n\
-           eval $g+1 g\n\
+           expr $g+1 g\n\
          end\n\
          loop 10 \n\
            foo\n\
@@ -500,11 +500,11 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "eval simple... ");
+  fprintf(stdout, "expr simple... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
-        "eval \"1 + 2\" r\n\
+        "expr \"1 + 2\" r\n\
          mock $r");
     global_buf = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
@@ -520,7 +520,7 @@ int main(int argc, const char *const argv[]) {
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
-        "set i = $eval(1+2)\n\
+        "set i = $expr(1+2)\n\
          mock $i");
     global_buf = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
@@ -537,7 +537,7 @@ int main(int argc, const char *const argv[]) {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
         "set i = 1\n\
-         set i = $eval($i+2)\n\
+         set i = $expr($i+2)\n\
          mock $i");
     global_buf = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
@@ -583,10 +583,10 @@ int main(int argc, const char *const argv[]) {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
         "set i = 0\n\
-         if $eval($i==0)\n\
+         if $expr($i==0)\n\
            mock $i==0\n\
          end\n\
-         if $eval($i==1)\n\
+         if $expr($i==1)\n\
            mock $i==1\n\
          end");
     global_buf = NULL;
@@ -604,10 +604,10 @@ int main(int argc, const char *const argv[]) {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
         "set i = 10\n\
-         if $eval($i>0)\n\
+         if $expr($i>0)\n\
            mock $i>0\n\
          end\n\
-         if $eval($i>10)\n\
+         if $expr($i>10)\n\
            mock $i>10\n\
          end");
     global_buf = NULL;
@@ -703,13 +703,13 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
-  fprintf(stdout, "assert $eval(\"1 == 1\") ...");
+  fprintf(stdout, "assert $expr(\"1 == 1\") ...");
   {
     apr_proc_t proc;
     apr_status_t status;
 
       char *buf = apr_pstrdup(pool, 
-          "assert $eval(\"1 == 1\")");
+          "assert $expr(\"1 == 1\")");
       global_buf = NULL;
       status = htt_compile_buf(htt, buf, strlen(buf));
       assert(status == APR_SUCCESS);
@@ -718,13 +718,13 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
-  fprintf(stdout, "assert $eval(\"1 == 2\") ...");
+  fprintf(stdout, "assert $expr(\"1 == 2\") ...");
   {
     apr_proc_t proc;
     apr_status_t status;
 
       char *buf = apr_pstrdup(pool, 
-          "assert $eval(\"1 == 2\")");
+          "assert $expr(\"1 == 2\")");
       global_buf = NULL;
       status = htt_compile_buf(htt, buf, strlen(buf));
       assert(status == APR_SUCCESS);

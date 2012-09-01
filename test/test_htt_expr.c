@@ -37,7 +37,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
-#include "htt_eval.h"
+#include "htt_expr.h"
 
 /************************************************************************
  * Defines 
@@ -52,16 +52,16 @@
  ***********************************************************************/
 int main(int argc, const char *const argv[]) {
   apr_pool_t *pool;
-  htt_eval_t *eval;
+  htt_expr_t *expr;
 
   apr_app_initialize(&argc, &argv, NULL);
   apr_pool_create(&pool, NULL);
-  eval = htt_eval_new(pool);
+  expr = htt_expr_new(pool);
 
   fprintf(stdout, "1 + 1 ");
   {
     long result;
-    htt_eval(eval, "1 + 1", &result);
+    htt_expr(expr, "1 + 1", &result);
     assert(result == 2);
   }
   fprintf(stdout, "ok\n");
@@ -69,14 +69,14 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "1 * 1 ");
   {
     long result;
-    htt_eval(eval, "1 * 1", &result);
+    htt_expr(expr, "1 * 1", &result);
     assert(result == 1);
   }
 
   fprintf(stdout, "99+1*10 ");
   {
     long result;
-    htt_eval(eval, "99+1*10", &result);
+    htt_expr(expr, "99+1*10", &result);
     assert(result == 109);
   }
   fprintf(stdout, "ok\n");
@@ -84,7 +84,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "(99+1)*10 ");
   {
     long result;
-    htt_eval(eval, "(99+1)*10", &result);
+    htt_expr(expr, "(99+1)*10", &result);
     assert(result == 1000);
   }
   fprintf(stdout, "ok\n");
@@ -92,7 +92,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "(99+1)*10+1 ");
   {
     long result;
-    htt_eval(eval, "(99+1)*10+1", &result);
+    htt_expr(expr, "(99+1)*10+1", &result);
     assert(result == 1001);
   }
   fprintf(stdout, "ok\n");
@@ -100,7 +100,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "(99+1)*(10+1) ");
   {
     long result;
-    htt_eval(eval, "(99+1)*(10+1)", &result);
+    htt_expr(expr, "(99+1)*(10+1)", &result);
     assert(result == 1100);
   }
   fprintf(stdout, "ok\n");
@@ -108,7 +108,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "((99+1)+1) * 10 ");
   {
     long result;
-    htt_eval(eval, "((99+1)+1) * 10", &result);
+    htt_expr(expr, "((99+1)+1) * 10", &result);
     assert(result == 1010);
   }
   fprintf(stdout, "ok\n");
@@ -116,7 +116,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "1 > 0 ");
   {
     long result;
-    htt_eval(eval, "1 > 0", &result);
+    htt_expr(expr, "1 > 0", &result);
     assert(result == 1);
   }
   fprintf(stdout, "ok\n");
@@ -124,7 +124,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "1 > 2 ");
   {
     long result;
-    htt_eval(eval, "1 > 2", &result);
+    htt_expr(expr, "1 > 2", &result);
     assert(result == 0);
   }
   fprintf(stdout, "ok\n");
@@ -132,7 +132,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "1 != 2 ");
   {
     long result;
-    htt_eval(eval, "1 != 2", &result);
+    htt_expr(expr, "1 != 2", &result);
     assert(result == 1);
   }
   fprintf(stdout, "ok\n");
@@ -141,7 +141,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "1 and 1", &result);
+    status = htt_expr(expr, "1 and 1", &result);
     assert(status == APR_SUCCESS);
     assert(result == 1);
   }
@@ -151,7 +151,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "1 and 0", &result);
+    status = htt_expr(expr, "1 and 0", &result);
     assert(status == APR_SUCCESS);
     assert(result == 0);
   }
@@ -161,7 +161,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "1 or 0", &result);
+    status = htt_expr(expr, "1 or 0", &result);
     assert(status == APR_SUCCESS);
     assert(result == 1);
   }
@@ -171,7 +171,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "1 or 1", &result);
+    status = htt_expr(expr, "1 or 1", &result);
     assert(status == APR_SUCCESS);
     assert(result == 1);
   }
@@ -181,7 +181,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "0 or 0", &result);
+    status = htt_expr(expr, "0 or 0", &result);
     assert(status == APR_SUCCESS);
     assert(result == 0);
   }
@@ -191,7 +191,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "2 > 1 or 1 > 2", &result);
+    status = htt_expr(expr, "2 > 1 or 1 > 2", &result);
     assert(status == APR_SUCCESS);
     assert(result == 1);
   }
@@ -201,7 +201,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "(2 > 1 or 1 > 2) and 1", &result);
+    status = htt_expr(expr, "(2 > 1 or 1 > 2) and 1", &result);
     assert(status == APR_SUCCESS);
     assert(result == 1);
   }
@@ -211,7 +211,7 @@ int main(int argc, const char *const argv[]) {
   {
     long result;
     apr_status_t status;
-    status = htt_eval(eval, "(2 > 1 or 1 > 2) and 0", &result);
+    status = htt_expr(expr, "(2 > 1 or 1 > 2) and 0", &result);
     assert(status == APR_SUCCESS);
     assert(result == 0);
   }

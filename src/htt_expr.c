@@ -63,7 +63,7 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
-#include "htt_eval.h"
+#include "htt_expr.h"
 
 /************************************************************************
  * Definitions 
@@ -92,7 +92,7 @@ enum {
   MATH_ERR
 } _token_e;
 
-struct htt_eval_s {
+struct htt_expr_s {
   apr_pool_t *pool;
   STACK_OF(long) *stack;
   const char *line;
@@ -102,13 +102,13 @@ struct htt_eval_s {
   int cur_token;
 };
 
-static apr_status_t _parse_bexpression(htt_eval_t *hook);
-static apr_status_t _parse_bterm(htt_eval_t *hook);
-static apr_status_t _parse_bfactor(htt_eval_t *hook);
-static apr_status_t _parse_expression(htt_eval_t *hook);
-static apr_status_t _parse_condition(htt_eval_t *hook);
-static apr_status_t _parse_term(htt_eval_t *hook);
-static apr_status_t _parse_factor(htt_eval_t *hook);
+static apr_status_t _parse_bexpression(htt_expr_t *hook);
+static apr_status_t _parse_bterm(htt_expr_t *hook);
+static apr_status_t _parse_bfactor(htt_expr_t *hook);
+static apr_status_t _parse_expression(htt_expr_t *hook);
+static apr_status_t _parse_condition(htt_expr_t *hook);
+static apr_status_t _parse_term(htt_expr_t *hook);
+static apr_status_t _parse_factor(htt_expr_t *hook);
 
 /************************************************************************
  * Globals 
@@ -119,18 +119,18 @@ static apr_status_t _parse_factor(htt_eval_t *hook);
  ***********************************************************************/
 /**
  * skip spaces
- * @param hook IN eval instance
+ * @param hook IN expr instance
  */
-static void _skip_space(htt_eval_t *hook) {
+static void _skip_space(htt_expr_t *hook) {
   for (; hook->i < hook->len && hook->line[hook->i] == ' '; hook->i++);
 }
 
 /**
  * get next char and increase read pointer.
- * @param hook IN eval instance
+ * @param hook IN expr instance
  * @return char or \0 if end of line
  */
-static char _next_char(htt_eval_t *hook) {
+static char _next_char(htt_expr_t *hook) {
   if (hook->i < hook->len) {
     return hook->line[hook->i++];
   }
@@ -141,10 +141,10 @@ static char _next_char(htt_eval_t *hook) {
 
 /**
  * look a head on char but do not increase read pointer.
- * @param hook IN eval instance
+ * @param hook IN expr instance
  * @return lookahead char or \0 if end of line
  */
-static char _peek_char(htt_eval_t *hook) {
+static char _peek_char(htt_expr_t *hook) {
   if (hook->i < hook->len) {
     return hook->line[hook->i];
   }
@@ -155,10 +155,10 @@ static char _peek_char(htt_eval_t *hook) {
 
 /**
  * look a head on char but do not increase read pointer.
- * @param hook IN eval instance
+ * @param hook IN expr instance
  * @return lookahead char or \0 if end of line
  */
-static char _lookahead(htt_eval_t *hook, int ahead) {
+static char _lookahead(htt_expr_t *hook, int ahead) {
   if (hook->i+ahead < hook->len) {
     return hook->line[hook->i+ahead];
   }
@@ -169,9 +169,9 @@ static char _lookahead(htt_eval_t *hook, int ahead) {
 
 /**
  * Get number from given possition
- * @param hook IN eval instance
+ * @param hook IN expr instance
  */
-static void _get_number(htt_eval_t *hook) {
+static void _get_number(htt_expr_t *hook) {
   const char *number;
   apr_size_t start = hook->i;
   while (apr_isdigit(_peek_char(hook))) _next_char(hook);
@@ -181,10 +181,10 @@ static void _get_number(htt_eval_t *hook) {
 
 /**
  * get next token from line
- * @param hook IN eval instance
+ * @param hook IN expr instance
  * @return token
  */
-static int _get_next_token(htt_eval_t *hook) {
+static int _get_next_token(htt_expr_t *hook) {
   char c;
   _skip_space(hook);
   while ((c = _peek_char(hook))) {
@@ -315,7 +315,7 @@ static int _get_next_token(htt_eval_t *hook) {
  * @param hook IN math instance
  * @return token
  */
-static int _get_token(htt_eval_t *hook) {
+static int _get_token(htt_expr_t *hook) {
   hook->cur_token = _get_next_token(hook);
   return hook->cur_token;
 }
@@ -325,7 +325,7 @@ static int _get_token(htt_eval_t *hook) {
  * @param hook IN math instance
  * @return token
  */
-static int _peek_token(htt_eval_t *hook) {
+static int _peek_token(htt_expr_t *hook) {
   if (hook->cur_token) {
     return hook->cur_token;
   }
@@ -340,7 +340,7 @@ static int _peek_token(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_bterm(htt_eval_t *hook) {
+static apr_status_t _parse_bterm(htt_expr_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -380,7 +380,7 @@ static apr_status_t _parse_bterm(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_bexpression(htt_eval_t *hook) {
+static apr_status_t _parse_bexpression(htt_expr_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -420,7 +420,7 @@ static apr_status_t _parse_bexpression(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_factor(htt_eval_t *hook) {
+static apr_status_t _parse_factor(htt_expr_t *hook) {
   apr_status_t status;
   int token; 
   long *number;
@@ -463,7 +463,7 @@ static apr_status_t _parse_factor(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_term(htt_eval_t *hook) {
+static apr_status_t _parse_term(htt_expr_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -521,7 +521,7 @@ static apr_status_t _parse_term(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_expression(htt_eval_t *hook) {
+static apr_status_t _parse_expression(htt_expr_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -570,7 +570,7 @@ static apr_status_t _parse_expression(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_bfactor(htt_eval_t *hook) {
+static apr_status_t _parse_bfactor(htt_expr_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -608,7 +608,7 @@ static apr_status_t _parse_bfactor(htt_eval_t *hook) {
  * @param hook IN math object
  * return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse_condition(htt_eval_t *hook) {
+static apr_status_t _parse_condition(htt_expr_t *hook) {
   int token; 
   apr_status_t status;
   long *right;
@@ -665,10 +665,10 @@ static apr_status_t _parse_condition(htt_eval_t *hook) {
 
 /**
  * Parse expression line
- * @param hook IN eval instance
+ * @param hook IN expr instance
  * @return APR_SUCCESS or APR_EINVAL
  */
-static apr_status_t _parse(htt_eval_t * hook, long *val) {
+static apr_status_t _parse(htt_expr_t * hook, long *val) {
   long *result;
   apr_status_t status = _parse_bexpression(hook);
   result = SKM_sk_pop(long, hook->stack);
@@ -686,17 +686,17 @@ static apr_status_t _parse(htt_eval_t * hook, long *val) {
  * public interface 
  ***********************************************************************/
 
-htt_eval_t *htt_eval_new(apr_pool_t * pool) {
+htt_expr_t *htt_expr_new(apr_pool_t * pool) {
   apr_pool_t *mypool;
   apr_pool_create(&mypool, pool);
-  htt_eval_t *hook = apr_pcalloc(mypool, sizeof(*hook));
+  htt_expr_t *hook = apr_pcalloc(mypool, sizeof(*hook));
   hook->pool = mypool; 
   hook->stack = SKM_sk_new_null(long);
 
   return hook;
 }
 
-apr_status_t htt_eval(htt_eval_t * hook, const char *line, long *val) {
+apr_status_t htt_expr(htt_expr_t * hook, const char *line, long *val) {
   apr_status_t status;
 
   hook->line = line; 
@@ -712,8 +712,8 @@ apr_status_t htt_eval(htt_eval_t * hook, const char *line, long *val) {
   return APR_SUCCESS;
 }
 
-void htt_eval_free(htt_eval_t *eval) {
-  SKM_sk_free(long, eval->stack);
-  apr_pool_destroy(eval->pool);
+void htt_expr_free(htt_expr_t *expr) {
+  SKM_sk_free(long, expr->stack);
+  apr_pool_destroy(expr->pool);
 }
 

@@ -33,4 +33,4 @@ nginx.pid
 test/test_htt_stack
 test/test_htt_bufreader
 test/test_htt_core
-test/test_htt_eval
+test/test_htt_expr
