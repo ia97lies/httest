@@ -705,7 +705,6 @@ int main(int argc, const char *const argv[]) {
 
   fprintf(stdout, "assert $expr(\"1 == 1\") ...");
   {
-    apr_proc_t proc;
     apr_status_t status;
 
       char *buf = apr_pstrdup(pool, 
@@ -720,7 +719,6 @@ int main(int argc, const char *const argv[]) {
 
   fprintf(stdout, "assert $expr(\"1 == 2\") ...");
   {
-    apr_proc_t proc;
     apr_status_t status;
 
       char *buf = apr_pstrdup(pool, 
