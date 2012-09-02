@@ -17,6 +17,12 @@ syn keyword httStatement        function
 syn keyword httStatement        echo
 syn keyword httStatement        set
 syn keyword httStatement        exit
+syn keyword httStatement        local
+syn keyword httStatement        req
+syn keyword httStatement        wait
+syn keyword httStatement        expect
+syn keyword httStatement        match
+syn keyword httStatement        _
 syn keyword httRepeat           loop end
 syn keyword httConditional      if end
 
