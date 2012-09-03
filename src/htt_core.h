@@ -32,7 +32,6 @@
 #include "htt_command.h"
 
 typedef struct htt_s htt_t;
-typedef struct htt_command_s htt_command_t; 
 
 /**
  * Instanted a new interpreter
