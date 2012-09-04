@@ -11,11 +11,11 @@ httest_SOURCES = \
 	htt_command.c htt_string.c htt_function.c htt_socket.c htt_expr.c \
 	htt_modules.c
 
-#EXTRA_httest_SOURCES = \
-#	lua_crypto.c lua_module.c js_module.c html_module.c
+EXTRA_httest_SOURCES = \
+	core_module.c
 
-#httest_LDADD = $(HTTEST_MODULES)
-#httest_DEPENDENCIES = $(HTTEST_MODULES)
+httest_LDADD = $(HTTEST_MODULES)
+httest_DEPENDENCIES = $(HTTEST_MODULES)
 
 #htproxy_SOURCES = \
 #	htproxy.c file.c socket.c regex.c util.c ssl.c replacer.c worker.c \
