@@ -1,4 +1,4 @@
 EXTRA_DIST= \
 	filetype.vim \
-	htt.vim \
+	ht3.vim \
 	INSTALL
