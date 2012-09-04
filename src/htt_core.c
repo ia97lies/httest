@@ -143,46 +143,6 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args);
  * @return apr status
  */
 static apr_status_t _cmd_function_compile(htt_command_t *command, char *args); 
-/**
- * Simple echo command 
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
-                                       htt_context_t *context,
-                                       apr_pool_t *ptmp, htt_map_t *params, 
-                                       htt_stack_t *retvars, char *line);
-
-/**
- * Set command 
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_set_function(htt_executable_t *executable, 
-                                      htt_context_t *context,
-                                      apr_pool_t *ptmp, htt_map_t *params, 
-                                      htt_stack_t *retvars, char *line); 
-/**
- * Local command 
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_local_function(htt_executable_t *executable, 
-                                        htt_context_t *context, 
-                                        apr_pool_t *ptmp, htt_map_t *params, 
-                                        htt_stack_t *retvars, char *line); 
 
 /**
  * Loop command
@@ -410,28 +370,6 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_body_compile, _cmd_loop_function);
   htt_add_command(htt, "if", NULL, "0|1 $expr(\"<expression>\")", "do body if 1",
                   htt_cmd_body_compile, _cmd_if_function);
-
-  htt_modules_init(htt);
-
-  return htt;
-}
-
-apr_status_t core_module_init(htt_t *htt) {
-  htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
-                  htt_cmd_line_compile, _cmd_echo_function);
-  htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
-                  htt_cmd_line_compile, _cmd_set_function);
-  htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
-                  htt_cmd_line_compile, _cmd_local_function);
-  htt_add_command(htt, "expr", "expression : result", "<expression> <variable>", 
-                  "Evaluate <expression> and store it in <variable>",
-                  htt_cmd_line_compile, _cmd_expr_function);
-  htt_add_command(htt, "exit", NULL, "", 
-                  "terminate script either with success, failed or skipped",
-                  htt_cmd_line_compile, _cmd_exit_function);
-  htt_add_command(htt, "assert", NULL, "0|1 use $expr(\"<expression>\")", 
-                  "assert throw exception if 0",
-                  htt_cmd_line_compile, _cmd_assert_function);
   htt_add_command(htt, "req", NULL, "<scheme>://<target> <params>",
                   "req connects to a resource",
                   htt_cmd_line_compile, _cmd_req_function);
@@ -443,7 +381,10 @@ apr_status_t core_module_init(htt_t *htt) {
                   "wait for an answer from an requested resource, "
                   "optional could say how many bytes <n>",
                   htt_cmd_line_compile, _cmd_expect_function);
-  return APR_SUCCESS;
+
+  htt_modules_init(htt);
+
+  return htt;
 }
 
 void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
@@ -663,51 +604,6 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   return status;
 }
 
-static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
-                                       htt_context_t *context, 
-                                       apr_pool_t *ptmp, htt_map_t *params, 
-                                       htt_stack_t *retvars, char *line) {
-  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", line);
-  return APR_SUCCESS;
-}
-
-static apr_status_t _cmd_set_function(htt_executable_t *executable, 
-                                      htt_context_t *context, 
-                                      apr_pool_t *ptmp, htt_map_t *params, 
-                                      htt_stack_t *retvars, char *line) {
-  char *key;
-  char *val;
-  char *rest;
-  htt_context_t *cur = context;
-  htt_string_t *string;
- 
-  key = apr_strtok(line, "=", &val);
-  while (*val == ' ') ++val;
-  val = htt_util_unescape(val, &rest);
-  apr_collapse_spaces(key, key);
-  string = htt_string_new(htt_context_get_pool(cur), val);
-  htt_context_set_var(context, key, string);
-  return APR_SUCCESS;
-}
-
-static apr_status_t _cmd_local_function(htt_executable_t *executable, 
-                                        htt_context_t *context, 
-                                        apr_pool_t *ptmp, htt_map_t *params, 
-                                        htt_stack_t *retvars, char *line) {
-  char *var;
-  char *rest;
-  htt_map_t *vars;
-
-  vars = htt_context_get_vars(context);
-  var = apr_strtok(line, " ", &rest);
-  while (var) {
-    htt_string_t *string = htt_string_new(htt_context_get_pool(context), NULL);
-    htt_map_set(vars, var, string);
-    var = apr_strtok(NULL, " ", &rest);
-  }
-  return APR_SUCCESS;
-}
-
 static _counter_config_t *_counter_get_config(htt_context_t *context) {
   _counter_config_t *config;
 
@@ -862,56 +758,6 @@ static apr_status_t _cmd_if_function(htt_executable_t *executable,
   htt_stack_push(retvars, if_closure);
   return APR_SUCCESS;
 }
-
-static apr_status_t _cmd_expr_function(htt_executable_t *executable, 
-                                       htt_context_t *context, 
-                                       apr_pool_t *ptmp, htt_map_t *params, 
-                                       htt_stack_t *retvars, char *line) {
-  long result;
-  htt_string_t *string;
-  htt_string_t *expression;
-  apr_status_t status;
-  htt_expr_t *expr = htt_expr_new(ptmp);
-  expression = htt_map_get(params, "expression");
-  if ((status = htt_expr(expr, htt_string_get(expression), &result)) 
-      == APR_SUCCESS) {
-    string = htt_string_new(ptmp, apr_psprintf(ptmp, "%ld", result));
-    htt_stack_push(retvars, string);
-  }
-  htt_expr_free(expr);
-  return status;
-} 
-
-static apr_status_t _cmd_exit_function(htt_executable_t *executable, 
-                                       htt_context_t *context, 
-                                       apr_pool_t *ptmp, htt_map_t *params, 
-                                       htt_stack_t *retvars, char *line) {
-  apr_collapse_spaces(line, line);
-  if (strcmp(line, "fail") == 0) {
-    htt_throw_error();
-  }
-  else if (strcmp(line, "ok") == 0) {
-    htt_throw_ok();
-  }
-  else if (strcmp(line, "skip") == 0) {
-    htt_throw_skip();
-  }
-  else {
-    htt_throw_error();
-  }
-  return APR_SUCCESS;
-} 
-
-static apr_status_t _cmd_assert_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
-                                         apr_pool_t *ptmp, htt_map_t *params, 
-                                         htt_stack_t *retvars, char *line) {
-  apr_collapse_spaces(line, line);
-  if (strcmp(line, "1") != 0) {
-    return APR_EINVAL;
-  }
-  return APR_SUCCESS;
-} 
 
 static apr_status_t _cmd_req_function(htt_executable_t *executable, 
                                       htt_context_t *context, 

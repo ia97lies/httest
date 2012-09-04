@@ -9,10 +9,10 @@ httest_SOURCES = \
 	httest.c htt_core.c htt_context.c htt_executable.c htt_map.c \
 	htt_log.c htt_util.c htt_stack.c htt_bufreader.c htt_replacer.c \
 	htt_command.c htt_string.c htt_function.c htt_socket.c htt_expr.c \
-	htt_modules.c
+	core_module.c htt_modules.c
 
-EXTRA_httest_SOURCES = \
-	core_module.c
+#EXTRA_httest_SOURCES = \
+#	lua_module.c
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)
