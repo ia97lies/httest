@@ -174,5 +174,12 @@ void htt_throw_ok();
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, request,
                           (htt_executable_t *executable, 
                            htt_context_t *context, char *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, wait,
+                          (htt_executable_t *executable, 
+                           htt_context_t *context, char *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, expect,
+                          (htt_executable_t *executable, 
+                           htt_context_t *context, char *line));
 
 #endif
+

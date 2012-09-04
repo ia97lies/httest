@@ -112,7 +112,7 @@ if test "$enable_iconv_support" = "yes"; then
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
-MODULES="perf dbg sys math coder date binary websocket socks udp tcp ssl" 
+MODULES="core" 
 
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
@@ -151,7 +151,6 @@ AC_SUBST([HTTEST_MODULES])
 
 # generate makefiles
 AC_CONFIG_FILES([Makefile
-                 tools/Makefile
                  src/Makefile
                  macros/Makefile
                  examples/Makefile

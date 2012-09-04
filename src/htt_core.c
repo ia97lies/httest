@@ -31,7 +31,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include "defines.h"
+#include "htt_defines.h"
 
 #include <apr.h>
 #include <apr_signal.h>
@@ -58,6 +58,7 @@
 #include <unistd.h> /* for getpid() */
 #endif
 
+#include "htt_modules.h"
 #include "htt_bufreader.h"
 #include "htt_util.h"
 #include "htt_core.h"
@@ -391,6 +392,12 @@ htt_t *htt_new(apr_pool_t *pool) {
                                        NULL, NULL, NULL, 0);
   htt_stack_push(htt->stack, htt->executable);
 
+  htt_modules_init(htt);
+
+  return htt;
+}
+
+apr_status_t core_module_init(htt_t *htt) {
   htt_add_command(htt, "include", "NULL", "<file>+", "include ht3 files", 
                   _cmd_include_compile, NULL);
   htt_add_command(htt, "end", NULL, "", "end a open body", 
@@ -431,7 +438,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                   "wait for an answer from an requested resource, "
                   "optional could say how many bytes <n>",
                   htt_cmd_line_compile, _cmd_expect_function);
-  return htt;
+  return APR_SUCCESS;
 }
 
 void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
@@ -495,9 +502,21 @@ apr_status_t htt_run(htt_t *htt) {
  ***********************************************************************/
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(request)
+  APR_HOOK_LINK(wait)
+  APR_HOOK_LINK(expect)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, request, 
+                                      (htt_executable_t *executable, 
+                                       htt_context_t *context, char *line), 
+				      (executable, context, line), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, wait, 
+                                      (htt_executable_t *executable, 
+                                       htt_context_t *context, char *line), 
+				      (executable, context, line), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, expect, 
                                       (htt_executable_t *executable, 
                                        htt_context_t *context, char *line), 
 				      (executable, context, line), APR_SUCCESS);
@@ -893,7 +912,6 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
-  /** TODO: hook */
   htt_run_request(executable, context, line);
   return APR_SUCCESS;
 } 
@@ -902,7 +920,7 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  /** TODO: hook */
+  htt_run_wait(executable, context, line);
   return APR_SUCCESS;
 } 
 
@@ -910,7 +928,7 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  /** TODO: hook */
+  htt_run_expect(executable, context, line);
   return APR_SUCCESS;
 } 
 

@@ -34,3 +34,4 @@ test/test_htt_stack
 test/test_htt_bufreader
 test/test_htt_core
 test/test_htt_expr
+src/htt_modules.c

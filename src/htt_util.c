@@ -31,7 +31,7 @@
 #include <apr_file_io.h>
 #include <apr_env.h>
 
-#include "defines.h"
+#include "htt_defines.h"
 #include "htt_util.h"
 
 

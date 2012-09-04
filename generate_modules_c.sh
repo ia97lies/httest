@@ -2,7 +2,7 @@
 
 LIST=$1
 
-TARGET=src/modules.c
+TARGET=src/htt_modules.c
 
 #init
 cat > $TARGET << EOF
@@ -21,20 +21,20 @@ cat > $TARGET << EOF
  * limitations under the License.
  */
 
-#include "module.h"
+#include "htt_modules.h"
 
-extern module_t modules[];
+extern htt_module_t htt_modules[];
 
 /* MODULES_DECLARATION */
 EOF
 
 for I in $LIST; do
-  echo "apr_status_t ${I}_module_init(global_t *global);" >> $TARGET
+  echo "apr_status_t ${I}_module_init(htt_t *htt);" >> $TARGET
 done
 
 cat >> $TARGET << EOF
 
-module_t modules[] = {
+htt_module_t htt_modules[] = {
   /* MODULES_REGISTRATION */
 EOF
 
@@ -45,5 +45,18 @@ done
 cat >> $TARGET << EOF
   { NULL }
 };
+
+apr_status_t htt_modules_init(htt_t *htt) {
+  int i;
+
+  for (i = 0; htt_modules[i].module_init; i++) {
+    apr_status_t status;
+    if ((status = htt_modules[i].module_init(htt)) != APR_SUCCESS) {
+      return status;
+    }
+  }
+  return APR_SUCCESS;
+}
+
 EOF
 

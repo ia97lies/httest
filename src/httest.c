@@ -31,7 +31,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include "defines.h"
+#include "htt_defines.h"
 
 /* Use STACK from openssl to sort commands */
 #include <openssl/ssl.h>
