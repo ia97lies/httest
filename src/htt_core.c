@@ -392,32 +392,37 @@ htt_t *htt_new(apr_pool_t *pool) {
                                        NULL, NULL, NULL, 0);
   htt_stack_push(htt->stack, htt->executable);
 
+  htt_add_command(htt, "include", "NULL", "<file>+", 
+                  "include ht3 files", 
+                  _cmd_include_compile, NULL);
+  htt_add_command(htt, "end", NULL, "", 
+                  "end a open body", 
+                  _cmd_end_compile, NULL);
+  htt_add_command(htt, "body", NULL, "", 
+                  "open a new body",
+                  htt_cmd_body_compile, NULL);
+  htt_add_command(htt, "function", NULL, "<parameter>*", 
+                  "define a function",
+                  _cmd_func_def_compile, NULL);
+  htt_add_command(htt, "loop", NULL, "<n> [<variable>]", 
+                  "loop a body <n> times, if <variable> is defined <n> will be "
+                  "stored in <variable>",
+                  htt_cmd_body_compile, _cmd_loop_function);
+  htt_add_command(htt, "if", NULL, "0|1 $expr(\"<expression>\")", "do body if 1",
+                  htt_cmd_body_compile, _cmd_if_function);
+
   htt_modules_init(htt);
 
   return htt;
 }
 
 apr_status_t core_module_init(htt_t *htt) {
-  htt_add_command(htt, "include", "NULL", "<file>+", "include ht3 files", 
-                  _cmd_include_compile, NULL);
-  htt_add_command(htt, "end", NULL, "", "end a open body", 
-                  _cmd_end_compile, NULL);
-  htt_add_command(htt, "body", NULL, "", "open a new body",
-                  htt_cmd_body_compile, NULL);
-  htt_add_command(htt, "function", NULL, "<parameter>*", "define a function",
-                  _cmd_func_def_compile, NULL);
   htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
                   htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
                   htt_cmd_line_compile, _cmd_set_function);
   htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
                   htt_cmd_line_compile, _cmd_local_function);
-  htt_add_command(htt, "loop", NULL, 
-                  "<n> [<variable>]", "loop a body <n> times, if <variable> "
-                  "is defined <n> will be stored in <variable>",
-                  htt_cmd_body_compile, _cmd_loop_function);
-  htt_add_command(htt, "if", NULL, "0|1 $expr(\"<expression>\")", "do body if 1",
-                  htt_cmd_body_compile, _cmd_if_function);
   htt_add_command(htt, "expr", "expression : result", "<expression> <variable>", 
                   "Evaluate <expression> and store it in <variable>",
                   htt_cmd_line_compile, _cmd_expr_function);

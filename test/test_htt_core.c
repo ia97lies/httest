@@ -31,7 +31,7 @@
 #endif
 #include <stdio.h>
 #include <assert.h>
-#include "defines.h"
+#include "htt_defines.h"
 
 #include <apr.h>
 #include <apr_pools.h>
