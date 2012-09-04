@@ -37,10 +37,11 @@
  * Simple echo command 
  * @param executable IN executable
  * @param context IN running context
+ * @param ptmp IN pool
  * @param params IN parameters
  * @param retvars IN return variables
  * @param line IN unsplitted but resolved line
- * @param apr status
+ * @return apr status
  */
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
                                        htt_context_t *context,
@@ -51,10 +52,11 @@ static apr_status_t _cmd_echo_function(htt_executable_t *executable,
  * Set command 
  * @param executable IN executable
  * @param context IN running context
+ * @param ptmp IN pool
  * @param params IN parameters
  * @param retvars IN return variables
  * @param line IN unsplitted but resolved line
- * @param apr status
+ * @return apr status
  */
 static apr_status_t _cmd_set_function(htt_executable_t *executable, 
                                       htt_context_t *context,
@@ -64,10 +66,11 @@ static apr_status_t _cmd_set_function(htt_executable_t *executable,
  * Local command 
  * @param executable IN executable
  * @param context IN running context
+ * @param ptmp IN pool
  * @param params IN parameters
  * @param retvars IN return variables
  * @param line IN unsplitted but resolved line
- * @param apr status
+ * @return apr status
  */
 static apr_status_t _cmd_local_function(htt_executable_t *executable, 
                                         htt_context_t *context, 
@@ -78,10 +81,11 @@ static apr_status_t _cmd_local_function(htt_executable_t *executable,
  * Eval math expressions
  * @param executable IN executable
  * @param context IN running context
+ * @param ptmp IN pool
  * @param params IN parameters
  * @param retvars IN return variables
  * @param line IN unsplitted but resolved line
- * @param apr status
+ * @return apr status
  */
 static apr_status_t _cmd_expr_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
@@ -92,10 +96,11 @@ static apr_status_t _cmd_expr_function(htt_executable_t *executable,
  * Exit
  * @param executable IN executable
  * @param context IN running context
+ * @param ptmp IN pool
  * @param params IN parameters
  * @param retvars IN return variables
  * @param line IN unsplitted but resolved line
- * @param apr status
+ * @return apr status
  */
 static apr_status_t _cmd_exit_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
@@ -106,26 +111,51 @@ static apr_status_t _cmd_exit_function(htt_executable_t *executable,
  * Assert
  * @param executable IN executable
  * @param context IN running context
+ * @param ptmp IN pool
  * @param params IN parameters
  * @param retvars IN return variables
  * @param line IN unsplitted but resolved line
- * @param apr status
+ * @return apr status
  */
 static apr_status_t _cmd_assert_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line); 
 
-/************************************************************************
- * Globals 
- ***********************************************************************/
+/**
+ * Core req functionality
+ * @param executable IN executable
+ * @param context IN running context
+ * @param line IN unsplitted but resolved line
+ * return apr status
+ */
+static apr_status_t _hook_req(htt_executable_t *executable, htt_context_t *context,
+                              char *line);
 
 /************************************************************************
- * Local 
+ * Public
  ***********************************************************************/
+apr_status_t core_module_init(htt_t *htt) {
+  htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
+                  htt_cmd_line_compile, _cmd_echo_function);
+  htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
+                  htt_cmd_line_compile, _cmd_set_function);
+  htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
+                  htt_cmd_line_compile, _cmd_local_function);
+  htt_add_command(htt, "expr", "expression : result", "<expression> <variable>", 
+                  "Evaluate <expression> and store it in <variable>",
+                  htt_cmd_line_compile, _cmd_expr_function);
+  htt_add_command(htt, "exit", NULL, "", 
+                  "terminate script either with success, failed or skipped",
+                  htt_cmd_line_compile, _cmd_exit_function);
+  htt_add_command(htt, "assert", NULL, "0|1 use $expr(\"<expression>\")", 
+                  "assert throw exception if 0",
+                  htt_cmd_line_compile, _cmd_assert_function);
+  return APR_SUCCESS;
+}
 
 /************************************************************************
- * Commands 
+ * Private
  ***********************************************************************/
 static apr_status_t _cmd_echo_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
@@ -222,25 +252,10 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
   return APR_SUCCESS;
 } 
 
-/************************************************************************
- * Module
- ***********************************************************************/
-apr_status_t core_module_init(htt_t *htt) {
-  htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
-                  htt_cmd_line_compile, _cmd_echo_function);
-  htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
-                  htt_cmd_line_compile, _cmd_set_function);
-  htt_add_command(htt, "local", NULL, "<variable>+", "define variable local", 
-                  htt_cmd_line_compile, _cmd_local_function);
-  htt_add_command(htt, "expr", "expression : result", "<expression> <variable>", 
-                  "Evaluate <expression> and store it in <variable>",
-                  htt_cmd_line_compile, _cmd_expr_function);
-  htt_add_command(htt, "exit", NULL, "", 
-                  "terminate script either with success, failed or skipped",
-                  htt_cmd_line_compile, _cmd_exit_function);
-  htt_add_command(htt, "assert", NULL, "0|1 use $expr(\"<expression>\")", 
-                  "assert throw exception if 0",
-                  htt_cmd_line_compile, _cmd_assert_function);
+static apr_status_t _hook_req(htt_executable_t *executable, htt_context_t *context,
+                              char *line) {
+  if (strncmp(line, "var://", 6) == 0) {
+  }
   return APR_SUCCESS;
 }
 

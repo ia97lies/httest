@@ -763,24 +763,21 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
-  htt_run_request(executable, context, line);
-  return APR_SUCCESS;
+  return htt_run_request(executable, context, line);
 } 
 
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  htt_run_wait(executable, context, line);
-  return APR_SUCCESS;
+  return htt_run_wait(executable, context, line);
 } 
 
 static apr_status_t _cmd_expect_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  htt_run_expect(executable, context, line);
-  return APR_SUCCESS;
+  return htt_run_expect(executable, context, line);
 } 
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
