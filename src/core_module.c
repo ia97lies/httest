@@ -285,7 +285,6 @@ static apr_status_t _hook_request(htt_executable_t *executable,
 
 static apr_status_t _hook_wait(htt_executable_t *executable, 
                                htt_context_t *context, char *line) {
-  apr_status_t status = APR_SUCCESS;
   if (strncmp(line, "var://", 6) == 0) {
     _request_config_t *config;
     config = htt_context_get_config(context, "core_module_request");

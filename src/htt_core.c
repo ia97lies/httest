@@ -339,7 +339,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                   "wait for an answer from an requested resource, "
                   "optional could say how many bytes <n>",
                   htt_cmd_line_compile, _cmd_expect_function);
-
+  apr_hook_global_pool = htt->pool;
   htt_modules_init(htt);
 
   return htt;
