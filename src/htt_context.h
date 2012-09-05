@@ -120,6 +120,14 @@ void htt_context_set_config(htt_context_t *context, const char *name,
  */
 void  *htt_context_get_config(htt_context_t *context, const char *name);
 
+/**
+ * From the top config back to the grand grand parents look up a config name
+ * @param context IN startpoint
+ * @param name IN name of the config
+ * @return config if any else NULL
+ */
+void  *htt_context_lookup_config(htt_context_t *context, const char *name); 
+
 /** 
  * Destroy context
  * @param context IN context

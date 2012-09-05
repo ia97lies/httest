@@ -136,6 +136,15 @@ void  *htt_context_get_config(htt_context_t *context, const char *name) {
   return apr_hash_get(context->config, name, APR_HASH_KEY_STRING);
 }
 
+void  *htt_context_lookup_config(htt_context_t *context, const char *name) {
+  htt_context_t *cur = context;
+  void *value = NULL;
+  while (!value && cur) {
+    value = apr_hash_get(cur->config, name, APR_HASH_KEY_STRING);
+  }
+  return value;
+}
+
 void htt_context_destroy(htt_context_t *context) {
   apr_pool_destroy(context->pool);
 }

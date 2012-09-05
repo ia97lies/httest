@@ -187,48 +187,6 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
                                            htt_stack_t *retvars, char *line); 
 
 /**
- * Eval math expressions
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_expr_function(htt_executable_t *executable, 
-                                       htt_context_t *context, 
-                                       apr_pool_t *ptmp, htt_map_t *params, 
-                                       htt_stack_t *retvars, char *line); 
-
-/**
- * Exit
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_exit_function(htt_executable_t *executable, 
-                                       htt_context_t *context, 
-                                       apr_pool_t *ptmp, htt_map_t *params, 
-                                       htt_stack_t *retvars, char *line); 
-
-/**
- * Assert
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_assert_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
-                                         apr_pool_t *ptmp, htt_map_t *params, 
-                                         htt_stack_t *retvars, char *line); 
-
-/**
  * req 
  * @param executable IN executable
  * @param context IN running context

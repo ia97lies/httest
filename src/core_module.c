@@ -25,7 +25,9 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
+#include <apr_strings.h>
 #include "htt_modules.h"
+#include "htt_core.h"
 #include "htt_string.h"
 #include "htt_util.h"
 #include "htt_expr.h"
@@ -33,6 +35,11 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+typedef struct _request_config_s {
+  apr_pool_t *pool;
+  const char *var;
+} _request_config_t;
+
 /**
  * Simple echo command 
  * @param executable IN executable
@@ -129,8 +136,8 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
  * @param line IN unsplitted but resolved line
  * return apr status
  */
-static apr_status_t _hook_req(htt_executable_t *executable, htt_context_t *context,
-                              char *line);
+static apr_status_t _hook_request(htt_executable_t *executable, 
+                                  htt_context_t *context, char *line);
 
 /************************************************************************
  * Public
@@ -151,6 +158,7 @@ apr_status_t core_module_init(htt_t *htt) {
   htt_add_command(htt, "assert", NULL, "0|1 use $expr(\"<expression>\")", 
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
+  htt_hook_request(_hook_request, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
@@ -252,9 +260,43 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
   return APR_SUCCESS;
 } 
 
-static apr_status_t _hook_req(htt_executable_t *executable, htt_context_t *context,
-                              char *line) {
+static _request_config_t *_create_request_config(htt_context_t *context) {
+  _request_config_t *varconf;
+  varconf = apr_pcalloc(htt_context_get_pool(context), sizeof(*varconf));
+  htt_context_set_config(context, "core_module_request", varconf); 
+  return varconf;
+}
+
+static void _destroy_request_config(htt_context_t *context) {
+  htt_context_set_config(context, "core_module_request", NULL); 
+}
+
+static apr_status_t _hook_request(htt_executable_t *executable, 
+                                  htt_context_t *context, char *line) {
   if (strncmp(line, "var://", 6) == 0) {
+    _request_config_t *config = _create_request_config(context);
+    char *var = &line[6];
+    apr_collapse_spaces(var, var);
+    apr_pool_create(&config->pool, htt_context_get_pool(context));
+    config->var = apr_pstrdup(config->pool, var);
+  }
+  return APR_SUCCESS;
+}
+
+static apr_status_t _hook_wait(htt_executable_t *executable, 
+                               htt_context_t *context, char *line) {
+  apr_status_t status = APR_SUCCESS;
+  if (strncmp(line, "var://", 6) == 0) {
+    _request_config_t *config;
+    config = htt_context_get_config(context, "core_module_request");
+    if (config) {
+      htt_string_t *value = htt_context_get_var(context, config->var);
+      /*
+      htt_core_expect(context, value);
+      */
+      apr_pool_destroy(config->pool);
+      _destroy_request_config(context); 
+    }
   }
   return APR_SUCCESS;
 }
