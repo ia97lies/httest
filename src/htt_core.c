@@ -401,6 +401,10 @@ apr_status_t htt_run(htt_t *htt) {
   return htt_execute(htt->executable, context);
 }
 
+void htt_core_expect(htt_context_t *context, const char *namespace, 
+                     const char *buf, apr_size_t len) {
+}
+
 /************************************************************************
  * Hooks 
  ***********************************************************************/

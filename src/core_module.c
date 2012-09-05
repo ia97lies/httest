@@ -139,6 +139,16 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
 static apr_status_t _hook_request(htt_executable_t *executable, 
                                   htt_context_t *context, char *line);
 
+/**
+ * Core wait functionality
+ * @param executable IN executable
+ * @param context IN running context
+ * @param line IN unsplitted but resolved line
+ * return apr status
+ */
+static apr_status_t _hook_wait(htt_executable_t *executable, 
+                               htt_context_t *context, char *line);
+
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -159,6 +169,7 @@ apr_status_t core_module_init(htt_t *htt) {
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
   htt_hook_request(_hook_request, NULL, NULL, 0);
+  htt_hook_request(_hook_wait, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
@@ -271,6 +282,10 @@ static void _destroy_request_config(htt_context_t *context) {
   htt_context_set_config(context, "core_module_request", NULL); 
 }
 
+static _request_config_t *_get_request_config(htt_context_t *context) {
+  return htt_context_get_config(context, "core_module_request"); 
+}
+
 static apr_status_t _hook_request(htt_executable_t *executable, 
                                   htt_context_t *context, char *line) {
   if (strncmp(line, "var://", 6) == 0) {
@@ -285,17 +300,13 @@ static apr_status_t _hook_request(htt_executable_t *executable,
 
 static apr_status_t _hook_wait(htt_executable_t *executable, 
                                htt_context_t *context, char *line) {
-  if (strncmp(line, "var://", 6) == 0) {
-    _request_config_t *config;
-    config = htt_context_get_config(context, "core_module_request");
-    if (config) {
-      htt_string_t *value = htt_context_get_var(context, config->var);
-      /*
-      htt_core_expect(context, value);
-      */
-      apr_pool_destroy(config->pool);
-      _destroy_request_config(context); 
-    }
+  _request_config_t *config;
+  config = _get_request_config(context);
+  if (config) {
+    htt_string_t *value = htt_context_get_var(context, config->var);
+    htt_core_expect(context, ".", htt_string_get(value), -1);
+    apr_pool_destroy(config->pool);
+    _destroy_request_config(context); 
   }
   return APR_SUCCESS;
 }

@@ -146,6 +146,17 @@ apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len);
 apr_status_t htt_run(htt_t *htt);
 
 /**
+ * Check if value do fit the defined expects
+ * @param context IN 
+ * @param namespace IN namespace of expect
+ * @param buf IN buffer to inspect
+ * @param len IN buffer len if -1 string length
+ * @note: throw exit error if do not match
+ */
+void htt_core_expect(htt_context_t *context, const char *namespace, 
+                     const char *buf, apr_size_t len);
+
+/**
  * verbose exit func
  */
 void htt_exit();
