@@ -19,3 +19,14 @@
 - A closure is a tuple of htt_executable_t and htt_context_t
 - The closures htt_context_t is a child of the callers htt_context_t
 - All variables needed must be a local variable in the closure htt_context_t!
+
+++req/expect/wait
+- This should be a main part of htt3
+- req is a empty function which is implemented by specific modules
+- with the scheme of the given url the specific modules takes action
+- scheme could be http://, https://, file://, var://, ws://, ...
+- expect it self to have namespaces given by the specific modules
+- namespaces of expect depends on the given resource
+- "." namespace of expect do get all data received
+- in the case of http:// or https:// there is also a namespace headers and body
+- on wait all defined expect are checked against received data

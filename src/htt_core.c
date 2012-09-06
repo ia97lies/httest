@@ -95,6 +95,16 @@ typedef struct _counter_config_s {
   int i;
 } _counter_config_t;
 
+typedef struct _regex_s {
+  const char *pattern;
+  pcre *regex;
+} _regex_t;
+
+typedef struct _expect_config_s {
+  apr_pool_t *pool;
+  apr_hash_t *hash;
+} _expect_config_t;
+
 /**
  * Get return vals with given signature
  * @param context IN 
@@ -411,7 +421,6 @@ void htt_core_expect(htt_context_t *context, const char *namespace,
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(request)
   APR_HOOK_LINK(wait)
-  APR_HOOK_LINK(expect)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, request, 
@@ -420,11 +429,6 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, request,
 				      (executable, context, line), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, wait, 
-                                      (htt_executable_t *executable, 
-                                       htt_context_t *context, char *line), 
-				      (executable, context, line), APR_SUCCESS);
-
-APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, expect, 
                                       (htt_executable_t *executable, 
                                        htt_context_t *context, char *line), 
 				      (executable, context, line), APR_SUCCESS);
@@ -725,21 +729,37 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
-  return htt_run_request(executable, context, line);
+  htt_context_t *top = htt_context_get_godfather(context);
+  return htt_run_request(executable, top, line);
 } 
 
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  return htt_run_wait(executable, context, line);
+  htt_context_t *top = htt_context_get_godfather(context);
+  return htt_run_wait(executable, top, line);
 } 
 
 static apr_status_t _cmd_expect_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  return htt_run_expect(executable, context, line);
+  int i;
+  char **argv;
+  htt_context_t *top = htt_context_get_godfather(context);
+  htt_util_to_argv(line, &argv, ptmp, 0);
+  for (i = 0; argv[i]; i++);
+  if (i < 1) {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Command expect need 2 arguments, a namespace and a regular "
+                  "expression");
+    return status;
+  }
+  return APR_SUCCESS;
 } 
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
