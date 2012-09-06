@@ -756,7 +756,7 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   htt_context_t *top = htt_context_get_godfather(context);
   htt_util_to_argv(line, &argv, ptmp, 0);
   for (i = 0; argv[i]; i++);
-  if (i < 1) {
+  if (i < 2) {
     apr_status_t status = APR_EGENERAL;
     htt_log_error(htt_context_get_log(context), status, 
                   htt_executable_get_file(executable), 

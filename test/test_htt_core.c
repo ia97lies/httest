@@ -621,6 +621,7 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
   fprintf(stdout, "exit ok ...");
   {
     apr_proc_t proc;
@@ -649,6 +650,7 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
   fprintf(stdout, "exit fail ...");
   {
     apr_proc_t proc;
@@ -677,6 +679,7 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
   fprintf(stdout, "exit skip ...");
   {
     apr_proc_t proc;
@@ -705,6 +708,7 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
   fprintf(stdout, "assert $expr(\"1 == 1\") ...");
   {
     apr_status_t status;
@@ -719,6 +723,7 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
   fprintf(stdout, "assert $expr(\"1 == 2\") ...");
   {
     apr_status_t status;
@@ -734,7 +739,49 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "req expect wait... ");
+  fprintf(stdout, "expect with wrong params ...");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "expect\n");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_EGENERAL);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "expect with wrong params ...");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "expect foo\n");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_EGENERAL);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "expect not used -> fail...");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "expect . \"never used\"\n");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_EINVAL);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "req expect wait -> ok... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -751,7 +798,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "req expect wait, fail... ");
+  fprintf(stdout, "req expect wait -> fail... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
