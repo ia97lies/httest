@@ -96,9 +96,15 @@ typedef struct _counter_config_s {
 } _counter_config_t;
 
 typedef struct _regex_s {
+  int not;
+  int hits;
   const char *pattern;
   pcre *regex;
 } _regex_t;
+
+typedef struct _regex_ns_s {
+  apr_table_t *regex_ns;
+} _regex_ns_t;
 
 typedef struct _expect_config_s {
   apr_pool_t *pool;
