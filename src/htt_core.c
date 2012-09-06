@@ -102,13 +102,13 @@ typedef struct _regex_s {
   pcre *regex;
 } _regex_t;
 
-typedef struct _regex_ns_s {
-  apr_table_t *regex_ns;
-} _regex_ns_t;
+typedef struct _ns_s {
+  apr_table_t *regexs;
+} _ns_t;
 
 typedef struct _expect_config_s {
   apr_pool_t *pool;
-  apr_hash_t *hash;
+  apr_table_t *ns;
 } _expect_config_t;
 
 /**
@@ -747,6 +747,33 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
   return htt_run_wait(executable, top, line);
 } 
 
+static _expect_config_t *_get_expect_config(htt_context_t *context) {
+  _expect_config_t *config = htt_context_get_config(context, "expect");
+  if (!config) {
+    apr_pool_t *pool;
+    apr_pool_create(&pool, htt_context_get_pool(context));
+    config = apr_pcalloc(pool, sizeof(*config));
+    config->pool = pool;
+    config->ns = apr_table_make(pool, 3);
+    htt_context_set_config(context, "expect", config);
+  }
+  return config;
+}
+
+static void _cmd_register_expect(htt_context_t *context, const char *namespace, 
+                                 const char *expr) {
+  _expect_config_t *config = _get_expect_config(context);
+  _ns_t *ns = (void *)apr_table_get(config->ns, namespace);
+  if (!ns) {
+    ns = apr_pcalloc(config->pool, sizeof(*ns));
+    ns->regexs = apr_table_make(config->pool, 5);
+    apr_table_setn(config->ns, apr_pstrdup(config->pool, namespace), 
+                   (void *)ns);
+  }
+
+  /** compile regex and add it to ns->regexs */
+}
+
 static apr_status_t _cmd_expect_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
@@ -756,16 +783,19 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   htt_context_t *top = htt_context_get_godfather(context);
   htt_util_to_argv(line, &argv, ptmp, 0);
   for (i = 0; argv[i]; i++);
-  if (i < 2) {
+  if (i >= 2) {
+    _cmd_register_expect(top, argv[0], argv[1]);
+    return APR_SUCCESS;
+  }
+  else {
     apr_status_t status = APR_EGENERAL;
-    htt_log_error(htt_context_get_log(context), status, 
+    htt_log_error(htt_context_get_log(top), status, 
                   htt_executable_get_file(executable), 
                   htt_executable_get_line(executable), 
                   "Command expect need 2 arguments, a namespace and a regular "
                   "expression");
     return status;
   }
-  return APR_SUCCESS;
 } 
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,

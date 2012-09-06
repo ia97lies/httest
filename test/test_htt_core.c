@@ -739,7 +739,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "expect with wrong params ...");
+  fprintf(stdout, "expect with no params -> fail ...");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -753,7 +753,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "expect with wrong params ...");
+  fprintf(stdout, "expect with one params -> fail ...");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
