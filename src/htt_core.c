@@ -99,7 +99,7 @@ typedef struct _regex_s {
   int not;
   int hits;
   const char *pattern;
-  pcre *regex;
+  pcre *pcre;
 } _regex_t;
 
 typedef struct _ns_s {
@@ -120,6 +120,14 @@ typedef struct _expect_config_s {
  */
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
                          htt_stack_t *retvals, apr_pool_t *pool); 
+
+/**
+ * Get expect config from given context
+ * @param context IN
+ * @return expect config
+ */
+static _expect_config_t *_get_expect_config(htt_context_t *context); 
+
 /**
  * Interpret reading from given bufreader 
  * @param htt IN instance
@@ -159,6 +167,20 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args);
  * @return apr status
  */
 static apr_status_t _cmd_function_compile(htt_command_t *command, char *args); 
+
+/**
+ * End command
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_end_function(htt_executable_t *executable, 
+                                      htt_context_t *context, 
+                                      apr_pool_t *ptmp, htt_map_t *params, 
+                                      htt_stack_t *retvars, char *line);
 
 /**
  * Loop command
@@ -331,7 +353,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                   _cmd_include_compile, NULL);
   htt_add_command(htt, "end", NULL, "", 
                   "end a open body", 
-                  _cmd_end_compile, NULL);
+                  _cmd_end_compile, _cmd_end_function);
   htt_add_command(htt, "body", NULL, "", 
                   "open a new body",
                   htt_cmd_body_compile, NULL);
@@ -427,6 +449,7 @@ void htt_core_expect(htt_context_t *context, const char *namespace,
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(request)
   APR_HOOK_LINK(wait)
+  APR_HOOK_LINK(end)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, request, 
@@ -435,6 +458,11 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, request,
 				      (executable, context, line), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, wait, 
+                                      (htt_executable_t *executable, 
+                                       htt_context_t *context, char *line), 
+				      (executable, context, line), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, end, 
                                       (htt_executable_t *executable, 
                                        htt_context_t *context, char *line), 
 				      (executable, context, line), APR_SUCCESS);
@@ -503,6 +531,7 @@ static apr_status_t _cmd_include_compile(htt_command_t *command, char *args) {
 
 static apr_status_t _cmd_end_compile(htt_command_t *command, char *args) {
   htt_t *htt = htt_command_get_config(command, "htt");
+  htt_cmd_line_compile(command, args);
   htt_stack_pop(htt->stack);
   htt->executable = htt_stack_top(htt->stack);
   if (htt->executable && htt_stack_elems(htt->stack) >= 0) {
@@ -618,6 +647,17 @@ static apr_status_t _loop_closure(htt_executable_t *executable,
     htt_stack_push(retvars, retval);
   }
   return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_end_function(htt_executable_t *executable, 
+                                      htt_context_t *context, 
+                                      apr_pool_t *ptmp, htt_map_t *params, 
+                                      htt_stack_t *retvars, char *line) {
+  _expect_config_t *config = _get_expect_config(context);
+  /* iterate over namespaces */
+    /* iterate over regexs */
+      /* hit must be bigger than 0 */
+  return htt_run_wait(executable, context, line);
 }
 
 static apr_status_t _cmd_loop_function(htt_executable_t *executable, 
@@ -760,8 +800,15 @@ static _expect_config_t *_get_expect_config(htt_context_t *context) {
   return config;
 }
 
-static void _cmd_register_expect(htt_context_t *context, const char *namespace, 
-                                 const char *expr) {
+static apr_status_t _regex_cleanup(void *pcre) {
+  pcre_free(pcre);
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_register_expect(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         const char *namespace, 
+                                         const char *expr) {
   _expect_config_t *config = _get_expect_config(context);
   _ns_t *ns = (void *)apr_table_get(config->ns, namespace);
   if (!ns) {
@@ -771,7 +818,25 @@ static void _cmd_register_expect(htt_context_t *context, const char *namespace,
                    (void *)ns);
   }
 
-  /** compile regex and add it to ns->regexs */
+  {
+    _regex_t *regex = apr_pcalloc(config->pool, sizeof(*regex));
+    const char *error;
+    int erroff;
+    regex->pcre = pcre_compile(expr, 0, &error, &erroff, NULL);
+    if (error) {
+      apr_status_t status = APR_EGENERAL;
+      htt_log_error(htt_context_get_log(context), status, 
+                    htt_executable_get_file(executable), 
+                    htt_executable_get_line(executable), 
+                    "Invalid regular expression at pos %d: %s", erroff, error);
+      return status;
+    }
+    apr_pool_cleanup_register(config->pool, (void *) regex->pcre, 
+                              _regex_cleanup, apr_pool_cleanup_null);
+    apr_table_setn(ns->regexs, apr_pstrdup(config->pool, expr), (void *)regex);
+  }
+
+  return APR_SUCCESS;
 }
 
 static apr_status_t _cmd_expect_function(htt_executable_t *executable, 
@@ -784,8 +849,7 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   htt_util_to_argv(line, &argv, ptmp, 0);
   for (i = 0; argv[i]; i++);
   if (i >= 2) {
-    _cmd_register_expect(top, argv[0], argv[1]);
-    return APR_SUCCESS;
+    return _cmd_register_expect(executable, top, argv[0], argv[1]);
   }
   else {
     apr_status_t status = APR_EGENERAL;

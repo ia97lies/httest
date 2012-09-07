@@ -265,8 +265,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       }
       while (status == APR_SUCCESS && exec->body && doit) {
         status = htt_execute(exec, child_context);
-        htt_log(log, HTT_LOG_CMD, "%s:%d -> end", 
-                exec->file, exec->line);
         doit = _doit(closure);
       }
       htt_context_destroy(child_context);

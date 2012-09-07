@@ -767,6 +767,20 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
+  fprintf(stdout, "expect wrong regex -> fail...");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "expect . \"[^abcd\"\n");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_EGENERAL);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
   fprintf(stdout, "expect not used -> fail...");
   {
     apr_status_t status;
