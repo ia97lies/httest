@@ -360,6 +360,9 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "function", NULL, "<parameter>*", 
                   "define a function",
                   _cmd_func_def_compile, NULL);
+  htt_add_command(htt, "terminate", NULL, "", 
+                  "very last command do wait for resouces", 
+                  htt_cmd_line_compile, _cmd_end_function);
   htt_add_command(htt, "loop", NULL, "<n> [<variable>]", 
                   "loop a body <n> times, if <variable> is defined <n> will be "
                   "stored in <variable>",
@@ -502,6 +505,7 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
     }
     ++htt->cur_line;
   }
+  htt_command_compile(htt_get_command(htt->executable, "terminate"), "");
 
   if (htt_stack_elems(htt->stack) != 1) {
     htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
@@ -653,11 +657,34 @@ static apr_status_t _cmd_end_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
+  int i;
+  apr_table_entry_t *e;
   _expect_config_t *config = _get_expect_config(context);
-  /* iterate over namespaces */
-    /* iterate over regexs */
-      /* hit must be bigger than 0 */
-  return htt_run_wait(executable, context, line);
+  apr_status_t status = APR_SUCCESS;
+  e = (void *) apr_table_elts(config->ns)->elts;
+  for (i = 0; i < apr_table_elts(config->ns)->nelts; i++) {
+    int j;
+    _ns_t *ns = (void *)e[i].val;
+    apr_table_entry_t *r;
+    r = (void *) apr_table_elts(ns->regexs)->elts;
+    for (j = 0; j < apr_table_elts(config->ns)->nelts; j++) {
+      /* iterate over regexs */
+      _regex_t *regex = (void *)r[j].val;
+      if (regex->hits == 0) {
+        status = APR_EINVAL;
+        htt_log_error(htt_context_get_log(context), status, 
+                      htt_executable_get_file(executable), 
+                      htt_executable_get_line(executable), 
+                      "Unused 'expect %s \"%s\"'", e[i].key, regex->pattern);
+      }
+    }
+  }
+  if (status == APR_SUCCESS) {
+    return htt_run_wait(executable, context, line);
+  }
+  else {
+    return status;
+  }
 }
 
 static apr_status_t _cmd_loop_function(htt_executable_t *executable, 
@@ -823,6 +850,7 @@ static apr_status_t _cmd_register_expect(htt_executable_t *executable,
     const char *error;
     int erroff;
     regex->pcre = pcre_compile(expr, 0, &error, &erroff, NULL);
+    regex->pattern = apr_pstrdup(config->pool, expr);
     if (error) {
       apr_status_t status = APR_EGENERAL;
       htt_log_error(htt_context_get_log(context), status, 
