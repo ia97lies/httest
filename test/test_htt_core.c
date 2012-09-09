@@ -828,6 +828,47 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "req multiple expect wait -> ok... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set bar=foobar\n\
+         req var://bar\n\
+         expect . \"foo.*\"\n\
+         expect . \".*\"\n\
+         expect . \".*bar\"\n\
+         expect body \"foo\"\n\
+         expect . \"bar\"\n\
+         wait");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "req unused expect wait -> fail before next command... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set bar=foobar\n\
+         req var://bar\n\
+         expect . \"foo.*\"\n\
+         expect unused \"foo\"\n\
+         wait\n\
+         mock error");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_EINVAL);
+    assert(global_buf == NULL);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 

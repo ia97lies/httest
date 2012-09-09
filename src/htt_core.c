@@ -849,8 +849,17 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
+  apr_status_t status;
+  _expect_config_t *config;
   htt_context_t *top = htt_context_get_godfather(context);
-  return htt_run_wait(executable, top, line);
+  status = htt_run_wait(executable, top, line);
+  if (status == APR_SUCCESS) {
+    status = htt_check_expect(executable, context);
+  }
+  config = htt_context_get_config(top, "expect");
+  apr_pool_destroy(config->pool);
+  htt_context_set_config(top, "expect", NULL);
+  return status;
 } 
 
 static _expect_config_t *_get_expect_config(htt_context_t *context) {
