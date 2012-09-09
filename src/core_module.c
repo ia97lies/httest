@@ -169,7 +169,7 @@ apr_status_t core_module_init(htt_t *htt) {
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
   htt_hook_request(_hook_request, NULL, NULL, 0);
-  htt_hook_request(_hook_wait, NULL, NULL, 0);
+  htt_hook_wait(_hook_wait, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

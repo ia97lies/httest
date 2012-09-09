@@ -318,16 +318,20 @@ apr_status_t htt_assert_expect(htt_executable_t *executable,
     }
     r = (void *) apr_table_elts(ns->regexs)->elts;
     for (i = 0; i < apr_table_elts(ns->regexs)->nelts; i++) {
+      int rc;
       _regex_t *regex = (void *)r[i].val;
+      rc = pcre_exec(regex->pcre, NULL, buf, _len, 0, 0, NULL, 0);
+      if (rc < 0) {
+        status = APR_EINVAL;
+        htt_log_error(htt_context_get_log(context), status, 
+                      htt_executable_get_file(executable), 
+                      htt_executable_get_line(executable), 
+                      "Did 'expect %s \"%s\"", namespace, regex->pattern);
+      }
+      else {
+        ++regex->hits;
+      }
     }
-  }
-  else {
-    status = APR_EINVAL;
-    htt_log_error(htt_context_get_log(context), status, 
-                  htt_executable_get_file(executable), 
-                  htt_executable_get_line(executable), 
-                  "Unknown expect namespace \"%s\"'", namespace);
-    return status;
   }
   return status;
 }
@@ -545,6 +549,7 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
               htt->cur_line, cmd, rest);
       command = htt_get_command(htt->executable, cmd);
       if (!command) {
+        status = APR_EGENERAL;
         htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
                       "Unknown command \"%s\"", cmd);
         htt_throw_error();
@@ -562,6 +567,7 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
   htt_command_compile(htt_get_command(htt->executable, "terminate"), "");
 
   if (htt_stack_elems(htt->stack) != 1) {
+    status = APR_EGENERAL;
     htt_log_error(htt->log, status, htt->cur_file, htt->cur_line, 
                   "Unclosed body on line %s:%d", 
                   htt_executable_get_file(htt->executable), 
