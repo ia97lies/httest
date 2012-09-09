@@ -301,13 +301,24 @@ static apr_status_t _hook_request(htt_executable_t *executable,
 static apr_status_t _hook_wait(htt_executable_t *executable, 
                                htt_context_t *context, char *line) {
   _request_config_t *config;
+  apr_status_t rc = APR_SUCCESS;
   config = _get_request_config(context);
   if (config) {
+    apr_status_t status;
     htt_string_t *value = htt_context_get_var(context, config->var);
-    htt_core_expect(context, ".", htt_string_get(value), -1);
+    status = htt_assert_expect(executable, context, ".", htt_string_get(value),
+                               -1);
+    if (status != APR_SUCCESS) {
+      rc = status;
+    }
+    status = htt_assert_expect(executable, context, "body", 
+                               htt_string_get(value), -1);
+    if (status != APR_SUCCESS) {
+      rc = status;
+    }
     apr_pool_destroy(config->pool);
     _destroy_request_config(context); 
   }
-  return APR_SUCCESS;
+  return rc;
 }
 

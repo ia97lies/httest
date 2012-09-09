@@ -274,6 +274,64 @@ int htt_error = 0;
 /************************************************************************
  * Public 
  ***********************************************************************/
+apr_status_t htt_check_expect(htt_executable_t *executable, 
+                              htt_context_t *context) {
+  int i;
+  apr_table_entry_t *e;
+  _expect_config_t *config = _get_expect_config(context);
+  apr_status_t status = APR_SUCCESS;
+  e = (void *) apr_table_elts(config->ns)->elts;
+  for (i = 0; i < apr_table_elts(config->ns)->nelts; i++) {
+    int j;
+    _ns_t *ns = (void *)e[i].val;
+    apr_table_entry_t *r;
+    r = (void *) apr_table_elts(ns->regexs)->elts;
+    for (j = 0; j < apr_table_elts(ns->regexs)->nelts; j++) {
+      _regex_t *regex = (void *)r[j].val;
+      if (regex->hits == 0) {
+        status = APR_EINVAL;
+        htt_log_error(htt_context_get_log(context), status, 
+                      htt_executable_get_file(executable), 
+                      htt_executable_get_line(executable), 
+                      "Unused 'expect %s \"%s\"'", e[i].key, regex->pattern);
+      }
+    }
+  }
+  return status;
+}
+
+apr_status_t htt_assert_expect(htt_executable_t *executable, 
+                               htt_context_t *context, const char *namespace,
+                               const char *buf, apr_size_t len) {
+  apr_size_t _len;
+  apr_status_t status = APR_SUCCESS;
+  _expect_config_t *config = _get_expect_config(context);
+  _ns_t *ns = (void *)apr_table_get(config->ns, namespace);
+  if (ns) {
+    int i;
+    apr_table_entry_t *r;
+    if (len == -1) {
+      _len = strlen(buf);
+    }
+    else {
+      _len = len;
+    }
+    r = (void *) apr_table_elts(ns->regexs)->elts;
+    for (i = 0; i < apr_table_elts(ns->regexs)->nelts; i++) {
+      _regex_t *regex = (void *)r[i].val;
+    }
+  }
+  else {
+    status = APR_EINVAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Unknown expect namespace \"%s\"'", namespace);
+    return status;
+  }
+  return status;
+}
+
 apr_status_t htt_cmd_line_compile(htt_command_t *command, char *args) {
   htt_executable_t *executable;
   htt_t *htt = htt_command_get_config(command, "htt");
@@ -440,10 +498,6 @@ apr_status_t htt_run(htt_t *htt) {
   htt_context_t *context = htt_context_new(NULL, htt->log);
   htt_context_set_vars(context, htt->defines);
   return htt_execute(htt->executable, context);
-}
-
-void htt_core_expect(htt_context_t *context, const char *namespace, 
-                     const char *buf, apr_size_t len) {
 }
 
 /************************************************************************
@@ -657,28 +711,7 @@ static apr_status_t _cmd_end_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
-  int i;
-  apr_table_entry_t *e;
-  _expect_config_t *config = _get_expect_config(context);
-  apr_status_t status = APR_SUCCESS;
-  e = (void *) apr_table_elts(config->ns)->elts;
-  for (i = 0; i < apr_table_elts(config->ns)->nelts; i++) {
-    int j;
-    _ns_t *ns = (void *)e[i].val;
-    apr_table_entry_t *r;
-    r = (void *) apr_table_elts(ns->regexs)->elts;
-    for (j = 0; j < apr_table_elts(config->ns)->nelts; j++) {
-      /* iterate over regexs */
-      _regex_t *regex = (void *)r[j].val;
-      if (regex->hits == 0) {
-        status = APR_EINVAL;
-        htt_log_error(htt_context_get_log(context), status, 
-                      htt_executable_get_file(executable), 
-                      htt_executable_get_line(executable), 
-                      "Unused 'expect %s \"%s\"'", e[i].key, regex->pattern);
-      }
-    }
-  }
+  apr_status_t status = htt_check_expect(executable, context);
   if (status == APR_SUCCESS) {
     return htt_run_wait(executable, context, line);
   }

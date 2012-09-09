@@ -14,6 +14,10 @@
 - Parameters are hold as key/value pairs in a map
 - Return variables are hold in a stack
 
+++Context
+- There is a static context "executable"
+- There is a dynamic context "context"
+
 ++Closure
 - Call a function which return a closure function
 - A closure is a tuple of htt_executable_t and htt_context_t
