@@ -129,6 +129,13 @@ static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
 static _expect_config_t *_get_expect_config(htt_context_t *context); 
 
 /**
+ * Get expect context seen from given context
+ * @param context IN
+ * @return context
+ */
+static htt_context_t *_get_expect_context(htt_context_t *context); 
+
+/**
  * Interpret reading from given bufreader 
  * @param htt IN instance
  * @param fp IN apr file pointer
@@ -841,8 +848,8 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       htt_context_t *context, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
-  htt_context_t *top = htt_context_get_godfather(context);
-  return htt_run_request(executable, top, line);
+  _get_expect_config(context);
+  return htt_run_request(executable, context, line);
 } 
 
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
@@ -851,7 +858,7 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
   _expect_config_t *config;
-  htt_context_t *top = htt_context_get_godfather(context);
+  htt_context_t *top = _get_expect_context(context);
   status = htt_run_wait(executable, top, line);
   if (status == APR_SUCCESS) {
     status = htt_check_expect(executable, context);
@@ -873,6 +880,21 @@ static _expect_config_t *_get_expect_config(htt_context_t *context) {
     htt_context_set_config(context, "expect", config);
   }
   return config;
+}
+
+static htt_context_t *_get_expect_context(htt_context_t *context) {
+  _expect_config_t *config = NULL;
+  htt_context_t *cur = context;
+  while (cur && config == NULL) {
+    config = htt_context_get_config(context, "expect");
+    if (!config) {
+      cur = htt_context_get_parent(cur);
+    }
+  }
+  if (!cur) {
+    cur = htt_context_get_godfather(context);
+  }
+  return cur;
 }
 
 static apr_status_t _regex_cleanup(void *pcre) {
@@ -921,7 +943,7 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line) {
   int i;
   char **argv;
-  htt_context_t *top = htt_context_get_godfather(context);
+  htt_context_t *top = _get_expect_context(context);
   htt_util_to_argv(line, &argv, ptmp, 0);
   for (i = 0; argv[i]; i++);
   if (i >= 2) {
