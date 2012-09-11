@@ -153,7 +153,7 @@ apr_status_t htt_run(htt_t *htt);
  * @param expr IN regular expression
  * @return apr status
  */
-apr_status_t htt_register_expect(htt_executable_t *executable, 
+apr_status_t htt_expect_register(htt_executable_t *executable, 
                                  htt_context_t *context, const char *namespace, 
                                  const char *expr);
 
@@ -166,7 +166,7 @@ apr_status_t htt_register_expect(htt_executable_t *executable,
  * @param len IN buffer len if -1 string length
  * @note: throw exit error if do not match
  */
-apr_status_t htt_assert_expect(htt_executable_t *executable, 
+apr_status_t htt_expect_assert(htt_executable_t *executable, 
                                htt_context_t *context, const char *namespace,
                                const char *buf, apr_size_t len); 
 

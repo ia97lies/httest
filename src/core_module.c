@@ -341,6 +341,7 @@ static apr_status_t _hook_expect(htt_executable_t *executable,
                     "Command expect needs regular expression");
     }
     apr_pool_destroy(config->pool);
+    _destroy_request_config(context); 
   }
   return status;
 }

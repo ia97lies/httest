@@ -907,6 +907,22 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "wait without req -> fail... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set bar=foobar\n\
+         expect var(bar) \"foo.*\"\n\
+         wait");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 
