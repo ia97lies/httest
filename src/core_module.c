@@ -137,7 +137,17 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
  * return apr status
  */
 static apr_status_t _hook_request(htt_executable_t *executable, 
-                                  htt_context_t *context, char *line);
+                                  htt_context_t *context, const char *line);
+
+/**
+ * Expect syntax sugar for variables
+ * @param executable IN executable
+ * @param context IN running context
+ * @param line IN unsplitted but resolved line
+ * return apr status
+ */
+static apr_status_t _hook_expect(htt_executable_t *executable, 
+                                 htt_context_t *context, const char *line);
 
 /**
  * Core wait functionality
@@ -147,7 +157,7 @@ static apr_status_t _hook_request(htt_executable_t *executable,
  * return apr status
  */
 static apr_status_t _hook_wait(htt_executable_t *executable, 
-                               htt_context_t *context, char *line);
+                               htt_context_t *context, const char *line);
 
 /************************************************************************
  * Public
@@ -169,6 +179,7 @@ apr_status_t core_module_init(htt_t *htt) {
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
   htt_hook_request(_hook_request, NULL, NULL, 0);
+  htt_hook_expect(_hook_expect, NULL, NULL, 0);
   htt_hook_wait(_hook_wait, NULL, NULL, 0);
   return APR_SUCCESS;
 }
@@ -272,10 +283,11 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
 } 
 
 static _request_config_t *_create_request_config(htt_context_t *context) {
-  _request_config_t *varconf;
-  varconf = apr_pcalloc(htt_context_get_pool(context), sizeof(*varconf));
-  htt_context_set_config(context, "core_module_request", varconf); 
-  return varconf;
+  _request_config_t *config;
+  config = apr_pcalloc(htt_context_get_pool(context), sizeof(*config));
+  apr_pool_create(&config->pool, htt_context_get_pool(context));
+  htt_context_set_config(context, "core_module_request", config); 
+  return config;
 }
 
 static void _destroy_request_config(htt_context_t *context) {
@@ -287,31 +299,66 @@ static _request_config_t *_get_request_config(htt_context_t *context) {
 }
 
 static apr_status_t _hook_request(htt_executable_t *executable, 
-                                  htt_context_t *context, char *line) {
+                                  htt_context_t *context, const char *line) {
   if (strncmp(line, "var://", 6) == 0) {
     _request_config_t *config = _create_request_config(context);
-    char *var = &line[6];
+    char *copy = apr_pstrdup(config->pool, line);
+    char *var = &copy[6];
     apr_collapse_spaces(var, var);
-    apr_pool_create(&config->pool, htt_context_get_pool(context));
     config->var = apr_pstrdup(config->pool, var);
   }
   return APR_SUCCESS;
 }
 
+static apr_status_t _hook_expect(htt_executable_t *executable, 
+                               htt_context_t *context, const char *line) {
+  apr_status_t status = APR_EAGAIN;
+  if (strncmp(line, "var(", 4) == 0) {
+    status = APR_SUCCESS;
+    _request_config_t *config = _create_request_config(context);
+    char **argv;
+    char *rest;
+    char *var;
+    int i;
+   
+    htt_util_to_argv(line, &argv, config->pool, 0);
+    for (i = 0; argv[i]; i++);
+    if (i >= 2) {
+      var = apr_strtok(argv[0], "(", &rest);
+      var = apr_strtok(NULL, ")", &rest);
+      if ((status = htt_expect_register(executable, context, ".", argv[1]))
+          == APR_SUCCESS) {
+        htt_string_t *value = htt_context_get_var(context, var);
+        status = htt_expect_assert(executable, context, ".", 
+                                   htt_string_get(value), -1);
+      }
+    }
+    else {
+      status = APR_EGENERAL;
+      htt_log_error(htt_context_get_log(context), status, 
+                    htt_executable_get_file(executable), 
+                    htt_executable_get_line(executable), 
+                    "Command expect needs regular expression");
+    }
+    apr_pool_destroy(config->pool);
+  }
+  return status;
+}
+
 static apr_status_t _hook_wait(htt_executable_t *executable, 
-                               htt_context_t *context, char *line) {
+                               htt_context_t *context, const char *line) {
   _request_config_t *config;
   apr_status_t rc = APR_SUCCESS;
   config = _get_request_config(context);
   if (config) {
     apr_status_t status;
     htt_string_t *value = htt_context_get_var(context, config->var);
-    status = htt_assert_expect(executable, context, ".", htt_string_get(value),
+    status = htt_expect_assert(executable, context, ".", htt_string_get(value),
                                -1);
     if (status != APR_SUCCESS) {
       rc = status;
     }
-    status = htt_assert_expect(executable, context, "body", 
+    status = htt_expect_assert(executable, context, "body", 
                                htt_string_get(value), -1);
     if (status != APR_SUCCESS) {
       rc = status;

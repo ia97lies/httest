@@ -146,6 +146,18 @@ apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len);
 apr_status_t htt_run(htt_t *htt);
 
 /**
+ * Register an expect in a freely in a namespace
+ * @param executable IN static context
+ * @param context IN dynamic context
+ * @param namespace IN expect namespace
+ * @param expr IN regular expression
+ * @return apr status
+ */
+apr_status_t htt_register_expect(htt_executable_t *executable, 
+                                 htt_context_t *context, const char *namespace, 
+                                 const char *expr);
+
+/**
  * Check if value do fit the defined expects
  * @param executable IN static context
  * @param context IN dynamic context
@@ -186,13 +198,16 @@ void htt_throw_ok();
 # define HTT_DECLARE(type)    type
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, request,
                           (htt_executable_t *executable, 
-                           htt_context_t *context, char *line));
+                           htt_context_t *context, const char *line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, expect,
+                          (htt_executable_t *executable, 
+                           htt_context_t *context, const char *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, wait,
                           (htt_executable_t *executable, 
-                           htt_context_t *context, char *line));
+                           htt_context_t *context, const char *line));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, end,
                           (htt_executable_t *executable, 
-                           htt_context_t *context, char *line));
+                           htt_context_t *context, const char *line));
 
 #endif
 
