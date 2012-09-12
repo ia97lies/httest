@@ -274,6 +274,20 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line); 
 
 /**
+ * thread
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_thread_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
  * Clean up pcre object
  * @param pcre IN void pointer to pcre
  * @return APR_SUCCESS
@@ -946,6 +960,16 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   }
   return status;
 } 
+
+static apr_status_t _cmd_thread_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  /* create thread and hand over thread loop */
+  /* register thread */
+  /* handle thread join on "end" */
+  return APR_SUCCESS;
+}
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
                          htt_stack_t *retvals, apr_pool_t *pool) {

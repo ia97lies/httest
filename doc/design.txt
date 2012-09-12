@@ -34,3 +34,25 @@
 - "." namespace of expect do get all data received
 - in the case of http:// or https:// there is also a namespace headers and body
 - on wait all defined expect are checked against received data
+
+++client/server/deamon/thread
+- Client/Server are able to read/write global variable
+- httest script migration: global SET are mapped to local variable of client
+    SET foo=bar
+    CLIENT
+    _FOO $foo
+    END
+    translate but only if foo is set -->
+    set foo=bar
+    client
+      local _foo
+      set _foo=$foo
+    end
+- Own scheduller on base of apr_pollcb, this needs tight integration to
+  reader/writer socket/file.
+- How to implement socket timeouts?
+- How to implement listen/accept timeouts?
+- Pseudo code
+    handle = htt_thread_create(thread_function)
+    htt_thread_join(handle)
+
