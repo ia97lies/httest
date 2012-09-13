@@ -112,10 +112,13 @@ typedef struct _expect_config_s {
 } _expect_config_t;
 
 typedef struct _thread_config_s {
-  apr_thread_t *thread;
+  int i;
+  apr_pool_t *pool;
+  apr_table_t *threads;
 } _thread_config_t;
 
 typedef struct _thread_handle_s {
+  const char *name;
   htt_executable_t *executable;
   htt_context_t *context;
 } _thread_handle_t;
@@ -137,6 +140,35 @@ static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
  */
 static _expect_config_t *_get_expect_config(htt_context_t *context); 
 
+/**
+ * Get thread config from given context
+ * @param context IN
+ * @return expect config
+ */
+static _thread_config_t *_get_thread_config(htt_context_t *context); 
+
+/**
+ * Thread main loop
+ * @param thread IN
+ * @param handlev IN void pointer to _thread_handle_t
+ * @return NULL
+ */
+static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev);
+
+/**
+ * thread closure
+ * @param executable IN
+ * @param context IN
+ * @param ptmp IN
+ * @param params IN
+ * @param retvars IN
+ * @param line IN
+ * @return 0
+ */
+static apr_status_t _thread_closure(htt_executable_t *executable, 
+                                    htt_context_t *context, apr_pool_t *ptmp, 
+                                    htt_map_t *params, htt_stack_t *retvars, 
+                                    char *line);
 /**
  * Get expect context seen from given context
  * @param context IN
@@ -295,6 +327,16 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line); 
+
+/**
+ * Join threads for a given context
+ * @param executable IN
+ * @param context IN
+ * @param line IN
+ * @return apr status
+ */
+static apr_status_t _hook_thread_end(htt_executable_t *executable, 
+                                     htt_context_t *context, const char *line); 
 
 /**
  * Clean up pcre object
@@ -517,6 +559,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                   htt_cmd_body_compile, _cmd_thread_function);
 
   apr_hook_global_pool = htt->pool;
+  htt_hook_end(_hook_thread_end, NULL, NULL, 0);
   htt_modules_init(htt);
 
   return htt;
@@ -834,7 +877,6 @@ static apr_status_t _if_closure(htt_executable_t *executable,
       }
     }
     else {
-      /** TODO: throw error */
       retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
     }
     htt_stack_push(retvars, retval);
@@ -973,12 +1015,6 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   return status;
 } 
 
-static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *selfv) {
-
-  apr_thread_exit(thread, APR_SUCCESS);
-  return NULL;
-}
-
 static apr_status_t _cmd_thread_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
@@ -986,26 +1022,96 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   apr_status_t status;
   apr_threadattr_t *tattr;
   apr_thread_t *thread;
-  _thread_handle_t *th = apr_pcalloc(htt_context_get_pool(context), 
-                                     sizeof(*th));
-  th->context = context;
-  th->executable = executable;
-  if ((status = apr_threadattr_create(&tattr, htt_context_get_pool(context))) 
+  htt_context_t *parent = htt_context_get_parent(context);
+  _thread_config_t *tc = _get_thread_config(parent);
+  _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
+
+  if ((status = apr_threadattr_create(&tattr, tc->pool)) 
       == APR_SUCCESS &&
       (status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
       == APR_SUCCESS && 
       (status = apr_threadattr_detach_set(tattr, 1))
       == APR_SUCCESS) {
-    status = apr_thread_create(&thread, tattr, _thread_body, th, 
-                               htt_context_get_pool(context));
+    htt_context_t *child = htt_context_new(parent, htt_context_get_log(parent));
+
+    th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
+    th->context = child;
+    th->executable = executable;
+    if ((status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool))
+          == APR_SUCCESS) {
+      apr_table_setn(tc->threads, th->name, (void *)thread);
+    }
   }
 
-  /* create thread and hand over thread loop */
-  /* register thread */
-  /* handle thread join on "end" */
+  {
+    htt_executable_t *thread_executable;
+    htt_context_t *thread_context;
+    htt_function_t *thread_closure;
+
+    thread_executable = htt_executable_new(htt_context_get_pool(context), 
+                                           executable, "_thread_closure", NULL,
+                                           _thread_closure, NULL, 
+                                           htt_executable_get_file(executable), 
+                                           htt_executable_get_line(executable));
+    thread_context= htt_context_new(context, htt_context_get_log(context));
+    thread_closure = htt_function_new(htt_context_get_pool(thread_context), 
+                                      thread_executable, thread_context);
+    /* this must return a closure */
+    htt_stack_push(retvars, thread_closure);
+  }
+
   if (status != APR_SUCCESS) {
+    /** TODO: error log */
   }
   return status;
+}
+
+static apr_status_t _hook_thread_end(htt_executable_t *executable, 
+                                     htt_context_t *context, const char *line) {
+  _thread_config_t *tc = _get_thread_config(context);
+  if (tc) {
+    /* TODO: handle thread join on "end" */
+    int i;
+    apr_table_entry_t *e;
+    e = (void *) apr_table_elts(tc->threads)->elts;
+    for (i = 0; i < apr_table_elts(tc->threads)->nelts; i++) {
+    }
+  }
+  return APR_SUCCESS;
+}
+
+static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev) {
+
+  _thread_handle_t *handle = handlev;
+  htt_context_t *context = handle->context;
+
+  htt_log(htt_context_get_log(context), HTT_LOG_INFO, "%s starting ...", 
+          handle->name);
+  apr_thread_exit(thread, APR_SUCCESS);
+
+  return NULL;
+}
+
+static apr_status_t _thread_closure(htt_executable_t *executable, 
+                                    htt_context_t *context, apr_pool_t *ptmp, 
+                                    htt_map_t *params, htt_stack_t *retvars, 
+                                    char *line) {
+  htt_string_t *retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
+  htt_stack_push(retvars, retval);
+  return APR_SUCCESS;
+}
+
+static _thread_config_t *_get_thread_config(htt_context_t *context) {
+  _thread_config_t *config = htt_context_get_config(context, "thread");
+  if (!config) {
+    apr_pool_t *pool;
+    apr_pool_create(&pool, htt_context_get_pool(context));
+    config = apr_pcalloc(pool, sizeof(*config));
+    config->pool = pool;
+    config->threads = apr_table_make(pool, 10);
+    htt_context_set_config(context, "thread", config);
+  }
+  return config;
 }
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,

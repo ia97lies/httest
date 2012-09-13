@@ -251,7 +251,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
         status = exec->function(exec, child_context, ptmp, params, retvals, 
                                 line); 
         closure = htt_stack_top(retvals);
-        if (!htt_isa_function(closure)) {
+        if (closure && !htt_isa_function(closure)) {
           htt_log(log, HTT_LOG_ERROR, "Expect a closure"); 
           apr_pool_destroy(ptmp);
           return APR_EGENERAL;
