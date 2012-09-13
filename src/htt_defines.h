@@ -28,6 +28,10 @@
 #define HTT_BLOCK_MAX 8192
 #define HTT_ALLOWED_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
 
+#ifndef DEFAULT_THREAD_STACKSIZE
+#define DEFAULT_THREAD_STACKSIZE 262144 
+#endif
+
 #define USE_SSL
 
 #if defined(WIN32)

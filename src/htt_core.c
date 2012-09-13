@@ -111,6 +111,15 @@ typedef struct _expect_config_s {
   apr_table_t *ns;
 } _expect_config_t;
 
+typedef struct _thread_config_s {
+  apr_thread_t *thread;
+} _thread_config_t;
+
+typedef struct _thread_handle_s {
+  htt_executable_t *executable;
+  htt_context_t *context;
+} _thread_handle_t;
+
 /**
  * Get return vals with given signature
  * @param context IN 
@@ -500,10 +509,13 @@ htt_t *htt_new(apr_pool_t *pool) {
                   "wait for an answer from an requested resource, "
                   "optional could say how many bytes <n>",
                   htt_cmd_line_compile, _cmd_wait_function);
-  htt_add_command(htt, "expect", NULL, "[<n>]",
-                  "wait for an answer from an requested resource, "
-                  "optional could say how many bytes <n>",
+  htt_add_command(htt, "expect", NULL, "<namespace> <regex>",
+                  "defines what wait do expect in the receiving stream",
                   htt_cmd_line_compile, _cmd_expect_function);
+  htt_add_command(htt, "thread", NULL, "[<n>]",
+                  "start a thread if <n> then start that many threads",
+                  htt_cmd_body_compile, _cmd_thread_function);
+
   apr_hook_global_pool = htt->pool;
   htt_modules_init(htt);
 
@@ -961,14 +973,39 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   return status;
 } 
 
+static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *selfv) {
+
+  apr_thread_exit(thread, APR_SUCCESS);
+  return NULL;
+}
+
 static apr_status_t _cmd_thread_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
+  apr_status_t status;
+  apr_threadattr_t *tattr;
+  apr_thread_t *thread;
+  _thread_handle_t *th = apr_pcalloc(htt_context_get_pool(context), 
+                                     sizeof(*th));
+  th->context = context;
+  th->executable = executable;
+  if ((status = apr_threadattr_create(&tattr, htt_context_get_pool(context))) 
+      == APR_SUCCESS &&
+      (status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
+      == APR_SUCCESS && 
+      (status = apr_threadattr_detach_set(tattr, 1))
+      == APR_SUCCESS) {
+    status = apr_thread_create(&thread, tattr, _thread_body, th, 
+                               htt_context_get_pool(context));
+  }
+
   /* create thread and hand over thread loop */
   /* register thread */
   /* handle thread join on "end" */
-  return APR_SUCCESS;
+  if (status != APR_SUCCESS) {
+  }
+  return status;
 }
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
