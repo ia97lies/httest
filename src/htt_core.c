@@ -381,7 +381,7 @@ apr_status_t htt_expect_register(htt_executable_t *executable,
     }
     apr_pool_cleanup_register(config->pool, (void *) regex->pcre, 
                               _regex_cleanup, apr_pool_cleanup_null);
-    apr_table_setn(ns->regexs, apr_pstrdup(config->pool, expr), (void *)regex);
+    apr_table_addn(ns->regexs, apr_pstrdup(config->pool, expr), (void *)regex);
   }
 
   return APR_SUCCESS;
@@ -1030,20 +1030,22 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       == APR_SUCCESS &&
       (status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
       == APR_SUCCESS && 
-      (status = apr_threadattr_detach_set(tattr, 1))
+      (status = apr_threadattr_detach_set(tattr, 0))
       == APR_SUCCESS) {
     htt_context_t *child = htt_context_new(parent, htt_context_get_log(parent));
 
     th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
+    ++tc->i;
     th->context = child;
     th->executable = executable;
+    /* TODO: while count and success do create threads */
     if ((status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool))
           == APR_SUCCESS) {
-      apr_table_setn(tc->threads, th->name, (void *)thread);
+      apr_table_addn(tc->threads, th->name, (void *)thread);
     }
   }
 
-  {
+  if (status == APR_SUCCESS) {
     htt_executable_t *thread_executable;
     htt_context_t *thread_context;
     htt_function_t *thread_closure;
@@ -1061,33 +1063,52 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   }
 
   if (status != APR_SUCCESS) {
-    /** TODO: error log */
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Could not create thread");
   }
   return status;
 }
 
 static apr_status_t _hook_thread_end(htt_executable_t *executable, 
                                      htt_context_t *context, const char *line) {
-  _thread_config_t *tc = _get_thread_config(context);
+  apr_status_t status = APR_SUCCESS;
+  _thread_config_t *tc = htt_context_get_config(context, "thread");
   if (tc) {
-    /* TODO: handle thread join on "end" */
     int i;
     apr_table_entry_t *e;
     e = (void *) apr_table_elts(tc->threads)->elts;
     for (i = 0; i < apr_table_elts(tc->threads)->nelts; i++) {
+      apr_status_t rc;
+      apr_thread_t *thread = (void *)e[i].val;
+      fprintf(stderr, "XXX: %s", e[i].key);
+
+      rc = apr_thread_join(&status, thread);
+      if (rc != APR_SUCCESS) {
+        htt_log_error(htt_context_get_log(context), rc, 
+                      htt_executable_get_file(executable), 
+                      htt_executable_get_line(executable), 
+                      "Could not join thread %x", thread);
+        status = rc;
+      }
     }
+    apr_pool_destroy(tc->pool);
   }
-  return APR_SUCCESS;
+  return status;
 }
 
 static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev) {
-
+  apr_status_t status;
   _thread_handle_t *handle = handlev;
   htt_context_t *context = handle->context;
+  htt_executable_t *executable = handle->executable;
+
+  status = htt_execute(executable, context);
 
   htt_log(htt_context_get_log(context), HTT_LOG_INFO, "%s starting ...", 
           handle->name);
-  apr_thread_exit(thread, APR_SUCCESS);
+  apr_thread_exit(thread, status);
 
   return NULL;
 }
