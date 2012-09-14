@@ -1024,7 +1024,28 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   apr_thread_t *thread;
   htt_context_t *parent = htt_context_get_parent(context);
   _thread_config_t *tc = _get_thread_config(parent);
-  _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
+  char *cur;
+  char *variable;
+  int count;
+  htt_context_t *child = htt_context_new(parent, htt_context_get_log(parent));
+ 
+  while (line && *line == ' ') ++line;
+  if (line && line[0]) {
+    cur = apr_strtok(line, " ", &variable);
+    count = apr_atoi64(cur);
+    if (count <= 0) {
+      count = 1;
+    }
+  }
+
+  if (variable && variable[0]) {
+    htt_string_t *tcount;
+    tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
+    htt_map_set(htt_context_get_vars(child), variable, tcount);
+  }
+  else {
+    variable = NULL;
+  }
 
   if ((status = apr_threadattr_create(&tattr, tc->pool)) 
       == APR_SUCCESS &&
@@ -1032,16 +1053,31 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       == APR_SUCCESS && 
       (status = apr_threadattr_detach_set(tattr, 0))
       == APR_SUCCESS) {
-    htt_context_t *child = htt_context_new(parent, htt_context_get_log(parent));
+    _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
 
     th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
     ++tc->i;
     th->context = child;
     th->executable = executable;
-    /* TODO: while count and success do create threads */
-    if ((status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool))
-          == APR_SUCCESS) {
+    while (count && 
+           (status = apr_thread_create(&thread, tattr, _thread_body, th, 
+                                       tc->pool))
+           == APR_SUCCESS) {
       apr_table_addn(tc->threads, th->name, (void *)thread);
+      if (variable) {
+        htt_string_t *tcount;
+        tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
+        htt_map_set(htt_context_get_vars(child), variable, tcount);
+      }
+
+      --count;
+      if (count) {
+        child = htt_context_new(parent, htt_context_get_log(parent));
+        th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
+        ++tc->i;
+        th->context = child;
+        th->executable = executable;
+      }
     }
   }
 
