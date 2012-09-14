@@ -339,6 +339,12 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
                                      htt_context_t *context, const char *line); 
 
 /**
+ * Merge all vars from context to isolated context
+ * @param isolated IN context not connected to context
+ * @param context IN outer context
+ */
+static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context); 
+/**
  * Clean up pcre object
  * @param pcre IN void pointer to pcre
  * @return APR_SUCCESS
@@ -1048,12 +1054,13 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
     while (count && status == APR_SUCCESS) {
       _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
       htt_context_t *child;
-      child = htt_context_new(parent, htt_context_get_log(parent));
+      child = htt_context_new(NULL, htt_context_get_log(parent));
       if (variable && variable[0]) {
         htt_string_t *tcount;
         tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
         htt_map_set(htt_context_get_vars(child), variable, tcount);
       }
+      _merge_all_vars(child, context);
 
       th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
       th->context = child;
@@ -1089,6 +1096,19 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                   "Could not create thread");
   }
   return status;
+}
+
+static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context) {
+  htt_map_t *vars;
+  htt_map_t *isolated_vars = htt_context_get_vars(isolated);
+  htt_context_t *cur = context;
+  while (cur) {
+    vars = htt_context_get_vars(cur);
+    if (vars) {
+      htt_map_merge(isolated_vars, vars, htt_context_get_pool(isolated));
+    }
+    cur = htt_context_get_parent(cur);
+  }
 }
 
 static apr_status_t _hook_thread_end(htt_executable_t *executable, 
