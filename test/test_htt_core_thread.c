@@ -56,17 +56,19 @@
  * Implementation 
  ***********************************************************************/
 apr_pool_t *pool = NULL;
-char *global_buf = NULL;
+char *global_buf[4] = { NULL, NULL, NULL, NULL };
 
 static apr_status_t _cmd_mock_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  if (global_buf != NULL) {
-    global_buf = apr_pstrcat(pool, global_buf, line, "\n", NULL);
+  int i = 0;
+  /** TODO: set i from line */
+  if (global_buf[i] != NULL) {
+    global_buf[i] = apr_pstrcat(pool, global_buf[i], line, "\n", NULL);
   }
   else {
-    global_buf = apr_pstrcat(pool, line, "\n", NULL);
+    global_buf[i] = apr_pstrcat(pool, line, "\n", NULL);
   }
   return APR_SUCCESS;
 }
@@ -103,12 +105,12 @@ int main(int argc, const char *const argv[]) {
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, "mock this line");
-    global_buf = NULL;
+    global_buf[0] = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    assert(strcmp(global_buf, "this line\n") == 0);
+    assert(strcmp(global_buf[0], "this line\n") == 0);
   }
   fprintf(stdout, "ok\n");
 
