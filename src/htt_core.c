@@ -1026,8 +1026,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   _thread_config_t *tc = _get_thread_config(parent);
   char *cur;
   char *variable;
-  int count;
-  htt_context_t *child = htt_context_new(parent, htt_context_get_log(parent));
+  int count = 1;
  
   while (line && *line == ' ') ++line;
   if (line && line[0]) {
@@ -1038,46 +1037,31 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
     }
   }
 
-  if (variable && variable[0]) {
-    htt_string_t *tcount;
-    tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
-    htt_map_set(htt_context_get_vars(child), variable, tcount);
-  }
-  else {
-    variable = NULL;
-  }
-
   if ((status = apr_threadattr_create(&tattr, tc->pool)) 
       == APR_SUCCESS &&
       (status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
       == APR_SUCCESS && 
       (status = apr_threadattr_detach_set(tattr, 0))
       == APR_SUCCESS) {
-    _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
 
-    th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
-    ++tc->i;
-    th->context = child;
-    th->executable = executable;
-    while (count && 
-           (status = apr_thread_create(&thread, tattr, _thread_body, th, 
-                                       tc->pool))
-           == APR_SUCCESS) {
-      apr_table_addn(tc->threads, th->name, (void *)thread);
-      if (variable) {
+    status = APR_SUCCESS;
+    while (count && status == APR_SUCCESS) {
+      _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
+      htt_context_t *child;
+      child = htt_context_new(parent, htt_context_get_log(parent));
+      if (variable && variable[0]) {
         htt_string_t *tcount;
         tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
         htt_map_set(htt_context_get_vars(child), variable, tcount);
       }
 
+      th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
+      th->context = child;
+      th->executable = executable;
+      status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool);
+      apr_table_addn(tc->threads, th->name, (void *)thread);
+      ++tc->i;
       --count;
-      if (count) {
-        child = htt_context_new(parent, htt_context_get_log(parent));
-        th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
-        ++tc->i;
-        th->context = child;
-        th->executable = executable;
-      }
     }
   }
 
@@ -1118,8 +1102,6 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
     for (i = 0; i < apr_table_elts(tc->threads)->nelts; i++) {
       apr_status_t rc;
       apr_thread_t *thread = (void *)e[i].val;
-      fprintf(stderr, "XXX: %s", e[i].key);
-
       rc = apr_thread_join(&status, thread);
       if (rc != APR_SUCCESS) {
         htt_log_error(htt_context_get_log(context), rc, 
@@ -1142,8 +1124,6 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev)
 
   status = htt_execute(executable, context);
 
-  htt_log(htt_context_get_log(context), HTT_LOG_INFO, "%s starting ...", 
-          handle->name);
   apr_thread_exit(thread, status);
 
   return NULL;
