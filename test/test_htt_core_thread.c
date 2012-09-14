@@ -56,19 +56,23 @@
  * Implementation 
  ***********************************************************************/
 apr_pool_t *pool = NULL;
-char *global_buf[4] = { NULL, NULL, NULL, NULL };
+char *global_buf[10] = { NULL };
 
 static apr_status_t _cmd_mock_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
   int i = 0;
-  /** TODO: set i from line */
+  char *cur;
+  char *last;
+
+  cur = apr_strtok(line, " ", &last);
+  i = apr_atoi64(cur);
   if (global_buf[i] != NULL) {
-    global_buf[i] = apr_pstrcat(pool, global_buf[i], line, "\n", NULL);
+    global_buf[i] = apr_pstrcat(pool, global_buf[i], last, "\n", NULL);
   }
   else {
-    global_buf[i] = apr_pstrcat(pool, line, "\n", NULL);
+    global_buf[i] = apr_pstrcat(pool, last, "\n", NULL);
   }
   return APR_SUCCESS;
 }
@@ -89,7 +93,7 @@ static htt_t * _test_reset() {
   apr_file_open_stderr(&err, pool);
 
   htt = htt_new(pool);
-  htt_set_log(htt, out, err, HTT_LOG_NONE);
+  htt_set_log(htt, out, err, HTT_LOG_DEBUG);
   htt_add_command(htt, "mock", NULL, "<string>", "put string in a buffer", 
                   htt_cmd_line_compile, _cmd_mock_function);
   return htt;
@@ -101,16 +105,117 @@ int main(int argc, const char *const argv[]) {
   apr_app_initialize(&argc, &argv, NULL);
 
   htt = _test_reset();
-  fprintf(stdout, "Run single mock command... ");
+  fprintf(stdout, "Run one thread... ");
   {
     apr_status_t status;
-    char *buf = apr_pstrdup(pool, "mock this line");
+    char *buf = apr_pstrdup(pool, 
+        "thread\n\
+           mock 0 foobar\n\
+         end");
     global_buf[0] = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    assert(strcmp(global_buf[0], "this line\n") == 0);
+    assert(strcmp(global_buf[0], "foobar\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "Run two threads... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "thread\n\
+           mock 0 foobar1\n\
+         end\n\
+         \n\
+         thread\n\
+           mock 1 foobar2\n\
+         end");
+    global_buf[0] = NULL;
+    global_buf[1] = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf[0], "foobar1\n") == 0);
+    assert(strcmp(global_buf[1], "foobar2\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "Run two threads and loop ... ");
+  {
+    int i;
+    htt_bufreader_t *bufreader;
+    char *line;
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "thread\n\
+           loop 200\n\
+             mock 0 foobar1\n\
+           end\n\
+         end\n\
+         \n\
+         thread\n\
+           loop 200\n\
+             mock 1 foobar2\n\
+           end\n\
+         end");
+    global_buf[0] = NULL;
+    global_buf[1] = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    bufreader = htt_bufreader_buf_new(pool, global_buf[0], 
+                                      strlen(global_buf[0]));
+    for (i = 0; i < 200; i++) {
+      status = htt_bufreader_read_line(bufreader, &line);
+      assert(status == APR_SUCCESS);
+      assert(strcmp(line, "foobar1") == 0);
+    }
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_EOF);
+    assert(line[0] == 0);
+    bufreader = htt_bufreader_buf_new(pool, global_buf[1], 
+                                      strlen(global_buf[1]));
+    for (i = 0; i < 200; i++) {
+      status = htt_bufreader_read_line(bufreader, &line);
+      assert(status == APR_SUCCESS);
+      assert(strcmp(line, "foobar2") == 0);
+    }
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_EOF);
+    assert(line[0] == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "Run ten threads... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "thread 10 t\n\
+           mock $t foobar$t\n\
+         end");
+    global_buf[0] = NULL;
+    global_buf[1] = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf[0], "foobar0\n") == 0);
+    assert(strcmp(global_buf[1], "foobar1\n") == 0);
+    assert(strcmp(global_buf[2], "foobar2\n") == 0);
+    assert(strcmp(global_buf[3], "foobar3\n") == 0);
+    assert(strcmp(global_buf[4], "foobar4\n") == 0);
+    assert(strcmp(global_buf[5], "foobar5\n") == 0);
+    assert(strcmp(global_buf[6], "foobar6\n") == 0);
+    assert(strcmp(global_buf[7], "foobar7\n") == 0);
+    assert(strcmp(global_buf[8], "foobar8\n") == 0);
+    assert(strcmp(global_buf[9], "foobar9\n") == 0);
   }
   fprintf(stdout, "ok\n");
 
