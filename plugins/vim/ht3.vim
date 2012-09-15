@@ -11,6 +11,7 @@ endif
 
 syn keyword httInclude          include
 syn keyword httStatement        body
+syn keyword httStatement        thread
 syn keyword httStatement        if
 syn keyword httStatement        eval
 syn keyword httStatement        function 
