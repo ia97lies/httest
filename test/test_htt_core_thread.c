@@ -196,27 +196,22 @@ int main(int argc, const char *const argv[]) {
   htt = _test_reset();
   fprintf(stdout, "Run ten threads... ");
   {
+    int i;
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
         "thread 10 t\n\
            mock $t foobar$t\n\
          end");
-    global_buf[0] = NULL;
-    global_buf[1] = NULL;
+    for (i = 0; i < 10; i++) {
+      global_buf[i] = NULL;
+    }
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    assert(strcmp(global_buf[0], "foobar0\n") == 0);
-    assert(strcmp(global_buf[1], "foobar1\n") == 0);
-    assert(strcmp(global_buf[2], "foobar2\n") == 0);
-    assert(strcmp(global_buf[3], "foobar3\n") == 0);
-    assert(strcmp(global_buf[4], "foobar4\n") == 0);
-    assert(strcmp(global_buf[5], "foobar5\n") == 0);
-    assert(strcmp(global_buf[6], "foobar6\n") == 0);
-    assert(strcmp(global_buf[7], "foobar7\n") == 0);
-    assert(strcmp(global_buf[8], "foobar8\n") == 0);
-    assert(strcmp(global_buf[9], "foobar9\n") == 0);
+    for (i = 0; i < 10; i++) {
+      assert(strcmp(global_buf[i], apr_psprintf(pool, "foobar%d\n", i)) == 0);
+    }
   }
   fprintf(stdout, "ok\n");
 
