@@ -1132,6 +1132,7 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
       }
     }
     apr_pool_destroy(tc->pool);
+    htt_context_set_config(context, "thread", NULL);
   }
   return status;
 }

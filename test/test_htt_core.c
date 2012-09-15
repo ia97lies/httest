@@ -78,8 +78,8 @@ static htt_t * _test_reset() {
 
   if (pool) {
     /* clean up */
-    apr_pool_destroy(pool);
     apr_hook_deregister_all();
+    apr_pool_destroy(pool);
   }
   apr_pool_create(&pool, NULL);
 
