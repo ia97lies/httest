@@ -139,9 +139,8 @@ apr_status_t htt_bufreader_read_line(htt_bufreader_t * bufreader, char **line) {
     }
   }
 
+  apr_brigade_putc(bufreader->line, NULL, NULL, '\0');
   apr_brigade_pflatten(bufreader->line, line, &i, bufreader->pool);
-
-  (*line)[i] = 0;
 
   while (**line == ' ' || **line == '\t') {
     ++*line;
@@ -208,6 +207,7 @@ apr_status_t htt_bufreader_read_eof(htt_bufreader_t * bufreader,
     read = apr_pcalloc(bufreader->pool, HTT_BLOCK_MAX);
   } while (status == APR_SUCCESS); 
 
+  apr_brigade_putc(bb, NULL, NULL, '\0');
   apr_brigade_pflatten(bb, buf, len, bufreader->pool);
   apr_brigade_destroy(bb);
 
