@@ -163,7 +163,7 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev)
  * @param params IN
  * @param retvars IN
  * @param line IN
- * @return 0
+ * @return 0 mean the body is run as thread do not run it outside again
  */
 static apr_status_t _thread_closure(htt_executable_t *executable, 
                                     htt_context_t *context, apr_pool_t *ptmp, 

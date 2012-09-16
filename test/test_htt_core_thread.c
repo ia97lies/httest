@@ -57,6 +57,7 @@
  ***********************************************************************/
 apr_pool_t *pool = NULL;
 char *global_buf[10] = { NULL };
+  apr_thread_mutex_t *mutex;
 
 static apr_status_t _cmd_mock_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
@@ -66,6 +67,7 @@ static apr_status_t _cmd_mock_function(htt_executable_t *executable,
   char *cur;
   char *last;
 
+  apr_thread_mutex_lock(mutex);
   cur = apr_strtok(line, " ", &last);
   assert(cur != NULL);
   assert(cur[0] >= '0' && cur[0] <= '9');
@@ -77,13 +79,16 @@ static apr_status_t _cmd_mock_function(htt_executable_t *executable,
   else {
     global_buf[i] = apr_pstrcat(pool, last, "\n", NULL);
   }
+  apr_thread_mutex_unlock(mutex);
   return APR_SUCCESS;
 }
 
 static htt_t * _test_reset() {
+  apr_allocator_t *allocator;
   htt_t *htt;
   apr_file_t *out;
   apr_file_t *err;
+  int i;
 
   if (pool) {
     /* clean up */
@@ -91,6 +96,10 @@ static htt_t * _test_reset() {
     apr_pool_destroy(pool);
   }
   apr_pool_create(&pool, NULL);
+  
+  for (i = 0; i < 10; i++) {
+    global_buf[i] = NULL;
+  }
 
   apr_file_open_stdout(&out, pool);
   apr_file_open_stderr(&err, pool);
@@ -99,6 +108,9 @@ static htt_t * _test_reset() {
   htt_set_log(htt, out, err, HTT_LOG_NONE);
   htt_add_command(htt, "mock", NULL, "<string>", "put string in a buffer", 
                   htt_cmd_line_compile, _cmd_mock_function);
+
+  apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+
   return htt;
 }
 
@@ -116,7 +128,6 @@ int main(int argc, const char *const argv[]) {
         "thread\n\
            mock 0 foobar\n\
          end");
-    global_buf[0] = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
@@ -138,8 +149,6 @@ int main(int argc, const char *const argv[]) {
          thread\n\
            mock 1 foobar2\n\
          end");
-    global_buf[0] = NULL;
-    global_buf[1] = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
@@ -169,8 +178,6 @@ int main(int argc, const char *const argv[]) {
              mock 1 foobar2\n\
            end\n\
          end");
-    global_buf[0] = NULL;
-    global_buf[1] = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
@@ -208,9 +215,6 @@ int main(int argc, const char *const argv[]) {
         "thread 10 t\n\
            mock $t foobar$t\n\
          end");
-    for (i = 0; i < 10; i++) {
-      global_buf[i] = NULL;
-    }
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
@@ -232,11 +236,6 @@ int main(int argc, const char *const argv[]) {
              mock $i foobar$i\n\
            end\n\
          end");
-    global_buf[0] = NULL;
-    global_buf[1] = NULL;
-    global_buf[2] = NULL;
-    global_buf[3] = NULL;
-    global_buf[4] = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
