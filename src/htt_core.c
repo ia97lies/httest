@@ -1031,7 +1031,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   htt_context_t *parent = htt_context_get_parent(context);
   _thread_config_t *tc = _get_thread_config(parent);
   char *cur;
-  char *variable;
+  char *variable = NULL;
   int count = 1;
  
   while (line && *line == ' ') ++line;
