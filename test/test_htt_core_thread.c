@@ -67,6 +67,8 @@ static apr_status_t _cmd_mock_function(htt_executable_t *executable,
   char *last;
 
   cur = apr_strtok(line, " ", &last);
+  assert(cur != NULL);
+  assert(cur[0] >= '0' && cur[0] <= '9');
   i = apr_atoi64(cur);
   assert(i < 10);
   if (global_buf[i] != NULL) {
@@ -107,6 +109,7 @@ int main(int argc, const char *const argv[]) {
 
   htt = _test_reset();
   fprintf(stdout, "Run one thread... ");
+  fflush(stdout);
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -124,6 +127,7 @@ int main(int argc, const char *const argv[]) {
 
   htt = _test_reset();
   fprintf(stdout, "Run two threads... ");
+  fflush(stdout);
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -147,6 +151,7 @@ int main(int argc, const char *const argv[]) {
 
   htt = _test_reset();
   fprintf(stdout, "Run two threads and loop ... ");
+  fflush(stdout);
   {
     int i;
     htt_bufreader_t *bufreader;
@@ -195,6 +200,7 @@ int main(int argc, const char *const argv[]) {
 
   htt = _test_reset();
   fprintf(stdout, "Run ten threads... ");
+  fflush(stdout);
   {
     int i;
     apr_status_t status;
@@ -217,6 +223,7 @@ int main(int argc, const char *const argv[]) {
 
   htt = _test_reset();
   fprintf(stdout, "Run thread in a loop... ");
+  fflush(stdout);
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
