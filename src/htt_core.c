@@ -117,6 +117,10 @@ typedef struct _thread_config_s {
   apr_table_t *threads;
 } _thread_config_t;
 
+typedef struct _thread_init_s {
+  int count;
+} _thread_init_t;
+
 typedef struct _thread_handle_s {
   const char *name;
   htt_executable_t *executable;
@@ -215,6 +219,14 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args);
  * @return apr status
  */
 static apr_status_t _cmd_function_compile(htt_command_t *command, char *args); 
+
+/**
+ * Add init block compilation 
+ * @param command IN command
+ * @param args IN argument string
+ * @return apr status
+ */
+static apr_status_t _cmd_init_compile(htt_command_t *command, char *args); 
 
 /**
  * End command
@@ -329,6 +341,20 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line); 
 
 /**
+ * init function
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_init_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
  * Join threads for a given context
  * @param executable IN
  * @param context IN
@@ -344,6 +370,7 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
  * @param context IN outer context
  */
 static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context); 
+
 /**
  * Clean up pcre object
  * @param pcre IN void pointer to pcre
@@ -563,6 +590,9 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "thread", NULL, "[<n>]",
                   "start a thread if <n> then start that many threads",
                   htt_cmd_body_compile, _cmd_thread_function);
+  htt_add_command(htt, "init", NULL, "",
+                  "a init block is done before threads on the same level do start",
+                  _cmd_init_compile, _cmd_init_function);
 
   apr_hook_global_pool = htt->pool;
   htt_hook_end(_hook_thread_end, NULL, NULL, 0);
@@ -749,6 +779,23 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, char *args) {
                             htt_command_get_config(command, "executable"));
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_init_compile(htt_command_t *command, char *args) {
+  htt_t *htt = htt_command_get_config(command, "htt");
+  htt_executable_t *executable = htt_executable_get_parent(htt->executable);
+  if (!executable) {
+    executable = htt->executable;
+  }
+  _thread_init_t *thread_init = htt_executable_get_config(executable, 
+                                                          "__thread_init");
+  if (!thread_init) {
+    thread_init = apr_pcalloc(htt->pool, sizeof(*thread_init));
+    htt_executable_set_config(executable, "__thread_init", thread_init);
+  }
+  ++thread_init->count;
+  fprintf(stderr, "XXX: %d\n", thread_init->count);
+  return htt_cmd_body_compile(command, args);
 }
 
 static apr_status_t _cmd_function_function(htt_executable_t *executable, 
@@ -1096,6 +1143,13 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                   "Could not create thread");
   }
   return status;
+}
+
+static apr_status_t _cmd_init_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  return APR_SUCCESS;
 }
 
 static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context) {

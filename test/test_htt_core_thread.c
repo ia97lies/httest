@@ -84,7 +84,6 @@ static apr_status_t _cmd_mock_function(htt_executable_t *executable,
 }
 
 static htt_t * _test_reset() {
-  apr_allocator_t *allocator;
   htt_t *htt;
   apr_file_t *out;
   apr_file_t *err;
@@ -245,6 +244,35 @@ int main(int argc, const char *const argv[]) {
     assert(strcmp(global_buf[2], "foobar2\n") == 0);
     assert(strcmp(global_buf[3], "foobar3\n") == 0);
     assert(strcmp(global_buf[4], "foobar4\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "Run threads init block first ... ");
+  fflush(stdout);
+  {
+    htt_bufreader_t *bufreader;
+    apr_status_t status;
+    char *line;
+    char *buf = apr_pstrdup(pool, 
+        "thread\n\
+           mock 0 client\n\
+         end\n\
+         thread\n\
+           init\n\
+             mock 0 init\n\
+           end\n\
+           mock 0 server\n\
+         end");
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    bufreader = htt_bufreader_buf_new(pool, global_buf[0], 
+                                      strlen(global_buf[0]));
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(line, "init"));
   }
   fprintf(stdout, "ok\n");
 
