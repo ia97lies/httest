@@ -221,12 +221,12 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args);
 static apr_status_t _cmd_function_compile(htt_command_t *command, char *args); 
 
 /**
- * Add init block compilation 
+ * Add begin compilation only suitable for threads and only once
  * @param command IN command
  * @param args IN argument string
  * @return apr status
  */
-static apr_status_t _cmd_init_compile(htt_command_t *command, char *args); 
+static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args); 
 
 /**
  * End command
@@ -599,9 +599,10 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "thread", NULL, "[<n>]",
                   "start a thread if <n> then start that many threads",
                   htt_cmd_body_compile, _cmd_thread_function);
-  htt_add_command(htt, "init", NULL, "",
-                  "a init block is done before threads on the same level do start",
-                  _cmd_init_compile, _cmd_init_function);
+  htt_add_command(htt, "begin", NULL, "",
+                  "all lines before begin are done before threads on the "
+                  "same level do start, only allowed with in thread body",
+                  _cmd_begin_compile, _cmd_init_function);
 
   apr_hook_global_pool = htt->pool;
   htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
@@ -791,20 +792,27 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, char *args) {
   return APR_SUCCESS;
 }
 
-static apr_status_t _cmd_init_compile(htt_command_t *command, char *args) {
+static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args) {
   htt_t *htt = htt_command_get_config(command, "htt");
-  htt_executable_t *executable = htt_executable_get_parent(htt->executable);
-  if (!executable) {
-    executable = htt->executable;
+  htt_executable_t *me = htt->executable;
+  htt_executable_t *parent = htt_executable_get_parent(htt->executable);
+  if (!parent || htt_executable_get_function(me) != _cmd_thread_function ||
+      htt_executable_get_config(me, "__thread_begin")) {
+    htt_log_error(htt->log, APR_EGENERAL, 
+                  htt_executable_get_file(me), 
+                  htt_executable_get_line(me), 
+                  "begin only allowed in a thread body and only once");
+    return APR_EGENERAL;
   }
-  _thread_init_t *thread_init = htt_executable_get_config(executable, 
+  htt_executable_set_config(me, "__thread_begin", (void *)me);
+  _thread_init_t *thread_init = htt_executable_get_config(parent, 
                                                           "__thread_init");
   if (!thread_init) {
     thread_init = apr_pcalloc(htt->pool, sizeof(*thread_init));
-    htt_executable_set_config(executable, "__thread_init", thread_init);
+    htt_executable_set_config(parent, "__thread_init", thread_init);
   }
   ++thread_init->count;
-  return htt_cmd_body_compile(command, args);
+  return htt_cmd_line_compile(command, args);
 }
 
 static apr_status_t _cmd_function_function(htt_executable_t *executable, 

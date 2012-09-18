@@ -248,6 +248,37 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
+  fprintf(stdout, "Run threads only one init block else -> fail ... ");
+  fflush(stdout);
+  {
+    apr_status_t status;
+    apr_proc_t proc;
+    if ((status = apr_proc_fork(&proc, pool)) == APR_INCHILD) {
+      char *buf = apr_pstrdup(pool, 
+          "thread\n\
+             mock 0 init\n\
+           begin\n\
+             mock 0 server\n\
+           begin\n\
+             mock 0 bla\n\
+           end");
+      htt_compile_buf(htt, buf, strlen(buf));
+      exit(0);
+    }
+    else if (status == APR_INPARENT) {
+      int exitcode;
+      apr_exit_why_e exitwhy;
+      status = apr_proc_wait(&proc, &exitcode, &exitwhy, APR_WAIT); 
+      assert(status == APR_CHILD_DONE);
+      assert(exitcode != 0);
+    }
+    else {
+      assert(0);
+    }
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
   fprintf(stdout, "Run threads init block first ... ");
   fflush(stdout);
   {
@@ -265,9 +296,8 @@ int main(int argc, const char *const argv[]) {
            mock 0 client\n\
          end\n\
          thread\n\
-           init\n\
-             mock 0 init\n\
-           end\n\
+           mock 0 init\n\
+         begin\n\
            mock 0 server\n\
          end");
     status = htt_compile_buf(htt, buf, strlen(buf));

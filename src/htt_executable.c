@@ -175,6 +175,10 @@ const char *htt_executable_get_raw(htt_executable_t *executable) {
   return executable->raw;
 }
 
+const char *htt_executable_get_name(htt_executable_t *executable) {
+  return executable->name;
+}
+
 const char *htt_executable_get_signature(htt_executable_t *executable) {
   return executable->signature;
 }
