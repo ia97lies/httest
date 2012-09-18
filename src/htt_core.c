@@ -115,6 +115,8 @@ typedef struct _thread_config_s {
   int i;
   apr_pool_t *pool;
   apr_table_t *threads;
+  apr_thread_mutex_t *mutex;
+  apr_thread_mutex_t *sync;
 } _thread_config_t;
 
 typedef struct _thread_init_s {
@@ -125,6 +127,9 @@ typedef struct _thread_handle_s {
   const char *name;
   htt_executable_t *executable;
   htt_context_t *context;
+  int have_begin;
+  apr_thread_mutex_t *mutex;
+  apr_thread_mutex_t *sync;
 } _thread_handle_t;
 
 /**
@@ -1117,6 +1122,8 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
     status = APR_SUCCESS;
     while (count && status == APR_SUCCESS) {
       _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
+      th->have_begin = htt_executable_get_config(executable, 
+                                                 "__thread_begin") != NULL;
       htt_context_t *child;
       child = htt_context_new(NULL, htt_context_get_log(parent));
       if (variable && variable[0]) {
@@ -1207,6 +1214,8 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
         status = rc;
       }
     }
+    apr_thread_mutex_destroy(tc->mutex);
+    apr_thread_mutex_destroy(tc->sync);
     apr_pool_destroy(tc->pool);
     htt_context_set_config(context, "thread", NULL);
   }
@@ -1242,6 +1251,8 @@ static _thread_config_t *_get_thread_config(htt_context_t *context) {
     apr_pool_create(&pool, htt_context_get_pool(context));
     config = apr_pcalloc(pool, sizeof(*config));
     config->pool = pool;
+    apr_thread_mutex_create(&config->mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+    apr_thread_mutex_create(&config->sync, APR_THREAD_MUTEX_DEFAULT, pool);
     config->threads = apr_table_make(pool, 10);
     htt_context_set_config(context, "thread", config);
   }
