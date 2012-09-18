@@ -362,7 +362,16 @@ static apr_status_t _cmd_init_function(htt_executable_t *executable,
  * @return apr status
  */
 static apr_status_t _hook_thread_end(htt_executable_t *executable, 
-                                     htt_context_t *context, const char *line); 
+                                     htt_context_t *context, const char *line);
+
+/**
+ * Synchronise start of threads with and without a init block 
+ * @param executable IN
+ * @param context IN
+ * @return apr status
+ */
+static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
+                                            htt_context_t *context); 
 
 /**
  * Merge all vars from context to isolated context
@@ -595,6 +604,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                   _cmd_init_compile, _cmd_init_function);
 
   apr_hook_global_pool = htt->pool;
+  htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
   htt_hook_end(_hook_thread_end, NULL, NULL, 0);
   htt_modules_init(htt);
 
@@ -794,7 +804,6 @@ static apr_status_t _cmd_init_compile(htt_command_t *command, char *args) {
     htt_executable_set_config(executable, "__thread_init", thread_init);
   }
   ++thread_init->count;
-  fprintf(stderr, "XXX: %d\n", thread_init->count);
   return htt_cmd_body_compile(command, args);
 }
 
@@ -1163,6 +1172,11 @@ static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context) {
     }
     cur = htt_context_get_parent(cur);
   }
+}
+
+static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
+                                            htt_context_t *context) {
+  return APR_SUCCESS;
 }
 
 static apr_status_t _hook_thread_end(htt_executable_t *executable, 

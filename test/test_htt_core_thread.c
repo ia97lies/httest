@@ -259,6 +259,12 @@ int main(int argc, const char *const argv[]) {
            mock 0 client\n\
          end\n\
          thread\n\
+           mock 0 client\n\
+         end\n\
+         thread\n\
+           mock 0 client\n\
+         end\n\
+         thread\n\
            init\n\
              mock 0 init\n\
            end\n\
@@ -272,7 +278,7 @@ int main(int argc, const char *const argv[]) {
                                       strlen(global_buf[0]));
     status = htt_bufreader_read_line(bufreader, &line);
     assert(status == APR_SUCCESS);
-    assert(strcmp(line, "init"));
+    assert(strcmp(line, "init") == 0);
   }
   fprintf(stdout, "ok\n");
 

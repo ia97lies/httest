@@ -199,6 +199,8 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
   apr_table_entry_t *e;
   htt_executable_t *exec;
 
+  status = htt_run_begin(executable, context);
+
   e = (apr_table_entry_t *) apr_table_elts(executable->body)->elts;
   for (i = 0; 
        status == APR_SUCCESS && 
@@ -389,4 +391,17 @@ static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
     }
   }
 }
+
+/************************************************************************
+ * Hooks 
+ ***********************************************************************/
+APR_HOOK_STRUCT(
+  APR_HOOK_LINK(begin)
+)
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
+    htt, HTT, apr_status_t, begin, 
+    (htt_executable_t *executable, htt_context_t *context), 
+    (executable, context), APR_SUCCESS
+);
 

@@ -26,6 +26,7 @@
 #define HTT_EXECUTABLE_H
 
 #include <apr_hash.h>
+#include <apr_hooks.h>
 #include "htt_map.h"
 #include "htt_stack.h"
 #include "htt_context.h"
@@ -177,5 +178,9 @@ htt_function_f htt_executable_get_function(htt_executable_t *executable);
  */
 apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context); 
 
+# define HTT_DECLARE(type)    type
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, begin,
+                          (htt_executable_t *executable, 
+                           htt_context_t *context));
 
 #endif
