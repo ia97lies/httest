@@ -115,21 +115,21 @@ typedef struct _thread_config_s {
   int i;
   apr_pool_t *pool;
   apr_table_t *threads;
+  int count;
   apr_thread_mutex_t *mutex;
   apr_thread_mutex_t *sync;
 } _thread_config_t;
 
 typedef struct _thread_init_s {
   int count;
+  int hold_sync;
 } _thread_init_t;
 
 typedef struct _thread_handle_s {
   const char *name;
   htt_executable_t *executable;
   htt_context_t *context;
-  int have_begin;
-  apr_thread_mutex_t *mutex;
-  apr_thread_mutex_t *sync;
+  _thread_config_t *tc;
 } _thread_handle_t;
 
 /**
@@ -346,7 +346,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line); 
 
 /**
- * init function
+ * begin function
  * @param executable IN executable
  * @param context IN running context
  * @param params IN parameters
@@ -354,10 +354,10 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
  * @param line IN unsplitted but resolved line
  * @param apr status
  */
-static apr_status_t _cmd_init_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
-                                         apr_pool_t *ptmp, htt_map_t *params, 
-                                         htt_stack_t *retvars, char *line); 
+static apr_status_t _cmd_begin_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line); 
 
 /**
  * Join threads for a given context
@@ -607,7 +607,7 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "begin", NULL, "",
                   "all lines before begin are done before threads on the "
                   "same level do start, only allowed with in thread body",
-                  _cmd_begin_compile, _cmd_init_function);
+                  _cmd_begin_compile, _cmd_begin_function);
 
   apr_hook_global_pool = htt->pool;
   htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
@@ -810,8 +810,8 @@ static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args) {
     return APR_EGENERAL;
   }
   htt_executable_set_config(me, "__thread_begin", (void *)me);
-  _thread_init_t *thread_init = htt_executable_get_config(parent, 
-                                                          "__thread_init");
+  _thread_init_t *thread_init;
+  thread_init = htt_executable_get_config(parent, "__thread_init");
   if (!thread_init) {
     thread_init = apr_pcalloc(htt->pool, sizeof(*thread_init));
     htt_executable_set_config(parent, "__thread_init", thread_init);
@@ -1102,7 +1102,10 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   char *cur;
   char *variable = NULL;
   int count = 1;
- 
+  _thread_init_t *thread_init;
+  thread_init = htt_executable_get_config(htt_executable_get_parent(executable),
+                                          "__thread_init");
+
   while (line && *line == ' ') ++line;
   if (line && line[0]) {
     cur = apr_strtok(line, " ", &variable);
@@ -1110,6 +1113,12 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
     if (count <= 0) {
       count = 1;
     }
+  }
+
+  if (thread_init && !thread_init->hold_sync) {
+    apr_thread_mutex_lock(tc->sync);
+    thread_init->hold_sync = 1;
+    tc->count = thread_init->count;
   }
 
   if ((status = apr_threadattr_create(&tattr, tc->pool)) 
@@ -1122,8 +1131,6 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
     status = APR_SUCCESS;
     while (count && status == APR_SUCCESS) {
       _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
-      th->have_begin = htt_executable_get_config(executable, 
-                                                 "__thread_begin") != NULL;
       htt_context_t *child;
       child = htt_context_new(NULL, htt_context_get_log(parent));
       if (variable && variable[0]) {
@@ -1136,6 +1143,8 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
       th->context = child;
       th->executable = executable;
+      th->tc = tc;
+      htt_context_set_config(child, "__thread_handle", th);
       status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool);
       apr_table_addn(tc->threads, th->name, (void *)thread);
       ++tc->i;
@@ -1169,10 +1178,17 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   return status;
 }
 
-static apr_status_t _cmd_init_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
-                                         apr_pool_t *ptmp, htt_map_t *params, 
-                                         htt_stack_t *retvars, char *line) {
+static apr_status_t _cmd_begin_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line) {
+  _thread_handle_t *th = htt_context_get_config(context, "__thread_handle");
+  apr_thread_mutex_lock(th->tc->mutex);
+  --th->tc->count;
+  if (th->tc->count == 0) {
+    apr_thread_mutex_unlock(th->tc->sync);
+  }
+  apr_thread_mutex_unlock(th->tc->mutex);
   return APR_SUCCESS;
 }
 
@@ -1213,6 +1229,7 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
                       "Could not join thread %x", thread);
         status = rc;
       }
+      /* XXX: child context destroy */
     }
     apr_thread_mutex_destroy(tc->mutex);
     apr_thread_mutex_destroy(tc->sync);
@@ -1222,11 +1239,17 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
   return status;
 }
 
-static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev) {
+static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, 
+                                           void *handlev) {
   apr_status_t status;
   _thread_handle_t *handle = handlev;
   htt_context_t *context = handle->context;
   htt_executable_t *executable = handle->executable;
+
+  if (!htt_executable_get_config(executable, "__thread_begin")) {
+    apr_thread_mutex_lock(handle->tc->sync);
+    apr_thread_mutex_unlock(handle->tc->sync);
+  }
 
   status = htt_execute(executable, context);
 
