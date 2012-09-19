@@ -1229,7 +1229,6 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
                       "Could not join thread %x", thread);
         status = rc;
       }
-      /* XXX: child context destroy */
     }
     apr_thread_mutex_destroy(tc->mutex);
     apr_thread_mutex_destroy(tc->sync);
@@ -1237,6 +1236,12 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
     htt_context_set_config(context, "thread", NULL);
   }
   return status;
+}
+
+static apr_status_t _thread_context_destroy(void *v) {
+  htt_context_t *context = v;
+  htt_context_destroy(context);
+  return APR_SUCCESS;
 }
 
 static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, 
@@ -1251,6 +1256,7 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
     apr_thread_mutex_unlock(handle->tc->sync);
   }
 
+  apr_thread_data_set(context, "context", _thread_context_destroy, thread);
   status = htt_execute(executable, context);
 
   apr_thread_exit(thread, status);
