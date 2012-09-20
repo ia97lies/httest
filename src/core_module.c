@@ -130,6 +130,21 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line); 
 
 /**
+ * Sleep
+ * @param executable IN executable
+ * @param context IN running context
+ * @param ptmp IN pool
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @return apr status
+ */
+static apr_status_t _cmd_sleep_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line); 
+
+/**
  * Core req functionality
  * @param executable IN executable
  * @param context IN running context
@@ -172,12 +187,15 @@ apr_status_t core_module_init(htt_t *htt) {
   htt_add_command(htt, "expr", "expression : result", "<expression> <variable>", 
                   "Evaluate <expression> and store it in <variable>",
                   htt_cmd_line_compile, _cmd_expr_function);
-  htt_add_command(htt, "exit", NULL, "", 
+  htt_add_command(htt, "exit", "type", "ok|failed|skip", 
                   "terminate script either with success, failed or skipped",
                   htt_cmd_line_compile, _cmd_exit_function);
   htt_add_command(htt, "assert", NULL, "0|1 use $expr(\"<expression>\")", 
                   "assert throw exception if 0",
                   htt_cmd_line_compile, _cmd_assert_function);
+  htt_add_command(htt, "sleep", "t", "<t>", 
+                  "sleep for <t> miliseconds",
+                  htt_cmd_line_compile, _cmd_sleep_function);
   htt_hook_request(_hook_request, NULL, NULL, 0);
   htt_hook_expect(_hook_expect, NULL, NULL, 0);
   htt_hook_wait(_hook_wait, NULL, NULL, 0);
@@ -255,14 +273,14 @@ static apr_status_t _cmd_exit_function(htt_executable_t *executable,
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  apr_collapse_spaces(line, line);
-  if (strcmp(line, "fail") == 0) {
+  htt_string_t *type = htt_map_get(params, "type");
+  if (strcmp(htt_string_get(type), "fail") == 0) {
     htt_throw_error();
   }
-  else if (strcmp(line, "ok") == 0) {
+  else if (strcmp(htt_string_get(type), "ok") == 0) {
     htt_throw_ok();
   }
-  else if (strcmp(line, "skip") == 0) {
+  else if (strcmp(htt_string_get(type), "skip") == 0) {
     htt_throw_skip();
   }
   else {
@@ -281,6 +299,26 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
   }
   return APR_SUCCESS;
 } 
+
+static apr_status_t _cmd_sleep_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line) { 
+  htt_string_t *t_str = htt_map_get(params, "t");
+  if (htt_isa_string(t_str)) {
+    apr_time_t t = apr_time_from_msec(apr_atoi64(htt_string_get(t_str)));
+    apr_sleep(t);
+    return APR_SUCCESS;
+  }
+  else {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Expect number of ms");
+    return status;
+  }
+}
 
 static _request_config_t *_create_request_config(htt_context_t *context) {
   _request_config_t *config;

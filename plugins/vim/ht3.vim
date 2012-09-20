@@ -12,6 +12,7 @@ endif
 syn keyword httInclude          include
 syn keyword httStatement        body
 syn keyword httStatement        thread
+syn keyword httStatement        begin
 syn keyword httStatement        if
 syn keyword httStatement        eval
 syn keyword httStatement        function 
@@ -23,6 +24,7 @@ syn keyword httStatement        req
 syn keyword httStatement        wait
 syn keyword httStatement        expect
 syn keyword httStatement        match
+syn keyword httStatement        sleep
 syn keyword httStatement        _
 syn keyword httRepeat           loop end
 syn keyword httConditional      if end

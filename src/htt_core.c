@@ -1218,7 +1218,9 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
     int i;
     apr_table_entry_t *e;
     e = (void *) apr_table_elts(tc->threads)->elts;
-    for (i = 0; i < apr_table_elts(tc->threads)->nelts; i++) {
+    for (i = 0; 
+         status == APR_SUCCESS && i < apr_table_elts(tc->threads)->nelts; 
+         i++) {
       apr_status_t rc;
       apr_thread_t *thread = (void *)e[i].val;
       rc = apr_thread_join(&status, thread);
@@ -1235,6 +1237,7 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
     apr_pool_destroy(tc->pool);
     htt_context_set_config(context, "thread", NULL);
   }
+
   return status;
 }
 
