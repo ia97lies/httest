@@ -1262,7 +1262,13 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
   apr_thread_data_set(context, "context", _thread_context_destroy, thread);
   status = htt_execute(executable, context);
 
-  apr_thread_exit(thread, status);
+  /** TODO: do this more general and call finally methods */
+  if (status == APR_SUCCESS) {
+    apr_thread_exit(thread, status);
+  }
+  else {
+    htt_throw_error();
+  }
 
   return NULL;
 }
