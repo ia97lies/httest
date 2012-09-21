@@ -202,6 +202,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
   int i;
   apr_table_entry_t *e;
   htt_executable_t *exec;
+  apr_pool_t *ptmp;
 
   status = htt_run_begin(executable, context);
 
@@ -213,7 +214,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     htt_context_t *child_context = NULL;
     int doit = 0;
     char *line;
-    apr_pool_t *ptmp;
     _context_replacer_t replacer_ctx;
     htt_stack_t *retvals; 
     htt_stack_t *retvars = NULL; 
@@ -279,10 +279,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_destroy(ptmp);
   }
 
-  /** TODO: run finally function if any is defined */
-  if (status != APR_SUCCESS) {
-    /** TODO: run on_error function if any is defined */
-  }
   return status;
 }
 
@@ -294,14 +290,17 @@ apr_status_t htt_execute_command(htt_executable_t *executable,
   htt_function_f function;
   htt_map_t *params;
   htt_command_t *command;
-  (*retvals) = htt_stack_new(pool);
+  if (retvals) {
+    (*retvals) = htt_stack_new(pool);
+  }
   command = htt_get_command(executable, name);
   if (command) {
     char *copy = apr_pstrdup(pool, args);
     function = htt_command_get_function(command);
     _handle_signature(pool, htt_command_get_params(command), 
                       htt_command_get_retvars(command), args, &params, NULL);
-    status = function(executable, context, pool, params, *retvals, copy); 
+    status = function(executable, context, pool, params, retvals?*retvals:NULL,
+                      copy); 
   }
   else {
     status = APR_EGENERAL;

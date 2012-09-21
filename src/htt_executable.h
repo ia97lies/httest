@@ -185,6 +185,21 @@ htt_function_f htt_executable_get_function(htt_executable_t *executable);
  */
 apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context); 
 
+/**
+ * Execute a single command
+ * @param executable IN static context
+ * @param context IN dynamic context
+ * @param name IN command name
+ * @param args IN arguments line
+ * @param retvals INOUT stack of return variables
+ * @param pool IN
+ * @return apr status
+ */
+apr_status_t htt_execute_command(htt_executable_t *executable, 
+                                 htt_context_t *context, const char *name, 
+                                 const char *args, htt_stack_t **retvals, 
+                                 apr_pool_t *pool); 
+
 # define HTT_DECLARE(type)    type
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, begin,
                           (htt_executable_t *executable, 
