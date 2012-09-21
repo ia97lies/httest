@@ -94,7 +94,7 @@ static int _doit(htt_function_t *closure);
  * @param retvars OUT return parameters
  */
 static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
-                              htt_stack_t *map_retvars, char *line, 
+                              htt_stack_t *map_retvars, const char *line, 
                               htt_map_t **params, htt_stack_t **retvars); 
 
 /************************************************************************
@@ -279,8 +279,36 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_destroy(ptmp);
   }
 
+  /** TODO: run finally function if any is defined */
   if (status != APR_SUCCESS) {
-    /** TODO: run finally function if any is defined */
+    /** TODO: run on_error function if any is defined */
+  }
+  return status;
+}
+
+apr_status_t htt_execute_command(htt_executable_t *executable, 
+                                 htt_context_t *context, const char *name, 
+                                 const char *args, htt_stack_t **retvals, 
+                                 apr_pool_t *pool) {
+  apr_status_t status = APR_SUCCESS;
+  htt_function_f function;
+  htt_map_t *params;
+  htt_command_t *command;
+  (*retvals) = htt_stack_new(pool);
+  command = htt_get_command(executable, name);
+  if (command) {
+    char *copy = apr_pstrdup(pool, args);
+    function = htt_command_get_function(command);
+    _handle_signature(pool, htt_command_get_params(command), 
+                      htt_command_get_retvars(command), args, &params, NULL);
+    status = function(executable, context, pool, params, *retvals, copy); 
+  }
+  else {
+    status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Command \"%s\" not found", name); 
   }
   return status;
 }
@@ -294,25 +322,20 @@ static const char *_context_replacer(void *udata, const char *name) {
   htt_string_t *string;
 
   if (strchr(name, '(')) {
+    apr_status_t status;
+    htt_stack_t *retvals;
     char *rest;
     char *func;
     char *line;
-    htt_function_f function;
-    htt_map_t *params;
-    htt_command_t *command;
     htt_executable_t *executable = replacer_ctx->executable;
     apr_pool_t *ptmp = replacer_ctx->ptmp;
-    htt_stack_t *retvals = htt_stack_new(ptmp);
     char *copy = apr_pstrdup(ptmp, name);
     func = apr_strtok(copy, "(", &rest);
     line = apr_strtok(NULL, ")", &rest); 
     line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
-    command = htt_get_command(executable, func);
-    if (command) {
-      function = htt_command_get_function(command);
-      _handle_signature(ptmp, htt_command_get_params(command), 
-                        htt_command_get_retvars(command), line, &params, NULL);
-      function(executable, context, ptmp, params, retvals, line); 
+    status = htt_execute_command(executable, context, func, line, &retvals, 
+                                 ptmp);
+    if (status == APR_SUCCESS) {
       if (retvals) {
         htt_string_t *string = htt_stack_pop(retvals);
         if (htt_isa_string(string)) {
@@ -354,7 +377,7 @@ static int _doit(htt_function_t *closure) {
 }
 
 static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
-                              htt_stack_t *map_retvars, char *line, 
+                              htt_stack_t *map_retvars, const char *line, 
                               htt_map_t **params, htt_stack_t **retvars) {
   *params = NULL;
   if (retvars) {
