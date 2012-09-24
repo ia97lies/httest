@@ -72,6 +72,27 @@ void htt_set_cur_file_name(htt_t *htt, const char *name);
 const char *htt_get_cur_file_name(htt_t *htt);
 
 /**
+ * Get pool
+ * @param htt IN instance
+ * @return registered pool
+ */
+apr_pool_t *htt_get_pool(htt_t *htt);
+
+/**
+ * Get executable on top of executable stack 
+ * @param htt IN instance
+ * @return current top level executable
+ */
+htt_executable_t *htt_get_executable(htt_t *htt);
+
+/**
+ * Get logger
+ * @param htt IN instance
+ * @return logger
+ */
+htt_log_t *htt_get_log(htt_t *htt);
+
+/**
  * Compiles a simple command 
  * @param command IN command instance
  * @param args IN commands arguments

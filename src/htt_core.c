@@ -43,9 +43,6 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_portable.h>
-#include <apr_thread_proc.h>
-#include <apr_thread_cond.h>
-#include <apr_thread_mutex.h>
 #include <apr_support.h>
 #include <apr_hash.h>
 #include <apr_base64.h>
@@ -111,27 +108,6 @@ typedef struct _expect_config_s {
   apr_table_t *ns;
 } _expect_config_t;
 
-typedef struct _thread_config_s {
-  int i;
-  apr_pool_t *pool;
-  apr_table_t *threads;
-  int count;
-  apr_thread_mutex_t *mutex;
-  apr_thread_mutex_t *sync;
-} _thread_config_t;
-
-typedef struct _thread_init_s {
-  int count;
-  int hold_sync;
-} _thread_init_t;
-
-typedef struct _thread_handle_s {
-  const char *name;
-  htt_executable_t *executable;
-  htt_context_t *context;
-  _thread_config_t *tc;
-} _thread_handle_t;
-
 /**
  * Get return vals with given signature
  * @param context IN 
@@ -149,35 +125,6 @@ static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
  */
 static _expect_config_t *_get_expect_config(htt_context_t *context); 
 
-/**
- * Get thread config from given context
- * @param context IN
- * @return expect config
- */
-static _thread_config_t *_get_thread_config(htt_context_t *context); 
-
-/**
- * Thread main loop
- * @param thread IN
- * @param handlev IN void pointer to _thread_handle_t
- * @return NULL
- */
-static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev);
-
-/**
- * thread closure
- * @param executable IN
- * @param context IN
- * @param ptmp IN
- * @param params IN
- * @param retvars IN
- * @param line IN
- * @return 0 mean the body is run as thread do not run it outside again
- */
-static apr_status_t _thread_closure(htt_executable_t *executable, 
-                                    htt_context_t *context, apr_pool_t *ptmp, 
-                                    htt_map_t *params, htt_stack_t *retvars, 
-                                    char *line);
 /**
  * Get expect context seen from given context
  * @param context IN
@@ -224,14 +171,6 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args);
  * @return apr status
  */
 static apr_status_t _cmd_function_compile(htt_command_t *command, char *args); 
-
-/**
- * Add begin compilation only suitable for threads and only once
- * @param command IN command
- * @param args IN argument string
- * @return apr status
- */
-static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args); 
 
 /**
  * End command
@@ -330,60 +269,6 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line); 
-
-/**
- * thread
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_thread_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
-                                         apr_pool_t *ptmp, htt_map_t *params, 
-                                         htt_stack_t *retvars, char *line); 
-
-/**
- * begin function
- * @param executable IN executable
- * @param context IN running context
- * @param params IN parameters
- * @param retvars IN return variables
- * @param line IN unsplitted but resolved line
- * @param apr status
- */
-static apr_status_t _cmd_begin_function(htt_executable_t *executable, 
-                                        htt_context_t *context, 
-                                        apr_pool_t *ptmp, htt_map_t *params, 
-                                        htt_stack_t *retvars, char *line); 
-
-/**
- * Join threads for a given context
- * @param executable IN
- * @param context IN
- * @param line IN
- * @return apr status
- */
-static apr_status_t _hook_thread_end(htt_executable_t *executable, 
-                                     htt_context_t *context, const char *line);
-
-/**
- * Synchronise start of threads with and without a init block 
- * @param executable IN
- * @param context IN
- * @return apr status
- */
-static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
-                                            htt_context_t *context); 
-
-/**
- * Merge all vars from context to isolated context
- * @param isolated IN context not connected to context
- * @param context IN outer context
- */
-static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context); 
 
 /**
  * Clean up pcre object
@@ -601,17 +486,8 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "expect", NULL, "<namespace> <regex>",
                   "defines what wait do expect in the receiving stream",
                   htt_cmd_line_compile, _cmd_expect_function);
-  htt_add_command(htt, "thread", NULL, "[<n>]",
-                  "start a thread if <n> then start that many threads",
-                  htt_cmd_body_compile, _cmd_thread_function);
-  htt_add_command(htt, "begin", NULL, "",
-                  "all lines before begin are done before threads on the "
-                  "same level do start, only allowed with in thread body",
-                  _cmd_begin_compile, _cmd_begin_function);
 
   apr_hook_global_pool = htt->pool;
-  htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
-  htt_hook_end(_hook_thread_end, NULL, NULL, 0);
   htt_modules_init(htt);
 
   return htt;
@@ -633,6 +509,18 @@ void htt_set_cur_file_name(htt_t *htt, const char *name) {
 
 const char *htt_get_cur_file_name(htt_t *htt) {
   return htt->cur_file;
+}
+
+apr_pool_t *htt_get_pool(htt_t *htt) {
+  return htt->pool;
+}
+
+htt_executable_t *htt_get_executable(htt_t *htt) {
+  return htt->executable;
+}
+
+htt_log_t *htt_get_log(htt_t *htt) {
+  return htt->log;
 }
 
 void htt_add_command(htt_t *htt, const char *name, const char *signature, 
@@ -795,29 +683,6 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, char *args) {
                             htt_command_get_config(command, "executable"));
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
-}
-
-static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args) {
-  htt_t *htt = htt_command_get_config(command, "htt");
-  htt_executable_t *me = htt->executable;
-  htt_executable_t *parent = htt_executable_get_parent(htt->executable);
-  if (!parent || htt_executable_get_function(me) != _cmd_thread_function ||
-      htt_executable_get_config(me, "__thread_begin")) {
-    htt_log_error(htt->log, APR_EGENERAL, 
-                  htt_executable_get_file(me), 
-                  htt_executable_get_line(me), 
-                  "begin only allowed in a thread body and only once");
-    return APR_EGENERAL;
-  }
-  htt_executable_set_config(me, "__thread_begin", (void *)me);
-  _thread_init_t *thread_init;
-  thread_init = htt_executable_get_config(parent, "__thread_init");
-  if (!thread_init) {
-    thread_init = apr_pcalloc(htt->pool, sizeof(*thread_init));
-    htt_executable_set_config(parent, "__thread_init", thread_init);
-  }
-  ++thread_init->count;
-  return htt_cmd_line_compile(command, args);
 }
 
 static apr_status_t _cmd_function_function(htt_executable_t *executable, 
@@ -1089,212 +954,6 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
   }
   return status;
 } 
-
-static apr_status_t _cmd_thread_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
-                                         apr_pool_t *ptmp, htt_map_t *params, 
-                                         htt_stack_t *retvars, char *line) {
-  apr_status_t status;
-  apr_threadattr_t *tattr;
-  apr_thread_t *thread;
-  htt_context_t *parent = htt_context_get_parent(context);
-  _thread_config_t *tc = _get_thread_config(parent);
-  char *cur;
-  char *variable = NULL;
-  int count = 1;
-  _thread_init_t *thread_init;
-  thread_init = htt_executable_get_config(htt_executable_get_parent(executable),
-                                          "__thread_init");
-
-  while (line && *line == ' ') ++line;
-  if (line && line[0]) {
-    cur = apr_strtok(line, " ", &variable);
-    count = apr_atoi64(cur);
-    if (count <= 0) {
-      count = 1;
-    }
-  }
-
-  if (thread_init && !thread_init->hold_sync) {
-    apr_thread_mutex_lock(tc->sync);
-    thread_init->hold_sync = 1;
-    tc->count = thread_init->count;
-  }
-
-  if ((status = apr_threadattr_create(&tattr, tc->pool)) 
-      == APR_SUCCESS &&
-      (status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
-      == APR_SUCCESS && 
-      (status = apr_threadattr_detach_set(tattr, 0))
-      == APR_SUCCESS) {
-
-    status = APR_SUCCESS;
-    while (count && status == APR_SUCCESS) {
-      _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
-      htt_context_t *child;
-      child = htt_context_new(NULL, htt_context_get_log(parent));
-      if (variable && variable[0]) {
-        htt_string_t *tcount;
-        tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
-        htt_map_set(htt_context_get_vars(child), variable, tcount);
-      }
-      _merge_all_vars(child, context);
-
-      th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
-      th->context = child;
-      th->executable = executable;
-      th->tc = tc;
-      htt_context_set_config(child, "__thread_handle", th);
-      status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool);
-      apr_table_addn(tc->threads, th->name, (void *)thread);
-      ++tc->i;
-      --count;
-    }
-  }
-
-  if (status == APR_SUCCESS) {
-    htt_executable_t *thread_executable;
-    htt_context_t *thread_context;
-    htt_function_t *thread_closure;
-
-    thread_executable = htt_executable_new(htt_context_get_pool(context), 
-                                           executable, "_thread_closure", NULL,
-                                           _thread_closure, NULL, 
-                                           htt_executable_get_file(executable), 
-                                           htt_executable_get_line(executable));
-    thread_context= htt_context_new(context, htt_context_get_log(context));
-    thread_closure = htt_function_new(htt_context_get_pool(thread_context), 
-                                      thread_executable, thread_context);
-    /* this must return a closure */
-    htt_stack_push(retvars, thread_closure);
-  }
-
-  if (status != APR_SUCCESS) {
-    htt_log_error(htt_context_get_log(context), status, 
-                  htt_executable_get_file(executable), 
-                  htt_executable_get_line(executable), 
-                  "Could not create thread");
-  }
-  return status;
-}
-
-static apr_status_t _cmd_begin_function(htt_executable_t *executable, 
-                                        htt_context_t *context, 
-                                        apr_pool_t *ptmp, htt_map_t *params, 
-                                        htt_stack_t *retvars, char *line) {
-  _thread_handle_t *th = htt_context_get_config(context, "__thread_handle");
-  apr_thread_mutex_lock(th->tc->mutex);
-  --th->tc->count;
-  if (th->tc->count == 0) {
-    apr_thread_mutex_unlock(th->tc->sync);
-  }
-  apr_thread_mutex_unlock(th->tc->mutex);
-  return APR_SUCCESS;
-}
-
-static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context) {
-  htt_map_t *vars;
-  htt_map_t *isolated_vars = htt_context_get_vars(isolated);
-  htt_context_t *cur = context;
-  while (cur) {
-    vars = htt_context_get_vars(cur);
-    if (vars) {
-      htt_map_merge(isolated_vars, vars, htt_context_get_pool(isolated));
-    }
-    cur = htt_context_get_parent(cur);
-  }
-}
-
-static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
-                                            htt_context_t *context) {
-  return APR_SUCCESS;
-}
-
-static apr_status_t _hook_thread_end(htt_executable_t *executable, 
-                                     htt_context_t *context, const char *line) {
-  apr_status_t status = APR_SUCCESS;
-  _thread_config_t *tc = htt_context_get_config(context, "thread");
-  if (tc) {
-    int i;
-    apr_table_entry_t *e;
-    e = (void *) apr_table_elts(tc->threads)->elts;
-    for (i = 0; 
-         status == APR_SUCCESS && i < apr_table_elts(tc->threads)->nelts; 
-         i++) {
-      apr_status_t rc;
-      apr_thread_t *thread = (void *)e[i].val;
-      rc = apr_thread_join(&status, thread);
-      if (rc != APR_SUCCESS) {
-        htt_log_error(htt_context_get_log(context), rc, 
-                      htt_executable_get_file(executable), 
-                      htt_executable_get_line(executable), 
-                      "Could not join thread %x", thread);
-        status = rc;
-      }
-    }
-    apr_thread_mutex_destroy(tc->mutex);
-    apr_thread_mutex_destroy(tc->sync);
-    apr_pool_destroy(tc->pool);
-    htt_context_set_config(context, "thread", NULL);
-  }
-
-  return status;
-}
-
-static apr_status_t _thread_context_destroy(void *v) {
-  htt_context_t *context = v;
-  htt_context_destroy(context);
-  return APR_SUCCESS;
-}
-
-static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, 
-                                           void *handlev) {
-  apr_status_t status;
-  _thread_handle_t *handle = handlev;
-  htt_context_t *context = handle->context;
-  htt_executable_t *executable = handle->executable;
-
-  if (!htt_executable_get_config(executable, "__thread_begin")) {
-    apr_thread_mutex_lock(handle->tc->sync);
-    apr_thread_mutex_unlock(handle->tc->sync);
-  }
-
-  apr_thread_data_set(context, "context", _thread_context_destroy, thread);
-  status = htt_execute(executable, context);
-
-  if (status == APR_SUCCESS) {
-    apr_thread_exit(thread, status);
-  }
-  else {
-    htt_throw_error();
-  }
-
-  return NULL;
-}
-
-static apr_status_t _thread_closure(htt_executable_t *executable, 
-                                    htt_context_t *context, apr_pool_t *ptmp, 
-                                    htt_map_t *params, htt_stack_t *retvars, 
-                                    char *line) {
-  htt_string_t *retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
-  htt_stack_push(retvars, retval);
-  return APR_SUCCESS;
-}
-
-static _thread_config_t *_get_thread_config(htt_context_t *context) {
-  _thread_config_t *config = htt_context_get_config(context, "thread");
-  if (!config) {
-    apr_pool_t *pool;
-    apr_pool_create(&pool, htt_context_get_pool(context));
-    config = apr_pcalloc(pool, sizeof(*config));
-    config->pool = pool;
-    apr_thread_mutex_create(&config->mutex, APR_THREAD_MUTEX_DEFAULT, pool);
-    apr_thread_mutex_create(&config->sync, APR_THREAD_MUTEX_DEFAULT, pool);
-    config->threads = apr_table_make(pool, 10);
-    htt_context_set_config(context, "thread", config);
-  }
-  return config;
-}
 
 static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
                          htt_stack_t *retvals, apr_pool_t *pool) {

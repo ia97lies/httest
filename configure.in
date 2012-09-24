@@ -112,7 +112,7 @@ if test "$enable_iconv_support" = "yes"; then
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
-MODULES="core" 
+MODULES="core thread" 
 
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
