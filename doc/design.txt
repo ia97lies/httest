@@ -36,18 +36,11 @@
 - on wait all defined expect are checked against received data
 
 ++client/server/deamon/thread
-- Client/Server are able to read/write global variable
-- httest script migration: global SET are mapped to local variable of client
-    SET foo=bar
-    CLIENT
-    _FOO $foo
-    END
-    translate but only if foo is set -->
-    set foo=bar
-    client
-      local _foo
-      set _foo=$foo
-    end
+- Client/Server are not able to read/write global variable
+- all variables outside thread are copied into thread
+- special access to shared variables
+
+++event driven scheduler
 - Own scheduller on base of apr_pollcb, this needs tight integration to
   reader/writer socket/file.
 - How to implement socket timeouts?
@@ -56,3 +49,24 @@
     handle = htt_thread_create(thread_function)
     htt_thread_join(handle)
 
+++exceptions
+- Error exceptions should be catchable to handle error situation
+
+body
+  echo in the body
+
+  on error ".*"
+    echo general error
+  end
+  on error "foobar"
+    echo foobar error
+  end
+  finally
+    echo finally
+  end
+end
+
+++external calls
+- execute shell scripts
+- execute httest scripts
+  - use ht3 also as a test manager/executor
