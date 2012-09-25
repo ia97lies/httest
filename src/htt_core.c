@@ -530,16 +530,16 @@ void htt_add_command(htt_t *htt, const char *name, const char *signature,
   command = htt_command_new(htt->pool, name, signature, short_desc, desc,
                             compile, function);
   htt_command_set_config(command, "htt", htt);
-  htt_executable_set_config(htt->executable, name, command);
+  htt_executable_set_command(htt->executable, name, command);
 }
 
 htt_command_t *htt_get_command(htt_executable_t *executable, const char *cmd) {
   htt_command_t *command = NULL;
   htt_executable_t *cur = executable;
 
-  command = htt_executable_get_config(cur, cmd);
+  command = htt_executable_get_command(cur, cmd);
   while (cur && !command) {
-    command = htt_executable_get_config(cur, cmd);
+    command = htt_executable_get_command(cur, cmd);
     cur = htt_executable_get_parent(cur);
   }
   return command;
@@ -662,7 +662,7 @@ static apr_status_t _cmd_func_def_compile(htt_command_t *command, char *args) {
   htt_executable_set_retvars(executable, htt_command_get_retvars(new_command));
   htt_command_set_config(new_command, "htt", htt);
   htt_command_set_config(new_command, "executable", executable);
-  htt_executable_set_config(htt->executable, name, new_command);
+  htt_executable_set_command(htt->executable, name, new_command);
   htt_stack_push(htt->stack, executable);
   htt->executable = executable;
   return APR_SUCCESS;

@@ -161,6 +161,23 @@ void htt_executable_set_config(htt_executable_t *executable, const char *name,
 void  *htt_executable_get_config(htt_executable_t *executable, 
                                  const char *name);
 
+/**
+ * Set a command
+ * @param context IN context
+ * @param name IN name for stored data
+ * @param data IN data to store
+ */
+void htt_executable_set_command(htt_executable_t *executable, const char *name, 
+                                void *data);
+
+/**
+ * Get command
+ * @param context IN context
+ * @param name IN name for data
+ * @return data
+ */
+void  *htt_executable_get_command(htt_executable_t *executable, 
+                                  const char *name);
 
 /**
  * Add a executable to an executable (body)

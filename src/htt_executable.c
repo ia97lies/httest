@@ -61,6 +61,7 @@ struct htt_executable_s {
   const char *raw;
   apr_table_t *body;
   apr_hash_t *config;
+  apr_hash_t *command;
 };
 
 typedef struct _context_replacer_s {
@@ -118,6 +119,7 @@ htt_executable_t *htt_executable_new(apr_pool_t *pool, htt_executable_t *parent,
   executable->file = file;
   executable->line = line;
   executable->config = apr_hash_make(pool);
+  executable->command = apr_hash_make(pool);
   return executable;
 }
 
@@ -191,6 +193,16 @@ void htt_executable_set_config(htt_executable_t *executable, const char *name,
 void  *htt_executable_get_config(htt_executable_t *executable, 
                                  const char *name) {
   return apr_hash_get(executable->config, name, APR_HASH_KEY_STRING);
+}
+
+void htt_executable_set_command(htt_executable_t *executable, const char *name,
+                                void *data) {
+  apr_hash_set(executable->command, name, APR_HASH_KEY_STRING, data);
+}
+
+void  *htt_executable_get_command(htt_executable_t *executable, 
+                                  const char *name) {
+  return apr_hash_get(executable->command, name, APR_HASH_KEY_STRING);
 }
 
 htt_function_f htt_executable_get_function(htt_executable_t *executable) {
