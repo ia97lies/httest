@@ -165,7 +165,7 @@ apr_status_t thread_module_init(htt_t *htt) {
                   "same level do start, only allowed with in thread body",
                   _cmd_begin_compile, _cmd_begin_function);
   htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
-  htt_hook_end(_hook_thread_end, NULL, NULL, 0);
+  htt_hook_end_function(_hook_thread_end, NULL, NULL, 0);
 
   return APR_SUCCESS;
 }

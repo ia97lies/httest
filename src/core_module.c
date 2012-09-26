@@ -151,8 +151,9 @@ static apr_status_t _cmd_sleep_function(htt_executable_t *executable,
  * @param line IN unsplitted but resolved line
  * return apr status
  */
-static apr_status_t _hook_request(htt_executable_t *executable, 
-                                  htt_context_t *context, const char *line);
+static apr_status_t _hook_request_function(htt_executable_t *executable, 
+                                           htt_context_t *context, 
+                                           const char *line);
 
 /**
  * Expect syntax sugar for variables
@@ -161,8 +162,9 @@ static apr_status_t _hook_request(htt_executable_t *executable,
  * @param line IN unsplitted but resolved line
  * return apr status
  */
-static apr_status_t _hook_expect(htt_executable_t *executable, 
-                                 htt_context_t *context, const char *line);
+static apr_status_t _hook_expect_function(htt_executable_t *executable, 
+                                          htt_context_t *context, 
+                                          const char *line);
 
 /**
  * Core wait functionality
@@ -171,8 +173,9 @@ static apr_status_t _hook_expect(htt_executable_t *executable,
  * @param line IN unsplitted but resolved line
  * return apr status
  */
-static apr_status_t _hook_wait(htt_executable_t *executable, 
-                               htt_context_t *context, const char *line);
+static apr_status_t _hook_wait_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        const char *line);
 
 /************************************************************************
  * Public
@@ -196,9 +199,9 @@ apr_status_t core_module_init(htt_t *htt) {
   htt_add_command(htt, "sleep", "t", "<t>", 
                   "sleep for <t> miliseconds",
                   htt_cmd_line_compile, _cmd_sleep_function);
-  htt_hook_request(_hook_request, NULL, NULL, 0);
-  htt_hook_expect(_hook_expect, NULL, NULL, 0);
-  htt_hook_wait(_hook_wait, NULL, NULL, 0);
+  htt_hook_request_function(_hook_request_function, NULL, NULL, 0);
+  htt_hook_expect_function(_hook_expect_function, NULL, NULL, 0);
+  htt_hook_wait_function(_hook_wait_function, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 
@@ -336,8 +339,9 @@ static _request_config_t *_get_request_config(htt_context_t *context) {
   return htt_context_get_config(context, "core_module_request"); 
 }
 
-static apr_status_t _hook_request(htt_executable_t *executable, 
-                                  htt_context_t *context, const char *line) {
+static apr_status_t _hook_request_function(htt_executable_t *executable, 
+                                           htt_context_t *context, 
+                                           const char *line) {
   if (strncmp(line, "var://", 6) == 0) {
     _request_config_t *config = _create_request_config(context);
     char *copy = apr_pstrdup(config->pool, line);
@@ -348,8 +352,9 @@ static apr_status_t _hook_request(htt_executable_t *executable,
   return APR_SUCCESS;
 }
 
-static apr_status_t _hook_expect(htt_executable_t *executable, 
-                               htt_context_t *context, const char *line) {
+static apr_status_t _hook_expect_function(htt_executable_t *executable, 
+                                          htt_context_t *context, 
+                                          const char *line) {
   apr_status_t status = APR_EAGAIN;
   if (strncmp(line, "var(", 4) == 0) {
     status = APR_SUCCESS;
@@ -384,8 +389,9 @@ static apr_status_t _hook_expect(htt_executable_t *executable,
   return status;
 }
 
-static apr_status_t _hook_wait(htt_executable_t *executable, 
-                               htt_context_t *context, const char *line) {
+static apr_status_t _hook_wait_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        const char *line) {
   _request_config_t *config;
   apr_status_t rc = APR_SUCCESS;
   config = _get_request_config(context);

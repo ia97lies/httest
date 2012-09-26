@@ -85,18 +85,31 @@ apr_status_t exception_module_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
+/** TODO: Hook implementation */
+void exeception_call_finally(htt_executable_t *executable, 
+                             htt_context_t *context) {
+  htt_executable_t *finally;
+  finally = htt_executable_set_config(executable, "__finally");
+  if (finally) {
+    htt_execute(finally, context);
+  }
+}
+
 /************************************************************************
  * Private
  ***********************************************************************/
 
 static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args) {
-  /* htt_t *htt = htt_command_get_config(command, "htt");
-   */
-  /* TODO: register finally to current executable and call it at end or
-   *       termination. Need a secure point where all exits will pass
-   *       through!
-   */
-  return htt_cmd_body_compile(command, args);
+  apr_status_t status;
+  htt_t *htt = htt_command_get_config(command, "htt");
+  htt_executable_t *parent = htt_get_executable(htt);
+
+  status = htt_cmd_body_compile(command, args);
+  if (status == APR_SUCCESS) {
+    htt_executable_t *finally = htt_get_executable(htt);
+    htt_executable_set_config(parent, "__finally", finally);
+  }
+  return status;
 }
 
 static apr_status_t _cmd_finally_function(htt_executable_t *executable, 

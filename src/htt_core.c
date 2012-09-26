@@ -752,7 +752,7 @@ static apr_status_t _cmd_end_function(htt_executable_t *executable,
                                       htt_stack_t *retvars, char *line) {
   apr_status_t status = htt_expect_check(executable, context);
   if (status == APR_SUCCESS) {
-    return htt_run_end(executable, context, line);
+    return htt_run_end_function(executable, context, line);
   }
   else {
     return status;
@@ -874,7 +874,7 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
   _get_expect_config(context);
-  return htt_run_request(executable, context, line);
+  return htt_run_request_function(executable, context, line);
 } 
 
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
@@ -884,7 +884,7 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
   apr_status_t status;
   _expect_config_t *config;
   htt_context_t *top = _get_expect_context(context);
-  status = htt_run_wait(executable, top, line);
+  status = htt_run_wait_function(executable, top, line);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
   }
@@ -931,7 +931,7 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  apr_status_t status = htt_run_expect(executable, context, line);
+  apr_status_t status = htt_run_expect_function(executable, context, line);
   if (APR_STATUS_IS_EAGAIN(status)) {
     int i;
     char **argv;
@@ -977,32 +977,32 @@ static void _get_retvals(htt_context_t *context, htt_stack_t *retvars,
  * Hooks 
  ***********************************************************************/
 APR_HOOK_STRUCT(
-  APR_HOOK_LINK(request)
-  APR_HOOK_LINK(expect)
-  APR_HOOK_LINK(wait)
-  APR_HOOK_LINK(end)
+  APR_HOOK_LINK(request_function)
+  APR_HOOK_LINK(expect_function)
+  APR_HOOK_LINK(wait_function)
+  APR_HOOK_LINK(end_function)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
-    htt, HTT, apr_status_t, request, 
+    htt, HTT, apr_status_t, request_function, 
     (htt_executable_t *executable, htt_context_t *context, const char *line), 
     (executable, context, line), APR_SUCCESS
 );
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
-    htt, HTT, apr_status_t, expect, 
+    htt, HTT, apr_status_t, expect_function, 
     (htt_executable_t *executable, htt_context_t *context, const char *line), 
     (executable, context, line), APR_EAGAIN
 );
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
-    htt, HTT, apr_status_t, wait, 
+    htt, HTT, apr_status_t, wait_function, 
     (htt_executable_t *executable, htt_context_t *context, const char *line), 
     (executable, context, line), APR_SUCCESS
 );
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
-    htt, HTT, apr_status_t, end, 
+    htt, HTT, apr_status_t, end_function, 
     (htt_executable_t *executable, htt_context_t *context, const char *line), 
     (executable, context, line), APR_SUCCESS
 );

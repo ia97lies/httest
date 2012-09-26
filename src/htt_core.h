@@ -217,16 +217,16 @@ void htt_throw_skip();
 void htt_throw_ok(); 
 
 # define HTT_DECLARE(type)    type
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, request,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, request_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, expect,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, expect_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, wait,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, wait_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line));
-APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, end,
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, end_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line));
 
