@@ -291,7 +291,6 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_destroy(ptmp);
   }
 
-  /** call finally hook */
   htt_run_final(executable, context);
   return status;
 }

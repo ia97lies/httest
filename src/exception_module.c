@@ -80,8 +80,8 @@ static apr_status_t _finally_closure(htt_executable_t *executable,
  * @param executable IN static context
  * @param context IN dynamic context
  */
-static void _hook_call_finally(htt_executable_t *executable, 
-                               htt_context_t *context); 
+static apr_status_t _hook_call_finally(htt_executable_t *executable, 
+                                       htt_context_t *context); 
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -97,13 +97,14 @@ apr_status_t exception_module_init(htt_t *htt) {
  * Private
  ***********************************************************************/
 
-static void _hook_call_finally(htt_executable_t *executable, 
-                               htt_context_t *context) {
+static apr_status_t _hook_call_finally(htt_executable_t *executable, 
+                                       htt_context_t *context) {
   htt_executable_t *finally;
   finally = htt_executable_get_config(executable, "__finally");
   if (finally) {
     htt_execute(finally, context);
   }
+  return APR_SUCCESS;
 }
 
 static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args) {
