@@ -75,6 +75,13 @@ static apr_status_t _finally_closure(htt_executable_t *executable,
                                      htt_map_t *params, htt_stack_t *retvars, 
                                      char *line);
 
+/**
+ * Call finally block if any
+ * @param executable IN static context
+ * @param context IN dynamic context
+ */
+static void _hook_call_finally(htt_executable_t *executable, 
+                               htt_context_t *context); 
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -82,22 +89,22 @@ apr_status_t exception_module_init(htt_t *htt) {
   htt_add_command(htt, "finally", NULL, "", 
                   "run finally in a block even on error", 
                   _cmd_finally_compile, _cmd_finally_function);
+  htt_hook_final(_hook_call_finally, NULL, NULL, 0);
   return APR_SUCCESS;
-}
-
-/** TODO: Hook implementation */
-void exeception_call_finally(htt_executable_t *executable, 
-                             htt_context_t *context) {
-  htt_executable_t *finally;
-  finally = htt_executable_set_config(executable, "__finally");
-  if (finally) {
-    htt_execute(finally, context);
-  }
 }
 
 /************************************************************************
  * Private
  ***********************************************************************/
+
+static void _hook_call_finally(htt_executable_t *executable, 
+                               htt_context_t *context) {
+  htt_executable_t *finally;
+  finally = htt_executable_get_config(executable, "__finally");
+  if (finally) {
+    htt_execute(finally, context);
+  }
+}
 
 static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args) {
   apr_status_t status;

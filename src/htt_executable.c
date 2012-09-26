@@ -291,6 +291,8 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_destroy(ptmp);
   }
 
+  /** call finally hook */
+  htt_run_final(executable, context);
   return status;
 }
 
@@ -439,10 +441,17 @@ static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
  ***********************************************************************/
 APR_HOOK_STRUCT(
   APR_HOOK_LINK(begin)
+  APR_HOOK_LINK(final)
 )
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
     htt, HTT, apr_status_t, begin, 
+    (htt_executable_t *executable, htt_context_t *context), 
+    (executable, context), APR_SUCCESS
+);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
+    htt, HTT, apr_status_t, final, 
     (htt_executable_t *executable, htt_context_t *context), 
     (executable, context), APR_SUCCESS
 );
