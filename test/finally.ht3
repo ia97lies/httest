@@ -1,0 +1,14 @@
+body
+  thread 10
+    sleep 1000
+    echo foo
+    assert 0
+  end
+
+  finally
+    echo finally hi
+  end
+end
+  finally
+    echo last finally hi
+  end
