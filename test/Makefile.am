@@ -30,6 +30,7 @@ test_exception_module_SOURCES=test_exception_module.c $(top_srcdir)/src/htt_core
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/core_module.c $(top_srcdir)/src/htt_modules.c
+EXTRA_DIST=finally.ht3
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_htt_stack test_htt_bufreader test_htt_expr test_htt_core test_thread_module test_exception_module
-TESTS = test_htt_stack test_htt_bufreader test_htt_expr test_htt_core test_thread_module test_exception_module
+TESTS = test_htt_stack test_htt_bufreader test_htt_expr test_htt_core test_thread_module test_exception_module run_all.sh

@@ -14,7 +14,7 @@ function run_single {
 }
 
 echo normal test execution
-LIST=`ls *.htt`
-COUNT=`ls *.htt | wc -l`
+LIST=`ls *.ht3`
+COUNT=`ls *.ht3 | wc -l`
 run_all "$LIST" $COUNT
 

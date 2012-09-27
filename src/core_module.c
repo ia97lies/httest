@@ -303,6 +303,7 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
                   htt_executable_get_file(executable), 
                   htt_executable_get_line(executable), 
                   "Assertion failed");
+    return status;
   }
   return APR_SUCCESS;
 } 
