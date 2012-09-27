@@ -360,7 +360,15 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
     apr_thread_exit(thread, status);
   }
   else {
-    htt_throw_error();
+    apr_thread_mutex_lock(handle->tc->mutex);
+    {
+      htt_executable_t *cur = htt_executable_get_parent(executable);
+      while (cur) {
+        htt_run_final(cur, context);
+        cur = htt_executable_get_parent(cur);
+      }
+      htt_throw_error();
+    } 
   }
 
   return NULL;

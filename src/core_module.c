@@ -298,7 +298,11 @@ static apr_status_t _cmd_assert_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line) {
   apr_collapse_spaces(line, line);
   if (strcmp(line, "1") != 0) {
-    return APR_EINVAL;
+    apr_status_t status = APR_EINVAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Assertion failed");
   }
   return APR_SUCCESS;
 } 
