@@ -12,6 +12,8 @@ endif
 syn keyword httInclude          include
 syn keyword httStatement        body
 syn keyword httStatement        finally
+syn keyword httStatement        assert
+syn keyword httStatement        daemon
 syn keyword httStatement        thread
 syn keyword httStatement        begin
 syn keyword httStatement        if

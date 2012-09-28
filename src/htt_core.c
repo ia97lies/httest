@@ -728,6 +728,7 @@ static apr_status_t _loop_closure(htt_executable_t *executable,
                                   htt_context_t *context, apr_pool_t *ptmp, 
                                   htt_map_t *params, htt_stack_t *retvars, 
                                   char *line) {
+  int counter;
   htt_string_t *retval;
   _counter_config_t *config;
   htt_string_t *index = htt_map_get(htt_context_get_vars(context), "index");
@@ -744,7 +745,8 @@ static apr_status_t _loop_closure(htt_executable_t *executable,
                   index_val);
     }
     ++config->i;
-    if (config->i > apr_atoi64(htt_string_get(count))) {
+    counter = apr_atoi64(htt_string_get(count));
+    if (counter >= 0 && config->i > counter) {
       retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
     }
     else {

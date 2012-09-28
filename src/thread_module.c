@@ -99,6 +99,20 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                                          htt_stack_t *retvars, char *line); 
 
 /**
+ * daemon 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_daemon_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
  * begin function
  * @param executable IN executable
  * @param context IN running context
@@ -145,6 +159,9 @@ apr_status_t thread_module_init(htt_t *htt) {
   htt_add_command(htt, "thread", NULL, "[<n>]",
                   "start a thread if <n> then start that many threads",
                   htt_cmd_body_compile, _cmd_thread_function);
+  htt_add_command(htt, "daemon", NULL, "",
+                  "start a daemon, daemons are not joined",
+                  htt_cmd_body_compile, _cmd_daemon_function);
   htt_add_command(htt, "begin", NULL, "",
                   "all lines before begin are done before threads on the "
                   "same level do start, only allowed with in thread body",
@@ -266,6 +283,60 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                   htt_executable_get_file(executable), 
                   htt_executable_get_line(executable), 
                   "Could not create thread");
+  }
+  return status;
+}
+
+static apr_status_t _cmd_daemon_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  apr_status_t status;
+  apr_threadattr_t *tattr;
+  apr_thread_t *thread;
+  htt_context_t *parent = htt_context_get_parent(context);
+  _thread_config_t *tc = _get_thread_config(parent);
+
+  if ((status = apr_threadattr_create(&tattr, tc->pool)) 
+      == APR_SUCCESS &&
+      (status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
+      == APR_SUCCESS && 
+      (status = apr_threadattr_detach_set(tattr, 1))
+      == APR_SUCCESS) {
+    _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
+    htt_context_t *child;
+    child = htt_context_new(NULL, htt_context_get_log(parent));
+    _merge_all_vars(child, context);
+
+    th->name = apr_psprintf(tc->pool, "daemon-%d", tc->i);
+    th->context = child;
+    th->executable = executable;
+    th->tc = tc;
+    status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool);
+  }
+
+  if (status == APR_SUCCESS) {
+    htt_executable_t *thread_executable;
+    htt_context_t *thread_context;
+    htt_function_t *thread_closure;
+
+    thread_executable = htt_executable_new(htt_context_get_pool(context), 
+                                           executable, "_daemon_closure", NULL,
+                                           htt_null_closure, NULL, 
+                                           htt_executable_get_file(executable), 
+                                           htt_executable_get_line(executable));
+    thread_context= htt_context_new(context, htt_context_get_log(context));
+    thread_closure = htt_function_new(htt_context_get_pool(thread_context), 
+                                      thread_executable, thread_context);
+    /* this must return a closure */
+    htt_stack_push(retvars, thread_closure);
+  }
+
+  if (status != APR_SUCCESS) {
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Could not create daemon");
   }
   return status;
 }
