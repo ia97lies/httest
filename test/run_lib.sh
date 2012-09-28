@@ -31,5 +31,6 @@ function run_all {
 
   if [ $errors -ne 0 ]; then
     printf "\e[1;31m$errors Errors found\e[0m\n"
+    exit 1
   fi
 }

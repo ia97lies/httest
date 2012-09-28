@@ -9,6 +9,8 @@ body
     echo finally hi
   end
 end
-  finally
-    echo last finally hi
-  end
+
+finally
+  echo last finally hi
+  exit ok
+end

@@ -192,6 +192,20 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
                                const char *buf, apr_size_t len); 
 
 /**
+ * For special bodies like function, finally, ...
+ * @param executable IN static context
+ * @param context IN dynamic context
+ * @param ptmp IN pool
+ * @param params IN parameters
+ * @param retvars IN contains a 0
+ * @param line IN resolved line
+ */
+apr_status_t htt_null_closure(htt_executable_t *executable, 
+                              htt_context_t *context, apr_pool_t *ptmp, 
+                              htt_map_t *params, htt_stack_t *retvars, 
+                              char *line);
+
+/**
  * verbose exit func
  */
 void htt_exit();

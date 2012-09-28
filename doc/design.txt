@@ -69,4 +69,4 @@ end
 ++external calls
 - execute shell scripts
 - execute httest scripts
-  - use ht3 also as a test manager/executor
+- use ht3 also as a test manager/executor

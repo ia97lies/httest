@@ -77,21 +77,6 @@ static _thread_config_t *_get_thread_config(htt_context_t *context);
 static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev);
 
 /**
- * thread closure
- * @param executable IN
- * @param context IN
- * @param ptmp IN
- * @param params IN
- * @param retvars IN
- * @param line IN
- * @return 0 mean the body is run as thread do not run it outside again
- */
-static apr_status_t _thread_closure(htt_executable_t *executable, 
-                                    htt_context_t *context, apr_pool_t *ptmp, 
-                                    htt_map_t *params, htt_stack_t *retvars, 
-                                    char *line);
-
-/**
  * Add begin compilation only suitable for threads and only once
  * @param command IN command
  * @param args IN argument string
@@ -266,7 +251,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
 
     thread_executable = htt_executable_new(htt_context_get_pool(context), 
                                            executable, "_thread_closure", NULL,
-                                           _thread_closure, NULL, 
+                                           htt_null_closure, NULL, 
                                            htt_executable_get_file(executable), 
                                            htt_executable_get_line(executable));
     thread_context= htt_context_new(context, htt_context_get_log(context));
@@ -364,7 +349,7 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
     {
       htt_executable_t *cur = htt_executable_get_parent(executable);
       while (cur) {
-        htt_run_final(cur, context);
+        htt_run_final(cur, context, status);
         cur = htt_executable_get_parent(cur);
       }
       htt_throw_error();
@@ -372,15 +357,6 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
   }
 
   return NULL;
-}
-
-static apr_status_t _thread_closure(htt_executable_t *executable, 
-                                    htt_context_t *context, apr_pool_t *ptmp, 
-                                    htt_map_t *params, htt_stack_t *retvars, 
-                                    char *line) {
-  htt_string_t *retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
-  htt_stack_push(retvars, retval);
-  return APR_SUCCESS;
 }
 
 static _thread_config_t *_get_thread_config(htt_context_t *context) {

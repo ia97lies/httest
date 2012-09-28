@@ -285,6 +285,15 @@ int htt_error = 0;
 /************************************************************************
  * Public 
  ***********************************************************************/
+apr_status_t htt_null_closure(htt_executable_t *executable, 
+                              htt_context_t *context, apr_pool_t *ptmp, 
+                              htt_map_t *params, htt_stack_t *retvars, 
+                              char *line) {
+  htt_string_t *retval = htt_string_new(ptmp, apr_pstrdup(ptmp, "0"));
+  htt_stack_push(retvars, retval);
+  return APR_SUCCESS;
+}
+
 apr_status_t htt_expect_register(htt_executable_t *executable, 
                                  htt_context_t *context, const char *namespace, 
                                  const char *expr) {

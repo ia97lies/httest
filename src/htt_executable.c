@@ -291,7 +291,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     apr_pool_destroy(ptmp);
   }
 
-  htt_run_final(executable, context);
+  htt_run_final(executable, context, status);
   return status;
 }
 
@@ -451,7 +451,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
     htt, HTT, apr_status_t, final, 
-    (htt_executable_t *executable, htt_context_t *context), 
-    (executable, context), APR_SUCCESS
+    (htt_executable_t *executable, htt_context_t *context, apr_status_t status),
+    (executable, context, status), APR_SUCCESS
 );
 

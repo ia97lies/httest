@@ -223,5 +223,5 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, begin,
                            htt_context_t *context));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, final,
                           (htt_executable_t *executable, 
-                           htt_context_t *context));
+                           htt_context_t *context, apr_status_t status));
 #endif
