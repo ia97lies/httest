@@ -9,6 +9,7 @@ test_htt_core_SOURCES=test_htt_core.c $(top_srcdir)/src/htt_core.c $(top_srcdir)
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
+		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c $(top_srcdir)/src/htt_modules.c
 test_thread_module_SOURCES=test_thread_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_context.c $(top_srcdir)/src/htt_executable.c \
@@ -19,6 +20,7 @@ test_thread_module_SOURCES=test_thread_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
+		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c $(top_srcdir)/src/htt_modules.c
 test_exception_module_SOURCES=test_exception_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_context.c $(top_srcdir)/src/htt_executable.c \
@@ -29,6 +31,7 @@ test_exception_module_SOURCES=test_exception_module.c $(top_srcdir)/src/htt_core
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
+		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c $(top_srcdir)/src/htt_modules.c
 EXTRA_DIST=finally.ht3
 AM_CFLAGS=-I$(top_srcdir)/src

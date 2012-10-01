@@ -19,44 +19,54 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool skeleton module 
+ * Implementation of the HTTP Test Tool shell module 
  */
 
 /************************************************************************
  * Includes
  ***********************************************************************/
-#include "module.h"
+#include <apr_strings.h>
+#include "htt_modules.h"
+#include "htt_core.h"
+#include "htt_string.h"
+#include "htt_util.h"
+#include "htt_expr.h"
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
 
-/************************************************************************
- * Globals 
- ***********************************************************************/
+/**
+ * Simple exec command 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param ptmp IN pool
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @return apr status
+ */
+static apr_status_t _cmd_foo_function(htt_executable_t *executable, 
+                                      htt_context_t *context,
+                                      apr_pool_t *ptmp, htt_map_t *params, 
+                                      htt_stack_t *retvars, char *line);
 
 /************************************************************************
- * Local 
+ * Public
  ***********************************************************************/
-
-/************************************************************************
- * Commands 
- ***********************************************************************/
-static apr_status_t block_SKELETON_DUMMY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+apr_status_t skeleton_module_init(htt_t *htt) {
+  htt_add_command(htt, "foo", "p1 p2 : r1", "input: p1 p2, output: r1", 
+                  "foo command", htt_cmd_line_compile, _cmd_exec_function);
   return APR_SUCCESS;
 }
 
 /************************************************************************
- * Module
+ * Private
  ***********************************************************************/
-apr_status_t skeleton_module_init(global_t *global) {
-  apr_status_t status;
-  if ((status = module_command_new(global, "SKELETON", "_DUMMY",
-	                           "<foo>",
-	                           "Bla bla bla.",
-	                           block_SKELETON_DUMMY)) != APR_SUCCESS) {
-    return status;
-  }
+static apr_status_t _cmd_foo_function(htt_executable_t *executable, 
+                                      htt_context_t *context, 
+                                      apr_pool_t *ptmp, htt_map_t *params, 
+                                      htt_stack_t *retvars, char *line) {
   return APR_SUCCESS;
 }
 
