@@ -167,7 +167,7 @@ apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len);
 apr_status_t htt_run(htt_t *htt);
 
 /**
- * Register an expect in a freely in a namespace
+ * Register an expect with a namespace
  * @param executable IN static context
  * @param context IN dynamic context
  * @param namespace IN expect namespace
@@ -185,7 +185,7 @@ apr_status_t htt_expect_register(htt_executable_t *executable,
  * @param namespace IN namespace of expect
  * @param buf IN buffer to inspect
  * @param len IN buffer len if -1 string length
- * @note: throw exit error if do not match
+ * @return APR_EINVAL if do not match
  */
 apr_status_t htt_expect_assert(htt_executable_t *executable, 
                                htt_context_t *context, const char *namespace,

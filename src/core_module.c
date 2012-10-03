@@ -405,12 +405,14 @@ static apr_status_t _hook_wait_function(htt_executable_t *executable,
     htt_string_t *value = htt_context_get_var(context, config->var);
     status = htt_expect_assert(executable, context, ".", htt_string_get(value),
                                -1);
-    if (status != APR_SUCCESS) {
-      rc = status;
+    if (status == APR_SUCCESS) {
+      status = htt_expect_assert(executable, context, "body", 
+                                 htt_string_get(value), -1);
+      if (status != APR_SUCCESS) {
+        rc = status;
+      }
     }
-    status = htt_expect_assert(executable, context, "body", 
-                               htt_string_get(value), -1);
-    if (status != APR_SUCCESS) {
+    else {
       rc = status;
     }
     apr_pool_destroy(config->pool);
