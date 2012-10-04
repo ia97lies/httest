@@ -34,5 +34,9 @@ test/test_htt_stack
 test/test_htt_bufreader
 test/test_htt_core
 test/test_htt_core_thread
+test/test_exception_module
+test/test_shell_module
+test/test_thread_module
+
 test/test_htt_expr
 src/htt_modules.c
