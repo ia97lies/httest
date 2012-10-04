@@ -47,6 +47,10 @@ htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err) {
   return log;
 }
 
+htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log) {
+  return htt_log_new(pool, log->out, log->err);
+}
+
 void htt_log_set_mode(htt_log_t *log, int mode) {
   log->prev_mode = log->mode;
   log->mode = mode;

@@ -210,6 +210,9 @@ apr_status_t htt_bufreader_read_eof(htt_bufreader_t * bufreader,
   apr_brigade_putc(bb, NULL, NULL, '\0');
   apr_brigade_pflatten(bb, buf, len, bufreader->pool);
   apr_brigade_destroy(bb);
+  if (*len) {
+    --*len;
+  }
 
   if (status == APR_SUCCESS || status == APR_EOF) {
     return APR_SUCCESS;

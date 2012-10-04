@@ -73,6 +73,10 @@ htt_context_t *htt_context_get_godfather(htt_context_t *context) {
   return cur;
 }
 
+void htt_context_set_log(htt_context_t *context, htt_log_t *log) {
+  context->log = log;
+}
+
 htt_log_t *htt_context_get_log(htt_context_t *context) {
   return context->log;
 }

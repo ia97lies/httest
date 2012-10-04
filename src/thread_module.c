@@ -61,6 +61,10 @@ typedef struct _thread_handle_s {
   _thread_config_t *tc;
 } _thread_handle_t;
 
+typedef struct _thread_stats_s {
+  int no_threads;
+} _thread_stats_t;
+
 /**
  * Get thread config from given context
  * @param context IN
@@ -152,6 +156,13 @@ static apr_status_t _hook_thread_init_begin(htt_executable_t *executable,
  */
 static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context); 
 
+/**
+ * Set a prefix for threads to make log more human readable
+ * @param count IN how many threads allready running
+ * @param log IN logger
+ * @param pool IN
+ */
+void _set_log_prefix(int count, htt_log_t *log, apr_pool_t *pool); 
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -242,6 +253,13 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
       htt_context_t *child;
       child = htt_context_new(NULL, htt_context_get_log(parent));
+      htt_context_set_log(child, 
+                          htt_log_clone(htt_context_get_pool(child), 
+                                        htt_context_get_log(parent)));
+      /*
+      _set_log_prefix(thread_init->count, htt_context_get_log(child),
+                      htt_context_get_pool(child));
+      */
       if (variable && variable[0]) {
         htt_string_t *tcount;
         tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
@@ -456,5 +474,15 @@ static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context) {
     }
     cur = htt_context_get_parent(cur);
   }
+}
+
+void _set_log_prefix(int count, htt_log_t *log, apr_pool_t *pool) {
+  int i;
+  int no_spaces = count * 10;
+  char *spaces = apr_pcalloc(pool, no_spaces + 1);
+  for (i = 0; i < no_spaces; i++) {
+    spaces[i] = ' ';
+  }
+  htt_log_set_prefix(log, spaces);
 }
 
