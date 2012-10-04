@@ -62,7 +62,7 @@ typedef struct _thread_handle_s {
 } _thread_handle_t;
 
 typedef struct _thread_stats_s {
-  int no_threads;
+  int threads;
 } _thread_stats_t;
 
 /**
@@ -163,6 +163,13 @@ static void _merge_all_vars(htt_context_t *isolated, htt_context_t *context);
  * @param pool IN
  */
 void _set_log_prefix(int count, htt_log_t *log, apr_pool_t *pool); 
+
+/**
+ * Get thread stats from a given context
+ * @param context IN dynamic context
+ * @return thread stats
+ */
+_thread_stats_t *_get_thread_stats(htt_context_t *context); 
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -223,8 +230,11 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   char *variable = NULL;
   int count = 1;
   _thread_init_t *thread_init;
+  _thread_stats_t *thread_stats;
   thread_init = htt_executable_get_config(htt_executable_get_parent(executable),
                                           "__thread_init");
+  thread_stats = _get_thread_stats(parent);
+  ++thread_stats->threads;
 
   while (line && *line == ' ') ++line;
   if (line && line[0]) {
@@ -256,10 +266,8 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       htt_context_set_log(child, 
                           htt_log_clone(htt_context_get_pool(child), 
                                         htt_context_get_log(parent)));
-      /*
-      _set_log_prefix(thread_init->count, htt_context_get_log(child),
+      _set_log_prefix(thread_stats->threads-1, htt_context_get_log(child),
                       htt_context_get_pool(child));
-      */
       if (variable && variable[0]) {
         htt_string_t *tcount;
         tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
@@ -303,6 +311,15 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
                   "Could not create thread");
   }
   return status;
+}
+
+_thread_stats_t *_get_thread_stats(htt_context_t *context) {
+  _thread_stats_t *stats = htt_context_get_config(context, "__thread_stats");
+  if (!stats) {
+    stats = apr_pcalloc(htt_context_get_pool(context), sizeof(*stats));
+    htt_context_set_config(context, "__thread_stats", stats);
+  }
+  return stats;
 }
 
 static apr_status_t _cmd_daemon_function(htt_executable_t *executable, 

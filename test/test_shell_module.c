@@ -134,7 +134,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
   
   htt = _test_reset();
-  fprintf(stdout, "exec echo foo expect... ");
+  fprintf(stdout, "exec echo foo expect twice... ");
   fflush(stdout);
   {
     apr_status_t status;

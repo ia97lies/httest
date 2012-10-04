@@ -192,6 +192,15 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
                                const char *buf, apr_size_t len); 
 
 /**
+ * Check expects, shout if unused expects and cleanup
+ * @param executable IN static context
+ * @param context IN dynamic context
+ * @return apr status
+ */
+apr_status_t htt_expect_check(htt_executable_t *executable, 
+                              htt_context_t *context); 
+
+/**
  * For special bodies like function, finally, ...
  * @param executable IN static context
  * @param context IN dynamic context

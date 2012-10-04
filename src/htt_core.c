@@ -351,6 +351,8 @@ apr_status_t htt_expect_check(htt_executable_t *executable,
       }
     }
   }
+  apr_pool_destroy(config->pool);
+  htt_context_set_config(context, "expect", NULL);
   return status;
 }
 
@@ -893,15 +895,11 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
-  _expect_config_t *config;
   htt_context_t *top = _get_expect_context(context);
   status = htt_run_wait_function(executable, top, line);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
   }
-  config = htt_context_get_config(top, "expect");
-  apr_pool_destroy(config->pool);
-  htt_context_set_config(top, "expect", NULL);
   return status;
 } 
 
