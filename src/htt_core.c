@@ -279,6 +279,15 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
  */
 static apr_status_t _regex_cleanup(void *pcre);
 
+/**
+ * Fill mached parts from buf with help of ovector
+ * @param context IN dynamic context
+ * @param buf IN buffer
+ * @param ovector IN pcre ovector
+ * @param ns IN namespace data
+ */
+void _fill_expected_vars(htt_context_t *context, const char *buf, int *ovector,
+                         _ns_t *ns);
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -378,9 +387,11 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
     }
     r = (void *) apr_table_elts(ns->regexs)->elts;
     for (i = 0; i < apr_table_elts(ns->regexs)->nelts; i++) {
+      int *ovector = malloc(sizeof(int) * ns->n_vars * 3);
       int rc;
       _regex_t *regex = (void *)r[i].val;
-      rc = pcre_exec(regex->pcre, NULL, buf, _len, 0, 0, NULL, 0);
+      rc = pcre_exec(regex->pcre, NULL, buf, _len, 0, 0, ovector, 
+                     ns->n_vars * 3);
       if (rc < 0) {
         status = APR_EINVAL;
         htt_log_error(htt_context_get_log(context), status, 
@@ -389,8 +400,10 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
                       "Did 'expect %s \"%s\"", namespace, regex->pattern);
       }
       else {
+        _fill_expected_vars(context, buf, ovector, ns);
         ++regex->hits;
       }
+      free(ovector);
     }
   }
   return status;
@@ -579,6 +592,18 @@ apr_status_t htt_run(htt_t *htt) {
 /************************************************************************
  * Private 
  ***********************************************************************/
+void _fill_expected_vars(htt_context_t *context, const char *buf, int *ovector,
+                         _ns_t *ns) {
+  int i;
+
+  for (i = 0; i < ns->n_vars; i++) {
+    int so = ovector[i * 2];
+    int eo = ovector[i * 2 + 1];
+
+
+  }
+}
+
 static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
   char *line;
   apr_status_t status = APR_SUCCESS;
