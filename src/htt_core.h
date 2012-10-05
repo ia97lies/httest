@@ -172,11 +172,13 @@ apr_status_t htt_run(htt_t *htt);
  * @param context IN dynamic context
  * @param namespace IN expect namespace
  * @param expr IN regular expression
+ * @param vars IN possible variable names
+ * @param n IN no variables
  * @return apr status
  */
 apr_status_t htt_expect_register(htt_executable_t *executable, 
                                  htt_context_t *context, const char *namespace, 
-                                 const char *expr);
+                                 const char *expr, char **vars, int n);
 
 /**
  * Check if value do fit the defined expects

@@ -101,6 +101,8 @@ typedef struct _regex_s {
 
 typedef struct _ns_s {
   apr_table_t *regexs;
+  char **vars;
+  int n_vars;
 } _ns_t;
 
 typedef struct _expect_config_s {
@@ -296,12 +298,14 @@ apr_status_t htt_null_closure(htt_executable_t *executable,
 
 apr_status_t htt_expect_register(htt_executable_t *executable, 
                                  htt_context_t *context, const char *namespace, 
-                                 const char *expr) {
+                                 const char *expr, char **vars, int n) {
   _expect_config_t *config = _get_expect_config(context);
   _ns_t *ns = (void *)apr_table_get(config->ns, namespace);
   if (!ns) {
     ns = apr_pcalloc(config->pool, sizeof(*ns));
     ns->regexs = apr_table_make(config->pool, 5);
+    ns->vars = vars;
+    ns->n_vars = n;
     apr_table_setn(config->ns, apr_pstrdup(config->pool, namespace), 
                    (void *)ns);
   }
@@ -948,17 +952,25 @@ static apr_status_t _cmd_expect_function(htt_executable_t *executable,
     status = APR_SUCCESS;
     htt_util_to_argv(line, &argv, ptmp, 0);
     for (i = 0; argv[i]; i++);
-    if (i >= 2) {
-      return htt_expect_register(executable, top, argv[0], argv[1]);
+    if (i >= 2 && i <= 12) {
+      return htt_expect_register(executable, top, argv[0], argv[1], &argv[2], 
+                                 i-2);
     }
-    else {
+    else if (i <= 12) {
       status = APR_EGENERAL;
       htt_log_error(htt_context_get_log(top), status, 
                     htt_executable_get_file(executable), 
                     htt_executable_get_line(executable), 
                     "Command expect needs 2 arguments, a namespace and a "
                     "regular expression");
-      return status;
+    }
+    else {
+      status = APR_EGENERAL;
+      htt_log_error(htt_context_get_log(top), status, 
+                    htt_executable_get_file(executable), 
+                    htt_executable_get_line(executable), 
+                    "Too many vars defined for expect statement, "
+                    "max 10 vars allowed");
     }
   }
   return status;

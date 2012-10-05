@@ -374,7 +374,8 @@ static apr_status_t _hook_expect_function(htt_executable_t *executable,
     if (i >= 2) {
       var = apr_strtok(argv[0], "(", &rest);
       var = apr_strtok(NULL, ")", &rest);
-      if ((status = htt_expect_register(executable, context, ".", argv[1]))
+      if ((status = htt_expect_register(executable, context, ".", argv[1], 
+                                        &argv[2], i-2))
           == APR_SUCCESS) {
         htt_string_t *value = htt_context_get_var(context, var);
         status = htt_expect_assert(executable, context, ".", 
