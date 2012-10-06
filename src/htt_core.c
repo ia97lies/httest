@@ -387,11 +387,11 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
     }
     r = (void *) apr_table_elts(ns->regexs)->elts;
     for (i = 0; i < apr_table_elts(ns->regexs)->nelts; i++) {
-      int *ovector = malloc(sizeof(int) * ns->n_vars * 3);
+      int *ovector = malloc(sizeof(int) * (ns->n_vars + 1) * 3);
       int rc;
       _regex_t *regex = (void *)r[i].val;
       rc = pcre_exec(regex->pcre, NULL, buf, _len, 0, 0, ovector, 
-                     ns->n_vars * 3);
+                     (ns->n_vars + 1) * 3);
       if (rc < 0) {
         status = APR_EINVAL;
         htt_log_error(htt_context_get_log(context), status, 
@@ -399,7 +399,12 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
                       htt_executable_get_line(executable), 
                       "Did 'expect %s \"%s\"", namespace, regex->pattern);
       }
+      else if (rc == 0) {
+        _fill_expected_vars(context, buf, ovector, ns);
+        ++regex->hits;
+      }
       else {
+        ns->n_vars = rc - 1;
         _fill_expected_vars(context, buf, ovector, ns);
         ++regex->hits;
       }
@@ -597,10 +602,12 @@ void _fill_expected_vars(htt_context_t *context, const char *buf, int *ovector,
   int i;
 
   for (i = 0; i < ns->n_vars; i++) {
-    int so = ovector[i * 2];
-    int eo = ovector[i * 2 + 1];
+    htt_string_t *var;
+    int so = ovector[(i + 1) * 2];
+    int eo = ovector[(i + 1) * 2 + 1];
 
-
+    var = htt_string_n_new(htt_context_get_pool(context), &buf[so], eo-so);
+    htt_context_set_var(context, ns->vars[i], var);
   }
 }
 

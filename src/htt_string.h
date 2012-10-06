@@ -38,6 +38,16 @@ typedef struct htt_string_s htt_string_t;
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value);
 
 /**
+ * Create a string and take n bytes of value
+ * @param pool IN parent pool for inheritance
+ * @param value IN source for strint to hold in this string variable
+ * @param n IN n bytes of source
+ * @return string instance
+ */
+htt_string_t *htt_string_n_new(apr_pool_t *pool, const char *value, 
+                               apr_size_t n);
+
+/**
  * Clone a string variable
  * @param string IN string to clone
  * @param pool IN parent pool for inheritance

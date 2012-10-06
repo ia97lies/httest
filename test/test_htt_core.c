@@ -942,6 +942,26 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "req expect wait with 2 vars one unused -> ok... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "set bar=foobar\n\
+         req var://bar\n\
+         expect . \"foo(.*)\" r1 r2\n\
+         wait\n\
+         mock $r1 $r2");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    fprintf(stderr, "XXX: %s\n", global_buf);
+    assert(strcmp(global_buf, "bar $r2\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 

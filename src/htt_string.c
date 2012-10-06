@@ -55,6 +55,11 @@ struct htt_string_s {
  * Public 
  ***********************************************************************/
 htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
+  return htt_string_n_new(pool, value, value?strlen(value):0);
+}
+
+htt_string_t *htt_string_n_new(apr_pool_t *pool, const char *value, 
+                               apr_size_t n) {
   apr_pool_t *mypool;
   htt_string_t *string;
   apr_pool_create(&mypool, pool);
@@ -64,7 +69,7 @@ htt_string_t *htt_string_new(apr_pool_t *pool, const char *value) {
   string->obj.destructor = htt_string_free;
   string->obj.clone = htt_string_clone;
   if (value) {
-    string->value = apr_pstrdup(mypool, value);
+    string->value = apr_pstrndup(mypool, value, n);
   }
   return string;
 }
