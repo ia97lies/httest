@@ -59,6 +59,7 @@ typedef struct _thread_handle_s {
   htt_executable_t *executable;
   htt_context_t *context;
   _thread_config_t *tc;
+  apr_thread_t *thread;
 } _thread_handle_t;
 
 typedef struct _thread_stats_s {
@@ -262,7 +263,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
     while (count && status == APR_SUCCESS) {
       _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
       htt_context_t *child;
-      child = htt_context_new(NULL, htt_context_get_log(parent));
+      child = htt_context_new(NULL, NULL);
       htt_context_set_log(child, 
                           htt_log_clone(htt_context_get_pool(child), 
                                         htt_context_get_log(parent)));
@@ -280,8 +281,12 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       th->executable = executable;
       th->tc = tc;
       htt_context_set_config(child, "__thread_handle", th);
+      /** FIXME: child is never destroyed. If I destroy them after join, I get 
+       *         coredumps
+       */
       status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool);
-      apr_table_addn(tc->threads, th->name, (void *)thread);
+      apr_table_addn(tc->threads, th->name, (void *)th);
+      th->thread = thread;
       ++tc->i;
       --count;
     }
@@ -407,13 +412,13 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
          status == APR_SUCCESS && i < apr_table_elts(tc->threads)->nelts; 
          i++) {
       apr_status_t rc;
-      apr_thread_t *thread = (void *)e[i].val;
-      rc = apr_thread_join(&status, thread);
+      _thread_handle_t *th = (void *)e[i].val;
+      rc = apr_thread_join(&status, th->thread);
       if (rc != APR_SUCCESS) {
         htt_log_error(htt_context_get_log(context), rc, 
                       htt_executable_get_file(executable), 
                       htt_executable_get_line(executable), 
-                      "Could not join thread %x", thread);
+                      "Could not join thread %x", th->thread);
         status = rc;
       }
     }
