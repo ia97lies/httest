@@ -274,7 +274,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
         tcount = htt_string_new(tc->pool, apr_ltoa(tc->pool, tc->i));
         htt_map_set(htt_context_get_vars(child), variable, tcount);
       }
-      _merge_all_vars(child, context);
+      _merge_all_vars(child, parent);
 
       th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
       th->context = child;
@@ -285,8 +285,8 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
        *         coredumps
        */
       status = apr_thread_create(&thread, tattr, _thread_body, th, tc->pool);
-      apr_table_addn(tc->threads, th->name, (void *)th);
       th->thread = thread;
+      apr_table_addn(tc->threads, th->name, (void *)th);
       ++tc->i;
       --count;
     }
@@ -421,7 +421,11 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
                       "Could not join thread %x", th->thread);
         status = rc;
       }
+      /** FIXME: child is never destroyed. If I destroy them after join, I get 
+       *         coredumps
+       */
     }
+
     apr_thread_mutex_destroy(tc->mutex);
     apr_thread_mutex_destroy(tc->sync);
     apr_pool_destroy(tc->pool);
@@ -470,7 +474,8 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
   return NULL;
 }
 
-static _thread_config_t *_get_thread_config(htt_context_t *context) {
+static _thread_config_t *_get_thread_config(htt_context_t *cur) {
+  htt_context_t *context = htt_context_get_godfather(cur);
   _thread_config_t *config = htt_context_get_config(context, "thread");
   if (!config) {
     apr_pool_t *pool;
