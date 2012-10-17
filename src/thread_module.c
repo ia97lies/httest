@@ -40,14 +40,16 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
-typedef struct _thread_config_s {
+typedef struct _thread_config_s _thread_config_t;
+struct _thread_config_s {
+  _thread_config_t *next;
   int i;
   apr_pool_t *pool;
   apr_table_t *threads;
   int count;
   apr_thread_mutex_t *mutex;
   apr_thread_mutex_t *sync;
-} _thread_config_t;
+}; 
 
 typedef struct _thread_init_s {
   int count;
@@ -185,6 +187,17 @@ void _set_log_prefix(int count, htt_log_t *log, apr_pool_t *pool);
  * @return thread stats
  */
 _thread_stats_t *_get_thread_stats(htt_context_t *context); 
+
+/**
+ * Join context on a given context level
+ * @param exectuable IN static executable
+ * @param context IN dynamic context
+ * @param tc IN thread config 
+ * @return apr status
+ */
+static apr_status_t _join_threads(htt_executable_t *executable, 
+                                  htt_context_t *context,
+                                  _thread_config_t *tc);
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -413,12 +426,28 @@ static apr_status_t _cmd_begin_function(htt_executable_t *executable,
 }
 
 static apr_status_t _cmd_join_function(htt_executable_t *executable, 
-                                       htt_context_t *cur, 
+                                       htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status = APR_SUCCESS;
-  htt_context_t *context = htt_context_get_godfather(cur);
-  _thread_config_t *tc = htt_context_get_config(context, "thread");
+  htt_context_t *parent = htt_context_get_parent(context);
+  if (!parent) {
+    parent = context;
+  }
+  _thread_config_t *tc = htt_context_get_config(parent, "thread");
+  while (status == APR_SUCCESS && tc) {
+    _thread_config_t *cur;
+    cur = tc;
+    tc = tc->next;
+    status = _join_threads(executable, parent, cur);
+  }
+  return status;
+}
+
+static apr_status_t _join_threads(htt_executable_t *executable, 
+                                  htt_context_t *context,
+                                  _thread_config_t *tc) {
+  apr_status_t status = APR_SUCCESS;
   if (tc) {
     int i;
     apr_table_entry_t *e;
@@ -448,6 +477,7 @@ static apr_status_t _cmd_join_function(htt_executable_t *executable,
   }
 
   return status;
+
 }
 
 static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
@@ -458,35 +488,23 @@ static apr_status_t _hook_thread_init_begin(htt_executable_t *executable,
 static apr_status_t _hook_thread_end(htt_executable_t *executable, 
                                      htt_context_t *context, const char *line) {
   apr_status_t status = APR_SUCCESS;
-  _thread_config_t *tc = htt_context_get_config(context, "thread");
-  if (tc) {
-    int i;
-    apr_table_entry_t *e;
-    e = (void *) apr_table_elts(tc->threads)->elts;
-    for (i = 0; 
-         status == APR_SUCCESS && i < apr_table_elts(tc->threads)->nelts; 
-         i++) {
-      apr_status_t rc;
-      _thread_handle_t *th = (void *)e[i].val;
-      rc = apr_thread_join(&status, th->thread);
-      if (rc != APR_SUCCESS) {
-        htt_log_error(htt_context_get_log(context), rc, 
-                      htt_executable_get_file(executable), 
-                      htt_executable_get_line(executable), 
-                      "Could not join thread %x", th->thread);
-        status = rc;
-      }
-      /** FIXME: child is never destroyed. If I destroy them after join, I get 
-       *         coredumps
-       */
-    }
-
-    apr_thread_mutex_destroy(tc->mutex);
-    apr_thread_mutex_destroy(tc->sync);
-    apr_pool_destroy(tc->pool);
-    htt_context_set_config(context, "thread", NULL);
+  htt_context_t *top = htt_context_get_godfather(context);
+  if (top == context) {
+    status = _cmd_join_function(executable, context, NULL, NULL, NULL, NULL);
   }
-
+  else {
+    _thread_config_t *tc = htt_context_get_config(context, "thread");
+    if (tc) {
+      htt_context_t *parent = htt_context_get_parent(context);
+      _thread_config_t *parent_tc = htt_context_get_config(context, "thread");
+      if (parent_tc) {
+        tc->next = parent_tc;
+      }
+      else {
+        htt_context_set_config(parent, "thread", tc);
+      }
+    }
+  }
   return status;
 }
 

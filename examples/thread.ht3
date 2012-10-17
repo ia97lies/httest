@@ -1,0 +1,22 @@
+set foo=hallo
+
+body
+  loop 9 i
+    thread
+      loop 5
+        sleep 300
+        echo foobar $i
+      end
+    end
+  end
+  join
+  loop 4 j
+    thread
+      loop 5
+        sleep 300
+        echo nextfoo $j
+      end
+    end
+  end
+end
+
