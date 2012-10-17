@@ -343,6 +343,40 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "join threads ... ");
+  fflush(stdout);
+  {
+    htt_bufreader_t *bufreader;
+    apr_status_t status;
+    int i;
+    char *line;
+    char *buf = apr_pstrdup(pool, 
+        "thread\n\
+           loop 100\n\
+             mock 0 client\n\
+           end\n\
+         end\n\
+         join\n\
+         thread\n\
+           mock 0 server\n\
+         end");
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    bufreader = htt_bufreader_buf_new(pool, global_buf[0], 
+                                      strlen(global_buf[0]));
+    for (i = 0; i < 100; i++) {
+      status = htt_bufreader_read_line(bufreader, &line);
+      assert(status == APR_SUCCESS);
+    }
+    status = htt_bufreader_read_line(bufreader, &line);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(line, "server") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 

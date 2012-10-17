@@ -132,6 +132,20 @@ static apr_status_t _cmd_begin_function(htt_executable_t *executable,
                                         htt_stack_t *retvars, char *line); 
 
 /**
+ * join function
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_join_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line); 
+
+/**
  * Join threads for a given context
  * @param executable IN
  * @param context IN
@@ -185,6 +199,9 @@ apr_status_t thread_module_init(htt_t *htt) {
                   "all lines before begin are done before threads on the "
                   "same level do start, only allowed with in thread body",
                   _cmd_begin_compile, _cmd_begin_function);
+  htt_add_command(htt, "join", NULL, "",
+                  "join running threads befor continue script",
+                  htt_cmd_line_compile, _cmd_join_function);
   htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
   htt_hook_end_function(_hook_thread_end, NULL, NULL, 0);
 
@@ -393,6 +410,44 @@ static apr_status_t _cmd_begin_function(htt_executable_t *executable,
   }
   apr_thread_mutex_unlock(th->tc->mutex);
   return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_join_function(htt_executable_t *executable, 
+                                       htt_context_t *cur, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line) {
+  apr_status_t status = APR_SUCCESS;
+  htt_context_t *context = htt_context_get_godfather(cur);
+  _thread_config_t *tc = htt_context_get_config(context, "thread");
+  if (tc) {
+    int i;
+    apr_table_entry_t *e;
+    e = (void *) apr_table_elts(tc->threads)->elts;
+    for (i = 0; 
+         status == APR_SUCCESS && i < apr_table_elts(tc->threads)->nelts; 
+         i++) {
+      apr_status_t rc;
+      _thread_handle_t *th = (void *)e[i].val;
+      rc = apr_thread_join(&status, th->thread);
+      if (rc != APR_SUCCESS) {
+        htt_log_error(htt_context_get_log(context), rc, 
+                      htt_executable_get_file(executable), 
+                      htt_executable_get_line(executable), 
+                      "Could not join thread %x", th->thread);
+        status = rc;
+      }
+      /** FIXME: child is never destroyed. If I destroy them after join, I get 
+       *         coredumps
+       */
+    }
+
+    apr_thread_mutex_destroy(tc->mutex);
+    apr_thread_mutex_destroy(tc->sync);
+    apr_pool_destroy(tc->pool);
+    htt_context_set_config(context, "thread", NULL);
+  }
+
+  return status;
 }
 
 static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
