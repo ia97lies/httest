@@ -109,8 +109,8 @@ static apr_status_t _cmd_exec_function(htt_executable_t *executable,
         if (br) {
           status = APR_SUCCESS;
           htt_bufreader_read_eof(br, &buf, &len);
-          htt_log_buf(htt_context_get_log(context), HTT_LOG_INFO, buf, len, 
-                      "<");
+          htt_log_buf(htt_context_get_log(context), HTT_LOG_INFO, '>', "exec", 
+                      buf, len);
           status = htt_expect_assert(executable, context, "exec", buf, len);
           if (status == APR_SUCCESS) {
             status = htt_expect_check(executable, context);

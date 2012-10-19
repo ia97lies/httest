@@ -34,10 +34,8 @@ struct htt_log_s {
   apr_file_t *err; 
   int prev_mode;
   int mode;
+  int level;
   long unsigned int id;
-  char direction;
-  const char *custom;
-  const char *prefix;
 };
 
 const char *mode_str[] = {
@@ -58,13 +56,15 @@ htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err,
   log->out = out;
   log->err = err;
   log->mode = HTT_LOG_INFO;;
-  log->prefix = apr_pstrdup(pool, "");
   return log;
 }
 
 htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log, 
                           long unsigned int id) {
-  return htt_log_new(pool, log->out, log->err, id);
+  htt_log_t *new_log = htt_log_new(pool, log->out, log->err, id);
+  new_log->mode = log->mode;
+  new_log->level = log->level;
+  return new_log;
 }
 
 void htt_log_set_mode(htt_log_t *log, int mode) {
@@ -76,8 +76,8 @@ void htt_log_unset_mode(htt_log_t *log, int mode) {
   log->mode = log->prev_mode;
 }
 
-void htt_log_set_prefix(htt_log_t *log, const char *prefix) {
-  log->prefix = apr_pstrdup(log->pool, prefix);
+void htt_log_set_level(htt_log_t *log, int level) {
+  log->level = level;
 }
 
 void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
@@ -92,7 +92,7 @@ void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
     }
     apr_pool_create(&pool, log->pool);
     tmp = apr_pvsprintf(pool, fmt, va);
-    apr_file_printf(fp, "\n%s%c[%lu][%s][%s] %s", log->prefix, direction, log->id, mode_str[mode], custom?custom:"null", tmp);
+    apr_file_printf(fp, "\n[%d][%c][%lu][%s][%s] %s", log->level, direction, log->id, mode_str[mode], custom?custom:"null", tmp);
     apr_pool_destroy(pool);
   }
 }
@@ -134,17 +134,12 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
   }
 }
 
-void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len, 
-                 char *prefix) {
+void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
+                 const char *buf, int len) {
   if (log->mode >= mode) {
-    int i;
-    int j;
-    int max_line_len;
-    int line_len;
     char *null="<null>";
     apr_file_t *fd = log->out;
     apr_pool_t *pool;
-    char * outbuf;
 
     if (!buf) {
       buf = null;
@@ -155,80 +150,9 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
       fd = log->err;
     }
 
-    if (prefix) {
-      apr_file_printf(fd, "\n%s%s", log->prefix, prefix);
-    }
-    
-    /* find longest line */
-    i = 0;
-    max_line_len = 0;
-    line_len = 0;
-    while (i < len) {
-      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-        if (buf[i] >= 0x20) {
-          line_len++;
-        }
-        else {
-          line_len+=4;
-        }
-        i++;
-      }
-      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-        if (i != len -1) {
-          if (buf[i] == '\n') {
-            line_len+= 1 + strlen(log->prefix) + (prefix?strlen(prefix):0);
-          }
-        }
-        i++;
-      }
-      if (line_len > max_line_len) {
-        max_line_len = line_len;
-      }
-      line_len = 0;
-    }
-    
     apr_pool_create(&pool, log->pool);
-    outbuf = apr_pcalloc(pool, max_line_len + 100);
-
-    /* log lines */
-    i = 0;
-    while (i < len) {
-      j = 0;
-      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-        if (buf[i] >= 0x20) {
-          sprintf(&outbuf[j], "%c", buf[i]);
-          j++;
-        }
-        else {
-          sprintf(&outbuf[j], "0x%02x ", (unsigned char)buf[i]);
-          j+=4;
-        }
-        i++;
-      }
-      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-        if (i != len -1) {
-          if (buf[i] == '\n') {
-            sprintf(&outbuf[j], "%c", buf[i]);
-            j++;
-            sprintf(&outbuf[j], "%s%s", log->prefix, prefix?prefix:"");
-            j+= strlen(log->prefix) + (prefix?strlen(prefix):0);
-          }
-        }
-        i++;
-      }
-      apr_file_printf(fd, "%s", outbuf);
-      outbuf[0] = 0;
-    }
-    
+    apr_file_printf(fd, "\n[%d][%c][%s] %s", log->level, direction, custom, apr_pstrndup(pool, buf, len));
     apr_pool_destroy(pool);
   }
-}
-
-void htt_log_outbuf(htt_log_t *log, int mode, const char *buf, int len) {
-  htt_log_buf(log, mode, buf, len, ">");
-}
-
-void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len) {
-  htt_log_buf(log, mode, buf, len, "<");
 }
 

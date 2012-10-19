@@ -72,11 +72,11 @@ void htt_log_set_mode(htt_log_t *log, int mode);
 void htt_log_unset_mode(htt_log_t *log, int mode);
 
 /**
- * Log formated text
- * @param log IN instance
- * @param prefix IN prefix i.e. spaces
+ * Set level for indention
+ * @param log IN log
+ * @param level IN level of indention
  */
-void htt_log_set_prefix(htt_log_t *log, const char *prefix);
+void htt_log_set_level(htt_log_t *log, int level); 
 
 /**
  * Log formated text
@@ -106,30 +106,14 @@ void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
  * Log formated buffer
  * @param log IN instance
  * @param mode IN log mode
- * @param buf IN buffer to log
- * @param len IN buffer len to log 
- * @param prefix IN for input/output buffer
- */
-void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len, 
-                 char *prefix);
-
-/**
- * Log formated output buffer
- * @param log IN instance
- * @param mode IN log mode
+ * @param direction IN =,>,<
+ * @param custom IN custom category
+ * @param fmt IN format
  * @param buf IN buffer to log
  * @param len IN buffer len to log 
  */
-void htt_log_outbuf(htt_log_t *log, int mode, const char *buf, int len);
-
-/**
- * Log formated input buffer
- * @param log IN instance
- * @param mode IN log mode
- * @param buf IN buffer to log
- * @param len IN buffer len to log 
- */
-void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len);
+void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
+                 const char *buf, int len); 
 
 /**
  * Log error
