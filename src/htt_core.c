@@ -527,7 +527,7 @@ htt_t *htt_new(apr_pool_t *pool) {
 }
 
 void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
-  htt->log = htt_log_new(htt->pool, std, err);
+  htt->log = htt_log_new(htt->pool, std, err, 0);
   htt_log_set_mode(htt->log, mode);
 }
 
@@ -625,8 +625,8 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
       htt_command_t *command;
 
       cmd = apr_strtok(line, " ", &rest);
-      htt_log(htt->log, HTT_LOG_DEBUG, "%s:%d -> %s[%s]", htt->cur_file, 
-              htt->cur_line, cmd, rest);
+      htt_log(htt->log, HTT_LOG_DEBUG, '=', "compile", "%s:%d -> %s[%s]", 
+              htt->cur_file, htt->cur_line, cmd, rest);
       command = htt_get_command(htt->executable, cmd);
       if (!command) {
         status = APR_EGENERAL;
@@ -825,9 +825,12 @@ static apr_status_t _cmd_loop_function(htt_executable_t *executable,
   count = apr_strtok(line, " ", &index);
 
   if (!count || !count[0]) {
-      htt_log(htt_context_get_log(context), HTT_LOG_ERROR, 
-              "Expect a count");
-    return APR_EGENERAL;
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Expect a count");
+    return status;
   }
 
   loop_executable = htt_executable_new(htt_context_get_pool(context), 

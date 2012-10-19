@@ -212,7 +212,7 @@ static apr_status_t _cmd_echo_function(htt_executable_t *executable,
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  htt_log(htt_context_get_log(context), HTT_LOG_NONE, "%s", line);
+  htt_log(htt_context_get_log(context), HTT_LOG_NONE, '>', NULL, "%s", line);
   return APR_SUCCESS;
 }
 

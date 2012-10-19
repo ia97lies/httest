@@ -68,6 +68,8 @@ typedef struct _thread_stats_s {
   int threads;
 } _thread_stats_t;
 
+long unsigned int t_count = 0;
+
 /**
  * Get thread config from given context
  * @param context IN
@@ -291,12 +293,16 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
 
     status = APR_SUCCESS;
     while (count && status == APR_SUCCESS) {
+      apr_thread_mutex_lock(tc->mutex);
+      ++t_count;
+      apr_thread_mutex_unlock(tc->mutex);
       _thread_handle_t *th = apr_pcalloc(tc->pool, sizeof(*th));
       htt_context_t *child;
       child = htt_context_new(NULL, NULL);
       htt_context_set_log(child, 
                           htt_log_clone(htt_context_get_pool(child), 
-                                        htt_context_get_log(parent)));
+                                        htt_context_get_log(parent),
+                                        t_count));
       _set_log_prefix(thread_stats->threads-1, htt_context_get_log(child),
                       htt_context_get_pool(child));
       if (variable && variable[0]) {

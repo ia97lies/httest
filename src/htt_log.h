@@ -34,25 +34,28 @@ typedef struct htt_log_s htt_log_t;
 #define HTT_LOG_WARN 2
 #define HTT_LOG_INFO 3
 #define HTT_LOG_CMD 4
-#define HTT_LOG_ALL_CMD 5
-#define HTT_LOG_DEBUG 6
+#define HTT_LOG_DEBUG 5
 
 /**
  * Create a new log instance
  * @param pool IN
  * @param out IN file desc for stdout
  * @param err IN file desc for errout
+ * @param id IN unique id for thread
  * @return htt log instance
  */
-htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err);
+htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err,
+                        long unsigned int id);
 
 /**
  * Clone a log instance from a given one
  * @param pool IN
  * @param log IN 
+ * @param id IN unique id for thread
  * @return htt log instance
  */
-htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log); 
+htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log, 
+                          long unsigned int id); 
 
 /**
  * Set logger mode
@@ -79,10 +82,25 @@ void htt_log_set_prefix(htt_log_t *log, const char *prefix);
  * Log formated text
  * @param log IN instance
  * @param mode IN log mode
+ * @param direction IN =,>,<
+ * @param custom IN custom category
  * @param fmt IN format
  * @param ... IN format parameters
  */
-void htt_log(htt_log_t *log, int mode, char *fmt, ...);
+void htt_log(htt_log_t *log, int mode, char direction, const char *custom, 
+             char *fmt, ...);
+
+/**
+ * Log formated text
+ * @param log IN instance
+ * @param mode IN log mode
+ * @param direction IN =,>,<
+ * @param custom IN custom category
+ * @param fmt IN format
+ * @param va IN va args
+ */
+void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom, 
+                char *fmt, va_list va); 
 
 /**
  * Log formated buffer

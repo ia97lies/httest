@@ -92,7 +92,6 @@ apr_getopt_option_t options[] = {
   { "warn", 'w', 0, "log level warn" },
   { "info", 'i', 0, "log level info" },
   { "debug", 'd', 0, "log level debug for script debugging" },
-  { "debug-system", 'p', 0, "log level debug-system to log more details" },
   { "list-commands", 'L', 0, "List all available script commands" },
   { "help-command", 'C', 1, "Print help for specific command" },
   { "duration", 't', 0, "Print test duration" },
@@ -221,9 +220,6 @@ int main(int argc, const char *const argv[]) {
     case 'e':
       log_mode = HTT_LOG_ERROR;
       break;
-    case 'p':
-      log_mode = HTT_LOG_DEBUG;
-      break;
     case 'w':
       log_mode = HTT_LOG_WARN;
       break;
@@ -231,7 +227,7 @@ int main(int argc, const char *const argv[]) {
       log_mode = HTT_LOG_INFO;
       break;
     case 'd':
-      log_mode = HTT_LOG_ALL_CMD;
+      log_mode = HTT_LOG_DEBUG;
       break;
     case 't':
       flags |= MAIN_FLAGS_PRINT_DURATION; 

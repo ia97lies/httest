@@ -242,8 +242,8 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     line = htt_replacer(ptmp, line, &replacer_ctx, _context_replacer);
     _handle_signature(ptmp, exec->params, exec->retvars, line, &params, 
                       &retvars);
-    htt_log(htt_context_get_log(context), HTT_LOG_CMD, "%s:%d -> %s %s", 
-            exec->file, exec->line, exec->name, line);
+    htt_log(htt_context_get_log(context), HTT_LOG_CMD, '=', "cmd", "%s %s", 
+            exec->name, line);
     if (!exec->body) {
       if (exec->function) {
         status = exec->function(exec, context, ptmp, params, retvals, line); 
@@ -263,16 +263,18 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
       }
     }
     else {
-      htt_log_t *log = htt_context_get_log(context);
       child_context= htt_context_new(context, htt_context_get_log(context));
       if (exec->function) {
         status = exec->function(exec, child_context, ptmp, params, retvals, 
                                 line); 
         closure = htt_stack_top(retvals);
         if (closure && !htt_isa_function(closure)) {
-          htt_log(log, HTT_LOG_ERROR, "Expect a closure"); 
-          apr_pool_destroy(ptmp);
           status = APR_EGENERAL;
+          htt_log_error(htt_context_get_log(context), status, 
+                        htt_executable_get_file(exec), 
+                        htt_executable_get_line(exec), 
+                        "Expect a closure"); 
+          apr_pool_destroy(ptmp);
           break;
         }
       }

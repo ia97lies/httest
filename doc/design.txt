@@ -70,3 +70,9 @@ end
 - execute shell scripts
 - execute httest scripts
 - use ht3 also as a test manager/executor
+
+++logging
+- thread safe
+- thread distiguish
+- appender
+

@@ -34,12 +34,27 @@ struct htt_log_s {
   apr_file_t *err; 
   int prev_mode;
   int mode;
+  long unsigned int id;
+  char direction;
+  const char *custom;
   const char *prefix;
 };
 
-htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err) {
+const char *mode_str[] = {
+ "NONE",
+ "ERROR",
+ "WARN",
+ "INFO",
+ "CMD",
+ "DEBUG",
+  NULL
+};
+
+htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err, 
+                        long unsigned int id) {
   htt_log_t *log = apr_pcalloc(pool, sizeof(*log));
   log->pool = pool;
+  log->id = id;
   log->out = out;
   log->err = err;
   log->mode = HTT_LOG_INFO;;
@@ -47,8 +62,9 @@ htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err) {
   return log;
 }
 
-htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log) {
-  return htt_log_new(pool, log->out, log->err);
+htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log, 
+                          long unsigned int id) {
+  return htt_log_new(pool, log->out, log->err, id);
 }
 
 void htt_log_set_mode(htt_log_t *log, int mode) {
@@ -64,22 +80,55 @@ void htt_log_set_prefix(htt_log_t *log, const char *prefix) {
   log->prefix = apr_pstrdup(log->pool, prefix);
 }
 
-void htt_log(htt_log_t *log, int mode, char *fmt, ...) {
+void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
+                char *fmt, va_list va) {
   if (log->mode >= mode) {
+    apr_file_t *fp = log->out;
+    char *tmp;
+    apr_pool_t *pool;
+
+    if (log->mode >= HTT_LOG_ERROR) {
+      fp = log->err;
+    }
+    apr_pool_create(&pool, log->pool);
+    tmp = apr_pvsprintf(pool, fmt, va);
+    apr_file_printf(fp, "\n%s%c[%lu][%s][%s] %s", log->prefix, direction, log->id, mode_str[mode], custom?custom:"null", tmp);
+    apr_pool_destroy(pool);
+  }
+}
+
+void htt_log(htt_log_t *log, int mode, char direction, const char *custom, 
+             char *fmt, ...) {
+  if (log->mode >= mode) {
+    va_list va;
+
+    va_start(va, fmt);
+    htt_log_va(log, mode, direction, custom, fmt, va);
+  }
+}
+
+void htt_log_debug(htt_log_t *log, char *fmt, ...) {
+  if (log->mode >= HTT_LOG_DEBUG) {
+    va_list va;
+
+    va_start(va, fmt);
+    htt_log_va(log, HTT_LOG_DEBUG, '=', NULL, fmt, va);
+  }
+}
+
+void htt_log_error(htt_log_t *log, apr_status_t status, const char *file, 
+                   int pos, const char *fmt, ...) {
+  if (log->mode >= HTT_LOG_ERROR) {
     char *tmp;
     va_list va;
     apr_pool_t *pool;
 
     apr_pool_create(&pool, log->pool);
     va_start(va, fmt);
-    if (log->mode == HTT_LOG_ERROR) {
-      tmp = apr_pvsprintf(pool, fmt, va);
-      apr_file_printf(log->err, "\n%-88s", tmp);
-    }
-    else {
-      tmp = apr_pvsprintf(pool, fmt, va);
-      apr_file_printf(log->out, "\n%s%s", log->prefix, tmp);
-    }
+    tmp = apr_pvsprintf(pool, fmt, va);
+    tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
+                       htt_util_status_str(pool, status), status, tmp);
+    apr_file_printf(log->err, "\n%s", tmp);
     va_end(va);
     apr_pool_destroy(pool);
   }
@@ -102,7 +151,7 @@ void htt_log_buf(htt_log_t *log, int mode, const char *buf, int len,
       len = strlen(buf);
     }
     
-    if (mode == HTT_LOG_ERROR) {
+    if (mode >= HTT_LOG_ERROR) {
       fd = log->err;
     }
 
@@ -182,24 +231,4 @@ void htt_log_outbuf(htt_log_t *log, int mode, const char *buf, int len) {
 void htt_log_inbuf(htt_log_t *log, int mode, const char *buf, int len) {
   htt_log_buf(log, mode, buf, len, "<");
 }
-
-void htt_log_error(htt_log_t *log, apr_status_t status, const char *file, 
-                   int pos, const char *fmt, ...) {
-  if (log->mode >= HTT_LOG_ERROR) {
-    char *tmp;
-    va_list va;
-    apr_pool_t *pool;
-
-    apr_pool_create(&pool, log->pool);
-    va_start(va, fmt);
-    tmp = apr_pvsprintf(pool, fmt, va);
-    tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
-                       htt_util_status_str(pool, status), status, tmp);
-    apr_file_printf(log->err, "\n%-88s", tmp);
-    va_end(va);
-    apr_pool_destroy(pool);
-  }
-
-}
-
 
