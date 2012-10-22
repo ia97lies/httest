@@ -27,6 +27,7 @@
 #include <apr_strings.h>
 #include "htt_util.h"
 #include "htt_log.h"
+#include "htt_log_appender.h"
 
 struct htt_log_s {
   apr_pool_t *pool;
@@ -36,6 +37,7 @@ struct htt_log_s {
   int mode;
   int level;
   long unsigned int id;
+  htt_log_appender_t *appender;
 };
 
 const char *mode_str[] = {
@@ -64,7 +66,12 @@ htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log,
   htt_log_t *new_log = htt_log_new(pool, log->out, log->err, id);
   new_log->mode = log->mode;
   new_log->level = log->level;
+  new_log->appender = log->appender;
   return new_log;
+}
+
+void htt_log_set_appender(htt_log_t *log, htt_log_appender_t *appender) {
+  log->appender = appender;
 }
 
 void htt_log_set_mode(htt_log_t *log, int mode) {
@@ -140,7 +147,6 @@ void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
     char *cur;
     char *null="<null>";
     apr_file_t *fd = log->out;
-    apr_pool_t *pool;
 
     if (!buf) {
       buf = null;
@@ -151,9 +157,7 @@ void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
       fd = log->err;
     }
 
-    apr_pool_create(&pool, log->pool);
     while ((cur = strchr(buf, '\n'))) {
-      char *tmp;
       apr_size_t len = cur - buf;
       if (buf[len] == '\r') {
         --len;
@@ -163,7 +167,7 @@ void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
       apr_file_write(fd, buf, &len);
       buf = cur + 1;
     }
-    apr_pool_destroy(pool);
   }
 }
+
 

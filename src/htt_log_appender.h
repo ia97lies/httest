@@ -32,9 +32,38 @@ typedef apr_status_t(*htt_print_f)(htt_log_appender_t *appender, int level,
                                    int mode, const char *custom, 
                                    const char *buf, apr_size_t len);
 
-htt_log_appender_t *htt_log_appender_new(htt_print_f print, void *user_data);
+/**
+ * Create a new appender
+ * @param pool IN 
+ * @param print IN implemented print method
+ * @param user_data IN user data for print method
+ * @return appender instance
+ */
+htt_log_appender_t *htt_log_appender_new(apr_pool_t *pool, htt_print_f print, 
+                                         void *user_data);
 
-void *htt_log_appneder_get_user_data(htt_log_appender *appender);
+/**
+ * Get user data registered to appender
+ * @param appender IN
+ * @return registered user data
+ */
+void *htt_log_appender_get_user_data(htt_log_appender_t *appender);
+
+/**
+ * Print with the implemented print method
+ * @param appender IN
+ * @param level IN concurrent threads
+ * @param direction IN <,>,= (in, out, else)
+ * @param id IN thread id
+ * @param mode IN ERROR, WARN, INFO, ...
+ * @param custom IN custom string
+ * @param buf IN buffer to print
+ * @param len IN buffer lenght or 0 if null terminated string
+ */
+void htt_log_appender_print(htt_log_appender_t *appender, int level, 
+                            char direction, long unsigned int id, int mode, 
+                            const char *custom, const char *buf, 
+                            apr_size_t len);
 
 #endif
 
