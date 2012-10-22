@@ -137,6 +137,7 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
 void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
                  const char *buf, int len) {
   if (log->mode >= mode) {
+    char *cur;
     char *null="<null>";
     apr_file_t *fd = log->out;
     apr_pool_t *pool;
@@ -151,7 +152,17 @@ void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
     }
 
     apr_pool_create(&pool, log->pool);
-    apr_file_printf(fd, "\n[%d][%c][%s] %s", log->level, direction, custom, apr_pstrndup(pool, buf, len));
+    while ((cur = strchr(buf, '\n'))) {
+      char *tmp;
+      apr_size_t len = cur - buf;
+      if (buf[len] == '\r') {
+        --len;
+      }
+      apr_file_printf(fd, "\n[%d][%c][%lu][%s] ", log->level, direction, 
+                      log->id, custom);
+      apr_file_write(fd, buf, &len);
+      buf = cur + 1;
+    }
     apr_pool_destroy(pool);
   }
 }
