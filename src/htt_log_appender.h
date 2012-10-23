@@ -25,6 +25,13 @@
 #ifndef HTT_LOG_APPENDER_H
 #define HTT_LOG_APPENDER_H
 
+#define HTT_LOG_NONE 0
+#define HTT_LOG_ERROR 1
+#define HTT_LOG_WARN 2
+#define HTT_LOG_INFO 3
+#define HTT_LOG_CMD 4
+#define HTT_LOG_DEBUG 5
+
 typedef struct htt_log_appender_s htt_log_appender_t;
 
 typedef void(*htt_print_f)(htt_log_appender_t *appender, int level, 

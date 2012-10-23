@@ -26,15 +26,9 @@
 #define HTT_LOG_H
 
 #include <apr_file_io.h>
+#include "htt_log_appender.h"
 
 typedef struct htt_log_s htt_log_t;
-
-#define HTT_LOG_NONE 0
-#define HTT_LOG_ERROR 1
-#define HTT_LOG_WARN 2
-#define HTT_LOG_INFO 3
-#define HTT_LOG_CMD 4
-#define HTT_LOG_DEBUG 5
 
 /**
  * Create a new log instance
@@ -55,6 +49,13 @@ htt_log_t * htt_log_new(apr_pool_t *pool, long unsigned int id);
  */
 htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log, 
                           long unsigned int id); 
+
+/**
+ * Set an appender to print infos
+ * @param log IN
+ * @param appender IN
+ */
+void htt_log_set_appender(htt_log_t *log, htt_log_appender_t *appender); 
 
 /**
  * Set logger mode

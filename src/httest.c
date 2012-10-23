@@ -65,6 +65,7 @@
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
+#include "htt_log_simple_appender.h"
 #include "htt_map.h"
 
 /************************************************************************
