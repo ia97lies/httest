@@ -10,7 +10,7 @@ httest_SOURCES = \
 	htt_log.c htt_log_appender.c htt_util.c htt_stack.c htt_bufreader.c \
 	htt_replacer.c htt_command.c htt_string.c htt_function.c htt_socket.c \
 	htt_expr.c core_module.c thread_module.c exception_module.c \
-	shell_module.c htt_modules.c
+	shell_module.c htt_modules.c htt_log_simple_appender.c
 
 #EXTRA_httest_SOURCES = \
 #	lua_module.c

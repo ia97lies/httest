@@ -60,6 +60,7 @@
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
+#include "htt_log_appender.h"
 #include "htt_map.h"
 #include "htt_stack.h"
 #include "htt_executable.h"
@@ -527,7 +528,8 @@ htt_t *htt_new(apr_pool_t *pool) {
 }
 
 void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
-  htt->log = htt_log_new(htt->pool, std, err, 0);
+  htt->log = htt_log_new(htt->pool, 0);
+  htt_log_set_appender(htt->log, htt_log_simple_appender_new(htt->pool, std, err));
   htt_log_set_mode(htt->log, mode);
 }
 

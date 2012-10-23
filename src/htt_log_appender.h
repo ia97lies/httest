@@ -27,10 +27,10 @@
 
 typedef struct htt_log_appender_s htt_log_appender_t;
 
-typedef apr_status_t(*htt_print_f)(htt_log_appender_t *appender, int level, 
-                                   char direction, long unsigned int id, 
-                                   int mode, const char *custom, 
-                                   const char *buf, apr_size_t len);
+typedef void(*htt_print_f)(htt_log_appender_t *appender, int level, 
+                           char direction, long unsigned int id, 
+                           int mode, const char *custom, 
+                           const char *buf, apr_size_t len);
 
 /**
  * Create a new appender
@@ -61,9 +61,9 @@ void *htt_log_appender_get_user_data(htt_log_appender_t *appender);
  * @param len IN buffer lenght or 0 if null terminated string
  */
 void htt_log_appender_print(htt_log_appender_t *appender, int level, 
-                            char direction, long unsigned int id, int mode, 
-                            const char *custom, const char *buf, 
-                            apr_size_t len);
+                            char direction, long unsigned int id, 
+                            int mode, const char *custom, 
+                            const char *buf, apr_size_t len);
 
 #endif
 

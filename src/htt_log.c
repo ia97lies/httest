@@ -31,14 +31,16 @@
 
 struct htt_log_s {
   apr_pool_t *pool;
-  apr_file_t *out; 
-  apr_file_t *err; 
   int prev_mode;
   int mode;
   int level;
   long unsigned int id;
   htt_log_appender_t *appender;
 };
+
+/************************************************************************
+ * Globals
+ ***********************************************************************/
 
 const char *mode_str[] = {
  "NONE",
@@ -50,20 +52,21 @@ const char *mode_str[] = {
   NULL
 };
 
-htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err, 
-                        long unsigned int id) {
+/************************************************************************
+ * Public 
+ ***********************************************************************/
+
+htt_log_t * htt_log_new(apr_pool_t *pool, long unsigned int id) {
   htt_log_t *log = apr_pcalloc(pool, sizeof(*log));
   log->pool = pool;
   log->id = id;
-  log->out = out;
-  log->err = err;
   log->mode = HTT_LOG_INFO;;
   return log;
 }
 
 htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log, 
                           long unsigned int id) {
-  htt_log_t *new_log = htt_log_new(pool, log->out, log->err, id);
+  htt_log_t *new_log = htt_log_new(pool, id);
   new_log->mode = log->mode;
   new_log->level = log->level;
   new_log->appender = log->appender;
@@ -90,16 +93,13 @@ void htt_log_set_level(htt_log_t *log, int level) {
 void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
                 char *fmt, va_list va) {
   if (log->mode >= mode) {
-    apr_file_t *fp = log->out;
     char *tmp;
     apr_pool_t *pool;
 
-    if (log->mode >= HTT_LOG_ERROR) {
-      fp = log->err;
-    }
     apr_pool_create(&pool, log->pool);
     tmp = apr_pvsprintf(pool, fmt, va);
-    apr_file_printf(fp, "\n[%d][%c][%lu][%s][%s] %s", log->level, direction, log->id, mode_str[mode], custom?custom:"null", tmp);
+    htt_log_appender_print(log->appender, log->level, direction, log->id, 
+                           mode, custom?custom:"null", tmp, 0);
     apr_pool_destroy(pool);
   }
 }
@@ -135,7 +135,8 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
     tmp = apr_pvsprintf(pool, fmt, va);
     tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
                        htt_util_status_str(pool, status), status, tmp);
-    apr_file_printf(log->err, "\n%s", tmp);
+    htt_log_appender_print(log->appender, log->level, '=', log->id, 
+                           log->mode, "error", tmp, 0);
     va_end(va);
     apr_pool_destroy(pool);
   }
@@ -146,28 +147,21 @@ void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
   if (log->mode >= mode) {
     char *cur;
     char *null="<null>";
-    apr_file_t *fd = log->out;
 
     if (!buf) {
       buf = null;
       len = strlen(buf);
     }
     
-    if (mode >= HTT_LOG_ERROR) {
-      fd = log->err;
-    }
-
     while ((cur = strchr(buf, '\n'))) {
       apr_size_t len = cur - buf;
       if (buf[len] == '\r') {
         --len;
       }
-      apr_file_printf(fd, "\n[%d][%c][%lu][%s] ", log->level, direction, 
-                      log->id, custom);
-      apr_file_write(fd, buf, &len);
+      htt_log_appender_print(log->appender, log->level, direction, log->id, 
+                             mode, custom?custom:"null", buf, len);
       buf = cur + 1;
     }
   }
 }
-
 

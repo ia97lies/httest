@@ -44,8 +44,7 @@ typedef struct htt_log_s htt_log_t;
  * @param id IN unique id for thread
  * @return htt log instance
  */
-htt_log_t * htt_log_new(apr_pool_t *pool, apr_file_t *out, apr_file_t *err,
-                        long unsigned int id);
+htt_log_t * htt_log_new(apr_pool_t *pool, long unsigned int id);
 
 /**
  * Clone a log instance from a given one

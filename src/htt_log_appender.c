@@ -46,11 +46,12 @@ void *htt_log_appender_get_user_data(htt_log_appender_t *appender) {
 }
 
 void htt_log_appender_print(htt_log_appender_t *appender, int level, 
-                            char direction, long unsigned int id, int mode, 
-                            const char *custom, const char *buf, 
-                            apr_size_t len) {
-  if (appender->print) {
-    appender->print(appender, level, direction, id, mode, custom, buf, len);
+                            char direction, long unsigned int id, 
+                            int mode, const char *custom, 
+                            const char *buf, apr_size_t len) {
+  if (appender && appender->print) {
+    appender->print(appender, level, direction, id, mode, custom, buf, 
+                    (len ? len : strlen(buf)));
   }
 }
 
