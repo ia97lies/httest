@@ -24,6 +24,7 @@
 
 #include <apr.h>
 #include <apr_pools.h>
+#include <apr_thread_mutex.h>
 #include <apr_strings.h>
 #include "htt_util.h"
 #include "htt_log.h"
@@ -36,6 +37,7 @@ struct htt_log_s {
   int level;
   long unsigned int id;
   htt_log_appender_t *appender;
+  apr_thread_mutex_t *mutex;
 };
 
 /************************************************************************
@@ -70,6 +72,10 @@ htt_log_t * htt_log_clone(apr_pool_t *pool, htt_log_t *log,
   new_log->mode = log->mode;
   new_log->level = log->level;
   new_log->appender = log->appender;
+  if (!log->mutex) {
+    apr_thread_mutex_create(&log->mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+  }
+  new_log->mutex = log->mutex;
   return new_log;
 }
 
@@ -98,8 +104,10 @@ void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
 
     apr_pool_create(&pool, log->pool);
     tmp = apr_pvsprintf(pool, fmt, va);
+    if (log->mutex) apr_thread_mutex_lock(log->mutex);
     htt_log_appender_print(log->appender, log->level, direction, log->id, 
                            mode, custom?custom:"null", tmp, 0);
+    if (log->mutex) apr_thread_mutex_unlock(log->mutex);
     apr_pool_destroy(pool);
   }
 }
@@ -135,8 +143,10 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
     tmp = apr_pvsprintf(pool, fmt, va);
     tmp = apr_psprintf(pool, "%s:%d: error: %s(%d): %s", file, pos,
                        htt_util_status_str(pool, status), status, tmp);
+    if (log->mutex) apr_thread_mutex_lock(log->mutex);
     htt_log_appender_print(log->appender, log->level, '=', log->id, 
                            log->mode, "error", tmp, 0);
+    if (log->mutex) apr_thread_mutex_unlock(log->mutex);
     va_end(va);
     apr_pool_destroy(pool);
   }
@@ -158,9 +168,11 @@ void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
       if (buf[len] == '\r') {
         --len;
       }
+      if (log->mutex) apr_thread_mutex_lock(log->mutex);
       htt_log_appender_print(log->appender, log->level, direction, log->id, 
                              mode, custom?custom:"null", buf, len);
       buf = cur + 1;
+      if (log->mutex) apr_thread_mutex_unlock(log->mutex);
     }
   }
 }

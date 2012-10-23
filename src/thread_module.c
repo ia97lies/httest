@@ -518,6 +518,7 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
   htt_context_t *context = handle->context;
   htt_executable_t *executable = handle->executable;
 
+  htt_log(htt_context_get_log(context), HTT_LOG_INFO, '=', "thread", "thread-%d start", handle->tc->i);
   if (!htt_executable_get_config(executable, "__thread_begin")) {
     apr_thread_mutex_lock(handle->tc->sync);
     apr_thread_mutex_unlock(handle->tc->sync);
