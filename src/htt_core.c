@@ -529,7 +529,7 @@ htt_t *htt_new(apr_pool_t *pool) {
 
 void htt_set_log(htt_t *htt, apr_file_t *std, apr_file_t *err, int mode) {
   htt->log = htt_log_new(htt->pool, 0);
-  htt_log_set_appender(htt->log, htt_log_simple_appender_new(htt->pool, std, err));
+  htt_log_set_appender(htt->log, htt_log_std_appender_new(htt->pool, std, err));
   htt_log_set_mode(htt->log, mode);
 }
 

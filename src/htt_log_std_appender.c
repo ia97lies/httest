@@ -51,6 +51,13 @@ void _std_appender_print(htt_log_appender_t *appender, int level,
                             int mode, const char *custom, 
                             const char *buf, apr_size_t len);
 
+/**
+ * Add indention for every level
+ * @param out IN out file
+ * @param level IN
+ */
+void _print_prefix(apr_file_t *out, int level);
+
 /************************************************************************
  * Pupblic
  ***********************************************************************/
@@ -81,8 +88,8 @@ void _std_appender_print(htt_log_appender_t *appender, int level,
     out = std->err;
   }
 
-  apr_file_printf(out, "\n[%d][%c][%lu][%d][%s]", level, direction, id, mode,
-                  custom?custom:"null");
+  _print_prefix(out, level);
+  apr_file_printf(out, "%c", direction);
   while (total) {
     apr_size_t tmp_len = total;
     apr_file_write(out, &buf[cur_pos], &tmp_len);
@@ -91,4 +98,13 @@ void _std_appender_print(htt_log_appender_t *appender, int level,
   }
 }
 
+void _print_prefix(apr_file_t *out, int level) {
+  int i;
+  apr_size_t len = 1;
+  apr_file_write(out, "\n", &len);
+  for (i = 0; i < level; i++) {
+    len = 10;
+    apr_file_write(out, "          ", &len);
+  }
+}
 
