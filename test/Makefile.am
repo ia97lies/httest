@@ -9,6 +9,7 @@ test_htt_core_SOURCES=test_htt_core.c $(top_srcdir)/src/htt_core.c $(top_srcdir)
 		      $(top_srcdir)/src/htt_string.c $(top_srcdir)/src/htt_function.c \
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/htt_log_simple_appender.c \
+		      $(top_srcdir)/src/htt_log_std_appender.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
@@ -23,6 +24,7 @@ test_thread_module_SOURCES=test_thread_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_string.c $(top_srcdir)/src/htt_function.c \
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/htt_log_simple_appender.c \
+		      $(top_srcdir)/src/htt_log_std_appender.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
@@ -37,6 +39,7 @@ test_exception_module_SOURCES=test_exception_module.c $(top_srcdir)/src/htt_core
 		      $(top_srcdir)/src/htt_string.c $(top_srcdir)/src/htt_function.c \
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/htt_log_simple_appender.c \
+		      $(top_srcdir)/src/htt_log_std_appender.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
@@ -51,6 +54,7 @@ test_shell_module_SOURCES=test_shell_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_string.c $(top_srcdir)/src/htt_function.c \
 		      $(top_srcdir)/src/htt_command.c $(top_srcdir)/src/htt_expr.c \
 		      $(top_srcdir)/src/htt_log_simple_appender.c \
+		      $(top_srcdir)/src/htt_log_std_appender.c \
 		      $(top_srcdir)/src/thread_module.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \

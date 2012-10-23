@@ -60,7 +60,7 @@
 #include "htt_util.h"
 #include "htt_core.h"
 #include "htt_log.h"
-#include "htt_log_simple_appender.h"
+#include "htt_log_std_appender.h"
 #include "htt_map.h"
 #include "htt_stack.h"
 #include "htt_executable.h"
