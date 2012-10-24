@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool shell module 
+ * Implementation of the HTTP Test Tool skeleton module 
  */
 
 /************************************************************************

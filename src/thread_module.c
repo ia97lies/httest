@@ -303,7 +303,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       }
       _merge_all_vars(child, parent);
 
-      th->name = apr_psprintf(tc->pool, "thread-%d", tc->i);
+      th->name = apr_psprintf(tc->pool, "thread-%lu", t_count);
       th->context = child;
       th->executable = executable;
       th->tc = tc;
@@ -518,7 +518,8 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
   htt_context_t *context = handle->context;
   htt_executable_t *executable = handle->executable;
 
-  htt_log(htt_context_get_log(context), HTT_LOG_INFO, '=', "thread", "thread-%d start", handle->tc->i);
+  htt_log(htt_context_get_log(context), HTT_LOG_INFO, '=', "thread", "%s start",
+          handle->name);
   if (!htt_executable_get_config(executable, "__thread_begin")) {
     apr_thread_mutex_lock(handle->tc->sync);
     apr_thread_mutex_unlock(handle->tc->sync);

@@ -89,7 +89,9 @@ void _std_appender_print(htt_log_appender_t *appender, int level,
   }
 
   _print_prefix(out, level);
-  apr_file_printf(out, "%c", direction);
+  if (direction != '=') {
+    apr_file_printf(out, "%c", direction);
+  }
   while (total) {
     apr_size_t tmp_len = total;
     apr_file_write(out, &buf[cur_pos], &tmp_len);
