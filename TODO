@@ -1,3 +1,5 @@
 TODO List
 ---------
-- Improve htt_store with the possibility to access entries by index
+- For the moment only one appender is possible, change this and allow multiple appenders
+- Write a appender which writes each thread into a separated file. 
+
