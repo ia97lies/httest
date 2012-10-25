@@ -2054,6 +2054,14 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   
   interm = my_unescape(last, &last);
 
+  if (last) {
+    while (*last == ' ') ++last;
+    if (*last != 0) {
+      worker_log(worker, LOG_ERR, "there is more stuff behind last quote");
+      return APR_EGENERAL;
+    }
+  }
+
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
