@@ -81,7 +81,7 @@ void _simple_appender_print(htt_log_appender_t *appender, int level,
     out = simple->err;
   }
 
-  apr_file_printf(out, "\n[%d][%c][%lu][%d][%s]", level, direction, id, mode,
+  apr_file_printf(out, "\n%c,id=%lu,mode=%d,custom=%s,msg=", direction, id, mode,
                   custom?custom:"null");
   while (total) {
     apr_size_t tmp_len = total;
