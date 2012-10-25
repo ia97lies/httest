@@ -957,7 +957,6 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
-    fprintf(stderr, "XXX: %s\n", global_buf);
     assert(strcmp(global_buf, "bar $r2\n") == 0);
   }
   fprintf(stdout, "ok\n");

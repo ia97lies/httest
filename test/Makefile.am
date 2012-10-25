@@ -64,7 +64,7 @@ test_shell_module_SOURCES=test_shell_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c \
 		      $(top_srcdir)/src/htt_modules.c
-EXTRA_DIST=finally.ht3
+EXTRA_DIST=run_lib.sh run_all.sh finally.ht3
 AM_CFLAGS=-I$(top_srcdir)/src
 check_PROGRAMS=test_htt_stack test_htt_bufreader test_htt_expr test_htt_core test_thread_module test_exception_module test_shell_module
 TESTS = test_htt_stack test_htt_bufreader test_htt_expr test_htt_core test_thread_module test_exception_module test_shell_module run_all.sh
