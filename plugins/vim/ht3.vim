@@ -10,16 +10,16 @@ elseif exists("b:current_syntax")
 endif
 
 syn keyword httInclude          include
-syn keyword httStatement        body
+syn keyword httStorageClass     body
 syn keyword httStatement        finally
 syn keyword httStatement        assert
-syn keyword httStatement        daemon
-syn keyword httStatement        thread
+syn keyword httStorageClass     daemon
+syn keyword httStorageClass     thread
 syn keyword httStatement        begin
-syn keyword httStatement        join
-syn keyword httStatement        if
+syn keyword httStorageClass     if
 syn keyword httStatement        eval
-syn keyword httStatement        function 
+syn keyword httStorageClass     function 
+syn keyword httStorageClass     end 
 syn keyword httStatement        echo
 syn keyword httStatement        set
 syn keyword httStatement        exit
@@ -30,8 +30,8 @@ syn keyword httStatement        expect
 syn keyword httStatement        match
 syn keyword httStatement        sleep
 syn keyword httStatement        _
-syn keyword httRepeat           loop end
-syn keyword httConditional      if end
+syn keyword httStorageClass     loop
+syn keyword httStorageClass     if
 
 " Constants
 syn keyword httOperator         not and or 
