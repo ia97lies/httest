@@ -16,6 +16,7 @@ syn keyword httStatement        assert
 syn keyword httStatement        daemon
 syn keyword httStatement        thread
 syn keyword httStatement        begin
+syn keyword httStatement        join
 syn keyword httStatement        if
 syn keyword httStatement        eval
 syn keyword httStatement        function 
