@@ -251,7 +251,7 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, expect_function,
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, wait_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line, 
-                           htt_stack_t *filter_chain));
+                           apr_table_t *filter_chain));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, end_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line));

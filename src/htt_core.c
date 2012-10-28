@@ -109,6 +109,7 @@ typedef struct _ns_s {
 typedef struct _expect_config_s {
   apr_pool_t *pool;
   apr_table_t *ns;
+  apr_table_t *filter_chain;
 } _expect_config_t;
 
 /**
@@ -949,7 +950,23 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  _get_expect_config(context);
+  htt_executable_t *filter_exe;
+  htt_command_t *command;
+  _expect_config_t *config = _get_expect_config(context);
+  if (!config->filter_chain) {
+    config->filter_chain = apr_table_make(config->pool, 3);
+  }
+
+  apr_collapse_spaces(line, line);
+  command = htt_get_command(executable, line);
+  filter_exe = htt_executable_new(config->pool, executable, 
+                                  htt_command_get_name(command), 
+                                  htt_command_get_signature(command), 
+                                  htt_command_get_function(command), NULL, 
+                                  NULL, 0);
+  apr_table_addn(config->filter_chain, apr_pstrdup(config->pool, line), 
+                 (void *)filter_exe);
+
   return APR_SUCCESS;
 }
 
@@ -1078,7 +1095,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
     htt, HTT, apr_status_t, wait_function, 
     (htt_executable_t *executable, htt_context_t *context, const char *line, 
-     htt_stack_t *filter_chain), 
+     apr_table_t *filter_chain), 
     (executable, context, line, filter_chain), APR_SUCCESS
 );
 
