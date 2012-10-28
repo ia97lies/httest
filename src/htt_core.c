@@ -246,6 +246,20 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
                                       htt_stack_t *retvars, char *line); 
 
 /**
+ * filter registers function for content filtering
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_filter_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
  * wait
  * @param executable IN executable
  * @param context IN running context
@@ -931,13 +945,21 @@ static apr_status_t _cmd_req_function(htt_executable_t *executable,
   return htt_run_request_function(executable, context, line);
 } 
 
+static apr_status_t _cmd_filter_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  _get_expect_config(context);
+  return APR_SUCCESS;
+}
+
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
   htt_context_t *top = _get_expect_context(context);
-  status = htt_run_wait_function(executable, top, line);
+  status = htt_run_wait_function(executable, top, line, NULL);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
   }
@@ -1055,8 +1077,9 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
     htt, HTT, apr_status_t, wait_function, 
-    (htt_executable_t *executable, htt_context_t *context, const char *line), 
-    (executable, context, line), APR_SUCCESS
+    (htt_executable_t *executable, htt_context_t *context, const char *line, 
+     htt_stack_t *filter_chain), 
+    (executable, context, line, filter_chain), APR_SUCCESS
 );
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
