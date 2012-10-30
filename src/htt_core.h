@@ -27,6 +27,7 @@
 
 #include <apr_file_io.h>
 #include <apr_hooks.h>
+#include "htt_string.h"
 #include "htt_context.h"
 #include "htt_executable.h"
 #include "htt_command.h"
@@ -201,6 +202,20 @@ apr_status_t htt_expect_assert(htt_executable_t *executable,
  */
 apr_status_t htt_expect_check(htt_executable_t *executable, 
                               htt_context_t *context); 
+
+/**
+ * Run filter chain
+ * @param filter_chain IN a table of filter executable
+ * @param context IN dynamic context
+ * @param buf_in IN input buffer
+ * @param len_in IN lenght of input buffer
+ * @param buf_out OUT output buffer
+ * @param len_out OUT lenght of output buffer
+ * @return apr status
+ */
+apr_status_t htt_filter_chain(apr_table_t *filter_chain, 
+                              htt_context_t *context, 
+                              htt_string_t *in, htt_string_t **out); 
 
 /**
  * For special bodies like function, finally, ...

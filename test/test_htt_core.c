@@ -961,6 +961,27 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "req filter expect wait -> ok... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo2bar in : out\n\
+           set out = bar\n\
+         end\n\
+         set bar=foo\n\
+         req var://bar\n\
+         filter foo2bar\n\
+         expect . \"bar\"\n\
+         wait");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 

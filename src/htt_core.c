@@ -528,6 +528,10 @@ htt_t *htt_new(apr_pool_t *pool) {
   htt_add_command(htt, "req", NULL, "<scheme>://<target> <params>",
                   "req connects to a resource",
                   htt_cmd_line_compile, _cmd_req_function);
+  htt_add_command(htt, "filter", NULL, "filter function",
+                  "add a function as a filter, function must have signature"
+                  "function <name> in : out",
+                  htt_cmd_line_compile, _cmd_filter_function);
   htt_add_command(htt, "wait", NULL, "[<n>]",
                   "wait for an answer from an requested resource, "
                   "optional could say how many bytes <n>",
@@ -609,6 +613,52 @@ apr_status_t htt_run(htt_t *htt) {
   htt_context_t *context = htt_context_new(NULL, htt->log);
   htt_context_set_vars(context, htt->defines);
   return htt_execute(htt->executable, context);
+}
+
+apr_status_t htt_filter_chain(apr_table_t *filter_chain, 
+                              htt_context_t *context, 
+                              htt_string_t *in, htt_string_t **out) {
+  if (filter_chain) {
+    int i;
+    apr_table_entry_t *e;
+    apr_pool_t *pool;
+    apr_status_t status = APR_SUCCESS;
+    htt_string_t *cur_in = in;
+    apr_pool_create(&pool, NULL);
+    e = (void *) apr_table_elts(filter_chain)->elts;
+    for (i = 0; status == APR_SUCCESS && i < apr_table_elts(filter_chain)->nelts;
+         i++) {
+      htt_string_t *result;
+      htt_stack_t *retvals;
+      htt_map_t *vars;
+      htt_context_t *child_context;
+      htt_executable_t *executable = (void *)e[i].val; 
+      retvals = htt_stack_new(pool);
+      child_context = htt_context_new(context, htt_context_get_log(context));
+      vars = htt_context_get_vars(child_context); 
+      htt_map_set(vars, "in", cur_in);
+      /** XXX: nope that do not work, have a look to htt_execute_command */
+      status = htt_execute(executable, child_context);
+      _get_retvals(child_context, htt_executable_get_retvars(executable), 
+                   retvals, pool);
+      result = htt_stack_pop(retvals);
+      if (htt_isa_string(result)) {
+        cur_in = result;
+      }
+      else {
+        status = APR_EINVAL;
+        htt_log_error(htt_context_get_log(context), status, 
+                      htt_executable_get_file(executable), 
+                      htt_executable_get_line(executable), 
+                      "Expect a string");
+      }
+    }
+    *out = cur_in;
+    *out = cur_in;
+    return status;
+  }
+  *out = in;
+  return APR_SUCCESS;
 }
 
 /************************************************************************
@@ -757,7 +807,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   htt_executable_t *_executable;
   htt_context_t *child_context;
   _executable = htt_executable_get_config(executable, "__executable");
-  child_context= htt_context_new(context, htt_context_get_log(context));
+  child_context = htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
   status = htt_execute(_executable, child_context);
   _get_retvals(child_context, htt_executable_get_retvars(_executable), 
@@ -950,6 +1000,7 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
+  htt_t *htt;
   htt_executable_t *filter_exe;
   htt_command_t *command;
   _expect_config_t *config = _get_expect_config(context);
@@ -959,11 +1010,12 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
 
   apr_collapse_spaces(line, line);
   command = htt_get_command(executable, line);
+  htt = htt_command_get_config(command, "htt");
   filter_exe = htt_executable_new(config->pool, executable, 
                                   htt_command_get_name(command), 
                                   htt_command_get_signature(command), 
                                   htt_command_get_function(command), NULL, 
-                                  NULL, 0);
+                                  htt->cur_file, htt->cur_line);
   apr_table_addn(config->filter_chain, apr_pstrdup(config->pool, line), 
                  (void *)filter_exe);
 
@@ -976,7 +1028,8 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
   htt_context_t *top = _get_expect_context(context);
-  status = htt_run_wait_function(executable, top, line, NULL);
+  _expect_config_t *config = _get_expect_config(context);
+  status = htt_run_wait_function(executable, top, line, config->filter_chain);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
   }

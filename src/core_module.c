@@ -405,8 +405,10 @@ static apr_status_t _hook_wait_function(htt_executable_t *executable,
   config = _get_request_config(context);
   if (config) {
     apr_status_t status;
+    htt_string_t *result;
     htt_string_t *value = htt_context_get_var(context, config->var);
-    /** TODO: filter chain */
+    htt_filter_chain(filter_chain, context, value, &result);
+    value = result;
     status = htt_expect_assert(executable, context, ".", htt_string_get(value),
                                -1);
     if (status == APR_SUCCESS) {
