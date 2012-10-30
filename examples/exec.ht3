@@ -1,0 +1,6 @@
+log.appender.add simple
+expect exec "foo.*"
+exec echo foo
+expect exec bar.*
+exec echo barbla
+

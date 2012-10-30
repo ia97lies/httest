@@ -1,0 +1,13 @@
+
+function foobar in : out
+  set out = "$in blabla"
+end
+
+body
+  set foo = bar
+  req var://foo
+  expect . "bar"
+  filter foobar
+  wait
+end
+
