@@ -3896,8 +3896,10 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->params = store_make(p);
   (*self)->retvars = store_make(p);
   (*self)->locals = store_make(p);
+  if (global->mutex) apr_thread_mutex_lock(global->mutex);
   (*self)->vars = store_copy(global->vars, p);
   (*self)->modules = apr_hash_copy(p, global->modules);
+  if (global->mutex) apr_thread_mutex_unlock(global->mutex);
   (*self)->blocks = global->blocks;
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;
