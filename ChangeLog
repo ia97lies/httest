@@ -1,5 +1,8 @@
                                                          -*- coding: utf-8 -*-
   
+Changes with httest 2.2.11
+  *) httest: Bugfix possible coredump in thread tests with SSL.
+
 Changes with httest 2.2.10
   *) httest: Add a check if _EXPECT are clean or include some unescaped
              quotes. Please adjust detected missformated _EXPECT.
