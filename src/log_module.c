@@ -51,6 +51,10 @@ static apr_status_t _cmd_log_compile(htt_command_t *command, char *args);
  * Public
  ***********************************************************************/
 apr_status_t log_module_init(htt_t *htt) {
+  return APR_SUCCESS;
+}
+
+apr_status_t log_module_register(htt_t *htt) {
   htt_add_command(htt, "log.appender.add", NULL, "simple|std", 
                   "add log appender", _cmd_log_compile, NULL);
   return APR_SUCCESS;

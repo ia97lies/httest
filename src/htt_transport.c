@@ -43,7 +43,7 @@
 #include <apr_hooks.h>
 
 
-#include "defines.h"
+#include "htt_defines.h"
 #include "htt_transport.h"
 
 /************************************************************************

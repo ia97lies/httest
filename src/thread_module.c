@@ -196,6 +196,13 @@ static apr_status_t _join_threads(htt_executable_t *executable,
  * Public
  ***********************************************************************/
 apr_status_t thread_module_init(htt_t *htt) {
+  htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
+  htt_hook_end_function(_hook_thread_end, NULL, NULL, 0);
+
+  return APR_SUCCESS;
+}
+
+apr_status_t thread_module_register(htt_t *htt) {
   htt_add_command(htt, "thread", NULL, "[<n>]",
                   "start a thread if <n> then start that many threads",
                   htt_cmd_body_compile, _cmd_thread_function);
@@ -209,8 +216,6 @@ apr_status_t thread_module_init(htt_t *htt) {
   htt_add_command(htt, "join", NULL, "",
                   "join running threads befor continue script",
                   htt_cmd_line_compile, _cmd_join_function);
-  htt_hook_begin(_hook_thread_init_begin, NULL, NULL, 0);
-  htt_hook_end_function(_hook_thread_end, NULL, NULL, 0);
 
   return APR_SUCCESS;
 }

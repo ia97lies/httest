@@ -87,6 +87,8 @@ static htt_t * _test_reset() {
   apr_file_open_stderr(&err, pool);
 
   htt = htt_new(pool);
+  apr_hook_global_pool = pool;
+  htt_modules_init(htt);
   htt_set_log(htt, out, err, HTT_LOG_NONE);
   htt_add_command(htt, "mock", NULL, "<string>", "put string in a buffer", 
                   htt_cmd_line_compile, _cmd_mock_function);
@@ -518,7 +520,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "function resolve... ");
+  fprintf(stdout, "builtin function resolve... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -534,7 +536,7 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "function resolve with unresolved parameters... ");
+  fprintf(stdout, "builtin function resolve with unresolved parameters... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
@@ -547,6 +549,25 @@ int main(int argc, const char *const argv[]) {
     status = htt_run(htt);
     assert(status == APR_SUCCESS);
     assert(strcmp(global_buf, "3\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
+  fprintf(stdout, "function resolve with no parameters... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo : r\n\
+           set r = bar\n\
+         end\n\
+         set i = $foo()\n\
+         mock $i");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "bar\n") == 0);
   }
   fprintf(stdout, "ok\n");
 

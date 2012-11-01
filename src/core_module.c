@@ -182,6 +182,13 @@ static apr_status_t _hook_wait_function(htt_executable_t *executable,
  * Public
  ***********************************************************************/
 apr_status_t core_module_init(htt_t *htt) {
+  htt_hook_request_function(_hook_request_function, NULL, NULL, 0);
+  htt_hook_expect_function(_hook_expect_function, NULL, NULL, 0);
+  htt_hook_wait_function(_hook_wait_function, NULL, NULL, 0);
+  return APR_SUCCESS;
+}
+
+apr_status_t core_module_register(htt_t *htt) {
   htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
                   htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 
@@ -200,9 +207,6 @@ apr_status_t core_module_init(htt_t *htt) {
   htt_add_command(htt, "sleep", "t", "<t>", 
                   "sleep for <t> miliseconds",
                   htt_cmd_line_compile, _cmd_sleep_function);
-  htt_hook_request_function(_hook_request_function, NULL, NULL, 0);
-  htt_hook_expect_function(_hook_expect_function, NULL, NULL, 0);
-  htt_hook_wait_function(_hook_wait_function, NULL, NULL, 0);
   return APR_SUCCESS;
 }
 

@@ -540,8 +540,7 @@ htt_t *htt_new(apr_pool_t *pool) {
                   "defines what wait do expect in the receiving stream",
                   htt_cmd_line_compile, _cmd_expect_function);
 
-  apr_hook_global_pool = htt->pool;
-  htt_modules_init(htt);
+  htt_modules_command_register(htt);
 
   return htt;
 }

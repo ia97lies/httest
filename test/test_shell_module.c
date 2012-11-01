@@ -104,6 +104,8 @@ static htt_t * _test_reset() {
   apr_file_open_stderr(&err, pool);
 
   htt = htt_new(pool);
+  apr_hook_global_pool = pool;
+  htt_modules_init(htt);
   htt_set_log(htt, out, err, HTT_LOG_NONE);
   htt_add_command(htt, "mock", NULL, "<string>", "put string in a buffer", 
                   htt_cmd_line_compile, _cmd_mock_function);

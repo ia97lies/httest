@@ -195,6 +195,8 @@ int main(int argc, const char *const argv[]) {
   
   /* set default */
   htt = htt_new(pool);
+  apr_hook_global_pool = pool;
+  htt_modules_init(htt);
 
   log_mode = HTT_LOG_CMD;
   flags = MAIN_FLAGS_NONE;
