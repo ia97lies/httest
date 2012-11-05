@@ -59,7 +59,7 @@ apr_status_t shell_module_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
-apr_status_t shell_module_register(htt_t *htt) {
+apr_status_t shell_module_command_register(htt_t *htt) {
   htt_add_command(htt, "exec", NULL, 
                   "shell command", "execute a shell command", 
                   htt_cmd_line_compile, _cmd_exec_function);

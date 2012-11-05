@@ -89,9 +89,11 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread, void *handlev)
  * Add begin compilation only suitable for threads and only once
  * @param command IN command
  * @param args IN argument string
+ * @param compiler IN compiler
  * @return apr status
  */
-static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args); 
+static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args,
+                                       void *compiler); 
 
 /**
  * thread
@@ -202,7 +204,7 @@ apr_status_t thread_module_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
-apr_status_t thread_module_register(htt_t *htt) {
+apr_status_t thread_module_command_register(htt_t *htt) {
   htt_add_command(htt, "thread", NULL, "[<n>]",
                   "start a thread if <n> then start that many threads",
                   htt_cmd_body_compile, _cmd_thread_function);
@@ -224,8 +226,9 @@ apr_status_t thread_module_register(htt_t *htt) {
  * Private
  ***********************************************************************/
 
-static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args) {
-  htt_t *htt = htt_command_get_config(command, "htt");
+static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args,
+                                       void *compiler) {
+  htt_t *htt = compiler;
   htt_executable_t *me = htt_get_executable(htt);
   htt_executable_t *parent = htt_executable_get_parent(me);
   if (!parent || htt_executable_get_function(me) != _cmd_thread_function ||
@@ -244,7 +247,7 @@ static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args) {
     htt_executable_set_config(parent, "__thread_init", thread_init);
   }
   ++thread_init->count;
-  return htt_cmd_line_compile(command, args);
+  return htt_cmd_line_compile(command, args, compiler);
 }
 
 static apr_status_t _cmd_thread_function(htt_executable_t *executable, 

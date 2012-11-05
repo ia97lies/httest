@@ -98,7 +98,7 @@ void htt_log_set_level(htt_log_t *log, int level) {
 
 void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
                 char *fmt, va_list va) {
-  if (log->mode >= mode) {
+  if (log && log->mode >= mode) {
     char *tmp;
     apr_pool_t *pool;
 
@@ -114,7 +114,7 @@ void htt_log_va(htt_log_t *log, int mode, char direction, const char *custom,
 
 void htt_log(htt_log_t *log, int mode, char direction, const char *custom, 
              char *fmt, ...) {
-  if (log->mode >= mode) {
+  if (log && log->mode >= mode) {
     va_list va;
 
     va_start(va, fmt);
@@ -123,7 +123,7 @@ void htt_log(htt_log_t *log, int mode, char direction, const char *custom,
 }
 
 void htt_log_debug(htt_log_t *log, char *fmt, ...) {
-  if (log->mode >= HTT_LOG_DEBUG) {
+  if (log && log->mode >= HTT_LOG_DEBUG) {
     va_list va;
 
     va_start(va, fmt);
@@ -133,7 +133,7 @@ void htt_log_debug(htt_log_t *log, char *fmt, ...) {
 
 void htt_log_error(htt_log_t *log, apr_status_t status, const char *file, 
                    int pos, const char *fmt, ...) {
-  if (log->mode >= HTT_LOG_ERROR) {
+  if (log && log->mode >= HTT_LOG_ERROR) {
     char *tmp;
     va_list va;
     apr_pool_t *pool;
@@ -154,7 +154,7 @@ void htt_log_error(htt_log_t *log, apr_status_t status, const char *file,
 
 void htt_log_buf(htt_log_t *log, int mode, char direction, const char *custom,
                  const char *buf, int len) {
-  if (log->mode >= mode) {
+  if (log && log->mode >= mode) {
     char *cur;
     char *null="<null>";
 

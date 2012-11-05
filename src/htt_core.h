@@ -42,6 +42,12 @@ typedef struct htt_s htt_t;
 htt_t *htt_new(apr_pool_t *pool);
 
 /**
+ * Registers all commands of all modules
+ * @param htt IN instance
+ */
+void htt_command_register(htt_t *htt); 
+
+/**
  * Set log file handles
  * @param htt IN instance
  * @param std IN standard out
@@ -97,17 +103,21 @@ htt_log_t *htt_get_log(htt_t *htt);
  * Compiles a simple command 
  * @param command IN command instance
  * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
+ * @param compiler IN compiler
+ * @return APR_SUCCESS on successfull compilation
  */
-apr_status_t htt_cmd_line_compile(htt_command_t *command, char *args);
+apr_status_t htt_cmd_line_compile(htt_command_t *command, char *args,
+                                  void *compiler);
 
 /**
  * Compiles a command with a body (if, loop, ...)
  * @param command IN command instance
  * @param args IN commands arguments
- * @param APR_SUCCESS on successfull compilation
+ * @param compiler IN compiler
+ * @return APR_SUCCESS on successfull compilation
  */
-apr_status_t htt_cmd_body_compile(htt_command_t *command, char *args);
+apr_status_t htt_cmd_body_compile(htt_command_t *command, char *args,
+                                  void *compiler);
 
 /**
  * Add command

@@ -50,12 +50,13 @@
 #include "htt_core.h"
 
 typedef apr_status_t (*htt_module_init_f)(htt_t *htt);
-typedef apr_status_t (*htt_module_register_f)(htt_t *htt);
+typedef apr_status_t (*htt_module_command_register_f)(htt_t *htt);
 typedef struct htt_module_s {
   htt_module_init_f module_init;
-  htt_module_init_f module_register;
+  htt_module_init_f module_command_register;
 } htt_module_t;
 
 apr_status_t htt_modules_init(htt_t *htt);
+apr_status_t htt_modules_command_register(htt_t *htt);
 
 #endif

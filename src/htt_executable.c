@@ -301,20 +301,29 @@ apr_status_t htt_execute_command(htt_executable_t *executable,
                                  htt_context_t *context, const char *name, 
                                  const char *args, htt_stack_t **retvals, 
                                  apr_pool_t *pool) {
-  apr_status_t status = APR_SUCCESS;
-  htt_function_f function;
   htt_map_t *params;
-  htt_command_t *command;
+  htt_function_f function;
+  apr_status_t status = APR_SUCCESS;
+  char *copy = apr_pstrdup(pool, args);
+  char *command = apr_psprintf(pool, "%s %s", name, args);
+  htt_t *htt = htt_new(pool);
+  htt_executable_t *exec = htt_get_executable(htt);
+
   if (retvals) {
     (*retvals) = htt_stack_new(pool);
   }
-  command = htt_get_command(executable, name);
-  if (command) {
-    char *copy = apr_pstrdup(pool, args);
-    function = htt_command_get_function(command);
-    _handle_signature(pool, htt_command_get_params(command), 
-                      htt_command_get_retvars(command), args, &params, NULL);
-    status = function(executable, context, pool, params, retvals?*retvals:NULL,
+
+  exec->parent = executable;
+  if ((status = htt_compile_buf(htt, command, strlen(command))) 
+      == APR_SUCCESS) {
+    htt_executable_t *_exec;
+    exec = htt_get_executable(htt);
+    apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(exec->body)->elts;
+    _exec = (void *)e[0].val;
+
+    function = _exec->function;
+    _handle_signature(pool, _exec->params, _exec->retvars, args, &params, NULL);
+    status = function(_exec, context, pool, params, retvals?*retvals:NULL,
                       copy); 
   }
   else {
@@ -346,7 +355,9 @@ static const char *_context_replacer(void *udata, const char *name) {
     char *copy = apr_pstrdup(ptmp, name);
     func = apr_strtok(copy, "(", &rest);
     line = apr_strtok(NULL, ")", &rest); 
-    line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
+    if (line && line[0]) {
+      line = htt_replacer(ptmp, line, replacer_ctx, _context_replacer);
+    }
     status = htt_execute_command(executable, context, func, line, &retvals, 
                                  ptmp);
     if (status == APR_SUCCESS) {
@@ -398,7 +409,7 @@ static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
     *retvars = NULL;
   }
 
-  if (map_params || map_retvars) {
+  if (line && (map_params || map_retvars)) {
     char **argv;
     int i = 0;
     htt_util_to_argv(line, &argv, pool, 0);

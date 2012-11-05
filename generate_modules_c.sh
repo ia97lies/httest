@@ -30,7 +30,7 @@ EOF
 
 for I in $LIST; do
   echo "apr_status_t ${I}_module_init(htt_t *htt);" >> $TARGET
-  echo "apr_status_t ${I}_module_register(htt_t *htt);" >> $TARGET
+  echo "apr_status_t ${I}_module_command_register(htt_t *htt);" >> $TARGET
 done
 
 cat >> $TARGET << EOF
@@ -40,7 +40,7 @@ htt_module_t htt_modules[] = {
 EOF
 
 for I in $LIST; do
-  echo "  { ${I}_module_init, ${I}_module_register }," >> $TARGET
+  echo "  { ${I}_module_init, ${I}_module_command_register }," >> $TARGET
 done
 
 cat >> $TARGET << EOF
@@ -59,12 +59,12 @@ apr_status_t htt_modules_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
-apr_status_t htt_modules_register(htt_t *htt) {
+apr_status_t htt_modules_command_register(htt_t *htt) {
   int i;
 
-  for (i = 0; htt_modules[i].module_register; i++) {
+  for (i = 0; htt_modules[i].module_command_register; i++) {
     apr_status_t status;
-    if ((status = htt_modules[i].module_register(htt)) != APR_SUCCESS) {
+    if ((status = htt_modules[i].module_command_register(htt)) != APR_SUCCESS) {
       return status;
     }
   }

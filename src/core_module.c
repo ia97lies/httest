@@ -188,7 +188,7 @@ apr_status_t core_module_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
-apr_status_t core_module_register(htt_t *htt) {
+apr_status_t core_module_command_register(htt_t *htt) {
   htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
                   htt_cmd_line_compile, _cmd_echo_function);
   htt_add_command(htt, "set", NULL, "<name>=<value>", "set variable <name> to <value>", 

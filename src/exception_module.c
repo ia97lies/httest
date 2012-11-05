@@ -41,9 +41,11 @@
  * Compile finally statement
  * @param command IN command data
  * @param args IN 
+ * @param compiler IN compiler
  * @return apr status
  */
-static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args); 
+static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args,
+                                         void *compiler); 
 
 /** 
  * finally block
@@ -76,7 +78,7 @@ apr_status_t exception_module_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
-apr_status_t exception_module_register(htt_t *htt) {
+apr_status_t exception_module_command_register(htt_t *htt) {
   htt_add_command(htt, "finally", NULL, "", 
                   "run finally in a block even on error", 
                   _cmd_finally_compile, _cmd_finally_function);
@@ -98,12 +100,13 @@ static apr_status_t _hook_call_final(htt_executable_t *executable,
   return APR_SUCCESS;
 }
 
-static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args) {
+static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args,
+                                         void *compiler) {
   apr_status_t status;
-  htt_t *htt = htt_command_get_config(command, "htt");
+  htt_t *htt = compiler;
   htt_executable_t *parent = htt_get_executable(htt);
 
-  status = htt_cmd_body_compile(command, args);
+  status = htt_cmd_body_compile(command, args, compiler);
   if (status == APR_SUCCESS) {
     htt_executable_t *finally = htt_get_executable(htt);
     htt_executable_set_config(parent, "__finally", finally);

@@ -31,7 +31,8 @@
 
 typedef struct htt_command_s htt_command_t;
 
-typedef apr_status_t(*htt_compile_f)(htt_command_t *command, char *params);
+typedef apr_status_t(*htt_compile_f)(htt_command_t *command, char *params, 
+                                     void *compiler);
 
 /**
  * Create a command
@@ -118,8 +119,10 @@ htt_stack_t *htt_command_get_retvars(htt_command_t *command);
  * Compiles given command
  * @param command IN
  * @param args IN args
+ * @param compiler IN compiler
  * @return apr status
  */
-apr_status_t htt_command_compile(htt_command_t *command, char *args);
+apr_status_t htt_command_compile(htt_command_t *command, char *args,
+                                 void *compiler);
 
 #endif

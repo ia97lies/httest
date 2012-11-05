@@ -43,9 +43,11 @@
  * Define log appender
  * @param command IN command
  * @param args IN argument string
+ * @param compiler IN compiler
  * @return apr status
  */
-static apr_status_t _cmd_log_compile(htt_command_t *command, char *args); 
+static apr_status_t _cmd_log_compile(htt_command_t *command, char *args,
+                                     void *compiler); 
 
 /************************************************************************
  * Public
@@ -54,7 +56,7 @@ apr_status_t log_module_init(htt_t *htt) {
   return APR_SUCCESS;
 }
 
-apr_status_t log_module_register(htt_t *htt) {
+apr_status_t log_module_command_register(htt_t *htt) {
   htt_add_command(htt, "log.appender.add", NULL, "simple|std", 
                   "add log appender", _cmd_log_compile, NULL);
   return APR_SUCCESS;
@@ -64,8 +66,9 @@ apr_status_t log_module_register(htt_t *htt) {
  * Private
  ***********************************************************************/
 
-static apr_status_t _cmd_log_compile(htt_command_t *command, char *args) {
-  htt_t *htt = htt_command_get_config(command, "htt");
+static apr_status_t _cmd_log_compile(htt_command_t *command, char *args,
+                                     void *compiler) {
+  htt_t *htt = compiler;
   htt_log_t *log = htt_get_log(htt);
   apr_pool_t *pool = htt_get_pool(htt);
   apr_file_t *out;

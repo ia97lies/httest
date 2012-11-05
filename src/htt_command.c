@@ -120,8 +120,9 @@ htt_stack_t *htt_command_get_retvars(htt_command_t *command) {
   return command->retvars;
 }
 
-apr_status_t htt_command_compile(htt_command_t *command, char *args) {
-  return command->compile(command, args);
+apr_status_t htt_command_compile(htt_command_t *command, char *args, 
+                                 void *compiler) {
+  return command->compile(command, args, compiler);
 }
 
 /************************************************************************

@@ -66,6 +66,7 @@
 #include "htt_core.h"
 #include "htt_log.h"
 #include "htt_map.h"
+#include "htt_modules.h"
 
 /************************************************************************
  * Defines 
@@ -195,6 +196,7 @@ int main(int argc, const char *const argv[]) {
   
   /* set default */
   htt = htt_new(pool);
+  htt_command_register(htt);
   apr_hook_global_pool = pool;
   htt_modules_init(htt);
 
