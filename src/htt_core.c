@@ -629,6 +629,20 @@ apr_status_t htt_run(htt_t *htt) {
 apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context, 
                               htt_string_t *in, htt_string_t **out) {
   if (filter_chain) {
+    int i;
+    apr_table_entry_t *e;
+    apr_status_t status = APR_SUCCESS;
+    htt_t *htt = filter_chain;
+    htt_executable_t *executable = htt->executable;
+    apr_table_t *body = htt_executable_get_body(executable);
+
+    e = (apr_table_entry_t *) apr_table_elts(body)->elts;
+    for (i = 0; 
+         status == APR_SUCCESS && 
+         i < apr_table_elts(body)->nelts; 
+         ++i) {
+      htt_executable_t *exec = e[i].val;
+    }
     /*
     int i;
     apr_table_entry_t *e;

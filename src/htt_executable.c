@@ -185,6 +185,10 @@ const char *htt_executable_get_signature(htt_executable_t *executable) {
   return executable->signature;
 }
 
+apr_table_t *htt_executable_get_body(htt_executable_t *executable) {
+  return executable->body;
+}
+
 void htt_executable_set_config(htt_executable_t *executable, const char *name,
                                void *data) {
   apr_hash_set(executable->config, name, APR_HASH_KEY_STRING, data);

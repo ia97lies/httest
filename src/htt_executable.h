@@ -144,6 +144,13 @@ const char *htt_executable_get_name(htt_executable_t *executable);
 const char *htt_executable_get_signature(htt_executable_t *executable); 
 
 /**
+ * Get body 
+ * @param exeuctabl IN executable
+ * @return table of executables
+ */
+apr_table_t *htt_executable_get_body(htt_executable_t *executable);
+
+/**
  * Set a named configuration
  * @param context IN context
  * @param name IN name for stored data

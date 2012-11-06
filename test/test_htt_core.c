@@ -1022,7 +1022,6 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
-  /*
   htt = _test_reset();
   fprintf(stdout, "req filter expect wait -> ok... ");
   {
@@ -1043,7 +1042,6 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
   }
   fprintf(stdout, "ok\n");
-  */
 
   return 0;
 }
