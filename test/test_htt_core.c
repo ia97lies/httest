@@ -592,6 +592,26 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
+  fprintf(stdout, "function call with one unresolved parameter... ");
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "function foo p : r\n\
+           set r = $p !!\n\
+         end\n\
+         set a = hello world\n\
+         foo @a result\n\
+         mock $result");
+    global_buf = NULL;
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf, "hello world !!\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
+  htt = _test_reset();
   fprintf(stdout, "loop with index... ");
   {
     int i;
@@ -1002,6 +1022,7 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  /*
   htt = _test_reset();
   fprintf(stdout, "req filter expect wait -> ok... ");
   {
@@ -1022,6 +1043,7 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
   }
   fprintf(stdout, "ok\n");
+  */
 
   return 0;
 }

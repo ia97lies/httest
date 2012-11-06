@@ -109,7 +109,7 @@ typedef struct _ns_s {
 typedef struct _expect_config_s {
   apr_pool_t *pool;
   apr_table_t *ns;
-  apr_table_t *filter_chain;
+  htt_t *filter_chain;
 } _expect_config_t;
 
 /**
@@ -140,9 +140,11 @@ static htt_context_t *_get_expect_context(htt_context_t *context);
  * Interpret reading from given bufreader 
  * @param htt IN instance
  * @param fp IN apr file pointer
+ * @param terminate IN if true do add an end at the end of script
  * @return apr status
  */
-static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader); 
+static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader,
+                             int terminate); 
 
 /**
  * Compile function for include. Just open file and and interpret.
@@ -610,12 +612,12 @@ htt_command_t *htt_get_command(htt_executable_t *executable, const char *cmd) {
 
 apr_status_t htt_compile_buf(htt_t *htt, const char *buf, apr_size_t len) {
   htt_bufreader_t *bufreader = htt_bufreader_buf_new(htt->pool, buf, len);
-  return _compile(htt, bufreader);
+  return _compile(htt, bufreader, 1);
 }
 
 apr_status_t htt_compile_fp(htt_t *htt, apr_file_t *fp) {
   htt_bufreader_t *bufreader = htt_bufreader_file_new(htt->pool, fp);
-  return _compile(htt, bufreader);
+  return _compile(htt, bufreader, 1);
 }
 
 apr_status_t htt_run(htt_t *htt) {
@@ -624,10 +626,10 @@ apr_status_t htt_run(htt_t *htt) {
   return htt_execute(htt->executable, context);
 }
 
-apr_status_t htt_filter_chain(apr_table_t *filter_chain, 
-                              htt_context_t *context, 
+apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context, 
                               htt_string_t *in, htt_string_t **out) {
   if (filter_chain) {
+    /*
     int i;
     apr_table_entry_t *e;
     apr_pool_t *pool;
@@ -646,7 +648,6 @@ apr_status_t htt_filter_chain(apr_table_t *filter_chain,
       child_context = htt_context_new(context, htt_context_get_log(context));
       vars = htt_context_get_vars(child_context); 
       htt_map_set(vars, "in", cur_in);
-      /** XXX: nope that do not work, have a look to htt_execute_command */
       status = htt_execute(executable, child_context);
       _get_retvals(child_context, htt_executable_get_retvars(executable), 
                    retvals, pool);
@@ -665,6 +666,7 @@ apr_status_t htt_filter_chain(apr_table_t *filter_chain,
     *out = cur_in;
     *out = cur_in;
     return status;
+    */
   }
   *out = in;
   return APR_SUCCESS;
@@ -687,7 +689,8 @@ void _fill_expected_vars(htt_context_t *context, const char *buf, int *ovector,
   }
 }
 
-static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
+static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader, 
+                             int terminate) {
   char *line;
   apr_status_t status = APR_SUCCESS;
   htt->cur_line = 1;
@@ -720,7 +723,9 @@ static apr_status_t _compile(htt_t *htt, htt_bufreader_t *bufreader) {
     }
     ++htt->cur_line;
   }
-  htt_command_compile(htt_get_command(htt->executable, "terminate"), "", htt);
+  if (terminate) {
+    htt_command_compile(htt_get_command(htt->executable, "terminate"), "", htt);
+  }
 
   if (htt_stack_elems(htt->stack) != 1) {
     status = APR_EGENERAL;
@@ -1012,26 +1017,27 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  htt_t *htt;
-  htt_executable_t *filter_exe;
-  htt_command_t *command;
+  apr_status_t status;
+  char *command;
   _expect_config_t *config = _get_expect_config(context);
+  htt_bufreader_t *bufreader;
+
   if (!config->filter_chain) {
-    config->filter_chain = apr_table_make(config->pool, 3);
+    config->filter_chain = htt_new(config->pool);
   }
 
   apr_collapse_spaces(line, line);
-  command = htt_get_command(executable, line);
-  htt = htt_command_get_config(command, "htt");
-  filter_exe = htt_executable_new(config->pool, executable, 
-                                  htt_command_get_name(command), 
-                                  htt_command_get_signature(command), 
-                                  htt_command_get_function(command), NULL, 
-                                  htt->cur_file, htt->cur_line);
-  apr_table_addn(config->filter_chain, apr_pstrdup(config->pool, line), 
-                 (void *)filter_exe);
+  command = apr_psprintf(config->pool, "%s IN OUT", line);
+  bufreader = htt_bufreader_buf_new(config->pool, command, strlen(command));
+  if ((status = _compile(config->filter_chain, bufreader, 0))
+      != APR_SUCCESS) {
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Unknown filter function");
+  }
 
-  return APR_SUCCESS;
+  return status;
 }
 
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
@@ -1160,7 +1166,7 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(
     htt, HTT, apr_status_t, wait_function, 
     (htt_executable_t *executable, htt_context_t *context, const char *line, 
-     apr_table_t *filter_chain), 
+     htt_t *filter_chain), 
     (executable, context, line, filter_chain), APR_SUCCESS
 );
 

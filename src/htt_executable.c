@@ -88,14 +88,14 @@ static int _doit(htt_function_t *closure);
 /**
  * Handle signature with given line
  * @param pool IN pool to alloc params map
- * @param map_params IN stack of param name mapper
- * @param map_retvars IN stack of return variable name mapper
+ * @param executable IN static context
+ * @param context IN dynamic context
  * @param line IN line
  * @param params OUT map of parameters
  * @param retvars OUT return parameters
  */
-static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
-                              htt_stack_t *map_retvars, const char *line, 
+static void _handle_signature(apr_pool_t *pool, htt_executable_t *executable,
+                              htt_context_t *context, const char *line, 
                               htt_map_t **params, htt_stack_t **retvars); 
 
 /************************************************************************
@@ -240,8 +240,7 @@ apr_status_t htt_execute(htt_executable_t *executable, htt_context_t *context) {
     replacer_ctx.context = context;
     replacer_ctx.ptmp = ptmp;
     line = htt_replacer(ptmp, line, &replacer_ctx, _context_replacer);
-    _handle_signature(ptmp, exec->params, exec->retvars, line, &params, 
-                      &retvars);
+    _handle_signature(ptmp, exec, context, line, &params, &retvars);
     htt_log(htt_context_get_log(context), HTT_LOG_CMD, '=', "cmd", "%s %s", 
             exec->name, line);
     if (!exec->body) {
@@ -322,7 +321,7 @@ apr_status_t htt_execute_command(htt_executable_t *executable,
     _exec = (void *)e[0].val;
 
     function = _exec->function;
-    _handle_signature(pool, _exec->params, _exec->retvars, args, &params, NULL);
+    _handle_signature(pool, _exec, context, args, &params, NULL);
     status = function(_exec, context, pool, params, retvals?*retvals:NULL,
                       copy); 
   }
@@ -401,27 +400,34 @@ static int _doit(htt_function_t *closure) {
   return doit;
 }
 
-static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
-                              htt_stack_t *map_retvars, const char *line, 
+static void _handle_signature(apr_pool_t *pool, htt_executable_t *executable,
+                              htt_context_t *context, const char *line, 
                               htt_map_t **params, htt_stack_t **retvars) {
   *params = NULL;
   if (retvars) {
     *retvars = NULL;
   }
 
-  if (line && (map_params || map_retvars)) {
+  if (line && (executable->params || executable->retvars)) {
     char **argv;
     int i = 0;
     htt_util_to_argv(line, &argv, pool, 0);
 
-    if (map_params) {
+    if (executable->params) {
       int j;
       char *cur;
       *params = htt_map_new(pool);
-      for (j = 0; j < htt_stack_elems(map_params); j++) {
-        cur = htt_stack_index(map_params, j);
+      for (j = 0; j < htt_stack_elems(executable->params); j++) {
+        cur = htt_stack_index(executable->params, j);
         if (argv[i]) {
-          htt_string_t *string = htt_string_new(pool, argv[i]);
+          htt_string_t *string;
+          if (argv[i][0] == '@') {
+            char *name = &argv[i][1];
+            string =  htt_context_get_var(context, name);
+          }
+          else {
+            string = htt_string_new(pool, argv[i]);
+          }
           htt_map_set(*params, cur, string);
           i++;
         }
@@ -431,12 +437,12 @@ static void _handle_signature(apr_pool_t *pool, htt_stack_t *map_params,
       }
     }
 
-    if (retvars && map_retvars) {
+    if (retvars && executable->retvars) {
       int j;
       char *cur;
       *retvars = htt_stack_new(pool);
-      for (j = 0; j < htt_stack_elems(map_retvars); j++) {
-        cur = htt_stack_index(map_retvars, j);
+      for (j = 0; j < htt_stack_elems(executable->retvars); j++) {
+        cur = htt_stack_index(executable->retvars, j);
         htt_string_t *string = htt_string_new(pool, NULL);
         htt_map_set(*params, cur, string);
       }

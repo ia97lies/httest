@@ -215,7 +215,7 @@ apr_status_t htt_expect_check(htt_executable_t *executable,
 
 /**
  * Run filter chain
- * @param filter_chain IN a table of filter executable
+ * @param filter_chain IN executable with body
  * @param context IN dynamic context
  * @param buf_in IN input buffer
  * @param len_in IN lenght of input buffer
@@ -223,8 +223,7 @@ apr_status_t htt_expect_check(htt_executable_t *executable,
  * @param len_out OUT lenght of output buffer
  * @return apr status
  */
-apr_status_t htt_filter_chain(apr_table_t *filter_chain, 
-                              htt_context_t *context, 
+apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context, 
                               htt_string_t *in, htt_string_t **out); 
 
 /**
@@ -276,7 +275,7 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, expect_function,
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, wait_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line, 
-                           apr_table_t *filter_chain));
+                           htt_t *filter_chain));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, end_function,
                           (htt_executable_t *executable, 
                            htt_context_t *context, const char *line));
