@@ -635,36 +635,24 @@ apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context,
     htt_t *htt = filter_chain;
     htt_executable_t *executable = htt->executable;
     apr_table_t *body = htt_executable_get_body(executable);
+    htt_string_t *cur_in = in;
 
     e = (apr_table_entry_t *) apr_table_elts(body)->elts;
     for (i = 0; 
          status == APR_SUCCESS && 
          i < apr_table_elts(body)->nelts; 
          ++i) {
-      htt_executable_t *exec = e[i].val;
-    }
-    /*
-    int i;
-    apr_table_entry_t *e;
-    apr_pool_t *pool;
-    apr_status_t status = APR_SUCCESS;
-    htt_string_t *cur_in = in;
-    apr_pool_create(&pool, NULL);
-    e = (void *) apr_table_elts(filter_chain)->elts;
-    for (i = 0; status == APR_SUCCESS && i < apr_table_elts(filter_chain)->nelts;
-         i++) {
       htt_string_t *result;
       htt_stack_t *retvals;
-      htt_map_t *vars;
-      htt_context_t *child_context;
-      htt_executable_t *executable = (void *)e[i].val; 
-      retvals = htt_stack_new(pool);
-      child_context = htt_context_new(context, htt_context_get_log(context));
-      vars = htt_context_get_vars(child_context); 
-      htt_map_set(vars, "in", cur_in);
-      status = htt_execute(executable, child_context);
-      _get_retvals(child_context, htt_executable_get_retvars(executable), 
-                   retvals, pool);
+      htt_function_f function;
+
+      htt_executable_t *exec = (void *)e[i].val;
+      htt_map_t *params = htt_map_new(htt_context_get_pool(context));
+      htt_map_set(params, "in", cur_in);
+      retvals = htt_stack_new(htt_context_get_pool(context));
+      function = htt_executable_get_function(exec);
+      status = function(exec, context, htt_context_get_pool(context), params, 
+                        retvals, NULL); 
       result = htt_stack_pop(retvals);
       if (htt_isa_string(result)) {
         cur_in = result;
@@ -677,10 +665,6 @@ apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context,
                       "Expect a string");
       }
     }
-    *out = cur_in;
-    *out = cur_in;
-    return status;
-    */
   }
   *out = in;
   return APR_SUCCESS;
@@ -1041,7 +1025,7 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
   }
 
   apr_collapse_spaces(line, line);
-  command = apr_psprintf(config->pool, "%s IN OUT", line);
+  command = apr_psprintf(config->pool, "%s in out", line);
   bufreader = htt_bufreader_buf_new(config->pool, command, strlen(command));
   if ((status = _compile(config->filter_chain, bufreader, 0))
       != APR_SUCCESS) {
@@ -1060,7 +1044,7 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
   htt_context_t *top = _get_expect_context(context);
-  _expect_config_t *config = _get_expect_config(context);
+  _expect_config_t *config = _get_expect_config(top);
   status = htt_run_wait_function(executable, top, line, config->filter_chain);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
