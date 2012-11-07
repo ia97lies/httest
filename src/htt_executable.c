@@ -139,6 +139,11 @@ void htt_executable_dump(htt_executable_t *executable) {
           executable->raw, executable->body);
 };
 
+void htt_executable_set_parent(htt_executable_t *executable, 
+                               htt_executable_t *parent) {
+  executable->parent = parent;
+}
+
 void htt_executable_set_params(htt_executable_t *executable, 
                                htt_stack_t *params) {
   executable->params = params;

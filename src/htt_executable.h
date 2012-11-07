@@ -72,6 +72,14 @@ void htt_executable_set_params(htt_executable_t *executable,
                                htt_stack_t *params); 
 
 /**
+ * Set parent 
+ * @param executable IN
+ * @param parent IN parent executable
+ */
+void htt_executable_set_parent(htt_executable_t *executable, 
+                               htt_executable_t *parent); 
+
+/**
  * Set stack of return variable
  * @param executable IN
  * @param params IN

@@ -628,6 +628,7 @@ apr_status_t htt_run(htt_t *htt) {
 
 apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context, 
                               htt_string_t *in, htt_string_t **out) {
+  *out = in;
   if (filter_chain) {
     int i;
     apr_table_entry_t *e;
@@ -665,8 +666,8 @@ apr_status_t htt_filter_chain(htt_t *filter_chain, htt_context_t *context,
                       "Expect a string");
       }
     }
+    *out = cur_in;
   }
-  *out = in;
   return APR_SUCCESS;
 }
 
@@ -1019,14 +1020,18 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
   char *command;
   _expect_config_t *config = _get_expect_config(context);
   htt_bufreader_t *bufreader;
+  htt_executable_t *exec;
 
   if (!config->filter_chain) {
     config->filter_chain = htt_new(config->pool);
+    config->filter_chain->log = htt_context_get_log(context);
   }
 
   apr_collapse_spaces(line, line);
   command = apr_psprintf(config->pool, "%s in out", line);
   bufreader = htt_bufreader_buf_new(config->pool, command, strlen(command));
+  exec = htt_get_executable(config->filter_chain);
+  htt_executable_set_parent(exec, executable);
   if ((status = _compile(config->filter_chain, bufreader, 0))
       != APR_SUCCESS) {
     htt_log_error(htt_context_get_log(context), status, 
@@ -1044,7 +1049,7 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
   htt_context_t *top = _get_expect_context(context);
-  _expect_config_t *config = _get_expect_config(top);
+  _expect_config_t *config = _get_expect_config(context);
   status = htt_run_wait_function(executable, top, line, config->filter_chain);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
