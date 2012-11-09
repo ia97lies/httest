@@ -24,60 +24,91 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
-#include "store.h"
-#include "module.h"
+#include "htt_modules.h"
+#include "htt_bufreader.h"
+#include "htt_string.h"
+#include "htt_function.h"
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
 
-/************************************************************************
- * Globals 
- ***********************************************************************/
-
-/************************************************************************
- * Local 
- ***********************************************************************/
 /**
  * Simple dbg interpreter
- * @param worker IN callee
- * @param parent IN caller
- * @param pool IN temporary pool
+ * @param executable IN static context 
+ * @param context IN dynamic context 
+ * @param ptmp IN temporary pool
+ * @param params IN unused
+ * @param retvars IN unused
+ * @param unused
  * @return apr status
  */
-static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t _cmd_bp_function(htt_executable_t *executable, 
+                                     htt_context_t *context, 
+                                     apr_pool_t *ptmp, htt_map_t *params, 
+                                     htt_stack_t *retvars, char *unused); 
+
+/************************************************************************
+ * Public
+ ***********************************************************************/
+apr_status_t dbg_module_init(htt_t *htt) {
+  return APR_SUCCESS;
+}
+
+apr_status_t dbg_module_command_register(htt_t *htt) {
+  htt_add_command(htt, "dbg.bp", NULL, "",
+                  "Stop script execution in the given thread at the given point. "
+                  "With command 'help' or '?' a help text is displayed",
+                  htt_cmd_line_compile, _cmd_bp_function);
+
+  return APR_SUCCESS;
+}
+
+/************************************************************************
+ * Private
+ ***********************************************************************/
+static apr_status_t _cmd_bp_function(htt_executable_t *executable, 
+                                     htt_context_t *context, 
+                                     apr_pool_t *ptmp, htt_map_t *params, 
+                                     htt_stack_t *retvars, char *unused) {
   apr_status_t status;
   apr_file_t *input;
   apr_file_t *output;
-  bufreader_t *bufreader;
+  htt_bufreader_t *bufreader;
   char *line = "";
-  int pos = 0;
 
   if ((status = apr_file_open_stdout(&output, ptmp)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not open stdout");
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "can not open stdout");
     return status;
   }
 
-  apr_file_printf(output, "\nbreak %s", worker->file_and_line);
+  apr_file_printf(output, "\nbreak %s:%d", htt_executable_get_file(executable),
+                  htt_executable_get_line(executable));
   apr_file_printf(output, "\n>");
   apr_file_flush(output);
 
   if ((status = apr_file_open_stdin(&input, ptmp)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not open stdin");
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "can not open stdin");
     return status;
   }
 
-  if ((status = bufreader_new(&bufreader, input, ptmp)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not create buffered reader for stdin");
-    return status;
-  }
+  bufreader = htt_bufreader_file_new(ptmp, input);
 
   for (;;) {
     char *last;
     char *entry;
 
-    if ((status = bufreader_read_line(bufreader, &line)) != APR_SUCCESS) {
-      worker_log_error(worker, "Can not read line from buffered stdin\n");
+    if ((status = htt_bufreader_read_line(bufreader, &line)) != APR_SUCCESS) {
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "can not read line from buffered stdin\n");
       return status;
     }
     if (!line[0]) {
@@ -98,26 +129,37 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
     }
     else if (strcmp(entry, "get") == 0 || strcmp(entry, "g") == 0) {
       char *variable;
-      const char *value;
+      const char *value_str;
+      htt_string_t *value;
       variable = last;
       if (!variable|| !variable[0]) {
         apr_file_printf(output, "Need a variable name as argument\n");
         goto prompt;
       }
-      value = worker_resolve_var(worker, variable, ptmp);
+      value = htt_context_get_var(context, variable);
       if (!value) {
         char *env;
         if (apr_env_get(&env, variable, ptmp) == APR_SUCCESS) {
-          value = env;
+          value_str = env;
+        }
+        else {
+          value_str = "<undef>";
         }
       }
+      else if (htt_isa_string(value)) {
+        value_str = htt_string_get(value);
+      }
+      else {
+        value_str = "<undef>";
+      }
 
-      apr_file_printf(output, "%s\n", value ? value : "<undef>");
+      apr_file_printf(output, "%s\n", value_str ? value_str : "<undef>");
     }
     else if (strcmp(entry, "set") == 0 || strcmp(entry, "s") == 0) {
       char *expr = last;
       char *var;
       char *val;
+      htt_string_t *value;
       if (!expr || !strchr(expr, '=')) {
         apr_file_printf(output, "Need an assignment <variable>=<ANY>\n");
         goto prompt;
@@ -127,20 +169,42 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
         apr_file_printf(output, "Need an assignment <variable>=<ANY>\n");
         goto prompt;
       }
-      worker_var_set(worker, var, val);
+      value = htt_string_new(ptmp, val);
+      htt_context_set_var(context, var, value);
     }
-    else if (strcmp(entry, "list") == 0 || strcmp(entry, "ls") == 0 || strcmp(entry, "l") == 0) {
-      int i, j;
-      apr_table_entry_t *e = (apr_table_entry_t *) apr_table_elts(parent->lines)->elts;
+    else if (strcmp(entry, "list") == 0 || 
+             strcmp(entry, "ls") == 0 || 
+             strcmp(entry, "l") == 0) {
+      apr_status_t status;
+      apr_file_t *fp;
+      const char *cur_file = htt_executable_get_file(executable);
+      int cur_line = htt_executable_get_line(executable);
 
-      if (!pos) {
-        pos = worker->cmd;
-        pos = pos > 5 ? pos - 5 : 0;
+      cur_line -= 5;
+      if (cur_line < 0) {
+        cur_line = 0;
       }
-      for (i = pos, j = 0; i < apr_table_elts(parent->lines)->nelts && j < 10; i++, j++) {
-        apr_file_printf(output, "> %s\n", e[i].val);
+
+      if ((status = apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT, 
+                                  ptmp)) 
+          == APR_SUCCESS) {
+        int i;
+        char *data;
+        htt_bufreader_t *filereader = htt_bufreader_file_new(ptmp, fp);
+        for (i = 0; i < cur_line; i++) {
+          char * dummy;
+          htt_bufreader_read_line(filereader, &dummy);
+        }
+
+        for (i = 0; i < 10 && 
+             htt_bufreader_read_line(filereader, &data) == APR_SUCCESS; i++) {
+          apr_file_printf(output, "> %s\n", data);
+        }
       }
-      pos = i;
+      else {
+        apr_file_printf(output, "Can not open source file \"%s\"", 
+                        htt_executable_get_file(executable));
+      }
     }
     else {
       apr_file_printf(output, "\"%s\" unknown command\n", line);
@@ -151,34 +215,6 @@ prompt:
     apr_file_flush(output);
   }
 
-  return APR_SUCCESS;
-}
-/************************************************************************
- * Commands 
- ***********************************************************************/
-/**
- * Simple break point
- * @param worker IN callee
- * @param parent IN caller
- * @param pool IN temporary pool
- * @return apr status
- */
-static apr_status_t block_DBG_BP(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  return dbg_interpreter(worker, parent, ptmp);
-}
-
-/************************************************************************
- * Module
- ***********************************************************************/
-apr_status_t dbg_module_init(global_t *global) {
-  apr_status_t status;
-  if ((status = module_command_new(global, "DBG", "_BP",
-	                           "",
-	                           "Stop script execution in the given thread at the given point. "
-                                   "Continue after typing \"c\"",
-	                           block_DBG_BP)) != APR_SUCCESS) {
-    return status;
-  }
   return APR_SUCCESS;
 }
 

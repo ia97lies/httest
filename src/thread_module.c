@@ -194,6 +194,7 @@ _thread_stats_t *_get_thread_stats(htt_context_t *context);
 static apr_status_t _join_threads(htt_executable_t *executable, 
                                   htt_context_t *context,
                                   _thread_config_t *tc);
+
 /************************************************************************
  * Public
  ***********************************************************************/
@@ -225,7 +226,6 @@ apr_status_t thread_module_command_register(htt_t *htt) {
 /************************************************************************
  * Private
  ***********************************************************************/
-
 static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args,
                                        void *compiler) {
   htt_t *htt = compiler;

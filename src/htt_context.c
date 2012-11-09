@@ -124,8 +124,6 @@ void htt_context_set_var(htt_context_t *context, const char *variable,
   } 
   if (!cur) {
     cur = htt_context_get_godfather(context);
-  }
-  if (!vars) {
     vars = htt_context_get_vars(cur);
   }
   htt_map_set(vars, variable, obj->clone(obj, cur->pool));
