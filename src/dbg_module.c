@@ -76,6 +76,7 @@ static apr_status_t _cmd_bp_function(htt_executable_t *executable,
   apr_file_t *output;
   htt_bufreader_t *bufreader;
   char *line = "";
+  int cur_line = -1;
 
   if ((status = apr_file_open_stdout(&output, ptmp)) != APR_SUCCESS) {
     htt_log_error(htt_context_get_log(context), status, 
@@ -178,11 +179,16 @@ static apr_status_t _cmd_bp_function(htt_executable_t *executable,
       apr_status_t status;
       apr_file_t *fp;
       const char *cur_file = htt_executable_get_file(executable);
-      int cur_line = htt_executable_get_line(executable);
 
-      cur_line -= 5;
-      if (cur_line < 0) {
-        cur_line = 0;
+      if (cur_line == -1) {
+        cur_line = htt_executable_get_line(executable);
+        cur_line -= 5;
+        if (cur_line < 0) {
+          cur_line = 0;
+        }
+      }
+      else {
+        cur_line += 10;
       }
 
       if ((status = apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT, 
