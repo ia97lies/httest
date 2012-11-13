@@ -145,6 +145,34 @@ static apr_status_t _cmd_sleep_function(htt_executable_t *executable,
                                         htt_stack_t *retvars, char *line); 
 
 /**
+ * get pid command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN variable
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t _cmd_getpid_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line);
+
+/**
+ * proc detach command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN variable
+ *
+ * @return APR_SUCCESS or apr error code
+ */
+static apr_status_t _cmd_daemonize_function(htt_executable_t *executable, 
+                                            htt_context_t *context, 
+                                            apr_pool_t *ptmp, htt_map_t *params, 
+                                            htt_stack_t *retvars, char *line);
+
+/**
  * Core req functionality
  * @param executable IN executable
  * @param context IN running context
@@ -206,6 +234,13 @@ apr_status_t core_module_command_register(htt_t *htt) {
   htt_add_command(htt, "sleep", "t", "<t>", 
                   "sleep for <t> miliseconds",
                   htt_cmd_line_compile, _cmd_sleep_function);
+  htt_add_command(htt, "proc.getpid", ": t", "<result>", 
+                  "get pid and write it into <result>",
+                  htt_cmd_line_compile, _cmd_getpid_function);
+  htt_add_command(htt, "proc.detach", NULL, "", 
+                  "get pid and write it into <result>",
+                  htt_cmd_line_compile, _cmd_daemonize_function);
+
   return APR_SUCCESS;
 }
 
@@ -330,6 +365,25 @@ static apr_status_t _cmd_sleep_function(htt_executable_t *executable,
                   "Expect number of ms");
     return status;
   }
+}
+
+static apr_status_t _cmd_getpid_function(htt_executable_t *executable, 
+                                        htt_context_t *context, 
+                                        apr_pool_t *ptmp, htt_map_t *params, 
+                                        htt_stack_t *retvars, char *line) { 
+
+  htt_string_t *string;
+  string = htt_string_new(ptmp, apr_psprintf(ptmp, "%u", getpid()));
+  htt_stack_push(retvars, string);
+  
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_daemonize_function(htt_executable_t *executable, 
+                                            htt_context_t *context, 
+                                            apr_pool_t *ptmp, htt_map_t *params, 
+                                            htt_stack_t *retvars, char *line) { 
+  return apr_proc_detach(1);
 }
 
 static _request_config_t *_create_request_config(htt_context_t *context) {

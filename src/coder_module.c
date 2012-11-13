@@ -25,7 +25,13 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
-#include "module.h"
+#include <apr_strings.h>
+#include <apr_base64.h>
+#include <htt_core.h>
+#include <htt_executable.h>
+#include <htt_context.h>
+#include <htt_string.h>
+#include <htt_util.h>
 
 /************************************************************************
  * Definitions 
@@ -35,6 +41,86 @@ typedef struct url_escape_seq {
   char *esc;
   apr_size_t len;
 } url_escape_seq_t;
+
+
+/**
+ * Get index of url escape sequenze array 
+ *
+ * @param c IN char for lookup
+ *
+ * @return index of url escape sequenz array
+ */
+static int _get_url_escape_index(char c); 
+
+/**
+ * urlenc 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_urlenc_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
+ * urldec 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_urldec_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
+ * urldec 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_htmldec_function(htt_executable_t *executable, 
+                                          htt_context_t *context, 
+                                          apr_pool_t *ptmp, htt_map_t *params, 
+                                          htt_stack_t *retvars, char *line); 
+
+/**
+ * b64enc 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_b64enc_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
+ * b64dec 
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_b64dec_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
 
 /************************************************************************
  * Globals 
@@ -58,66 +144,71 @@ static url_escape_seq_t url_escape_seq[] = {
 };
 
 /************************************************************************
- * Local
+ * Public
  ***********************************************************************/
-/**
- * Get index of url escape sequenze array 
- *
- * @param c IN char for lookup
- *
- * @return index of url escape sequenz array
- */
-static int get_url_escape_index(char c) {
-  int i;
-  for (i = 0; i < sizeof(url_escape_seq)/sizeof(url_escape_seq_t); i++) {
-    if (url_escape_seq[i].c == c) {
-      return i;
-    }
-  }
-  return -1;
+apr_status_t coder_module_init(htt_t *htt) {
+  return APR_SUCCESS;
+}
+
+apr_status_t coder_module_command_register(htt_t *htt) {
+  htt_add_command(htt, "urlenc", "in : out", "<url> <result>",
+                  "Url encode <url> and store it into <result>",
+                  htt_cmd_line_compile, _cmd_urlenc_function);
+
+  htt_add_command(htt, "urldec", "in : out", "<encoded url> <result>",
+                  "Url decode <encoded url> and store it into <result>",
+                  htt_cmd_line_compile, _cmd_urldec_function);
+
+  htt_add_command(htt, "htmldec", "in : out", "<encoded html> <result>",
+                  "Url decode <encoded html> and store it into <result>",
+                  htt_cmd_line_compile, _cmd_htmldec_function);
+
+  htt_add_command(htt, "b64enc", "in : out", "<string> <result>",
+                  "base 64 encode <string> and store it into <result>",
+                  htt_cmd_line_compile, _cmd_b64enc_function);
+
+  htt_add_command(htt, "b64dec", "in : out", "<string> <result>",
+                  "base 64 decode <string> and store it into <result>",
+                  htt_cmd_line_compile, _cmd_b64dec_function);
+
+  return APR_SUCCESS;
 }
 
 /************************************************************************
- * Commands 
+ * Private
  ***********************************************************************/
-/**
- * URLENC command
- *
- * @param worker IN command
- * @param worker IN thread data object
- * @param data IN string and variable name
- *
- * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
- */
-apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+
+static apr_status_t _cmd_urlenc_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
   /* do this the old way, becaus argv tokenizer removes all "\" */
   const char *string;
-  const char *var;
   char *result;
   int i;
   int j;
   int k;
   apr_size_t len;
 
-  string = store_get(worker->params, "1");
-  var = store_get(worker->params, "2");
+  htt_string_t *in = htt_map_get(params, "in");
 
-  if (!string) {
-    worker_log(worker, LOG_ERR, "Nothing to decode");
-    return APR_EGENERAL;
-  }
-  if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
-    return APR_EGENERAL;
+  if (!in || !htt_isa_string(in)) {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Nothing to encode");
+    return status;
   }
 
+  string = htt_string_get(in);
   len = strlen(string);
   /* allocate worste case -> every char enc with pattern %XX */
   result = apr_pcalloc(ptmp, 3 * len + 1);
 
   /** do the simple stuff */
   for (j = 0, i = 0; string[i]; i++) {
-    k = get_url_escape_index(string[i]);
+    k = _get_url_escape_index(string[i]);
     if (k != -1) {
       strncpy(&result[j], url_escape_seq[k].esc, url_escape_seq[k].len);
       j += url_escape_seq[k].len;
@@ -127,43 +218,36 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
     }
   }
 
-  worker_var_set(parent, var, result);
+  htt_stack_push(retvars, htt_string_new(ptmp, result));
 
   return APR_SUCCESS;
 
 }
 
-/**
- * URLDEC command
- *
- * @param worker IN command
- * @param worker IN thread data object
- * @param data IN string and variable name
- *
- * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
- */
-apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t _cmd_urldec_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
   /* do this the old way, becaus argv tokenizer removes all "\" */
   const char *string;
-  const char *var;
   char c;
   int i;
   int j;
   apr_size_t len;
   char *inplace;
 
-  string = store_get(worker->params, "1");
-  var = store_get(worker->params, "2");
+  htt_string_t *in = htt_map_get(params, "in");
 
-  if (!string) {
-    worker_log(worker, LOG_ERR, "Nothing to decode");
-    return APR_EGENERAL;
-  }
-  if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
-    return APR_EGENERAL;
+  if (!in || !htt_isa_string(in)) {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Nothing to decode");
+    return status;
   }
 
+  string = htt_string_get(in);
   inplace = apr_pstrdup(ptmp, string);
   len = strlen(string);
   for (i = 0, j = 0; i < len; i++, j++) {
@@ -173,13 +257,13 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
     }
     else if (string[i] == '%') {
       if (i + 2 < len) {
-        c = x2c(&string[i + 1]);
+        c = htt_util_x2c(&string[i + 1]);
 	i += 2;
       }
     }
     else if (string[i] == '\\' && i + 1 < len && string[i + 1] == 'x') {
       if (i + 3 < len) {
-        c = x2c(&string[i + 2]);
+        c = htt_util_x2c(&string[i + 2]);
 	i += 3;
       }
     }
@@ -187,40 +271,35 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
   }
   inplace[j] = 0;
 
-  worker_var_set(parent, var, inplace);
+  htt_stack_push(retvars, htt_string_new(ptmp, string));
 
   return APR_SUCCESS;
 }
 
-/**
- * HTMLDEC command
- *
- * @param worker IN command
- * @param worker IN thread data object
- * @param data IN string and variable name
- *
- * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
- */
-apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t _cmd_htmldec_function(htt_executable_t *executable, 
+                                          htt_context_t *context, 
+                                          apr_pool_t *ptmp, htt_map_t *params, 
+                                          htt_stack_t *retvars, char *line) {
   const char *string;
-  const char *var;
   char c;
   int i;
   int j;
   apr_size_t len;
   char *inplace;
 
-  string = store_get(worker->params, "1");
-  var = store_get(worker->params, "2");
 
-  if (!string) {
-    worker_log(worker, LOG_ERR, "Nothing to decode");
-    return APR_EGENERAL;
+  htt_string_t *in = htt_map_get(params, "in");
+
+  if (!in || !htt_isa_string(in)) {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Nothing to decode");
+    return status;
   }
-  if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
-    return APR_EGENERAL;
-  }
+
+  string = htt_string_get(in);
 
   inplace = apr_pstrdup(ptmp, string);
   len = strlen(string);
@@ -237,119 +316,78 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t 
     }
   inplace[j] = 0;
 
-  worker_var_set(parent, var, inplace);
+  htt_stack_push(retvars, htt_string_new(ptmp, string));
 
   return APR_SUCCESS;
 }
 
-/**
- * B64ENC command
- *
- * @param worker IN command
- * @param worker IN thread data object
- * @param data IN string and variable name
- *
- * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
- */
-apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t _cmd_b64enc_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
   const char *string;
-  const char *var;
   apr_size_t len;
   char *base64;
 
-  string = store_get(worker->params, "1");
-  var = store_get(worker->params, "2");
+  htt_string_t *in = htt_map_get(params, "in");
 
-  if (!string) {
-    worker_log(worker, LOG_ERR, "Nothing to decode");
-    return APR_EGENERAL;
+  if (!in || !htt_isa_string(in)) {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Nothing to decode");
+    return status;
   }
-  if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
-    return APR_EGENERAL;
-  }
+
+  string = htt_string_get(in);
 
   len = apr_base64_encode_len(strlen(string));
   base64 = apr_pcalloc(ptmp, len + 1);
   apr_base64_encode(base64, string, strlen(string));
   
-  worker_var_set(parent, var, base64);
+  htt_stack_push(retvars, htt_string_new(ptmp, string));
 
   return APR_SUCCESS;
 }
 
-/**
- * BASE64DEC command
- *
- * @param worker IN command
- * @param worker IN thread data object
- * @param data IN string and variable name
- *
- * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
- */
-apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t _cmd_b64dec_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
   const char *string;
-  const char *var;
   apr_size_t len;
   char *plain;
 
-  string = store_get(worker->params, "1");
-  var = store_get(worker->params, "2");
+  htt_string_t *in = htt_map_get(params, "in");
 
-  if (!string) {
-    worker_log(worker, LOG_ERR, "Nothing to decode");
-    return APR_EGENERAL;
+  if (!in || !htt_isa_string(in)) {
+    apr_status_t status = APR_EGENERAL;
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "Nothing to decode");
+    return status;
   }
-  if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
-    return APR_EGENERAL;
-  }
+
+  string = htt_string_get(in);
 
   len = apr_base64_decode_len(string);
   plain = apr_pcalloc(ptmp, len + 1);
   apr_base64_decode(plain, string);
   
-  worker_var_set(parent, var, plain);
+  htt_stack_push(retvars, htt_string_new(ptmp, string));
 
   return APR_SUCCESS;
 }
 
-/************************************************************************
- * Module
- ***********************************************************************/
-apr_status_t coder_module_init(global_t *global) {
-  apr_status_t status;
-  if ((status = module_command_new(global, "CODER", "_URLENC",
-	                           "<string> <var>",
-	                           "Url encode <string> and store it into a <var>",
-	                           block_CODER_URLENC)) != APR_SUCCESS) {
-    return status;
+static int _get_url_escape_index(char c) {
+  int i;
+  for (i = 0; i < sizeof(url_escape_seq)/sizeof(url_escape_seq_t); i++) {
+    if (url_escape_seq[i].c == c) {
+      return i;
+    }
   }
-  if ((status = module_command_new(global, "CODER", "_URLDEC",
-	                           "<string> <var>",
-	                           "Url decode <string> and store it into a <var>",
-	                           block_CODER_URLDEC)) != APR_SUCCESS) {
-    return status;
-  }
-  if ((status = module_command_new(global, "CODER", "_HTMLDEC",
-	                           "<string> <var>",
-	                           "Html decode <string> and store it into a <var>",
-	                           block_CODER_HTMLDEC)) != APR_SUCCESS) {
-    return status;
-  }
-  if ((status = module_command_new(global, "CODER", "_B64ENC",
-	                           "<string> <var>",
-	                           "Base64 encode <string> and store it into a <var>",
-	                           block_CODER_B64ENC)) != APR_SUCCESS) {
-    return status;
-  }
-  if ((status = module_command_new(global, "CODER", "_B64DEC",
-	                           "<string> <var>",
-	                           "Base64 decode <string> and store it into a <var>",
-	                           block_CODER_B64DEC)) != APR_SUCCESS) {
-    return status;
-  }
-
-  return APR_SUCCESS;
+  return -1;
 }
 

@@ -47,13 +47,9 @@
 #include <unistd.h> /* for getpid() */
 #endif
 
-#include "defines.h"
-#include "util.h"
-#include "regex.h"
-#include "file.h"
-#include "socket.h"
-#include "worker.h"
-#include "module.h"
+#include "htt_defines.h"
+#include "htt_util.h"
+#include "htt_modules.h"
 
 #ifdef _WINDOWS
   /* on windows the inclusion of windows.h/wincrypt.h causes

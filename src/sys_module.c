@@ -25,7 +25,7 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
-#include "module.h"
+#include "htt_modules.h"
 
 /************************************************************************
  * Definitions 
@@ -34,34 +34,6 @@
 /************************************************************************
  * Globals 
  ***********************************************************************/
-
-/************************************************************************
- * Local 
- ***********************************************************************/
-
-/************************************************************************
- * Commands 
- ***********************************************************************/
-/**
- * WHICH command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN varname
- *
- * @return APR_SUCCESS or apr error code
- */
-static apr_status_t block_THREAD_GET_NUMBER(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
-  const char *copy;
-  char *result;
- 
-  copy = store_get(worker->params, "1");
- 
-  result  = apr_psprintf(worker->pbody, "%d", worker->which);
-  worker_var_set(parent, copy, result);
-  
-  return APR_SUCCESS;
-}
 
 /**
  * LOCK command
@@ -156,8 +128,18 @@ static apr_status_t block_SYS_SLEEP(worker_t *worker, worker_t *parent, apr_pool
 
 
 /************************************************************************
- * Module
+ * Public
  ***********************************************************************/
+apr_status_t sys_module_init(htt_t *htt) {
+  return APR_SUCCESS;
+}
+
+apr_status_t sys_module_command_register(htt_t *htt) {
+  htt_add_command(htt, "echo", NULL, "<string>", "echo a string", 
+                  htt_cmd_line_compile, _cmd_echo_function);
+  return APR_SUCCESS;
+}
+
 apr_status_t sys_module_init(global_t *global) {
   apr_status_t status;
   if ((status = module_command_new(global, "THREAD", "_GET_NUMBER",
@@ -199,4 +181,8 @@ apr_status_t sys_module_init(global_t *global) {
 
   return APR_SUCCESS;
 }
+
+/************************************************************************
+ * Public
+ ***********************************************************************/
 

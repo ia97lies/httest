@@ -152,6 +152,34 @@ static apr_status_t _cmd_join_function(htt_executable_t *executable,
                                        htt_stack_t *retvars, char *line); 
 
 /**
+ * lock function
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_lock_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line); 
+
+/**
+ * unlock function
+ * @param executable IN executable
+ * @param context IN running context
+ * @param params IN parameters
+ * @param retvars IN return variables
+ * @param line IN unsplitted but resolved line
+ * @param apr status
+ */
+static apr_status_t _cmd_unlock_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line); 
+
+/**
  * Join threads for a given context
  * @param executable IN
  * @param context IN
@@ -219,6 +247,12 @@ apr_status_t thread_module_command_register(htt_t *htt) {
   htt_add_command(htt, "join", NULL, "",
                   "join running threads befor continue script",
                   htt_cmd_line_compile, _cmd_join_function);
+  htt_add_command(htt, "lock", NULL, "",
+                  "mutex for threads on the same level",
+                  htt_cmd_line_compile, _cmd_lock_function);
+  htt_add_command(htt, "unlock", NULL, "",
+                  "mutex for threads on the same level",
+                  htt_cmd_line_compile, _cmd_unlock_function);
 
   return APR_SUCCESS;
 }
@@ -483,6 +517,44 @@ static apr_status_t _join_threads(htt_executable_t *executable,
 
   return status;
 
+}
+
+static apr_status_t _cmd_lock_function(htt_executable_t *executable, 
+                                       htt_context_t *context, 
+                                       apr_pool_t *ptmp, htt_map_t *params, 
+                                       htt_stack_t *retvars, char *line) {
+  htt_context_t *parent = htt_context_get_parent(context);
+  _thread_config_t *tc = _get_thread_config(parent);
+  apr_status_t status;
+
+  if ((status = apr_thread_mutex_lock(tc->mutex)) != APR_SUCCESS) {
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "could not draw thread lock");
+    return status;
+  }
+
+  return APR_SUCCESS;
+}
+
+static apr_status_t _cmd_unlock_function(htt_executable_t *executable, 
+                                         htt_context_t *context, 
+                                         apr_pool_t *ptmp, htt_map_t *params, 
+                                         htt_stack_t *retvars, char *line) {
+  htt_context_t *parent = htt_context_get_parent(context);
+  _thread_config_t *tc = _get_thread_config(parent);
+  apr_status_t status;
+
+  if ((status = apr_thread_mutex_unlock(tc->mutex)) != APR_SUCCESS) {
+    htt_log_error(htt_context_get_log(context), status, 
+                  htt_executable_get_file(executable), 
+                  htt_executable_get_line(executable), 
+                  "could not release thread lock");
+    return status;
+  }
+
+  return APR_SUCCESS;
 }
 
 static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 
