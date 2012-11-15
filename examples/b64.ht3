@@ -1,0 +1,9 @@
+
+set a = foo bar
+b64enc "$a" b
+echo $b
+expect var(b) "Zm9vIGJhcg=="
+b64dec "$b" c
+echo $c
+expect var(c) "foo bar"
+

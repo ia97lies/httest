@@ -1,0 +1,16 @@
+thread
+  lock
+end
+join
+thread
+  lock
+  echo 0 1
+  unlock
+end
+
+thread
+  sleep 1000
+  echo 0 2
+  unlock
+end
+
