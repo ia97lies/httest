@@ -15,6 +15,8 @@ test_htt_core_SOURCES=test_htt_core.c $(top_srcdir)/src/htt_core.c $(top_srcdir)
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c \
+		      $(top_srcdir)/src/coder_module.c \
+		      $(top_srcdir)/src/dbg_module.c \
 		      $(top_srcdir)/src/htt_modules.c
 test_thread_module_SOURCES=test_thread_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_context.c $(top_srcdir)/src/htt_executable.c \
@@ -31,6 +33,8 @@ test_thread_module_SOURCES=test_thread_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c \
+		      $(top_srcdir)/src/coder_module.c \
+		      $(top_srcdir)/src/dbg_module.c \
 		      $(top_srcdir)/src/htt_modules.c
 test_exception_module_SOURCES=test_exception_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_context.c $(top_srcdir)/src/htt_executable.c \
@@ -47,6 +51,8 @@ test_exception_module_SOURCES=test_exception_module.c $(top_srcdir)/src/htt_core
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c \
+		      $(top_srcdir)/src/coder_module.c \
+		      $(top_srcdir)/src/dbg_module.c \
 		      $(top_srcdir)/src/htt_modules.c
 test_shell_module_SOURCES=test_shell_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/htt_context.c $(top_srcdir)/src/htt_executable.c \
@@ -63,6 +69,8 @@ test_shell_module_SOURCES=test_shell_module.c $(top_srcdir)/src/htt_core.c \
 		      $(top_srcdir)/src/exception_module.c \
 		      $(top_srcdir)/src/shell_module.c \
 		      $(top_srcdir)/src/core_module.c \
+		      $(top_srcdir)/src/coder_module.c \
+		      $(top_srcdir)/src/dbg_module.c \
 		      $(top_srcdir)/src/htt_modules.c
 EXTRA_DIST=run_lib.sh run_all.sh finally.ht3
 AM_CFLAGS=-I$(top_srcdir)/src

@@ -112,6 +112,13 @@ void htt_executable_set_raw(htt_executable_t *executable, char *raw);
 /**
  * Get parent of this executable
  * @param executable IN
+ * @return pool
+ */
+apr_pool_t *htt_executable_get_pool(htt_executable_t *executable); 
+
+/**
+ * Get parent of this executable
+ * @param executable IN
  * @return parent
  */
 htt_executable_t *htt_executable_get_parent(htt_executable_t *executable);

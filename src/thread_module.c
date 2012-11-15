@@ -214,7 +214,7 @@ _thread_stats_t *_get_thread_stats(htt_context_t *context);
 
 /**
  * Join context on a given context level
- * @param exectuable IN static executable
+ * @param exectuable IN static context 
  * @param context IN dynamic context
  * @param tc IN thread config 
  * @return apr status
@@ -222,6 +222,13 @@ _thread_stats_t *_get_thread_stats(htt_context_t *context);
 static apr_status_t _join_threads(htt_executable_t *executable, 
                                   htt_context_t *context,
                                   _thread_config_t *tc);
+
+/**
+ * Get global mutex
+ * @param executable IN static context
+ * @return mutex
+ */
+static apr_thread_mutex_t *_get_global_mutex(htt_executable_t *executable); 
 
 /************************************************************************
  * Public
@@ -523,38 +530,55 @@ static apr_status_t _cmd_lock_function(htt_executable_t *executable,
                                        htt_context_t *context, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
-  htt_context_t *parent = htt_context_get_parent(context);
-  _thread_config_t *tc = _get_thread_config(parent);
+  apr_thread_mutex_t *mutex = _get_global_mutex(executable);
   apr_status_t status;
 
-  if ((status = apr_thread_mutex_lock(tc->mutex)) != APR_SUCCESS) {
+  if ((status = apr_thread_mutex_lock(mutex)) == APR_SUCCESS) {
+    return APR_SUCCESS;
+  }
+  else {
     htt_log_error(htt_context_get_log(context), status, 
                   htt_executable_get_file(executable), 
                   htt_executable_get_line(executable), 
                   "could not draw thread lock");
     return status;
   }
-
-  return APR_SUCCESS;
 }
 
 static apr_status_t _cmd_unlock_function(htt_executable_t *executable, 
                                          htt_context_t *context, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
-  htt_context_t *parent = htt_context_get_parent(context);
-  _thread_config_t *tc = _get_thread_config(parent);
+  apr_thread_mutex_t *mutex = _get_global_mutex(executable);
   apr_status_t status;
 
-  if ((status = apr_thread_mutex_unlock(tc->mutex)) != APR_SUCCESS) {
+  if ((status = apr_thread_mutex_unlock(mutex)) == APR_SUCCESS) {
+    return APR_SUCCESS;
+  }
+  else {
     htt_log_error(htt_context_get_log(context), status, 
                   htt_executable_get_file(executable), 
                   htt_executable_get_line(executable), 
-                  "could not release thread lock");
+                  "could not draw thread lock");
     return status;
   }
+}
 
-  return APR_SUCCESS;
+static apr_thread_mutex_t *_get_global_mutex(htt_executable_t *executable) {
+  apr_thread_mutex_t *mutex;
+  htt_executable_t *top = executable;
+  htt_executable_t *cur = htt_executable_get_parent(executable);
+  while (cur) {
+    top = cur;
+    cur = htt_executable_get_parent(cur);
+  }
+
+  mutex = htt_executable_get_config(top, "__global_mutex");
+  if (!mutex) {
+    apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, htt_executable_get_pool(top));
+    htt_executable_set_config(top, "__global_mutex", mutex);
+  }
+  return mutex;
 }
 
 static apr_status_t _hook_thread_init_begin(htt_executable_t *executable, 

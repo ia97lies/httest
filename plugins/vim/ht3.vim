@@ -16,6 +16,9 @@ syn keyword httStatement        assert
 syn keyword httStorageClass     daemon
 syn keyword httStorageClass     thread
 syn keyword httStatement        begin
+syn keyword httStatement        join
+syn keyword httStatement        lock
+syn keyword httStatement        unlock
 syn keyword httStorageClass     if
 syn keyword httStatement        eval
 syn keyword httStorageClass     function 

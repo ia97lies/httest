@@ -381,6 +381,34 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  htt = _test_reset();
+  fprintf(stdout, "lock threads ... ");
+  fflush(stdout);
+  {
+    apr_status_t status;
+    char *buf = apr_pstrdup(pool, 
+        "thread\n\
+           lock\n\
+         end\n\
+         join\n\
+         thread\n\
+           lock\n\
+           mock 0 1\n\
+           unlock\n\
+         end\n\
+         thread\n\
+           sleep 1000\n\
+           mock 0 2\n\
+           unlock\n\
+         end");
+    status = htt_compile_buf(htt, buf, strlen(buf));
+    assert(status == APR_SUCCESS);
+    status = htt_run(htt);
+    assert(status == APR_SUCCESS);
+    assert(strcmp(global_buf[0], "2\n1\n") == 0);
+  }
+  fprintf(stdout, "ok\n");
+
   return 0;
 }
 

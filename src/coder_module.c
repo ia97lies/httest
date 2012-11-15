@@ -346,7 +346,7 @@ static apr_status_t _cmd_b64enc_function(htt_executable_t *executable,
   base64 = apr_pcalloc(ptmp, len + 1);
   apr_base64_encode(base64, string, strlen(string));
   
-  htt_stack_push(retvars, htt_string_new(ptmp, string));
+  htt_stack_push(retvars, htt_string_new(ptmp, base64));
 
   return APR_SUCCESS;
 }
@@ -376,7 +376,7 @@ static apr_status_t _cmd_b64dec_function(htt_executable_t *executable,
   plain = apr_pcalloc(ptmp, len + 1);
   apr_base64_decode(plain, string);
   
-  htt_stack_push(retvars, htt_string_new(ptmp, string));
+  htt_stack_push(retvars, htt_string_new(ptmp, plain));
 
   return APR_SUCCESS;
 }

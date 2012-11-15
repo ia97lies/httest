@@ -154,6 +154,10 @@ void htt_executable_set_retvars(htt_executable_t *executable,
   executable->retvars = retvars;
 }
 
+apr_pool_t *htt_executable_get_pool(htt_executable_t *executable) {
+  return executable->pool;
+}
+
 htt_stack_t *htt_executable_get_params(htt_executable_t *executable) {
   return executable->params;
 }
