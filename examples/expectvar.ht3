@@ -1,0 +1,6 @@
+
+set a = foobar
+set b = blabla
+
+expect var(a) "foo.*"
+expect var(b) "bla.*"
