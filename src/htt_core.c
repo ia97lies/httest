@@ -332,8 +332,9 @@ apr_status_t htt_null_closure(htt_executable_t *executable,
 }
 
 apr_status_t htt_expect_register(htt_executable_t *executable, 
-                                 htt_context_t *context, const char *namespace, 
+                                 htt_context_t *cur, const char *namespace, 
                                  const char *expr, char **vars, int n) {
+  htt_context_t *context = _get_expect_context(cur);
   _expect_config_t *config = _get_expect_config(context);
   _ns_t *ns = (void *)apr_table_get(config->ns, namespace);
   if (!ns) {
@@ -368,9 +369,10 @@ apr_status_t htt_expect_register(htt_executable_t *executable,
 }
 
 apr_status_t htt_expect_check(htt_executable_t *executable, 
-                              htt_context_t *context) {
+                              htt_context_t *cur) {
   int i;
   apr_table_entry_t *e;
+  htt_context_t *context = _get_expect_context(cur);
   _expect_config_t *config = _get_expect_config(context);
   apr_status_t status = APR_SUCCESS;
   e = (void *) apr_table_elts(config->ns)->elts;
@@ -396,10 +398,11 @@ apr_status_t htt_expect_check(htt_executable_t *executable,
 }
 
 apr_status_t htt_expect_assert(htt_executable_t *executable, 
-                               htt_context_t *context, const char *namespace,
+                               htt_context_t *cur, const char *namespace,
                                const char *buf, apr_size_t len) {
   apr_size_t _len;
   apr_status_t status = APR_SUCCESS;
+  htt_context_t *context = _get_expect_context(cur);
   _expect_config_t *config = _get_expect_config(context);
   _ns_t *ns = (void *)apr_table_get(config->ns, namespace);
   if (ns) {
@@ -1005,19 +1008,21 @@ static apr_status_t _cmd_if_function(htt_executable_t *executable,
 }
 
 static apr_status_t _cmd_req_function(htt_executable_t *executable, 
-                                      htt_context_t *context, 
+                                      htt_context_t *cur, 
                                       apr_pool_t *ptmp, htt_map_t *params, 
                                       htt_stack_t *retvars, char *line) {
+  htt_context_t *context = _get_expect_context(cur);
   _get_expect_config(context);
   return htt_run_request_function(executable, context, line);
 } 
 
 static apr_status_t _cmd_filter_function(htt_executable_t *executable, 
-                                         htt_context_t *context, 
+                                         htt_context_t *cur, 
                                          apr_pool_t *ptmp, htt_map_t *params, 
                                          htt_stack_t *retvars, char *line) {
   apr_status_t status;
   char *command;
+  htt_context_t *context = _get_expect_context(cur);
   _expect_config_t *config = _get_expect_config(context);
   htt_bufreader_t *bufreader;
   htt_executable_t *exec;
@@ -1044,13 +1049,13 @@ static apr_status_t _cmd_filter_function(htt_executable_t *executable,
 }
 
 static apr_status_t _cmd_wait_function(htt_executable_t *executable, 
-                                       htt_context_t *context, 
+                                       htt_context_t *cur, 
                                        apr_pool_t *ptmp, htt_map_t *params, 
                                        htt_stack_t *retvars, char *line) {
   apr_status_t status;
-  htt_context_t *top = _get_expect_context(context);
+  htt_context_t *context = _get_expect_context(cur);
   _expect_config_t *config = _get_expect_config(context);
-  status = htt_run_wait_function(executable, top, line, config->filter_chain);
+  status = htt_run_wait_function(executable, context, line, config->filter_chain);
   if (status == APR_SUCCESS) {
     status = htt_expect_check(executable, context);
   }

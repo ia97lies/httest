@@ -931,6 +931,8 @@ int main(int argc, const char *const argv[]) {
   }
   fprintf(stdout, "ok\n");
 
+  /**
+   * FIXME: is this a good idea?
   htt = _test_reset();
   fprintf(stdout, "capsulated req expect wait -> ok... ");
   {
@@ -953,6 +955,7 @@ int main(int argc, const char *const argv[]) {
     assert(status == APR_SUCCESS);
   }
   fprintf(stdout, "ok\n");
+  */
 
   htt = _test_reset();
   fprintf(stdout, "expect variable -> ok... ");
@@ -970,14 +973,14 @@ int main(int argc, const char *const argv[]) {
   fprintf(stdout, "ok\n");
 
   htt = _test_reset();
-  fprintf(stdout, "expect variable -> ok... ");
+  fprintf(stdout, "2 x expect variable -> ok... ");
   {
     apr_status_t status;
     char *buf = apr_pstrdup(pool, 
         "set bar=foobar\n\
          expect var(bar) \"foo.*\"\n\
          set foo=blabla\n\
-         expect var(foo) \"neinei\"");
+         expect var(foo) \"bla.*\"");
     global_buf = NULL;
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
@@ -998,7 +1001,7 @@ int main(int argc, const char *const argv[]) {
     status = htt_compile_buf(htt, buf, strlen(buf));
     assert(status == APR_SUCCESS);
     status = htt_run(htt);
-    assert(status == APR_SUCCESS);
+    assert(status == APR_EINVAL);
   }
   fprintf(stdout, "ok\n");
 

@@ -438,6 +438,7 @@ static apr_status_t _hook_expect_function(htt_executable_t *executable,
         htt_string_t *value = htt_context_get_var(context, var);
         status = htt_expect_assert(executable, context, ".", 
                                    htt_string_get(value), -1);
+        htt_expect_check(executable, context);
       }
     }
     else {
@@ -448,7 +449,6 @@ static apr_status_t _hook_expect_function(htt_executable_t *executable,
                     "Command expect needs regular expression");
     }
     apr_pool_destroy(config->pool);
-    _destroy_request_config(context); 
   }
   return status;
 }
