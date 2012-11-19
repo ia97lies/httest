@@ -1,55 +1,46 @@
 +DESIGN
 
 ++Compile
-- Composite of htt_executable_t
-- One htt_executable_t is one command or a body of commands
++ Composite of htt_executable_t
++ One htt_executable_t is one command or a body of commands
 
 ++Execute
-- Every htt_executable can have a function, if there run it
-- To execute a body the function of htt_executable has to return a closure
-- As long the closure returns 1 the body will be executed
-- On execution every running body do have a htt_context_t
-- A htt_context_t do exist until end of a body
-- Variables hold in context.
-- Parameters are hold as key/value pairs in a map
-- Return variables are hold in a stack
++ Every htt_executable can have a function, if there run it
++ To execute a body the function of htt_executable has to return a closure
++ As long the closure returns 1 the body will be executed
++ On execution every running body do have a htt_context_t
++ A htt_context_t do exist until end of a body
++ Variables hold in context.
++ Parameters are hold as key/value pairs in a map
++ Return variables are hold in a stack
 
 ++Context
-- There is a static context "executable"
-- There is a dynamic context "context"
++ There is a static context "executable"
++ There is a dynamic context "context"
 
-++Closure
+--Closure
 - Call a function which return a closure function
 - A closure is a tuple of htt_executable_t and htt_context_t
 - The closures htt_context_t is a child of the callers htt_context_t
 - All variables needed must be a local variable in the closure htt_context_t!
 
 ++req/expect/wait
-- This should be a main part of htt3
-- req is a empty function which is implemented by specific modules
-- with the scheme of the given url the specific modules takes action
-- scheme could be http://, https://, file://, var://, ws://, ...
-- expect it self to have namespaces given by the specific modules
-- namespaces of expect depends on the given resource
-- "." namespace of expect do get all data received
-- in the case of http:// or https:// there is also a namespace headers and body
-- on wait all defined expect are checked against received data
++ This should be a main part of htt3
++ req is a empty function which is implemented by specific modules
++ with the scheme of the given url the specific modules takes action
++ scheme could be http://, https://, file://, var://, ws://, ...
++ expect it self to have namespaces given by the specific modules
++ namespaces of expect depends on the given resource
++ "." namespace of expect do get all data received
++ in the case of http:// or https:// there is also a namespace headers and body
++ on wait all defined expect are checked against received data
 
 ++client/server/deamon/thread
-- Client/Server are not able to read/write global variable
-- all variables outside thread are copied into thread
++ Client/Server are not able to read/write global variable
++ all variables outside thread are copied into thread
 - special access to shared variables
 
-++event driven scheduler
-- Own scheduller on base of apr_pollcb, this needs tight integration to
-  reader/writer socket/file.
-- How to implement socket timeouts?
-- How to implement listen/accept timeouts?
-- Pseudo code
-    handle = htt_thread_create(thread_function)
-    htt_thread_join(handle)
-
-++exceptions
+--exceptions
 - Error exceptions should be catchable to handle error situation
 
 body
@@ -67,12 +58,45 @@ body
 end
 
 ++external calls
-- execute shell scripts
++ execute shell scripts
 - execute httest scripts
 - use ht3 also as a test manager/executor
 
 ++logging
-- thread safe
-- thread distiguish
-- appender
++ thread safe
++ thread distinguish
++ appender
+
+++ Network
++ It is not the main part any more but a module
+- Scheme tcp://, udp://, http://, https://, ws://, ...
+- https needs tcp and ssl -> handover unix socket desciptor of tcp to ssl
++ transport object
+  + read/write/timeout/get socket descriptor
+- udp:// only the base
+- http:// do need a tcp transport object
+- tcp should implement connect/listen/accept/close
+- ssl should implement connect/listen/accept/close
+- the following constructs should work
+
+  tcp.connect localhost 8080
+  ssl.connect cert key ca
+  req https://localhost:8080
+
+step by step build up
+
+  req https://localhost:8443
+  ...
+  wait
+  ssl.close
+
+now you have only http:// not https:// anymore
+
+- this will not work
+
+  tcp.connect localhost 8080
+  expect . "foo.*"
+  wait
+
+because wait only works in combination with req
 
