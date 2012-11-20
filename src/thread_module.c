@@ -70,6 +70,14 @@ typedef struct _thread_stats_s {
 
 long unsigned int t_count = 0;
 
+#define HTT_THREAD_GLOBAL_MUTEX "htt.thread.module.global.mutex"
+#define HTT_THREAD_BEGIN "htt.thread.module.thread.begin"
+#define HTT_THREAD_INIT "htt.thread.module.thread.init"
+#define HTT_THREAD_HANDLE "htt.thread.module.thread.handle"
+#define HTT_THREAD_STATS "htt.thread.module.thread.stats"
+#define HTT_THREAD_CONFIG "htt.thread.module.thread.config"
+
+
 /**
  * Get thread config from given context
  * @param context IN
@@ -273,19 +281,19 @@ static apr_status_t _cmd_begin_compile(htt_command_t *command, char *args,
   htt_executable_t *me = htt_get_executable(htt);
   htt_executable_t *parent = htt_executable_get_parent(me);
   if (!parent || htt_executable_get_function(me) != _cmd_thread_function ||
-      htt_executable_get_config(me, "__thread_begin")) {
+      htt_executable_get_config(me, HTT_THREAD_BEGIN)) {
     htt_log_error(htt_get_log(htt), APR_EGENERAL, 
                   htt_executable_get_file(me), 
                   htt_executable_get_line(me), 
                   "begin only allowed in a thread body and only once");
     return APR_EGENERAL;
   }
-  htt_executable_set_config(me, "__thread_begin", (void *)me);
+  htt_executable_set_config(me, HTT_THREAD_BEGIN, (void *)me);
   _thread_init_t *thread_init;
-  thread_init = htt_executable_get_config(parent, "__thread_init");
+  thread_init = htt_executable_get_config(parent, HTT_THREAD_INIT);
   if (!thread_init) {
     thread_init = apr_pcalloc(htt_get_pool(htt), sizeof(*thread_init));
-    htt_executable_set_config(parent, "__thread_init", thread_init);
+    htt_executable_set_config(parent, HTT_THREAD_INIT, thread_init);
   }
   ++thread_init->count;
   return htt_cmd_line_compile(command, args, compiler);
@@ -306,7 +314,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
   _thread_init_t *thread_init;
   _thread_stats_t *thread_stats;
   thread_init = htt_executable_get_config(htt_executable_get_parent(executable),
-                                          "__thread_init");
+                                          HTT_THREAD_INIT);
   thread_stats = _get_thread_stats(parent);
   ++thread_stats->threads;
 
@@ -356,7 +364,7 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
       th->context = child;
       th->executable = executable;
       th->tc = tc;
-      htt_context_set_config(child, "__thread_handle", th);
+      htt_context_set_config(child, HTT_THREAD_HANDLE, th);
       /** FIXME: child is never destroyed. If I destroy them after join, I get 
        *         coredumps
        */
@@ -395,10 +403,10 @@ static apr_status_t _cmd_thread_function(htt_executable_t *executable,
 }
 
 _thread_stats_t *_get_thread_stats(htt_context_t *context) {
-  _thread_stats_t *stats = htt_context_get_config(context, "__thread_stats");
+  _thread_stats_t *stats = htt_context_get_config(context, HTT_THREAD_STATS);
   if (!stats) {
     stats = apr_pcalloc(htt_context_get_pool(context), sizeof(*stats));
-    htt_context_set_config(context, "__thread_stats", stats);
+    htt_context_set_config(context, HTT_THREAD_STATS, stats);
   }
   return stats;
 }
@@ -461,7 +469,7 @@ static apr_status_t _cmd_begin_function(htt_executable_t *executable,
                                         htt_context_t *context, 
                                         apr_pool_t *ptmp, htt_map_t *params, 
                                         htt_stack_t *retvars, char *line) {
-  _thread_handle_t *th = htt_context_get_config(context, "__thread_handle");
+  _thread_handle_t *th = htt_context_get_config(context, HTT_THREAD_HANDLE);
   apr_thread_mutex_lock(th->tc->mutex);
   --th->tc->count;
   if (th->tc->count == 0) {
@@ -480,7 +488,7 @@ static apr_status_t _cmd_join_function(htt_executable_t *executable,
   if (!parent) {
     parent = context;
   }
-  _thread_config_t *tc = htt_context_get_config(parent, "thread");
+  _thread_config_t *tc = htt_context_get_config(parent, HTT_THREAD_CONFIG);
   while (status == APR_SUCCESS && tc) {
     _thread_config_t *cur;
     cur = tc;
@@ -519,7 +527,7 @@ static apr_status_t _join_threads(htt_executable_t *executable,
     apr_thread_mutex_destroy(tc->mutex);
     apr_thread_mutex_destroy(tc->sync);
     apr_pool_destroy(tc->pool);
-    htt_context_set_config(context, "thread", NULL);
+    htt_context_set_config(context, HTT_THREAD_CONFIG, NULL);
   }
 
   return status;
@@ -573,10 +581,10 @@ static apr_thread_mutex_t *_get_global_mutex(htt_executable_t *executable) {
     cur = htt_executable_get_parent(cur);
   }
 
-  mutex = htt_executable_get_config(top, "__global_mutex");
+  mutex = htt_executable_get_config(top, HTT_THREAD_GLOBAL_MUTEX);
   if (!mutex) {
     apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, htt_executable_get_pool(top));
-    htt_executable_set_config(top, "__global_mutex", mutex);
+    htt_executable_set_config(top, HTT_THREAD_GLOBAL_MUTEX, mutex);
   }
   return mutex;
 }
@@ -594,15 +602,15 @@ static apr_status_t _hook_thread_end(htt_executable_t *executable,
     status = _cmd_join_function(executable, context, NULL, NULL, NULL, NULL);
   }
   else {
-    _thread_config_t *tc = htt_context_get_config(context, "thread");
+    _thread_config_t *tc = htt_context_get_config(context, HTT_THREAD_CONFIG);
     if (tc) {
       htt_context_t *parent = htt_context_get_parent(context);
-      _thread_config_t *parent_tc = htt_context_get_config(context, "thread");
+      _thread_config_t *parent_tc = htt_context_get_config(context, HTT_THREAD_CONFIG);
       if (parent_tc) {
         tc->next = parent_tc;
       }
       else {
-        htt_context_set_config(parent, "thread", tc);
+        htt_context_set_config(parent, HTT_THREAD_CONFIG, tc);
       }
     }
   }
@@ -624,7 +632,7 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
 
   htt_log(htt_context_get_log(context), HTT_LOG_INFO, '=', "thread", "%s start",
           handle->name);
-  if (!htt_executable_get_config(executable, "__thread_begin")) {
+  if (!htt_executable_get_config(executable, HTT_THREAD_BEGIN)) {
     apr_thread_mutex_lock(handle->tc->sync);
     apr_thread_mutex_unlock(handle->tc->sync);
   }
@@ -652,7 +660,7 @@ static void * APR_THREAD_FUNC _thread_body(apr_thread_t * thread,
 
 static _thread_config_t *_get_thread_config(htt_context_t *cur) {
   htt_context_t *context = htt_context_get_godfather(cur);
-  _thread_config_t *config = htt_context_get_config(context, "thread");
+  _thread_config_t *config = htt_context_get_config(context, HTT_THREAD_CONFIG);
   if (!config) {
     apr_pool_t *pool;
     apr_pool_create(&pool, htt_context_get_pool(context));
@@ -661,7 +669,7 @@ static _thread_config_t *_get_thread_config(htt_context_t *cur) {
     apr_thread_mutex_create(&config->mutex, APR_THREAD_MUTEX_DEFAULT, pool);
     apr_thread_mutex_create(&config->sync, APR_THREAD_MUTEX_DEFAULT, pool);
     config->threads = apr_table_make(pool, 10);
-    htt_context_set_config(context, "thread", config);
+    htt_context_set_config(context, HTT_THREAD_CONFIG, config);
   }
   return config;
 }

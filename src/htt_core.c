@@ -70,11 +70,14 @@
 #include "htt_string.h"
 #include "htt_expr.h"
 #include "htt_command.h"
+#include "htt_transport.h"
 
 /************************************************************************
  * Defines 
  ***********************************************************************/
-
+#define HTT_BUILTIN_FUNC_EXEC "htt.builtin.function.executable"
+#define HTT_BUILTIN_REQUEST "htt.builtin.request"
+#define HTT_BUILTIN_LOOP_COUNTER "_counter_config"
 /************************************************************************
  * Structurs
  ***********************************************************************/
@@ -393,7 +396,7 @@ apr_status_t htt_expect_check(htt_executable_t *executable,
     }
   }
   apr_pool_destroy(config->pool);
-  htt_context_set_config(context, "expect", NULL);
+  htt_context_set_config(context, HTT_BUILTIN_REQUEST, NULL);
   return status;
 }
 
@@ -812,7 +815,7 @@ static apr_status_t _cmd_function_compile(htt_command_t *command, char *args,
   htt_executable_set_params(executable, htt_command_get_params(command));
   htt_executable_set_retvars(executable, htt_command_get_retvars(command));
   htt_executable_set_raw(executable, args);
-  htt_executable_set_config(executable, "__executable", 
+  htt_executable_set_config(executable, HTT_BUILTIN_FUNC_EXEC, 
                             htt_command_get_config(command, "executable"));
   htt_executable_add(htt->executable, executable);
   return APR_SUCCESS;
@@ -825,7 +828,7 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
   apr_status_t status;
   htt_executable_t *_executable;
   htt_context_t *child_context;
-  _executable = htt_executable_get_config(executable, "__executable");
+  _executable = htt_executable_get_config(executable, HTT_BUILTIN_FUNC_EXEC);
   child_context = htt_context_new(context, htt_context_get_log(context));
   if (params) htt_context_merge_vars(child_context, params);
   status = htt_execute(_executable, child_context);
@@ -838,12 +841,12 @@ static apr_status_t _cmd_function_function(htt_executable_t *executable,
 static _counter_config_t *_counter_get_config(htt_context_t *context) {
   _counter_config_t *config;
 
-  config = htt_context_get_config(context, "_counter_config");
+  config = htt_context_get_config(context, HTT_BUILTIN_LOOP_COUNTER);
   if (config == NULL) {
     config = apr_pcalloc(htt_context_get_pool(context), sizeof(*config));
     htt_context_set_config(context, 
                            apr_pstrdup(htt_context_get_pool(context), 
-                                       "_counter_config"), config);
+                                       HTT_BUILTIN_LOOP_COUNTER), config);
   }
   return config;
 }
@@ -1063,14 +1066,14 @@ static apr_status_t _cmd_wait_function(htt_executable_t *executable,
 } 
 
 static _expect_config_t *_get_expect_config(htt_context_t *context) {
-  _expect_config_t *config = htt_context_get_config(context, "expect");
+  _expect_config_t *config = htt_context_get_config(context, HTT_BUILTIN_REQUEST);
   if (!config) {
     apr_pool_t *pool;
     apr_pool_create(&pool, htt_context_get_pool(context));
     config = apr_pcalloc(pool, sizeof(*config));
     config->pool = pool;
     config->ns = apr_table_make(pool, 3);
-    htt_context_set_config(context, "expect", config);
+    htt_context_set_config(context, HTT_BUILTIN_REQUEST, config);
   }
   return config;
 }
@@ -1079,7 +1082,7 @@ static htt_context_t *_get_expect_context(htt_context_t *context) {
   _expect_config_t *config = NULL;
   htt_context_t *cur = context;
   while (cur && config == NULL) {
-    config = htt_context_get_config(context, "expect");
+    config = htt_context_get_config(context, HTT_BUILTIN_REQUEST);
     if (!config) {
       cur = htt_context_get_parent(cur);
     }

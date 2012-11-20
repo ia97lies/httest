@@ -40,6 +40,8 @@ typedef struct _request_config_s {
   const char *var;
 } _request_config_t;
 
+#define HTT_CORE_MODULE_REQUEST "htt.core.module.request"
+
 /**
  * Simple echo command 
  * @param executable IN executable
@@ -390,16 +392,16 @@ static _request_config_t *_create_request_config(htt_context_t *context) {
   _request_config_t *config;
   config = apr_pcalloc(htt_context_get_pool(context), sizeof(*config));
   apr_pool_create(&config->pool, htt_context_get_pool(context));
-  htt_context_set_config(context, "core_module_request", config); 
+  htt_context_set_config(context, HTT_CORE_MODULE_REQUEST, config); 
   return config;
 }
 
 static void _destroy_request_config(htt_context_t *context) {
-  htt_context_set_config(context, "core_module_request", NULL); 
+  htt_context_set_config(context, HTT_CORE_MODULE_REQUEST, NULL); 
 }
 
 static _request_config_t *_get_request_config(htt_context_t *context) {
-  return htt_context_get_config(context, "core_module_request"); 
+  return htt_context_get_config(context, HTT_CORE_MODULE_REQUEST); 
 }
 
 static apr_status_t _hook_request_function(htt_executable_t *executable, 

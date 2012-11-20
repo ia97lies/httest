@@ -37,6 +37,7 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+#define HTT_FINALLY "htt.exception.module.finally"
 /**
  * Compile finally statement
  * @param command IN command data
@@ -93,7 +94,7 @@ static apr_status_t _hook_call_final(htt_executable_t *executable,
                                      htt_context_t *context, 
                                      apr_status_t status) {
   htt_executable_t *finally;
-  finally = htt_executable_get_config(executable, "__finally");
+  finally = htt_executable_get_config(executable, HTT_FINALLY);
   if (finally) {
     htt_execute(finally, context);
   }
@@ -109,7 +110,7 @@ static apr_status_t _cmd_finally_compile(htt_command_t *command, char *args,
   status = htt_cmd_body_compile(command, args, compiler);
   if (status == APR_SUCCESS) {
     htt_executable_t *finally = htt_get_executable(htt);
-    htt_executable_set_config(parent, "__finally", finally);
+    htt_executable_set_config(parent, HTT_FINALLY, finally);
   }
   return status;
 }
