@@ -33,7 +33,10 @@
  ***********************************************************************/
 
 /************************************************************************
- * Local 
+ * Public
+ ***********************************************************************/
+/************************************************************************
+ * Private
  ***********************************************************************/
 /**
  * Get os socket descriptor
@@ -41,7 +44,7 @@
  * @param desc OUT os socket descriptor
  * @return apr status
  */
-static apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
+static apr_status_t _transport_os_desc_get(void *data, int *desc) {
   apr_socket_t *socket = data;
   if (!socket) {
     return APR_ENOSOCKET;
@@ -55,7 +58,7 @@ static apr_status_t tcp_transport_os_desc_get(void *data, int *desc) {
  * @param desc OUT os socket descriptor
  * @return apr status
  */
-static apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t) {
+static apr_status_t _transport_set_timeout(void *data, apr_interval_time_t t) {
   apr_socket_t *socket = data;
   if (!socket) {
     return APR_ENOSOCKET;
@@ -69,7 +72,7 @@ static apr_status_t tcp_transport_set_timeout(void *data, apr_interval_time_t t)
  * @param desc OUT os socket descriptor
  * @return apr status
  */
-static apr_status_t tcp_transport_get_timeout(void *data, apr_interval_time_t *t) {
+static apr_status_t _transport_get_timeout(void *data, apr_interval_time_t *t) {
   apr_socket_t *socket = data;
   if (!socket) {
     return APR_ENOSOCKET;
@@ -99,7 +102,7 @@ static apr_status_t tcp_transport_read(void *data, char *buf, apr_size_t *size) 
  * @param size INOUT buffer len
  * @return apr status
  */
-static apr_status_t tcp_transport_write(void *data, const char *buf, apr_size_t size) {
+static apr_status_t _transport_write(void *data, const char *buf, apr_size_t size) {
   apr_socket_t *socket = data;
   apr_status_t status = APR_SUCCESS;
   apr_size_t total = size;
@@ -121,9 +124,6 @@ static apr_status_t tcp_transport_write(void *data, const char *buf, apr_size_t 
   return APR_SUCCESS;
 }
 
-/************************************************************************
- * Hooks
-************************************************************************/
 /**
  * do ssl connect
  * @param worker IN
@@ -471,9 +471,7 @@ static apr_status_t block_TCP_CLOSE(worker_t * worker, worker_t *parent, apr_poo
   return tcp_close(worker);
 }
 
-/************************************************************************
- * Module 
- ***********************************************************************/
+/*
 apr_status_t tcp_module_init(global_t *global) {
   apr_status_t status;
 
@@ -513,5 +511,5 @@ apr_status_t tcp_module_init(global_t *global) {
   htt_hook_accept(tcp_hook_accept, NULL, NULL, 0);
   return APR_SUCCESS;
 }
-
+*/
 
