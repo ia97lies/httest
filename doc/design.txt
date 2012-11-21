@@ -109,10 +109,3 @@ now you have only http:// not https:// anymore
 
 because wait only works in combination with req
 
--- req/wait handle centralized in htt_core
-- should I handle this with a transport object central?
-- how do I know what which are the possible namespaces?
--- read function could return that
-- when do I know when it terminates?
--- as long as there is a APR_
-- would be nice!
