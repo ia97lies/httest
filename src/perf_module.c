@@ -805,7 +805,7 @@ static apr_status_t perf_server_create(worker_t *worker, apr_thread_start_t func
       perf_serialize_globals(global, host);
       perf_serialize_servers(global, host, server_port_info);
       perf_serialize(host, "GO\n");
-      perf_serialize(host, "EXIT\n");
+      perf_serialize(host, "EXIT OK\n");
       apr_sleep(apr_time_from_sec(1));
       worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
       apr_thread_mutex_unlock(worker->sync_mutex);
@@ -830,7 +830,7 @@ static apr_status_t perf_thread_start(global_t *global, apr_thread_t *thread) {
       perf_serialize_globals(global, host);
       perf_serialize_clients(global, host);
       perf_serialize(host, "GO\n");
-      perf_serialize(host, "EXIT\n");
+      perf_serialize(host, "EXIT OK\n");
     }
   }
   return APR_SUCCESS;
