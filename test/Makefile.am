@@ -237,6 +237,7 @@ EXTRA_DIST= \
 	server.cert.pem \
 	server_connection_close.htt \
 	server_def_before_client.htt \
+	server_distribute.htt \
 	server_ip_port.htt \
 	server.key.pem \
 	server_up_down.htt \
