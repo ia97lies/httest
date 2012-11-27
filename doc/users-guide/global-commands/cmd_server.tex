@@ -8,7 +8,7 @@
 
 \paragraph{Syntax:}
 \subparagraph{}
-\texttt{SERVER [<SSL>:]<addr\char`\_port> [<number of concurrent servers>]}
+\texttt{SERVER [<SSL>:]<addr\char`\_port> [<number of concurrent servers>] [ -> <host>:<por> }
 
 \paragraph{Purpose:}
 \subparagraph{}
@@ -21,5 +21,9 @@ only a single thread will be started. Otherwise, the same \texttt{SERVER} body w
 be executed in the specified number of parallel threads.
 
 The \texttt{SERVER} must be closed using the \texttt{END} command.
+
+If the server should speak SSL put one of the possible <SSL> tags in front of the <addr\char`\_port>. Possible <SSL> tags are SSL, SSL2, SSL3, TLS1. Depending of the linked openssl you also can set TLS1.1 or TLS1.2.
+
+With -> <host>:<port> you can define a remote host, where this server must run. The remote host must start the following command 'htremote -p <port> -e "httest -Ss"'. The server will be serialized and send over to remote httest which then executes this server.
 
 % Please see chapter TODO-REF for details about how to correctly set up SSL connections.
