@@ -797,7 +797,8 @@ static apr_status_t perf_server_create(worker_t *worker, apr_thread_start_t func
     worker_log(worker, LOG_DEBUG, "distribute server to \"%s\"\n", remote_host);
     status = perf_distribute_host(worker, host, new_thread);
     if (status != APR_SUCCESS) {
-      status = APR_ENOTHREAD;
+      status = APR_EINVAL;
+      worker_log_error(worker, "Can not serialize server to remote host \"%s\"", remote_host);
     }
     else {
       apr_hash_set(gconf->clients.my_threads, *new_thread, sizeof(*new_thread),
