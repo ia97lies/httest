@@ -815,14 +815,15 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
     apr_thread_exit(thread, status);
   } 
 
-  apr_pool_create(&ptmp, NULL);
 
   if ((status = call_command(client, command_TIMEOUT, "_TIMEOUT", "300000")) != APR_SUCCESS) {
-    goto unlock;
+    apr_thread_mutex_unlock(self->mutex);
+    return NULL;
   }
 
   if ((status = call_command(server, command_TIMEOUT, "_TIMEMOUT", "300000")) != APR_SUCCESS) {
-    goto unlock;
+    apr_thread_mutex_unlock(self->mutex);
+    return NULL;
   }
 
   /* as long we are connected */
@@ -832,6 +833,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
     request.pool = pool;
     apr_pool_create(&pool, NULL);
     response.pool = pool;
+    apr_pool_create(&ptmp, NULL);
 
     /* wait client request */
     if ((status = wait_request(client, &request)) != APR_SUCCESS) {
