@@ -105,7 +105,6 @@ typedef struct perf_gconf_s {
   perf_t stat;
   apr_file_t *log_file;
   perf_gconf_threads_t clients;
-  perf_gconf_threads_t servers;
 } perf_gconf_t;
 
 /************************************************************************
@@ -130,8 +129,6 @@ static perf_gconf_t *perf_get_global_config(global_t *global) {
     config = apr_pcalloc(global->pool, sizeof(*config));
     config->clients.host_and_ports = apr_hash_make(global->pool);
     config->clients.my_threads = apr_hash_make(global->pool);
-    config->servers.host_and_ports = apr_hash_make(global->pool);
-    config->servers.my_threads = apr_hash_make(global->pool);
     module_set_config(global->config, apr_pstrdup(global->pool, perf_module), config);
   }
   return config;
@@ -625,7 +622,11 @@ static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread,
   if ((status = sockreader_new(&sockreader, host->socket->transport,
                                NULL, 0, pool)) == APR_SUCCESS) {
     status = sockreader_read_line(sockreader, &buf); 
-    worker_log(host->worker, LOG_INFO, "Remote host finished \"%s\"\n", buf);
+    while (status == APR_SUCCESS) {
+      worker_log(host->worker, LOG_INFO, "[%s]: %s", host->name, buf);
+      status = sockreader_read_line(sockreader, &buf); 
+    }
+    worker_log(host->worker, LOG_INFO, "Remote host finished: %d\n", status);
   }
   else {
     worker_log_error(host->worker, "Lost connection to remote host \"%s\"\n", 
@@ -687,6 +688,7 @@ static apr_status_t perf_distribute_host(worker_t *worker,
                                           APR_THREAD_MUTEX_DEFAULT,
                                           global->pool)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not create supervisor thread sync mutex for remote host");
+      apr_pool_destroy(ptmp);
       return status;
     }
     apr_thread_mutex_lock(host->sync);
@@ -694,15 +696,17 @@ static apr_status_t perf_distribute_host(worker_t *worker,
                                     host, global->pool)) 
         != APR_SUCCESS) {
       worker_log_error(worker, "Could not create supervisor thread for remote host");
+      apr_pool_destroy(ptmp);
       return status;
     }
     if ((status = apr_thread_data_set(host, "host", 
                                       perf_host_cleanup, *thread)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not store remote host to thread");
+      apr_pool_destroy(ptmp);
       return status;
     }
   }
-  else if ((host->state == PERF_HOST_ERROR)) {
+  else if (host->state == PERF_HOST_ERROR) {
     worker_log_error(worker, "Could not connect to httestd \"%s\" SKIP", host->name);
     apr_pool_destroy(ptmp);
     return APR_ECONNREFUSED;
@@ -738,12 +742,12 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
       worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", 
                  gconf->clients.cur_host->name);
       status = perf_distribute_host(worker, gconf->clients.cur_host, new_thread);
-      if (status != APR_SUCCESS) {
-        status = APR_ENOTHREAD;
-      }
-      else {
+      if (*new_thread) {
         apr_hash_set(gconf->clients.my_threads, *new_thread, sizeof(*new_thread),
                      new_thread);
+      }
+      if (status != APR_SUCCESS) {
+        status = APR_ENOTHREAD;
       }
       perf_get_next_host(global, worker);
     }
