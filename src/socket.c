@@ -635,7 +635,8 @@ static char *my_strcasestr(const char *s1, const char *s2) {
     return((char *)s1);
   }
   while(1) {
-    for ( ; (*s1 != '\0') && (apr_tolower(*s1) != apr_tolower(*s2)); s1++);
+    for ( ; (*s1 != '\0') && (apr_tolower(*s1) != apr_tolower(*s2)); s1++)
+      ;
       if (*s1 == '\0') {
 	return(NULL);
       }
