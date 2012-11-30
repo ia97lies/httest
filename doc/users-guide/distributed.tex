@@ -1,0 +1,77 @@
+\chapter{Distribute Clients and Servers}
+\label{chap:distributed}
+
+httest 2.2.12 and higher can distribute clients and servers to remote hosts. 
+
+Distribute clients will be typically used for performance and load tests. Where
+distribute servers typically will be used for sophisticated integration tests.
+
+
+\section{Distribute Clients}
+\label{chap:distributeClients}
+
+If you like to run loadtests and your maschine is not fast enough, you could
+increase the load with additional maschines. Till today you have to do this manually
+by copy past the test script to different maschines and run it seperatly.
+Today it is possible to do this in one single script.
+
+With the command
+
+\begin{usplisting}
+  PERF:DISTRIBUTED <host>:<port>
+\end{usplisting}
+
+you can add additional hosts where your clients will be distributed. The local host 
+is automaticaly included. The clients are distributed with round robbin starting with
+your local host. If a remote host is not accessable it will be skipped.
+
+Now you need clients to distribute normaly done this way
+
+\begin{usplisting}
+  CLIENT <n>
+  <body>
+  END
+\end{usplisting}
+
+see also in the global command section.
+
+Of course you can have many differen client as well.
+
+With htremote a remote acceptor for the serialized httest clients must be started.Could
+be done even in your httest script. At the moment htremote do not have a deamon mode but
+will comming soon.
+
+\begin{usplisting}
+  htremote -p <port> -e "httest -Ss"
+\end{usplisting}
+
+The option of httest -S do start httest in shell mode to feed the script over standard in.
+The second option -s do make the httest silent, for debug purpose you could avoid the second
+option.
+
+\section{Distribute Servers}
+\label{chap:distributeClients}
+
+If your integration test case needs a mock on a remote host this you will use this feature.
+You just have to define your server this way
+
+\begin{usplisting}
+  SERVER [SSL:]<port> [<n>] -> <remote-host>:<remote-port>
+  <body>
+  END
+\end{usplisting}
+
+see also int the global command section.
+
+This server will now be serialzied to <remote-host>:<remote-port>.
+
+With htremote a remote acceptor for the serialized httest servers must be started.Could
+be done even in your httest script. At the moment htremote do not have a deamon mode but
+will comming soon.
+
+\begin{usplisting}
+  htremote -p <port> -e "httest -S"
+\end{usplisting}
+
+The option of httest -S do start httest in shell mode to feed the script over standard in.
+
