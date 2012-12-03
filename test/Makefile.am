@@ -198,7 +198,6 @@ EXTRA_DIST= \
 	only_printable.htt \
 	overflow.htt \
 	perf_terminate_check.htt \
-	perf_terminate_check.visual \
 	pipe_exec_out.htt \
 	pipelining_request.htt \
 	pipe_recv_to_file.htt \
