@@ -126,8 +126,8 @@ static void usage(const char *progname) {
     i++;
   }
   fprintf(stdout, "\n");
-  fprintf(stdout, "\nExample: \n"
-          "%s -p 8080 -e \"./httproxy -p 8888 -d foo\"\n", progname);
+  fprintf(stdout, "\nDistribute httest example (httest option see httest --help): \n"
+          "%s -p 8080 -e \"./httest -Ss\"\n", progname);
 }
 
 /**
@@ -541,7 +541,41 @@ int main(int argc, const char *const argv[]) {
     }
   }
   else {
-    fprintf(stderr, "\nThreaded mode is not implemented yet.\n");
+    apr_threadattr_t *tattr;
+    connection_t *conn;
+
+    if ((status = apr_threadattr_create(&tattr, pool)) != APR_SUCCESS) {
+      return status;
+    }
+
+    if ((status = apr_threadattr_stacksize_set(tattr, DEFAULT_THREAD_STACKSIZE))
+        != APR_SUCCESS) {
+      return status;
+    }
+
+    if ((status = apr_threadattr_detach_set(tattr, 1)) != APR_SUCCESS) {
+      return status;
+    }
+
+    fprintf(stdout, "\nWait for connections");
+    while ((status = apr_socket_accept(&socket, listener, pool)) == APR_SUCCESS) {
+      apr_pool_t *sub_pool;
+      apr_thread_t *thread;
+
+      apr_pool_create(&sub_pool, NULL);
+
+      conn = apr_pcalloc(sub_pool, sizeof(*conn));
+      conn->cmd = cmd;
+      conn->socket = socket;
+      if ((status = apr_thread_create(&thread, tattr, handle_connection, conn, 
+                                      sub_pool)) != APR_SUCCESS) {
+        return status;
+      }
+
+      apr_pool_destroy(sub_pool);
+      sub_pool = NULL;
+    }
+
   }
 
   fprintf(stdout, "\nTerminated");
