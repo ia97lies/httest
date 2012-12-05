@@ -154,6 +154,8 @@ EXTRA_DIST= \
 	include.txt \
 	incomplete.htt \
 	inline.htt \
+	inline_not_exist.htt \
+	inline_not_exist.visual \
 	join.htt \
 	late_var_replace.htt \
 	leftovertmpf.htt \

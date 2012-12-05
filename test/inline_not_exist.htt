@@ -1,0 +1,4 @@
+
+CLIENT
+_SET foo=$foo(blabla)
+END

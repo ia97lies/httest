@@ -1,0 +1,4 @@
+run inline_not_exist.htt                                                            	
+CLT0-0 start ...
+_SET foo=$foo(blabla)
+ OK

@@ -216,6 +216,7 @@ const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *
   const char *val = NULL;
 
   if (strchr(name, '(')) {
+    int log_mode;
     char *command = apr_pstrdup(ptmp, name);
     int i = 0;
     while (command[i] != 0) {
@@ -226,9 +227,12 @@ const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *
     }
     command = apr_pstrcat(ptmp, command, " __INLINE_RET", NULL);
     /** call it */
+    log_mode = worker->log_mode;
+    worker->log_mode = 0;
     if (command_CALL(NULL, worker, command, ptmp) == APR_SUCCESS) {
       val = worker_var_get(worker, "__INLINE_RET");
     }
+    worker->log_mode = log_mode;
   }
 
   if (!val) {
