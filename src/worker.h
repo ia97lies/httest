@@ -45,6 +45,8 @@ typedef struct socket_s {
 } socket_t;
 
 typedef struct validation_s {
+  apr_table_t *ns;
+
   apr_table_t *dot;
   apr_table_t *headers;
   apr_table_t *body;
@@ -339,9 +341,9 @@ apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
 
 /** helpers */
-apr_status_t worker_new(worker_t ** self, char *additional,
+void worker_new(worker_t ** self, char *additional,
                         char *prefix, global_t *global, interpret_f interpret);
-apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
+void worker_clone(worker_t ** self, worker_t * orig); 
 apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
                                apr_size_t len); 
 
@@ -429,7 +431,6 @@ const char * worker_resolve_var(worker_t *worker, const char *name, apr_pool_t *
 char * worker_replace_vars(worker_t * worker, char *line, int *unresolved,
                            apr_pool_t *ptmp); 
 apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp);
-apr_status_t worker_clone(worker_t ** self, worker_t * orig); 
 void worker_destroy(worker_t * self); 
 apr_status_t worker_match(worker_t * worker, apr_table_t * regexs, 
                           const char *data, apr_size_t len); 

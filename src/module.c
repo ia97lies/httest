@@ -82,13 +82,10 @@ apr_status_t module_command_new(global_t *global, const char *module,
                                 const char *command,
                                 const char *short_desc, const char *desc, 
                                 interpret_f function) {
-  apr_status_t status;
   worker_t *worker;
   apr_hash_t *blocks;
 
-  if ((status = worker_new(&worker, "", "", global, function)) != APR_SUCCESS) {
-    return status;
-  }
+  worker_new(&worker, "", "", global, function);
 
   /* descriptions */
   worker->short_desc = short_desc;

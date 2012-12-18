@@ -3848,11 +3848,9 @@ apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data,
  * @param self OUT thread data object
  * @param log_mode IN log mode  
  *
- * @return an apr status
  */
-apr_status_t worker_new(worker_t ** self, char *additional,
-                        char *prefix, global_t *global, 
-			interpret_f function) {
+void worker_new(worker_t ** self, char *additional, char *prefix, global_t *global, 
+                interpret_f function) {
   apr_pool_t *p;
 
   apr_pool_create(&p, NULL);
@@ -3913,7 +3911,6 @@ apr_status_t worker_new(worker_t ** self, char *additional,
 	    global->log_mode));
   
   worker_log(*self, LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
-  return APR_SUCCESS;
 }
 
 /**
@@ -3924,60 +3921,19 @@ apr_status_t worker_new(worker_t ** self, char *additional,
  *
  * @return an apr status
  */
-apr_status_t worker_clone(worker_t ** self, worker_t * orig) {
+void worker_clone(worker_t ** self, worker_t * orig) {
   apr_pool_t *p;
 
-  apr_pool_create(&p, NULL);
-  (*self) = apr_pcalloc(p, sizeof(worker_t));
-  memcpy(*self, orig, sizeof(worker_t));
-  (*self)->heartbeat = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pbody = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pcache = p;
-  /* this stuff muss last until END so take pbody pool for this */
+  worker_new(self, orig->additional, orig->prefix, orig->global, orig->interpret);
+
   p = (*self)->pbody;
-  (*self)->interpret = orig->interpret;
-  (*self)->config = apr_hash_make(p);
   (*self)->flags = orig->flags;
-  (*self)->prefix = apr_pstrdup(p, orig->prefix);
-  (*self)->additional = apr_pstrdup(p, orig->additional);
   (*self)->lines = my_table_deep_copy(p, orig->lines);
-  (*self)->cache = my_table_deep_copy((*self)->pcache, orig->cache);
-  (*self)->expect.dot = my_table_swallow_copy(p, orig->expect.dot);
-  (*self)->expect.headers = my_table_swallow_copy(p, orig->expect.headers);
-  (*self)->expect.body = my_table_swallow_copy(p, orig->expect.body);
-  (*self)->expect.exec = my_table_swallow_copy(p, orig->expect.exec);
-  (*self)->expect.error = my_table_swallow_copy(p, orig->expect.error);
-  (*self)->match.dot = my_table_swallow_copy(p, orig->match.dot);
-  (*self)->match.headers = my_table_swallow_copy(p, orig->match.headers);
-  (*self)->match.body = my_table_swallow_copy(p, orig->match.body);
-  (*self)->match.error = my_table_swallow_copy(p, orig->match.error);
-  (*self)->match.exec = my_table_swallow_copy(p, orig->match.exec);
-  (*self)->grep.dot = my_table_swallow_copy(p, orig->grep.dot);
-  (*self)->grep.headers = my_table_swallow_copy(p, orig->grep.headers);
-  (*self)->grep.body = my_table_swallow_copy(p, orig->grep.body);
-  (*self)->grep.error = my_table_swallow_copy(p, orig->grep.error);
-  (*self)->grep.exec = my_table_swallow_copy(p, orig->grep.exec);
   (*self)->listener = NULL;
-  (*self)->sockets = apr_hash_make(p);
-#if APR_HAS_FORK
-  (*self)->procs = NULL;
-#endif
-  if (orig->headers_allow) {
-    (*self)->headers_allow = my_table_deep_copy(p, orig->headers_allow);
-  }
-  if (orig->headers_filter) {
-    (*self)->headers_filter = my_table_deep_copy(p, orig->headers_filter);
-  }
-  (*self)->params = store_make(p);
-  (*self)->retvars = store_make(p);
-  (*self)->locals = store_make(p);
   (*self)->vars = store_copy(orig->vars, p);
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
 
   worker_log(*self, LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
-  return APR_SUCCESS;
 }
 
 /**

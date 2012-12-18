@@ -1735,10 +1735,7 @@ static apr_status_t worker_run_server_threads(worker_t *worker, int threads) {
   servers = apr_table_make(worker->pbody, 10);
 
   while(threads == -1 || i < threads) {
-    if ((status = worker_clone(&clone, worker)) != APR_SUCCESS) {
-      worker_log(worker, LOG_ERR, "Could not clone server thread data");
-      return status;
-    }
+    worker_clone(&clone, worker);
     if ((status = htt_run_worker_clone(worker, clone)) != APR_SUCCESS) {
       return status;
     }
@@ -1951,10 +1948,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->socktmo = 300000000;
   (*global)->prefix = apr_pstrdup(p, "");
 
-  if ((status = worker_new(&(*global)->worker, NULL, (*global)->prefix, 
-                           (*global), NULL)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal worker: could not create my worker");
-  }
+  worker_new(&(*global)->worker, NULL, (*global)->prefix, (*global), NULL);
 
   (*global)->worker->modules = (*global)->modules;
   (*global)->worker->name = apr_pstrdup(p, "__htt_global__");
@@ -2073,10 +2067,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     global->cur_worker->name = called_name;
     global->cur_worker->which = concurrent;
     if (concurrent) {
-      if ((status = worker_clone(&clone, global->cur_worker)) != APR_SUCCESS) {
-	worker_log(global->cur_worker, LOG_ERR, "Could not clone thread");
-	return APR_EINVAL;
-      }
+      worker_clone(&clone, global->cur_worker);
     }
 
     switch (global->state) {
@@ -2108,16 +2099,12 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
  *
  * @return apr status 
  */
-static apr_status_t global_worker(command_t *self, global_t *global, char *data, int state) {
-  apr_status_t status;
-
+static apr_status_t global_worker(command_t *self, global_t *global, char *data,
+                                  int state) {
   /* Client start */
   global->state = state;
-  if ((status = worker_new(&global->cur_worker, data, global->prefix, global, 
-                           worker_interpret)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal worker: could not create worker");
-    return status;
-  }
+  worker_new(&global->cur_worker, data, global->prefix, global, 
+             worker_interpret);
   return APR_SUCCESS;
 }
 
@@ -2183,10 +2170,8 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
   if ((status = htt_run_block_start(global, &data)) 
       == APR_ENOTIMPL) {
     /* Start a new worker */
-    if ((status = worker_new(&global->cur_worker, data, global->prefix, global, 
-                             worker_interpret)) != APR_SUCCESS) {
-      return status;
-    }
+    worker_new(&global->cur_worker, data, global->prefix, global, 
+               worker_interpret);
   }
   else if (status != APR_SUCCESS) {
     fprintf(stderr, "\nFailed on block start %s(%d)", my_status_str(global->pool, status), status);  
@@ -2237,19 +2222,14 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
  */
 static apr_status_t global_FILE(command_t * self, global_t * global,
                                 char *data, apr_pool_t *ptmp) {
-  apr_status_t status;
-
   while (*data == ' ') ++data;
   
   /* Block start */
   global->state = GLOBAL_STATE_FILE;
 
   /* Start a new worker */
-  if ((status = worker_new(&global->cur_worker, data, global->prefix, global, 
-                           worker_interpret)) != APR_SUCCESS) {
-    fprintf(stderr, "\nCould not initiate worker instance");
-    return status;
-  }
+  worker_new(&global->cur_worker, data, global->prefix, global, 
+             worker_interpret);
 
   global->cur_worker->name = data;
 
@@ -2291,11 +2271,8 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data,
     ++i;
   }
 
-  if ((status = worker_new(&worker, &data[i], "", global, worker_interpret))
-      != APR_SUCCESS) {
-    fprintf(stderr, "\nCould not initiate worker instance");
-    return status;
-  }
+  worker_new(&worker, &data[i], "", global, worker_interpret);
+
   worker_add_line(worker, apr_psprintf(global->pool, "%s:%d", global->filename,
 	                               global->line_nr), 
 		  apr_pstrcat(worker->pbody, "_EXEC ", &data[i], NULL));

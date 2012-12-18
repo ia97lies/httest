@@ -254,21 +254,14 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
  * @return APR_SUCCESS
  */
 static apr_status_t js_block_start(global_t *global, char **line) {
-  apr_status_t status;
   if (strncmp(*line, ":JS ", 4) == 0) {
     *line += 4;
-    if ((status = worker_new(&global->cur_worker, "", "", global, 
-                             block_js_interpreter)) 
-        != APR_SUCCESS) {
-      return status;
-    }
-    else {
-      js_wconf_t *wconf = js_get_worker_config(global->cur_worker);
-      js_gconf_t *gconf = js_get_global_config(global);
-      gconf->do_read_line = 1;
-      wconf->starting_line_nr = global->line_nr + 1;
-      return js_set_variable_names(global->cur_worker, *line);
-    }
+    worker_new(&global->cur_worker, "", "", global, block_js_interpreter);
+    js_wconf_t *wconf = js_get_worker_config(global->cur_worker);
+    js_gconf_t *gconf = js_get_global_config(global);
+    gconf->do_read_line = 1;
+    wconf->starting_line_nr = global->line_nr + 1;
+    return js_set_variable_names(global->cur_worker, *line);
   }
   return APR_ENOTIMPL;
 }
@@ -346,10 +339,7 @@ static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, ap
     return APR_EGENERAL;
   }
 
-  if ((status = worker_new(&block, "", "", global, block_js_interpreter)) 
-      != APR_SUCCESS) {
-    return status;
-  }
+  worker_new(&block, "", "", global, block_js_interpreter);
 
   if ((status = js_set_variable_names(block, signature)) != APR_SUCCESS) {
     return status;
