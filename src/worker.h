@@ -324,6 +324,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, block_end,
                           (global_t *global));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_create,
                           (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, server_create,
+                          (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_finally,
                           (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_start,

@@ -2754,10 +2754,16 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   for (i = 0; i < apr_table_elts(global->servers)->nelts; ++i) {
     sync_lock(global->sync);
     worker = (void *)e[i].val;
-    if ((status =
-	 apr_thread_create(&thread, global->tattr, worker_thread_listener,
-			   worker, global->pool)) != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not create server thread");
+    status = htt_run_server_create(worker, worker_thread_listener, &thread);
+    if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
+      if ((status =
+           apr_thread_create(&thread, global->tattr, worker_thread_listener,
+                             worker, global->pool)) != APR_SUCCESS) {
+        fprintf(stderr, "\nCould not create server thread");
+        return status;
+      }
+    }
+    else if (status != APR_SUCCESS) {
       return status;
     }
     apr_table_addn(global->threads, worker->name, (char *) thread);
@@ -3567,6 +3573,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(server_port_args)
   APR_HOOK_LINK(worker_clone)
   APR_HOOK_LINK(client_create)
+  APR_HOOK_LINK(server_create)
   APR_HOOK_LINK(thread_start)
   APR_HOOK_LINK(worker_finally)
   APR_HOOK_LINK(thread_join)
@@ -3594,6 +3601,10 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_end,
                                       (global), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_create, 
+                                      (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread), 
+                                      (worker, func, new_thread), APR_ENOTIMPL);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_create, 
                                       (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread), 
                                       (worker, func, new_thread), APR_ENOTIMPL);
 

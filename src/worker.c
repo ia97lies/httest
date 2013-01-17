@@ -2054,6 +2054,14 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   
   interm = my_unescape(last, &last);
 
+  if (last) {
+    while (*last == ' ') ++last;
+    if (*last != 0) {
+      worker_log(worker, LOG_ERR, "there is more stuff behind last quote");
+      return APR_EGENERAL;
+    }
+  }
+
   if (!type) {
     worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
@@ -3888,8 +3896,10 @@ apr_status_t worker_new(worker_t ** self, char *additional,
   (*self)->params = store_make(p);
   (*self)->retvars = store_make(p);
   (*self)->locals = store_make(p);
+  if (global->mutex) apr_thread_mutex_lock(global->mutex);
   (*self)->vars = store_copy(global->vars, p);
   (*self)->modules = apr_hash_copy(p, global->modules);
+  if (global->mutex) apr_thread_mutex_unlock(global->mutex);
   (*self)->blocks = global->blocks;
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;

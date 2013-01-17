@@ -110,6 +110,8 @@ EXTRA_DIST= \
 	expect_header_not_body.hte \
 	expect_header_not_body.htt \
 	expect_header_not_body.txt \
+	expect_with_trash_behind.hte \
+	expect_with_trash_behind.txt \
 	finally_on_failed2.htt \
 	finally_on_failed3.htt \
 	finally_on_failed.hte \
@@ -235,6 +237,7 @@ EXTRA_DIST= \
 	server.cert.pem \
 	server_connection_close.htt \
 	server_def_before_client.htt \
+	server_distribute.htt \
 	server_ip_port.htt \
 	server.key.pem \
 	server_up_down.htt \

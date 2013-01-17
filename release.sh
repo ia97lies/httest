@@ -13,8 +13,6 @@ function error() {
     git checkout master 2>/dev/null >/dev/null;
     git tag -d $VERSION 2>/dev/null >/dev/null;
   fi 
-  sed < configure.in > configure.in.tmp -e "s/$VERSION/snapshot/"
-  mv configure.in.tmp configure.in
   echo "Release build FAILED"
   exit $1
 }
@@ -26,8 +24,6 @@ fi
 
 echo
 echo "Release httest-$VERSION"
-sed < configure.in > configure.in.tmp -e "s/snapshot/$VERSION/"
-mv configure.in.tmp configure.in
 if [ ! $OPTION = "try" ]; then
   git commit -m"new release $VERSION" configure.in
 fi

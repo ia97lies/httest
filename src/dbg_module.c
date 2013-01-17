@@ -142,8 +142,22 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
       }
       pos = i;
     }
+    else if (strcmp(entry, "help") == 0 || strcmp(entry, "h") == 0 || strcmp(entry, "?") == 0) {
+      apr_file_printf(output, "help, h, ?\n");
+      apr_file_printf(output, "  This help text.\n");
+      apr_file_printf(output, "cont, c\n");
+      apr_file_printf(output, "  Continue script execution.\n");
+      apr_file_printf(output, "quit, q\n");
+      apr_file_printf(output, "  Quit script execution.\n");
+      apr_file_printf(output, "list, ls, l\n");
+      apr_file_printf(output, "  List script around breakpoint.\n");
+      apr_file_printf(output, "get, g <variable>\n");
+      apr_file_printf(output, "  Print value of <variable>.\n");
+      apr_file_printf(output, "set, s <variable>=<value>\n");
+      apr_file_printf(output, "  Set <variable> to <value>.\n");
+    }
     else {
-      apr_file_printf(output, "\"%s\" unknown command\n", line);
+      apr_file_printf(output, "\"%s\" unknown command, type help or ? for information\n", line);
     }
 
 prompt:
