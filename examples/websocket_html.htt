@@ -1,6 +1,6 @@
 
 BLOCK:LUA WebsocketAccept websocketKey : result
-  return coder.base64.encode(coder.evp.digest("sha1", websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11", true))
+  return crypto.base64.encode(crypto.evp.digest("sha1", websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11", true))
 END
 
 SERVER 8888
