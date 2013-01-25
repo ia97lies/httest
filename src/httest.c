@@ -346,7 +346,7 @@ command_t local_commands[] = {
   "Send file over http",
   COMMAND_FLAGS_NONE},
   {"_DEBUG", (command_f )command_DEBUG, "<string>", 
-  "Prints to stderr for debugging reasons",
+  "Prints to stdout for debugging reasons",
   COMMAND_FLAGS_NONE},
   {"_UP", (command_f )command_UP, "", 
   "Setup listener",
@@ -1180,15 +1180,17 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   char *copy;
   char **argv;
   int rps;
+  float ideal_req_time;
   int duration;
   apr_time_t init;
-  apr_time_t start;
+  apr_time_t cur_sec;
   apr_time_t cur;
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
   my_tokenize_to_argv(copy, &argv, ptmp, 0);
   rps = apr_atoi64(argv[0]);
+  ideal_req_time = 1.0 / rps;
   duration = apr_atoi64(argv[1]);
   
   /* create a new worker body */
@@ -1197,32 +1199,30 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   }
   
   /* loop */
-  init = apr_time_now();
+  cur_sec = init = apr_time_now();
   for (;;) {
     /* interpret */
-    start = apr_time_now();
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
     cur = apr_time_now();
 
     if (rps > 0) {
-      /* avoid division by zero, do happen on windows */
-      while ((cur - start == 0)) {
-        /* wait 1 ms */
-        apr_sleep(1000);
+      /* wait until we are below the max rps */
+      apr_time_t ideal_time = (ideal_req_time * body->req_cnt) * APR_USEC_PER_SEC;
+      apr_time_t act_time   = cur - cur_sec;
+      while (act_time < ideal_time) {
+        apr_sleep(ideal_time - act_time);
         cur = apr_time_now();
-      }
-      
-      /* wait loop until we are below the max rps */
-      while (((body->req_cnt * APR_USEC_PER_SEC) / (cur - start)) > rps ) {
-        /* wait 1 ms */
-        apr_sleep(1000);
-        cur = apr_time_now();
+        act_time = cur - cur_sec;
       }
 
       /* reset sent requests */
-      body->req_cnt = 0;
+      apr_time_t elapsed = cur - cur_sec - APR_USEC_PER_SEC;
+      if (elapsed > 0) {
+        body->req_cnt = 0;
+        cur_sec = cur - elapsed;
+      }
     }
 
     /* test termination */
