@@ -374,6 +374,7 @@ apr_status_t command_SOCKSTATE(command_t * self, worker_t * worker, char *data, 
 apr_status_t command_HEADER(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RAND(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
+apr_status_t command_PRINT(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_UP(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_TIME(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp);

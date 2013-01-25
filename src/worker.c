@@ -2955,7 +2955,8 @@ apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data,
   
   COMMAND_OPTIONAL_ARG;
 
-  worker_log(worker, LOG_ERR, "%s", copy);
+  /* Using LOG_NONE so this prints, regardless of httest internal log level */
+  worker_log(worker, LOG_NONE, "%s", copy);
 
   return APR_SUCCESS;
 }
