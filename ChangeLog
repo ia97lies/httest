@@ -3,20 +3,29 @@
 Changes with httest 2.2.13
   *) httest: Adjust logging if calling unresolvable inline functions.
 
+  *) httest: Bugfixed buggy _RPS command done by Steve Saunders.
+
+  *) httest: Changed _DEBUG command to print allways no mather with log level.
+
+
 Changes with httest 2.2.12
   *) httest: Distribute a server to a remote host, very usefull for
              integration testing, where a mock server must reside on a
 	     specific host in a specific network zone.
 
+
 Changes with httest 2.2.11
   *) httest: Bugfix possible coredump in thread tests with SSL.
+
 
 Changes with httest 2.2.10
   *) httest: Add a check if _EXPECT are clean or include some unescaped
              quotes. Please adjust detected missformated _EXPECT.
 
+
 Changes with httest 2.2.9
   *) httest: New commands REQUIRE_VERSION and REQUIRE_MODULE.
+
 
 Changes with httest 2.2.8
   *) httest: Workaround for cert loading problem if server is threaded.
@@ -26,8 +35,10 @@ Changes with httest 2.2.8
   
   *) tools: htcolor Perl script to color httest output.
 
+
 Changes with httest 2.2.7
   *) httest: Performance improvments around receiving and sending data.
+
 
 Changes with httest 2.2.6
   *) httest: New RAMPUP command to control the start fo CLIENTS.
@@ -51,6 +62,7 @@ Changes with httest 2.2.5
 Changes with httest 2.2.4
   *) httest: Bugfix possible segfault with _SSL:TRACE
 
+
 Changes with httest 2.2.3
   *) httest: Openssl 1.0.1 support.
 
@@ -61,16 +73,19 @@ Changes with httest 2.2.3
   *) httest: Get server cert also on "_SSL:RENEG_CERT" and do verification of
   this cert only on "_SSL:RENEG_CERT verify" 
 
+
 Changes with httest 2.2.2
   *) httest: New SSL command to set cipher suite.
 
   *) httest: Expect/match/grep SSL handshake messages.
+
 
 Changes with httest 2.2.1
   *) httest: New XPath command to query parts of the HTML document.
 
   *) httest: New variable scope GLOBAL. This variable are shared among all
              threads.
+
 
 Changes with httest 2.2.0
   *) general: Forked from httest 2.1.19
@@ -85,6 +100,7 @@ Changes with httest 2.2.0
   *) httest: Add _ASSERT "<expression>" command for arithmetical assertions,
              cleaner and better readable than _IF ... _ELSE ... _END
 	     constructs.
+
 
 Changes with httest 2.1.18
   *) httest: Bugfix possible coredumps at temp file clean up and _EXEC.
