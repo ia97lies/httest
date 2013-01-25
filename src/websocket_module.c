@@ -361,8 +361,14 @@ apr_status_t websocket_module_init(global_t *global) {
     return status;
   }
 
-  if ((status = module_command_new(global, "WS", "_SEND", "",
-				   "Send websocket frames",
+  if ((status = module_command_new(global, "WS", "_SEND", "<type> <length> <data>",
+				   				  "Send websocket frames\n" 
+								  "  <type>: can be one or more of the following keywords\n"
+								  "          FIN, CONTINUE, CLOSE, TEXT, BINARY, PING, PONG\n"
+								  "          there are combinations which will not work, see also RFC\n"
+								  "          of websockets to get a clue what is possible and what not.\n"
+								  "  <length>: Length of data or AUTO to do this automaticaly\n"
+								  "  <data>: Data to be send if spaces the data must be quoted",
 	                           block_WS_SEND)) != APR_SUCCESS) {
     return status;
   }
