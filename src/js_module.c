@@ -254,11 +254,13 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
  * @return APR_SUCCESS
  */
 static apr_status_t js_block_start(global_t *global, char **line) {
+  js_wconf_t *wconf;
+  js_gconf_t *gconf;
   if (strncmp(*line, ":JS ", 4) == 0) {
     *line += 4;
     worker_new(&global->cur_worker, "", "", global, block_js_interpreter);
-    js_wconf_t *wconf = js_get_worker_config(global->cur_worker);
-    js_gconf_t *gconf = js_get_global_config(global);
+    wconf = js_get_worker_config(global->cur_worker);
+    gconf = js_get_global_config(global);
     gconf->do_read_line = 1;
     wconf->starting_line_nr = global->line_nr + 1;
     return js_set_variable_names(global->cur_worker, *line);

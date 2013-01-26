@@ -1185,6 +1185,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   apr_time_t init;
   apr_time_t cur_sec;
   apr_time_t cur;
+  apr_time_t elapsed;
 
   COMMAND_NEED_ARG("Byte/s and duration time in second"); 
 
@@ -1218,7 +1219,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
       }
 
       /* reset sent requests */
-      apr_time_t elapsed = cur - cur_sec - APR_USEC_PER_SEC;
+      elapsed = cur - cur_sec - APR_USEC_PER_SEC;
       if (elapsed > 0) {
         body->req_cnt = 0;
         cur_sec = cur - elapsed;
