@@ -191,6 +191,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
   if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
+    worker_log(worker, LOG_DEBUG, "got: %ld" , len);
     worker_log_error(worker, "Could not read payload");
   }
 
