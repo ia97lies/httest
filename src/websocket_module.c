@@ -162,7 +162,11 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not read 16 bit payload length");
     }
-    payload_len = ntoh16(length);
+#if APR_IS_BIGENDIAN
+	payload_len = length;
+#else
+    payload_len = swap16(length);
+#endif
   }
   else if (pl_len == 127) {
     uint64_t length;
@@ -170,8 +174,11 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
       worker_log_error(worker, "Could not read 32 bit payload length");
     }
-    payload_len = ntoh64(length);
-
+#if APR_IS_BIGENDIAN
+	payload_len = length;
+#else
+    payload_len = swap64(length);
+#endif
   }
   else {
     payload_len = pl_len;
@@ -191,6 +198,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
   if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
+    worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", len, status);
     worker_log_error(worker, "Could not read payload");
   }
 
@@ -286,13 +294,21 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     uint16_t tmp;
     pl_len_8 = 126;
     tmp = len;
-    pl_len_16 = hton16(tmp);
+#if APR_IS_BIGENDIAN
+    pl_len_16 = tmp;
+#else
+    pl_len_16 = swap16(tmp);
+#endif
   }
   else {
     uint16_t tmp;
     pl_len_8 = 127;
     tmp = len;
-    pl_len_64 = hton64(tmp);
+#if APR_IS_BIGENDIAN
+    pl_len_64 = tmp;
+#else
+    pl_len_64 = swap64(tmp);
+#endif
   }
 
   pl_len_8 = pl_len_8;
