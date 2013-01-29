@@ -1,5 +1,8 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.2.14
+  *) httest: Bugfixed wrong length handling in websocket implementation.
+
 Changes with httest 2.2.13
   *) httest: Adjust logging if calling unresolvable inline functions.
 
