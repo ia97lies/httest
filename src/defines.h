@@ -26,7 +26,7 @@
 #define HTTEST_DEFINES_H
 
 #define BLOCK_MAX 8192
-#define VAR_ALLOWED_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+#define VAR_ALLOWED_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-."
 
 #define USE_SSL
 
