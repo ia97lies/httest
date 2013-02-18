@@ -197,9 +197,11 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
   worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
-  if ((status = sockreader_read_block(worker->sockreader, payload, &len)) != APR_SUCCESS) {
-    worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", len, status);
+  status = sockreader_read_block(worker->sockreader, payload, &len);
+  worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", len, status);
+  if (status != APR_SUCCESS) {
     worker_log_error(worker, "Could not read payload");
+    return status;
   }
 
   /* TODO: If masked unmask */
@@ -377,14 +379,15 @@ apr_status_t websocket_module_init(global_t *global) {
     return status;
   }
 
-  if ((status = module_command_new(global, "WS", "_SEND", "<type> <length> <data>",
+  if ((status = module_command_new(global, "WS", "_SEND", "<type> <length> <data> <mask>",
 				   				  "Send websocket frames\n" 
 								  "  <type>: can be one or more of the following keywords\n"
 								  "          FIN, CONTINUE, CLOSE, TEXT, BINARY, PING, PONG\n"
 								  "          there are combinations which will not work, see also RFC\n"
 								  "          of websockets to get a clue what is possible and what not.\n"
 								  "  <length>: Length of data or AUTO to do this automaticaly\n"
-								  "  <data>: Data to be send if spaces the data must be quoted",
+								  "  <data>: Data to be send if spaces the data must be quoted"
+								  "  <mask>: Optional 64 Byte number to mask data",
 	                           block_WS_SEND)) != APR_SUCCESS) {
     return status;
   }
