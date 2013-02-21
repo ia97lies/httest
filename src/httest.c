@@ -1931,13 +1931,20 @@ static apr_status_t global_new(global_t **global, store_t *vars,
     return status;
   }
 
-  if ((status = apr_thread_mutex_create(&(*global)->sync, 
+  if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
     fprintf(stderr, "\nGlobal creation: could not create sync mutex");
     return status;
   }
  
+  if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
+	                                APR_THREAD_MUTEX_DEFAULT,
+                                        pmutex)) != APR_SUCCESS) {
+    fprintf(stderr, "\nGlobal creation: could not create log mutex");
+    return status;
+  }
+
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
@@ -2730,7 +2737,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   /* create all servers */
   e = (apr_table_entry_t *) apr_table_elts(global->servers)->elts;
   for (i = 0; i < apr_table_elts(global->servers)->nelts; ++i) {
-    sync_lock(global->sync);
+    sync_lock(global->sync_mutex);
     worker = (void *)e[i].val;
     status = htt_run_server_create(worker, worker_thread_listener, &thread);
     if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
@@ -2749,8 +2756,8 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   apr_table_clear(global->servers);
 
   /* create clients */
-  sync_lock(global->sync);
-  sync_unlock(global->sync);
+  sync_lock(global->sync_mutex);
+  sync_unlock(global->sync_mutex);
   e = (apr_table_entry_t *) apr_table_elts(global->clients)->elts;
   for (i = 0; i < apr_table_elts(global->clients)->nelts; ++i) {
     worker = (void *)e[i].val;

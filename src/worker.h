@@ -117,6 +117,7 @@ struct worker_s {
   apr_thread_t *mythread;
   apr_thread_cond_t *sync_cond;
   apr_thread_mutex_t *sync_mutex;
+  apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
   apr_table_t *lines;
   apr_table_t *cache;
@@ -168,7 +169,8 @@ struct global_s {
   int CLTs; 
   int SRVs; 
   apr_thread_cond_t *cond; 
-  apr_thread_mutex_t *sync;
+  apr_thread_mutex_t *sync_mutex;
+  apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
   int line_nr;
 #define GLOBAL_STATE_NONE   0
