@@ -329,13 +329,24 @@ void worker_log_va(worker_t * worker, int log_mode, char *fmt, va_list va) {
       tmp = apr_pvsprintf(pool, fmt, va);
       tmp = apr_psprintf(pool, "%s: error: %s", worker->file_and_line?worker->file_and_line:"<none>",
                          tmp);
-      fprintf(stderr, "\n%d:%-88s", worker->which, tmp);
-      fflush(stderr);
+      if (worker->global->log_thread_no) {
+        apr_file_printf(worker->stderr, "\n%d:%-88s", worker->which, tmp);
+      }
+      else {
+        apr_file_printf(worker->stderr, "\n%-88s", tmp);
+      }
+      apr_file_flush(worker->stderr);
     }
     else {
-      fprintf(stdout, "\n%d:%s", worker->which, worker->prefix);
-      vfprintf(stdout, fmt, va);
-      fflush(stdout);
+      tmp = apr_pvsprintf(pool, fmt, va);
+      if (worker->global->log_thread_no) {
+        apr_file_printf(worker->stdout, "\n%d:%s", worker->which, worker->prefix);
+      }
+      else {
+        apr_file_printf(worker->stdout, "\n%s", worker->prefix);
+      }
+      apr_file_printf(worker->stdout, "%s", tmp);
+      apr_file_flush(worker->stdout);
     }
     if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
     apr_pool_destroy(pool);
@@ -393,92 +404,34 @@ void worker_log_buf(worker_t * worker, int log_mode, const char *buf,
                     char *prefix, int len) {
 
   if (worker->log_mode >= log_mode) {
-    int i;
-    int j;
-    int max_line_len;
-    int line_len;
-    char *null="<null>";
-    FILE *fd = stdout;
     apr_pool_t *pool;
-    char * outbuf;
+    char *cur;
+    char *null="<null>";
 
+    apr_pool_create(&pool, NULL);
     if (!buf) {
       buf = null;
       len = strlen(buf);
     }
     
-    if (log_mode == LOG_ERR) {
-      fd = stderr;
+    while ((cur = strchr(buf, '\n'))) {
+      apr_size_t len = cur - buf;
+      if (buf[len] == '\r') {
+        --len;
+      }
+      --len;
+      if (worker->log_mutex) apr_thread_mutex_lock(worker->log_mutex);
+      if (worker->global->log_thread_no) {
+        apr_file_printf(worker->stdout, "\n%d:%s%s", worker->which, worker->prefix, prefix);
+      }
+      else {
+        apr_file_printf(worker->stdout, "\n%s%s", worker->prefix, prefix);
+      }
+      apr_file_write(worker->stdout, buf, &len);
+      if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
+      buf = cur + 1;
     }
 
-    if (worker->log_mutex) apr_thread_mutex_lock(worker->log_mutex);
-    if (prefix) {
-      fprintf(fd, "\n%s%s", worker->prefix, prefix);
-    }
-    
-    /* find longest line */
-    i = 0;
-    max_line_len = 0;
-    line_len = 0;
-    while (i < len) {
-      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-        if (buf[i] >= 0x20) {
-          line_len++;
-        }
-        else {
-          line_len+=4;
-        }
-        i++;
-      }
-      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-        if (i != len -1) {
-          if (buf[i] == '\n') {
-            line_len+= 1 + strlen(worker->prefix) + (prefix?strlen(prefix):0);
-          }
-        }
-        i++;
-      }
-      if (line_len > max_line_len) {
-        max_line_len = line_len;
-      }
-      line_len = 0;
-    }
-    
-    apr_pool_create(&pool, NULL);
-    outbuf = apr_pcalloc(pool, max_line_len + 100);
-
-    /* log lines */
-    i = 0;
-    while (i < len) {
-      j = 0;
-      while (i < len && buf[i] != '\r' && buf[i] != '\n') {
-        if (buf[i] >= 0x20) {
-          sprintf(&outbuf[j], "%c", buf[i]);
-          j++;
-        }
-        else {
-          sprintf(&outbuf[j], "0x%02x ", (unsigned char)buf[i]);
-          j+=4;
-        }
-        i++;
-      }
-      while (i < len && (buf[i] == '\r' || buf[i] == '\n')) {
-        if (i != len -1) {
-          if (buf[i] == '\n') {
-            sprintf(&outbuf[j], "%c", buf[i]);
-            j++;
-            sprintf(&outbuf[j], "%s%s", worker->prefix, prefix?prefix:"");
-            j+= strlen(worker->prefix) + (prefix?strlen(prefix):0);
-          }
-        }
-        i++;
-      }
-      fprintf(fd, "%s", outbuf);
-      fflush(fd);
-      outbuf[0] = 0;
-    }
-    if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
-    
     apr_pool_destroy(pool);
   }
 }
@@ -2802,7 +2755,7 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
     if ((status =
          apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
                        ptmp)) != APR_SUCCESS) {
-      fprintf(stderr, "\nCan not send file: File \"%s\" not found", copy);
+      worker_log_error(worker, "\nCan not send file: File \"%s\" not found", copy);
       return APR_ENOENT;
     }
     
@@ -3916,6 +3869,8 @@ void worker_new(worker_t ** self, char *additional, char *prefix, global_t *glob
   (*self)->modules = apr_hash_copy(p, global->modules);
   if (global->mutex) apr_thread_mutex_unlock(global->mutex);
   (*self)->blocks = global->blocks;
+  (*self)->stdout = global->stdout;
+  (*self)->stderr = global->stderr;
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;
   (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);

@@ -1,2 +1,2 @@
 
-There are unused MATCH exec
+unused_match_exec.hte:2: error: There are unused MATCH exec                             

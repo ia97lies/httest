@@ -1,2 +1,2 @@
 
-There are unused MATCH .
+unused_match_dot.hte:2: error: There are unused MATCH .                                 

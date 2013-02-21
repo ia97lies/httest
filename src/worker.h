@@ -80,6 +80,11 @@ struct worker_s {
   store_t *retvars;
   /* block local variables */
   store_t *locals;
+  /* buffered stdout */
+  apr_file_t *stdout;
+  /* buffered errout */
+  apr_file_t *stderr;
+  /* filename of current script part */
   const char *filename;
   apr_file_t *tmpf;
 #define FLAGS_NONE           0x00000000
@@ -155,6 +160,8 @@ struct global_s {
   apr_hash_t *config;
   int flags;
   const char *path;
+  apr_file_t *stdout;
+  apr_file_t *stderr;
   const char *filename;
   store_t *vars;
   store_t *shared;
@@ -189,6 +196,7 @@ struct global_s {
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
+  int log_thread_no;
 };
 
 typedef struct command_s command_t;

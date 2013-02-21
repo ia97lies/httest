@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.3.0
+  *) httest: Mutex based logger to avoid scattered lines. Add optional thread
+             id to be able to sort the output of multi threaded tests.
+
 Changes with httest 2.2.14
   *) httest: Bugfixed wrong length handling in websocket implementation.
 

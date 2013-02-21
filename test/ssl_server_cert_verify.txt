@@ -1,4 +1,4 @@
 
-SSL peer verify failed: unable to get local issuer certificate(20)                      
+ssl_server_cert_verify.hte:7: error: SSL peer verify failed: unable to get local issuer certificate(20)
 ssl_server_cert_verify.hte:7: error: CLT0-0 Permission denied(13)                       
 ssl_server_cert_verify.hte:23: error: SRV0-0 End of file found(70014)                   

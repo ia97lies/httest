@@ -1,4 +1,4 @@
 
-Handshake failed: error:140890B2:SSL routines:SSL3_GET_CLIENT_CERTIFICATE:no certificate returned
-No peer certificate                                                                     
-ssl_mutual2.hte:23: error: SRV0-0 Permission denied(13)
+ssl_mutual2.hte:23: error: Handshake failed: error:140890B2:SSL routines:SSL3_GET_CLIENT_CERTIFICATE:no certificate returned
+ssl_mutual2.hte:23: error: No peer certificate                                          
+ssl_mutual2.hte:23: error: SRV0-0 Permission denied(13)                                 
