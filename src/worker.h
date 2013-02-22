@@ -428,7 +428,7 @@ apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_po
 void worker_log(worker_t * self, int log_mode, char *fmt, ...); 
 void worker_log_error(worker_t * self, char *fmt, ...); 
 void worker_log_buf(worker_t * self, int log_mode, const char *buf, char *prefix, 
-                    int len); 
+                    apr_size_t len); 
 void worker_var_set(worker_t * worker, const char *var, const char *val); 
 const char * worker_var_get(worker_t * worker, const char *var); 
 void worker_test_reset(worker_t * worker); 

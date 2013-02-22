@@ -401,25 +401,23 @@ void worker_log_error(worker_t * worker, char *fmt, ...) {
  * @param len IN buf len
  */
 void worker_log_buf(worker_t * worker, int log_mode, const char *buf,
-                    char *prefix, int len) {
+                    char *prefix, apr_size_t len) {
 
   if (worker->log_mode >= log_mode) {
-    apr_pool_t *pool;
-    char *cur;
+    apr_size_t i;
+    apr_size_t j;
     char *null="<null>";
 
-    apr_pool_create(&pool, NULL);
     if (!buf) {
       buf = null;
       len = strlen(buf);
     }
     
-    while ((cur = strchr(buf, '\n'))) {
-      apr_size_t len = cur - buf;
-      if (buf[len] == '\r') {
-        --len;
-      }
-      --len;
+    i = 0;
+    j = 0;
+    do {
+      for (; i < len && buf[i] != '\n'; i++); 
+      ++i;
       if (worker->log_mutex) apr_thread_mutex_lock(worker->log_mutex);
       if (worker->global->log_thread_no) {
         apr_file_printf(worker->stdout, "\n%d:%s%s", worker->which, worker->prefix, prefix);
@@ -427,12 +425,29 @@ void worker_log_buf(worker_t * worker, int log_mode, const char *buf,
       else {
         apr_file_printf(worker->stdout, "\n%s%s", worker->prefix, prefix);
       }
-      apr_file_write(worker->stdout, buf, &len);
-      if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
-      buf = cur + 1;
-    }
 
-    apr_pool_destroy(pool);
+      for (; j < i; j++) {
+        if ((unsigned char)buf[j] == '\n') {
+          /*
+          apr_size_t l = 2;
+          apr_file_write(worker->stdout, "\\n", &l);
+          */
+        }
+        else if ((unsigned char)buf[j] == '\r') {
+          /*
+          apr_size_t l = 2;
+          apr_file_write(worker->stdout, "\\r", &l);
+          */
+        }
+        else if ((unsigned char)buf[j] < 0x20) {
+          apr_file_putc('.', worker->stdout);
+        }
+        else {
+          apr_file_putc(buf[j], worker->stdout);
+        }
+      }
+      if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
+    } while (i < len);
   }
 }
 
@@ -3837,6 +3852,7 @@ void worker_new(worker_t ** self, char *additional, char *prefix, global_t *glob
   (*self)->additional = apr_pstrdup(p, additional);
   (*self)->sync_cond = global->cond;
   (*self)->sync_mutex = global->sync_mutex;
+  (*self)->log_mutex = global->log_mutex;
   (*self)->mutex = global->mutex;
   (*self)->lines = apr_table_make(p, 20);
   (*self)->cache = apr_table_make((*self)->pcache, 20);
