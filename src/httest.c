@@ -1935,12 +1935,6 @@ static apr_status_t global_new(global_t **global, store_t *vars,
     return status;
   }
 
-  if ((status = apr_thread_cond_create(&(*global)->cond, p)) != APR_SUCCESS) {
-    apr_file_printf((*global)->stderr, 
-                    "\nGlobal creation: could not create condition");
-    return status;
-  }
-
   if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {

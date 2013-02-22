@@ -3850,7 +3850,6 @@ void worker_new(worker_t ** self, char *additional, char *prefix, global_t *glob
   (*self)->socktmo = global->socktmo;
   (*self)->prefix = apr_pstrdup(p, prefix);
   (*self)->additional = apr_pstrdup(p, additional);
-  (*self)->sync_cond = global->cond;
   (*self)->sync_mutex = global->sync_mutex;
   (*self)->log_mutex = global->log_mutex;
   (*self)->mutex = global->mutex;

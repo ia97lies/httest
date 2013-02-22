@@ -120,7 +120,6 @@ struct worker_s {
   char *match_seq;
   apr_time_t socktmo;
   apr_thread_t *mythread;
-  apr_thread_cond_t *sync_cond;
   apr_thread_mutex_t *sync_mutex;
   apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
@@ -175,7 +174,6 @@ struct global_s {
   apr_table_t *daemons;
   int CLTs; 
   int SRVs; 
-  apr_thread_cond_t *cond; 
   apr_thread_mutex_t *sync_mutex;
   apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
