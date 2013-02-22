@@ -1,4 +1,4 @@
 
-EXPECT .: Did expect "03 01"                                                            
+binary_protocol.hte:17: error: EXPECT .: Did expect "03 01"                             
 binary_protocol.hte:15: error: SRV0-0 Invalid argument(22)                              
-binary_protocol.hte:15: error: SRV0-0 Invalid argument(22)
+binary_protocol.hte:15: error: SRV0-0 Invalid argument(22)                              

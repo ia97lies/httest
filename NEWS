@@ -1,3 +1,7 @@
+Version 2.3.0
+ - New      httest: Improve logging
+ - Planed   htunit: httest executor with junit like output
+
 Version 2.2.0
  - New      httest: Javascript support
  - Planed   httest: HTML DOM access 

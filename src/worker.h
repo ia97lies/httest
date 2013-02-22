@@ -80,6 +80,11 @@ struct worker_s {
   store_t *retvars;
   /* block local variables */
   store_t *locals;
+  /* buffered stdout */
+  apr_file_t *stdout;
+  /* buffered errout */
+  apr_file_t *stderr;
+  /* filename of current script part */
   const char *filename;
   apr_file_t *tmpf;
 #define FLAGS_NONE           0x00000000
@@ -117,6 +122,7 @@ struct worker_s {
   apr_thread_t *mythread;
   apr_thread_cond_t *sync_cond;
   apr_thread_mutex_t *sync_mutex;
+  apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
   apr_table_t *lines;
   apr_table_t *cache;
@@ -154,6 +160,8 @@ struct global_s {
   apr_hash_t *config;
   int flags;
   const char *path;
+  apr_file_t *stdout;
+  apr_file_t *stderr;
   const char *filename;
   store_t *vars;
   store_t *shared;
@@ -168,7 +176,8 @@ struct global_s {
   int CLTs; 
   int SRVs; 
   apr_thread_cond_t *cond; 
-  apr_thread_mutex_t *sync;
+  apr_thread_mutex_t *sync_mutex;
+  apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
   int line_nr;
 #define GLOBAL_STATE_NONE   0
@@ -187,6 +196,7 @@ struct global_s {
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
+  int log_thread_no;
 };
 
 typedef struct command_s command_t;
@@ -418,7 +428,7 @@ apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_po
 void worker_log(worker_t * self, int log_mode, char *fmt, ...); 
 void worker_log_error(worker_t * self, char *fmt, ...); 
 void worker_log_buf(worker_t * self, int log_mode, const char *buf, char *prefix, 
-                    int len); 
+                    apr_size_t len); 
 void worker_var_set(worker_t * worker, const char *var, const char *val); 
 const char * worker_var_get(worker_t * worker, const char *var); 
 void worker_test_reset(worker_t * worker); 

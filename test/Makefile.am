@@ -68,8 +68,6 @@ EXTRA_DIST= \
 	daemon2.htt \
 	daemon.htt \
 	dawn_of_the_deads.htt \
-	debug.htt \
-	debug.visual \
 	dummy2.htb \
 	dummy3.htb \
 	dummy4.htb \

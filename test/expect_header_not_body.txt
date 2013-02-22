@@ -1,3 +1,3 @@
 
-EXPECT body: Did not expect "Bar"                                                       
-expect_header_not_body.hte:11: error: CLT0-0 Invalid argument(22)
+expect_header_not_body.hte:11: error: EXPECT body: Did not expect "Bar"                 
+expect_header_not_body.hte:11: error: CLT0-0 Invalid argument(22)                       

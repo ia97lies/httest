@@ -1887,7 +1887,8 @@ error:
  * @return apr status
  */
 static apr_status_t global_new(global_t **global, store_t *vars, 
-                               int log_mode, apr_pool_t *p) {
+                               int log_mode, apr_pool_t *p, apr_file_t *out,
+                               apr_file_t *err, int log_thread_no) {
   apr_status_t status;
   apr_pool_t *pmutex;
 
@@ -1906,42 +1907,61 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->modules = apr_hash_make(p);
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
+  (*global)->stdout = out;
+  (*global)->stderr = err;
+  (*global)->log_thread_no = log_thread_no;
 
   /* set default blocks for blocks with no module name */
   apr_hash_set((*global)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*global)->blocks);
 
-  if ((status = apr_threadattr_create(&(*global)->tattr, (*global)->pool)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not create thread attr");
-    return status;
-  }
-
-  if ((status = apr_threadattr_stacksize_set((*global)->tattr, DEFAULT_THREAD_STACKSIZE))
+  if ((status = apr_threadattr_create(&(*global)->tattr, (*global)->pool)) 
       != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not set stacksize");
+    apr_file_printf((*global)->stderr, 
+                    "\nGlobal creation: could not create thread attr");
     return status;
   }
 
-  if ((status = apr_threadattr_detach_set((*global)->tattr, 0)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not set detach");
+  if ((status = apr_threadattr_stacksize_set((*global)->tattr, 
+                                             DEFAULT_THREAD_STACKSIZE))
+      != APR_SUCCESS) {
+    apr_file_printf((*global)->stderr, 
+                    "\nGlobal creation: could not set stacksize");
+    return status;
+  }
+
+  if ((status = apr_threadattr_detach_set((*global)->tattr, 0)) 
+      != APR_SUCCESS) {
+    apr_file_printf((*global)->stderr, "\nGlobal creation: could not set detach");
     return status;
   }
 
   if ((status = apr_thread_cond_create(&(*global)->cond, p)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not create condition");
+    apr_file_printf((*global)->stderr, 
+                    "\nGlobal creation: could not create condition");
     return status;
   }
 
-  if ((status = apr_thread_mutex_create(&(*global)->sync, 
+  if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not create sync mutex");
+    apr_file_printf((*global)->stderr, 
+                    "\nGlobal creation: could not create sync mutex");
     return status;
   }
  
+  if ((status = apr_thread_mutex_create(&(*global)->log_mutex, 
+	                                APR_THREAD_MUTEX_DEFAULT,
+                                        pmutex)) != APR_SUCCESS) {
+    apr_file_printf((*global)->stderr, 
+                    "\nGlobal creation: could not create log mutex");
+    return status;
+  }
+
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    fprintf(stderr, "\nGlobal creation: could not create mutex");
+    apr_file_printf((*global)->stderr, 
+                    "\nGlobal creation: could not create mutex");
     return status;
   }
 
@@ -1995,7 +2015,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
   switch (global->state) {
   case GLOBAL_STATE_CLIENT:
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
-      fprintf(stderr, "\nCLIENT not allowed in a MODULE file");
+      apr_file_printf(global->stderr, "\nCLIENT not allowed in a MODULE file");
       return APR_EINVAL;
     }
     /* get number of concurrent default is 1 */
@@ -2003,7 +2023,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     if (val) {
       concurrent = apr_atoi64(val);
       if (concurrent <= 0) {
-	fprintf(stderr, "\nNumber of concurrent clients must be > 0");
+	apr_file_printf(global->stderr, 
+                        "\nNumber of concurrent clients must be > 0");
 	return EINVAL;
       }
       global->cur_worker->additional = NULL;
@@ -2016,7 +2037,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     break; 
   case GLOBAL_STATE_SERVER:
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
-      fprintf(stderr, "\nSERVER not allowed in a MODULE file");
+      apr_file_printf(global->stderr, "\nSERVER not allowed in a MODULE file");
       return APR_EINVAL;
     }
     name = apr_psprintf(global->pool, "SRV%d", global->SRVs);
@@ -2032,7 +2053,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     break; 
   case GLOBAL_STATE_DAEMON:
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
-      fprintf(stderr, "\nDAEMON not allowed in a MODULE file");
+      apr_file_printf(global->stderr, "\nDAEMON not allowed in a MODULE file");
       return APR_EINVAL;
     }
     /* get number of concurrent default is 1 */
@@ -2043,7 +2064,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     /* write file */
     if ((status = worker_to_file(global->cur_worker)) != APR_SUCCESS) {
       worker_set_global_error(global->cur_worker);
-      fprintf(stderr, "\nCould not create %s: %s(%d)", global->cur_worker->name, 
+      apr_file_printf(global->stderr, "\nCould not create %s: %s(%d)", 
+                      global->cur_worker->name, 
 	      my_status_str(global->pool, status), status);
       return status;
     }
@@ -2054,7 +2076,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     return APR_SUCCESS;
     break; 
   default: 
-    fprintf(stderr, "\nUnknown close of a body definition");
+    apr_file_printf(global->stderr, "\nUnknown close of a body definition");
     return APR_ENOTIMPL;
     break; 
   }
@@ -2175,7 +2197,8 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
                worker_interpret);
   }
   else if (status != APR_SUCCESS) {
-    fprintf(stderr, "\nFailed on block start %s(%d)", my_status_str(global->pool, status), status);  
+    apr_file_printf(global->stderr, "\nFailed on block start %s(%d)", 
+                    my_status_str(global->pool, status), status);  
     return status;
   }
   
@@ -2185,7 +2208,8 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
   token = apr_strtok(data, " ", &last);
   if (token) {
     if (strchr(token, ':')) {
-      fprintf(stderr, "\nChar ':' is not allowed in block name \"%s\"", token);
+      apr_file_printf(global->stderr, 
+                      "\nChar ':' is not allowed in block name \"%s\"", token);
       return APR_EINVAL;
     }
     global->cur_worker->name = data;
@@ -2310,7 +2334,8 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data,
   key = apr_strtok(&data[i], "=", &last);
   for (i = 0; key[i] != 0 && strchr(VAR_ALLOWED_CHARS, key[i]); i++); 
   if (key[i] != 0) {
-    fprintf(stderr, "\nChar '%c' is not allowed in \"%s\"", key[i], key);
+    apr_file_printf(global->stderr, "\nChar '%c' is not allowed in \"%s\"", 
+                    key[i], key);
     success = 0;
     return APR_EINVAL;
   }
@@ -2352,7 +2377,7 @@ static apr_status_t global_GLOBAL(command_t *self, global_t *global, char *data,
   while (var) {
     for (i = 0; var[i] != 0 && strchr(VAR_ALLOWED_CHARS, var[i]); i++); 
     if (var[i] != 0) {
-      fprintf(stderr, "\nChar '%c' is not allowed in \"%s\"", var[i], var);
+      apr_file_printf(global->stderr, "\nChar '%c' is not allowed in \"%s\"", var[i], var);
       success = 0;
       return APR_EINVAL;
     }
@@ -2381,7 +2406,7 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
   global->file_state = GLOBAL_FILE_STATE_MODULE;
  
   if (strcmp(data, "DEFAULT") == 0) {
-    fprintf(stderr, "\nModule name \"%s\" is not allowed", data);
+    apr_file_printf(global->stderr, "\nModule name \"%s\" is not allowed", data);
     return APR_EINVAL;
   }
 
@@ -2452,7 +2477,7 @@ static apr_status_t global_REQUIRE_VERSION(command_t * self, global_t * global,
   }
 
   if (APR_STATUS_IS_EGENERAL(status)) {
-    fprintf(stderr, "\nGiven version \"%s\" is not valid, "
+    apr_file_printf(global->stderr, "\nGiven version \"%s\" is not valid, "
                     "must be of the form <major>.<minor>.<maint>", data);
   }
   else if (APR_STATUS_IS_EINVAL(status)) {
@@ -2552,7 +2577,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   }
 
   if (status != APR_SUCCESS) {
-    fprintf(stderr, "\nInclude file %s not found", data);
+    apr_file_printf(global->stderr, "\nInclude file %s not found", data);
     return APR_ENOENT;
   }
 
@@ -2562,7 +2587,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   status = interpret_recursiv(fp, global);
   --global->recursiv;
   if (!(global->blocks = apr_hash_get(global->modules, "DEFAULT", APR_HASH_KEY_STRING))) {
-    fprintf(stderr, "\nDEFAULT module not found?!\n");
+    apr_file_printf(global->stderr, "\nDEFAULT module not found?!\n");
     return APR_EGENERAL;
   }
   global->file_state = GLOBAL_FILE_STATE_NORMAL;
@@ -2650,7 +2675,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     ++i; 
   } 
   if(!data[i]) { 
-    fprintf(stderr, "\nNumber missing");
+    apr_file_printf(global->stderr, "\nNumber missing");
     return APR_EGENERAL; 
   } 
   copy = apr_pstrdup(global->pool, &data[i]); 
@@ -2660,7 +2685,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
   var = apr_strtok(NULL, " ", &last);
 
   if (!no) {
-    fprintf(stderr, "\nNumber missing");
+    apr_file_printf(global->stderr, "\nNumber missing");
     return APR_EGENERAL;
   }
 
@@ -2722,7 +2747,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
     if ((status =
 	 apr_thread_create(&thread, global->tattr, worker_thread_daemon,
 			   worker, global->pool)) != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not create deamon thread");
+      apr_file_printf(global->stderr, "\nCould not create deamon thread");
       return status;
     }
   }
@@ -2730,14 +2755,14 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   /* create all servers */
   e = (apr_table_entry_t *) apr_table_elts(global->servers)->elts;
   for (i = 0; i < apr_table_elts(global->servers)->nelts; ++i) {
-    sync_lock(global->sync);
+    sync_lock(global->sync_mutex);
     worker = (void *)e[i].val;
     status = htt_run_server_create(worker, worker_thread_listener, &thread);
     if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
       if ((status =
            apr_thread_create(&thread, global->tattr, worker_thread_listener,
                              worker, global->pool)) != APR_SUCCESS) {
-        fprintf(stderr, "\nCould not create server thread");
+        apr_file_printf(global->stderr, "\nCould not create server thread");
         return status;
       }
     }
@@ -2749,8 +2774,8 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   apr_table_clear(global->servers);
 
   /* create clients */
-  sync_lock(global->sync);
-  sync_unlock(global->sync);
+  sync_lock(global->sync_mutex);
+  sync_unlock(global->sync_mutex);
   e = (apr_table_entry_t *) apr_table_elts(global->clients)->elts;
   for (i = 0; i < apr_table_elts(global->clients)->nelts; ++i) {
     worker = (void *)e[i].val;
@@ -2759,7 +2784,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
       if ((status =
            apr_thread_create(&thread, global->tattr, worker_thread_client,
                              worker, global->pool)) != APR_SUCCESS) {
-        fprintf(stderr, "\nCould not create client thread");
+        apr_file_printf(global->stderr, "\nCould not create client thread");
         return status;
       }
     }
@@ -2778,7 +2803,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
     thread = (apr_thread_t *) e[i].val;
     status = htt_run_thread_start(global, thread);
     if (status != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not start thread: %d", status);
+      apr_file_printf(global->stderr, "\nCould not start thread: %d", status);
       return status;
     }
   }
@@ -2809,12 +2834,12 @@ static apr_status_t global_JOIN(command_t *self, global_t *global, char *data,
     status = htt_run_thread_join(global, thread);
     if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
       if ((retstat = apr_thread_join(&status, thread))) {
-        fprintf(stderr, "\nCould not join thread: %d", retstat);
+        apr_file_printf(global->stderr, "\nCould not join thread: %d", retstat);
         return retstat;
       }
     }
     else if (status != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not join thread: %d", status);
+      apr_file_printf(global->stderr, "\nCould not join thread: %d", status);
       return status;
     }
   }
@@ -2894,13 +2919,13 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   replacer_hook->store = global->vars;
 
   if (global->recursiv > 8) {
-    fprintf(stderr, "\nRecursiv inlcudes too deep");
+    apr_file_printf(global->stderr, "\nRecursiv inlcudes too deep");
     success = 0;
     exit(1);
   }
 
   if ((status = bufreader_new(&bufreader, fp, global->pool)) != APR_SUCCESS) {
-    fprintf(stderr, "\nCould not create buf reader for interpreter");
+    apr_file_printf(global->stderr, "\nCould not create buf reader for interpreter");
     return status;
   }
 
@@ -2910,7 +2935,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
     global->line_nr = line_nr;
     i = 0;
     if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS) { 
-      fprintf(stderr, "\nFailed on read line %s(%d)", my_status_str(global->pool, status), status);  
+      apr_file_printf(global->stderr, "\nFailed on read line %s(%d)", my_status_str(global->pool, status), status);  
       return status;
     }
     if (line[i] != '#' && line[i] != 0) {
@@ -2920,7 +2945,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	  i += 3;
 	  if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
 	      != APR_SUCCESS) {
-	    fprintf(stderr, "\nError on global END");
+	    apr_file_printf(global->stderr, "\nError on global END");
 	    return status;
 	  }
         }
@@ -2928,7 +2953,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 					   apr_psprintf(global->pool, "%s:%d", 
 					   global->filename, line_nr), line)) 
 	    != APR_SUCCESS) {
-	  fprintf(stderr, "\nCould not add line lines table");
+	  apr_file_printf(global->stderr, "\nCould not add line lines table");
           return status;
         }
       }
@@ -2965,7 +2990,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   }
 
   if (global->state != GLOBAL_STATE_NONE) {
-    fprintf(stderr, "\n<none>:%d: Missing END", global->line_nr);
+    apr_file_printf(global->stderr, "\n<none>:%d: Missing END", global->line_nr);
     return APR_EGENERAL;
   }
 
@@ -2982,15 +3007,16 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
  *
  * @return an apr status
  */
-static apr_status_t interpret(apr_file_t * fp, store_t * vars,
-                              int log_mode, apr_pool_t * p, char *additional) {
+static apr_status_t interpret(apr_file_t * fp, store_t * vars, apr_file_t *out,
+                              apr_file_t *err, int log_mode, apr_pool_t * p, 
+                              char *additional, int log_thread_no) {
   apr_status_t status;
   int i;
   global_t *global;
 
-  if ((status = global_new(&global, vars, log_mode, p)) 
+  if ((status = global_new(&global, vars, log_mode, p, out, err, log_thread_no)) 
       != APR_SUCCESS) {
-    fprintf(stderr, "\nCould not create global");
+    apr_file_printf(global->stderr, "\nCould not create global");
     return status;
   }
 
@@ -3045,6 +3071,7 @@ apr_getopt_option_t options[] = {
   { "shell", 'S', 0, "Shell mode" },
   { "shell", 'S', 0, "Shell mode" },
   { "define", 'D', 1, "Define variables" },
+  { "log-thread-number", 'l', 0, "Show the thread number for every printed line" },
   { NULL, 0, 0, NULL }
 };
 
@@ -3274,22 +3301,22 @@ static void show_command_help(apr_pool_t *p, global_t *global,
       block_name = apr_pstrdup(p, last);
     }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
-      fprintf(stdout, "\ncommand: %s does not exist\n\n", command);
+      apr_file_printf(global->stdout, "\ncommand: %s does not exist\n\n", command);
       exit(1);
     }
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      fprintf(stdout, "\ncommand: %s does not exist\n", command);
+      apr_file_printf(global->stdout, "\ncommand: %s does not exist\n", command);
       exit(1);
     }
     else {
       char *help;
       char *val;
       char *last;
-      fprintf(stdout, "%s %s", command, worker->short_desc?worker->short_desc:"");
+      apr_file_printf(global->stdout, "%s %s", command, worker->short_desc?worker->short_desc:"");
       help = apr_pstrdup(p, worker->desc);
       val = apr_strtok(help, "\n", &last);
       while (val) {
-	fprintf(stdout, "\n\t%s", val);
+	apr_file_printf(global->stdout, "\n\t%s", val);
 	val = apr_strtok(NULL, "\n", &last);
       }
       goto exit;
@@ -3297,11 +3324,11 @@ static void show_command_help(apr_pool_t *p, global_t *global,
 
   }
 
-  fprintf(stdout, "\ncommand: %s does not exist\n\n", command);
+  apr_file_printf(global->stdout, "\ncommand: %s does not exist\n\n", command);
   exit(1);
 
 exit:
-  fprintf(stdout, "\n");
+  apr_file_printf(global->stdout, "\n");
   fflush(stdout);
 }
 
@@ -3344,14 +3371,17 @@ int main(int argc, const char *const argv[]) {
   apr_file_t *fp;
   store_t *vars;
   int log_mode;
-#define MAIN_FLAGS_NONE 0
-#define MAIN_FLAGS_PRINT_TSTAMP 1
-#define MAIN_FLAGS_USE_STDIN 2
-#define MAIN_FLAGS_NO_OUTPUT 4
-#define MAIN_FLAGS_PRINT_DURATION 8
+#define MAIN_FLAGS_NONE 0x0000
+#define MAIN_FLAGS_PRINT_TSTAMP 0x0001
+#define MAIN_FLAGS_USE_STDIN 0x0002
+#define MAIN_FLAGS_NO_OUTPUT 0x0004
+#define MAIN_FLAGS_PRINT_DURATION 0x0008
+#define MAIN_FLAGS_LOG_THREAD_NO 0x0010
   int flags;
   apr_time_t time;
   char time_str[256];
+  apr_file_t *out;
+  apr_file_t *err;
 
   srand(apr_time_now()); 
   
@@ -3369,6 +3399,9 @@ int main(int argc, const char *const argv[]) {
 
   /* create a global vars table */
   vars = store_make(pool);
+
+  apr_file_open_flags_stderr(&err, APR_BUFFERED|APR_XTHREAD, pool);
+  apr_file_open_flags_stdout(&out, APR_BUFFERED|APR_XTHREAD, pool);
 
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
@@ -3407,10 +3440,10 @@ int main(int argc, const char *const argv[]) {
       flags |= MAIN_FLAGS_PRINT_DURATION; 
       break;
     case 'L':
-      interpret(NULL, NULL, -1, pool, NULL);
+      interpret(NULL, NULL, NULL, NULL, -1, pool, NULL, 0);
       break;
     case 'C':
-      interpret(NULL, NULL, -2, pool, apr_pstrdup(pool, optarg));
+      interpret(NULL, NULL, NULL, NULL, -2, pool, apr_pstrdup(pool, optarg), 0);
       exit(0);
       break;
     case 'T':
@@ -3430,26 +3463,35 @@ int main(int argc, const char *const argv[]) {
           store_set(vars, var, val);
         }
         else {
-          fprintf(stderr, "Error miss value in variable definition \"-D%s\", need the format -D<var>=<val>\n", optarg);
-          fflush(stderr);
+          apr_file_printf(err, 
+                          "Error miss value in variable definition \"-D%s\", "
+                          "need the format -D<var>=<val>\n", optarg);
+          apr_file_flush(err);
           exit(1);
         }
       }
+      break;
+    case 'l':
+      flags |= MAIN_FLAGS_LOG_THREAD_NO; 
       break;
     }
   }
 
   /* test for wrong options */
   if (!APR_STATUS_IS_EOF(status)) {
-    fprintf(stderr, "try \"%s --help\" to get more information\n", filename(pool, argv[0]));
+    apr_file_printf(err, "try \"%s --help\" to get more information\n", 
+                    filename(pool, argv[0]));
+    apr_file_flush(err);
     exit(1);
   }
 
   /* test at least one file */
   if (!log_mode == -1 && !(flags & MAIN_FLAGS_USE_STDIN) && !(argc - opt->ind)) {
-    fprintf(stderr, "%s: wrong number of arguments\n\n", filename(pool, 
-	    argv[0]));
-    fprintf(stderr, "try \"%s --help\" to get more information\n", filename(pool, argv[0]));
+    apr_file_printf(err, "%s: wrong number of arguments\n\n", 
+                    filename(pool, argv[0]));
+    apr_file_printf(err, "try \"%s --help\" to get more information\n", 
+                    filename(pool, argv[0]));
+    apr_file_flush(err);
     exit(1);
   }
 
@@ -3471,43 +3513,46 @@ int main(int argc, const char *const argv[]) {
 
     if ((flags & MAIN_FLAGS_USE_STDIN)) {
       if (log_mode != LOG_NONE) {
-        fprintf(stdout, "simple htt shell\n");
+        apr_file_printf(out, "simple htt shell\n");
       }
     }
     else if (flags & MAIN_FLAGS_PRINT_TSTAMP) {
       time = apr_time_now();
       if ((status = apr_ctime(time_str, time)) != APR_SUCCESS) {
-	fprintf(stderr, "Could not format time: %s (%d)\n", 
+	apr_file_printf(err, "Could not format time: %s (%d)\n", 
 	        my_status_str(pool, status), status);
 	success = 0;
+        apr_file_flush(err);
 	exit(1);
       }
       if (!(flags & MAIN_FLAGS_NO_OUTPUT)) {
-	fprintf(stdout, "%s  run %-54s\t", time_str, cur_file);
+	apr_file_printf(out, "%s  run %-54s\t", time_str, cur_file);
       }
     }
     else {
       if (!(flags & MAIN_FLAGS_NO_OUTPUT)) {
-	fprintf(stdout, "run %-80s\t", cur_file);
+	apr_file_printf(out, "run %-80s\t", cur_file);
       }
     }
-    fflush(stdout);
+    apr_file_flush(out);
 
     /* open current file */
     if (flags & MAIN_FLAGS_USE_STDIN) {
       if ((status = apr_file_open_stdin(&fp, pool)) != APR_SUCCESS) {
-	fprintf(stderr, "Could not open stdin: %s (%d)\n", 
-	        my_status_str(pool, status), status);
+	apr_file_printf(err, "Could not open stdin: %s (%d)\n", 
+                        my_status_str(pool, status), status);
 	success = 0;
+        apr_file_flush(err);
 	exit(1);
       }
     }
     else if ((status =
               apr_file_open(&fp, cur_file, APR_READ, APR_OS_DEFAULT,
                             pool)) != APR_SUCCESS) {
-      fprintf(stderr, "\nCould not open %s: %s (%d)", cur_file,
-	      my_status_str(pool, status), status);
+      apr_file_printf(err, "\nCould not open %s: %s (%d)", cur_file, 
+                      my_status_str(pool, status), status);
       success = 0;
+      apr_file_flush(err);
       exit(1);
     }
 
@@ -3515,20 +3560,24 @@ int main(int argc, const char *const argv[]) {
       time = apr_time_now();
     }
     /* interpret current file */
-    if ((status = interpret(fp, vars, log_mode, pool, NULL)) != APR_SUCCESS) {
+    if ((status = interpret(fp, vars, out, err, log_mode, pool, NULL, 
+                            flags & MAIN_FLAGS_LOG_THREAD_NO)) 
+        != APR_SUCCESS) {
       success = 0;
+      apr_file_flush(out);
+      apr_file_flush(err);
       exit(1);
     }
 
     if (log_mode > LOG_WARN) {
-      fprintf(stdout, "\n");
-      fflush(stdout);
+      apr_file_printf(out, "\n");
+      apr_file_flush(out);
     }
 
     if (flags & MAIN_FLAGS_PRINT_DURATION) {
       time = apr_time_now() - time;
-      fprintf(stdout, "%"APR_TIME_T_FMT , time);
-      fflush(stdout);
+      apr_file_printf(out, "%"APR_TIME_T_FMT , time);
+      apr_file_flush(out);
     }
 
     /* close current file */
