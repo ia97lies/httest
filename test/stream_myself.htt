@@ -1,4 +1,4 @@
-SET MAX_DURATION=20000
+#SET MAX_DURATION=20000
 INCLUDE $TOP/test/config.htb
 
 # runs exactly one time
@@ -39,7 +39,8 @@ _EXEC rm httest_tmp
 END
 
 SERVER $YOUR_PORT
-
+# to avoid defunc sh we sleep a little before accept the first time
+_SLEEP 500
 _LOOP 2
 _RES
 _EXEC| cat > httest_streamed

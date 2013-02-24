@@ -1,5 +1,5 @@
 Version 2.3.0
- - New      httest: Improve logging
+ - New      httest: Improve logging for better analysis.
  - Planed   htunit: httest executor with junit like output
 
 Version 2.2.0
