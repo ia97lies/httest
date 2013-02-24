@@ -2425,9 +2425,9 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
  */
 static apr_status_t global_REQUIRE_VERSION(command_t * self, global_t * global,
                                            char *data, apr_pool_t *ptmp) {
-  char *major;
-  char *minor;
-  char *maint;
+  char *major="<null>";
+  char *minor="<null>";
+  char *maint="<null>";
   char *version;
   char *v_major;
   char *v_minor;
@@ -3372,7 +3372,7 @@ int main(int argc, const char *const argv[]) {
 #define MAIN_FLAGS_PRINT_DURATION 0x0008
 #define MAIN_FLAGS_LOG_THREAD_NO 0x0010
   int flags;
-  apr_time_t time;
+  apr_time_t time = 0;
   char time_str[256];
   apr_file_t *out;
   apr_file_t *err;
