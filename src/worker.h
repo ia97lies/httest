@@ -81,9 +81,9 @@ struct worker_s {
   /* block local variables */
   store_t *locals;
   /* buffered stdout */
-  apr_file_t *stdout;
+  apr_file_t *out;
   /* buffered errout */
-  apr_file_t *stderr;
+  apr_file_t *err;
   /* filename of current script part */
   const char *filename;
   apr_file_t *tmpf;
@@ -159,8 +159,8 @@ struct global_s {
   apr_hash_t *config;
   int flags;
   const char *path;
-  apr_file_t *stdout;
-  apr_file_t *stderr;
+  apr_file_t *out;
+  apr_file_t *err;
   const char *filename;
   store_t *vars;
   store_t *shared;

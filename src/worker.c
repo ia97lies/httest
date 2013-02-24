@@ -330,23 +330,23 @@ void worker_log_va(worker_t * worker, int log_mode, char *fmt, va_list va) {
       tmp = apr_psprintf(pool, "%s: error: %s", worker->file_and_line?worker->file_and_line:"<none>",
                          tmp);
       if (worker->global->log_thread_no) {
-        apr_file_printf(worker->stderr, "\n%d:%-88s", worker->which, tmp);
+        apr_file_printf(worker->err, "\n%d:%-88s", worker->which, tmp);
       }
       else {
-        apr_file_printf(worker->stderr, "\n%-88s", tmp);
+        apr_file_printf(worker->err, "\n%-88s", tmp);
       }
-      apr_file_flush(worker->stderr);
+      apr_file_flush(worker->err);
     }
     else {
       tmp = apr_pvsprintf(pool, fmt, va);
       if (worker->global->log_thread_no) {
-        apr_file_printf(worker->stdout, "\n%d:%s", worker->which, worker->prefix);
+        apr_file_printf(worker->out, "\n%d:%s", worker->which, worker->prefix);
       }
       else {
-        apr_file_printf(worker->stdout, "\n%s", worker->prefix);
+        apr_file_printf(worker->out, "\n%s", worker->prefix);
       }
-      apr_file_printf(worker->stdout, "%s", tmp);
-      apr_file_flush(worker->stdout);
+      apr_file_printf(worker->out, "%s", tmp);
+      apr_file_flush(worker->out);
     }
     if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
     apr_pool_destroy(pool);
@@ -420,30 +420,30 @@ void worker_log_buf(worker_t * worker, int log_mode, const char *buf,
       ++i;
       if (worker->log_mutex) apr_thread_mutex_lock(worker->log_mutex);
       if (worker->global->log_thread_no) {
-        apr_file_printf(worker->stdout, "\n%d:%s%s", worker->which, worker->prefix, prefix);
+        apr_file_printf(worker->out, "\n%d:%s%s", worker->which, worker->prefix, prefix);
       }
       else {
-        apr_file_printf(worker->stdout, "\n%s%s", worker->prefix, prefix);
+        apr_file_printf(worker->out, "\n%s%s", worker->prefix, prefix);
       }
 
       for (; j < i; j++) {
         if ((unsigned char)buf[j] == '\n') {
           /*
           apr_size_t l = 2;
-          apr_file_write(worker->stdout, "\\n", &l);
+          apr_file_write(worker->out, "\\n", &l);
           */
         }
         else if ((unsigned char)buf[j] == '\r') {
           /*
           apr_size_t l = 2;
-          apr_file_write(worker->stdout, "\\r", &l);
+          apr_file_write(worker->out, "\\r", &l);
           */
         }
         else if ((unsigned char)buf[j] < 0x20) {
-          apr_file_putc('.', worker->stdout);
+          apr_file_putc('.', worker->out);
         }
         else {
-          apr_file_putc(buf[j], worker->stdout);
+          apr_file_putc(buf[j], worker->out);
         }
       }
       if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
@@ -3884,8 +3884,8 @@ void worker_new(worker_t ** self, char *additional, char *prefix, global_t *glob
   (*self)->modules = apr_hash_copy(p, global->modules);
   if (global->mutex) apr_thread_mutex_unlock(global->mutex);
   (*self)->blocks = global->blocks;
-  (*self)->stdout = global->stdout;
-  (*self)->stderr = global->stderr;
+  (*self)->out = global->out;
+  (*self)->err = global->err;
   (*self)->log_mode = global->log_mode;
   (*self)->flags = global->flags;
   (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
