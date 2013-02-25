@@ -40,6 +40,7 @@ AC_ARG_ENABLE([ssl-legacy-reneg], AS_HELP_STRING(--enable-ssl-legacy-reneg, enab
 AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add Lua support))
 AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript support))
 AC_ARG_ENABLE([html-module], AS_HELP_STRING(--enable-html-module,Add html support))
+AC_ARG_ENABLE([xml-module], AS_HELP_STRING(--enable-xml-module,Add xml support))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -142,6 +143,17 @@ if test "$enable_html_module" = "yes"; then
   LIBS="$LIBS `$XML2_CONFIG --libs`"
   HTTEST_MODULES="$HTTEST_MODULES html_module.${OBJEXT}"
   MODULES=" html $MODULES"
+fi
+if test "$enable_xml_module" = "yes"; then
+  XML2_VERSION=`$XML2_CONFIG --version`
+  if test ! "$?" = "0"; then
+    echo "libxml2 is missing"
+    exit -1
+  fi
+  CFLAGS="$CFLAGS `$XML2_CONFIG --cflags`"
+  LIBS="$LIBS `$XML2_CONFIG --libs`"
+  HTTEST_MODULES="$HTTEST_MODULES xml_module.${OBJEXT}"
+  MODULES=" xml $MODULES"
 fi
 
 if test -f ./generate_modules_c.sh; then
