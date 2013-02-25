@@ -7,8 +7,8 @@ if [ "$VERSION" != "snapshots" ]; then
 else
   HTTEST=snapshot
 fi
-scp ChangeLog ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.2/${HTTEST}/.
-scp NEWS ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.2/${HTTEST}/.
-scp httest-${VERSION}.tar.gz ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.2/${HTTEST}/.
-scp doc/users-guide/users-guide.pdf ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.2/${HTTEST}/.
+scp ChangeLog ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.3/${HTTEST}/.
+scp NEWS ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.3/${HTTEST}/.
+scp httest-${VERSION}.tar.gz ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.3/${HTTEST}/.
+scp doc/users-guide/users-guide.pdf ia97lies,htt@frs.sourceforge.net:/home/pfs/project/h/ht/htt/htt2.3/${HTTEST}/.
 
