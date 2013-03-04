@@ -14,8 +14,12 @@ Michael Vogt <michu@neophob.com>:
  
 Alain Stalder:
   changes for win32 -> httest htntlm
+  nightlybuilds for linux, mac and windows
 
 Nioclas Perrenoud:
   changes for openssl 1.0
   changes for ebuild
 
+Rafael Torres
+  add xml support -> xml_module.c
+  changes for older libxml2 versions -> html_module.c

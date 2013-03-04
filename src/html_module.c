@@ -39,6 +39,116 @@ typedef struct html_wconf_s {
   xmlXPathContextPtr xpath;
 } html_wconf_t;
 
+#if LIBXML_VERSION < 20627
+#define XML_CTXT_FINISH_DTD_0 0xabcd1234
+static int htmlInitParserCtxt(worker_t *worker,htmlParserCtxtPtr ctxt)
+{
+  htmlSAXHandler *sax;
+  if (ctxt == NULL) return(-1);
+  
+  memset(ctxt, 0, sizeof(htmlParserCtxt));
+  ctxt->dict = xmlDictCreate();
+  if (ctxt->dict == NULL) {
+     worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    return(-1);
+  }
+  sax = (htmlSAXHandler *) xmlMalloc(sizeof(htmlSAXHandler));
+  if (sax == NULL) {
+    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    return(-1);
+  }
+  else
+    memset(sax, 0, sizeof(htmlSAXHandler));
+
+  ctxt->inputTab = (htmlParserInputPtr *) xmlMalloc(5 * sizeof(htmlParserInputPtr));
+  if (ctxt->inputTab == NULL) {
+    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    ctxt->inputNr = 0;
+    ctxt->inputMax = 0;
+    ctxt->input = NULL;
+    return(-1);
+  }
+  ctxt->inputNr = 0;
+  ctxt->inputMax = 5;
+  ctxt->input = NULL;
+  ctxt->version = NULL;
+  ctxt->encoding = NULL;
+  ctxt->standalone = -1;
+  ctxt->instate = XML_PARSER_START;
+
+  ctxt->nodeTab = (htmlNodePtr *) xmlMalloc(10 * sizeof(htmlNodePtr));
+  if (ctxt->nodeTab == NULL) {
+    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    ctxt->nodeNr = 0;
+    ctxt->nodeMax = 0;
+    ctxt->node = NULL;
+    ctxt->inputNr = 0;
+    ctxt->inputMax = 0;
+    ctxt->input = NULL;
+    return(-1);
+  }
+  ctxt->nodeNr = 0;
+  ctxt->nodeMax = 10;
+  ctxt->node = NULL;
+
+  ctxt->nameTab = (const xmlChar **) xmlMalloc(10 * sizeof(xmlChar *));
+  if (ctxt->nameTab == NULL) {
+    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    ctxt->nameNr = 0;
+    ctxt->nameMax = 10;
+    ctxt->name = NULL;
+    ctxt->nodeNr = 0;
+    ctxt->nodeMax = 0;
+    ctxt->node = NULL;
+    ctxt->inputNr = 0;
+    ctxt->inputMax = 0;
+    ctxt->input = NULL;
+    return(-1);
+  }
+  ctxt->nameNr = 0;
+  ctxt->nameMax = 10;
+  ctxt->name = NULL;
+    
+  if (sax == NULL) ctxt->sax = (xmlSAXHandlerPtr) &htmlDefaultSAXHandler;
+  else {
+    ctxt->sax = sax;
+    memcpy(sax, &htmlDefaultSAXHandler, sizeof(xmlSAXHandlerV1));
+  }
+  ctxt->userData = ctxt;
+  ctxt->myDoc = NULL;
+  ctxt->wellFormed = 1;
+  ctxt->replaceEntities = 0;
+  ctxt->linenumbers = xmlLineNumbersDefaultValue;
+  ctxt->html = 1;
+  ctxt->vctxt.finishDtd = XML_CTXT_FINISH_DTD_0;
+  ctxt->vctxt.userData = ctxt;
+  ctxt->vctxt.error = xmlParserValidityError;
+  ctxt->vctxt.warning = xmlParserValidityWarning;
+  ctxt->record_info = 0;
+  ctxt->validate = 0;
+  ctxt->nbChars = 0;
+  ctxt->checkIndex = 0;
+  ctxt->catalogs = NULL;
+  xmlInitNodeInfoSeq(&ctxt->node_seq);
+  return(0);
+}
+
+static htmlParserCtxtPtr htmlNewParserCtxt(worker_t *worker)
+{
+  xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) xmlMalloc(sizeof(xmlParserCtxt));
+  if (ctxt == NULL) {
+    worker_log_error(worker, "NewParserCtxt: out of memory\n");
+    return(NULL);
+  }
+  memset(ctxt, 0, sizeof(xmlParserCtxt));
+  if (htmlInitParserCtxt(worker,ctxt) < 0) {
+    htmlFreeParserCtxt(ctxt);
+   return(NULL);
+  }
+  return(ctxt);
+}
+#endif
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -57,7 +167,11 @@ static html_wconf_t *html_get_worker_config(worker_t *worker) {
   html_wconf_t *config = module_get_config(worker->config, html_module);
   if (config == NULL) {
     config = apr_pcalloc(worker->pbody, sizeof(*config));
+#if LIBXML_VERSION < 20627
+    config->parser_ctx = htmlNewParserCtxt(worker);
+#else
     config->parser_ctx = htmlNewParserCtxt();
+#endif
     module_set_config(worker->config, apr_pstrdup(worker->pbody, html_module), config);
   }
   return config;
