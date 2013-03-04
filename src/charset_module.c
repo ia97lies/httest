@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool skeleton module 
+ * Implementation of the HTTP Test Tool charset module 
  */
 
 /************************************************************************
@@ -43,12 +43,13 @@
 /************************************************************************
  * Commands 
  ***********************************************************************/
-static apr_status_t block_CHARSET_DECODE(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+static apr_status_t block_CHARSET_CONVERT(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   apr_xlate_t *convset;
   const char *from = store_get(worker->params, "1");
   const char *to = store_get(worker->params, "2");
   const char *string = store_get(worker->params, "3");
+  const char *result = store_get(worker->params, "4");
   char *outbuf;
   apr_size_t inbytes;
   apr_size_t outbytes;
@@ -67,7 +68,7 @@ static apr_status_t block_CHARSET_DECODE(worker_t *worker, worker_t *parent, apr
 	return status;
   }
 
-  worker_log_error(worker, "XXX: %s", outbuf);
+  worker_var_set(parent, result, outbuf);
 
   return APR_SUCCESS;
 }
@@ -75,12 +76,12 @@ static apr_status_t block_CHARSET_DECODE(worker_t *worker, worker_t *parent, apr
 /************************************************************************
  * Module
  ***********************************************************************/
-apr_status_t skeleton_module_init(global_t *global) {
+apr_status_t charset_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "CHARSET", "_DECODE",
+  if ((status = module_command_new(global, "CHARSET", "_CONVERT",
 	                           "<from-charset> <to-charset> <string>",
 	                           "Convert a string from on to another charset",
-	                           block_CHARSET_DECODE)) != APR_SUCCESS) {
+	                           block_CHARSET_CONVERT)) != APR_SUCCESS) {
     return status;
   }
   return APR_SUCCESS;

@@ -67,12 +67,21 @@ static url_escape_seq_t url_escape_seq[] = {
  *
  * @return index of url escape sequenz array
  */
-static int get_url_escape_index(char c) {
+static int get_url_escape_index(unsigned char c) {
   int i;
   for (i = 0; i < sizeof(url_escape_seq)/sizeof(url_escape_seq_t); i++) {
     if (url_escape_seq[i].c == c) {
       return i;
     }
+  }
+  if (c >= 'a' && c <= 'z' ||
+    c >= 'A' && c <= 'Z' ||
+	c >= '0' && c <= '9' ||
+	c == '-' || c == '_' || c == '~') {
+	return -1;
+  }
+  else {
+	return -2;
   }
   return -1;
 }
@@ -91,9 +100,9 @@ static int get_url_escape_index(char c) {
  */
 apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   /* do this the old way, becaus argv tokenizer removes all "\" */
-  const char *string;
+  const unsigned char *string;
   const char *var;
-  char *result;
+  unsigned char *result;
   int i;
   int j;
   int k;
@@ -118,10 +127,14 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
   /** do the simple stuff */
   for (j = 0, i = 0; string[i]; i++) {
     k = get_url_escape_index(string[i]);
-    if (k != -1) {
+    if (k >= 0) {
       strncpy(&result[j], url_escape_seq[k].esc, url_escape_seq[k].len);
       j += url_escape_seq[k].len;
     }
+	else if (k == -2) {
+	  strncpy(&result[j], apr_psprintf(ptmp, "%%%2X", string[i]), 3);
+	  j += 3;
+	}
     else {
       result[j++] = string[i];
     }
