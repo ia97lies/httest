@@ -27,10 +27,19 @@
  ***********************************************************************/
 #include "module.h"
 #include <apr_xlate.h>
+#include <apr_buckets.h>
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+#define CHARSET_BUF_MAX 8192
+typedef struct charset_buf_s {
+  const char *const_data;
+  char *data;
+  apr_size_t len;
+  apr_size_t rest;
+  apr_size_t i;
+} charset_buf_t;
 
 /************************************************************************
  * Globals 
@@ -39,6 +48,47 @@
 /************************************************************************
  * Local 
  ***********************************************************************/
+static apr_status_t charset_xlate(worker_t *worker, apr_xlate_t *convset, 
+                                  const char *string, char **result,
+                                  apr_pool_t *ptmp) {
+  apr_status_t status;
+  apr_size_t len;
+  apr_bucket_alloc_t *alloc = apr_bucket_alloc_create(ptmp);
+  apr_bucket_brigade *bb = apr_brigade_create(ptmp, alloc);
+  charset_buf_t *inbuf = apr_pcalloc(ptmp, sizeof(*inbuf));
+  charset_buf_t *outbuf = apr_pcalloc(ptmp, sizeof(*outbuf));
+
+  inbuf->const_data = string;
+  inbuf->len = strlen(string);
+  inbuf->rest = inbuf->len;
+
+  outbuf->data = apr_pcalloc(ptmp, CHARSET_BUF_MAX);
+
+  do {
+    outbuf->len = CHARSET_BUF_MAX;
+    outbuf->rest = outbuf->len;
+
+    status = apr_xlate_conv_buffer(convset, 
+                                   &inbuf->const_data[inbuf->i], &inbuf->rest, 
+                                   outbuf->data, &outbuf->rest);
+    inbuf->i = inbuf->len -inbuf->rest;
+    inbuf->len = inbuf->rest;
+    
+    apr_brigade_write(bb, NULL, NULL, outbuf->data, outbuf->len - outbuf->rest);
+  } while (status == APR_SUCCESS && inbuf->len);
+  apr_brigade_putc(bb, NULL, NULL, '\0');
+
+  if (status != APR_SUCCESS) {
+    return status;
+  }
+
+  status = apr_brigade_pflatten(bb, result, &len, ptmp);
+  if (status != APR_SUCCESS) {
+	worker_log_error(worker, "Can't flatten converted buffer");
+    return status;
+  }
+  return APR_SUCCESS;
+}
 
 /************************************************************************
  * Commands 
@@ -62,7 +112,7 @@ static apr_status_t block_CHARSET_CONVERT(worker_t *worker, worker_t *parent, ap
   inbytes = strlen(string);
   outbytes = inbytes;
   outbuf = apr_pcalloc(ptmp, outbytes);
-  if ((status = apr_xlate_conv_buffer(convset, string, &inbytes, outbuf, &outbytes))
+  if ((status = charset_xlate(worker, convset, string, &outbuf, ptmp))
      != APR_SUCCESS) {
 	worker_log_error(worker, "Can not convert from %s to %s", from, to);
 	return status;
