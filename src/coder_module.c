@@ -39,52 +39,10 @@ typedef struct url_escape_seq {
 /************************************************************************
  * Globals 
  ***********************************************************************/
-static url_escape_seq_t url_escape_seq[] = {
-  { '?', "%3F", 3 },
-  { '\n', "%0D", 3 },
-  { ' ', "+", 1 },
-  { '/', "%2F", 3 },
-  { ';', "%3B", 3 },
-  { '%', "%25", 3 },
-  { '=', "%3D", 3 },
-  { '"', "%22", 3 },
-  { '\'', "%2C", 3 },
-  { '.', "%2E", 3 },
-  { ':', "%3A", 3 },
-  { '@', "%40", 3 },
-  { '\\', "%5C", 3 },
-  { '&', "%26", 3 },
-  { '+', "%2B", 3 },
-};
 
 /************************************************************************
  * Local
  ***********************************************************************/
-/**
- * Get index of url escape sequenze array 
- *
- * @param c IN char for lookup
- *
- * @return index of url escape sequenz array
- */
-static int get_url_escape_index(unsigned char c) {
-  int i;
-  for (i = 0; i < sizeof(url_escape_seq)/sizeof(url_escape_seq_t); i++) {
-    if (url_escape_seq[i].c == c) {
-      return i;
-    }
-  }
-  if (c >= 'a' && c <= 'z' ||
-    c >= 'A' && c <= 'Z' ||
-	c >= '0' && c <= '9' ||
-	c == '-' || c == '_' || c == '~') {
-	return -1;
-  }
-  else {
-	return -2;
-  }
-  return -1;
-}
 
 /************************************************************************
  * Commands 
@@ -126,17 +84,18 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
 
   /** do the simple stuff */
   for (j = 0, i = 0; string[i]; i++) {
-    k = get_url_escape_index(string[i]);
-    if (k >= 0) {
-      strncpy(&result[j], url_escape_seq[k].esc, url_escape_seq[k].len);
-      j += url_escape_seq[k].len;
+    if (string[i] >= 'a' && string[i] <= 'z' ||
+        string[i] >= 'A' && string[i] <= 'Z' ||
+        string[i] >= '0' && string[i] <= '9' ||
+        string[i] == '-' || string[i] == '_' || string[i] == '~') {
+      result[j++] = string[i];
     }
-	else if (k == -2) {
+    else if (string[i] == ' ') {
+      result[j++] = '+';
+    }
+    else {
 	  strncpy(&result[j], apr_psprintf(ptmp, "%%%2X", string[i]), 3);
 	  j += 3;
-	}
-    else {
-      result[j++] = string[i];
     }
   }
 
@@ -187,13 +146,13 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
     else if (string[i] == '%') {
       if (i + 2 < len) {
         c = x2c(&string[i + 1]);
-	i += 2;
+        i += 2;
       }
     }
     else if (string[i] == '\\' && i + 1 < len && string[i + 1] == 'x') {
       if (i + 3 < len) {
         c = x2c(&string[i + 2]);
-	i += 3;
+        i += 3;
       }
     }
     inplace[j] = c;
