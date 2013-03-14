@@ -63,10 +63,9 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
   unsigned char *result;
   int i;
   int j;
-  int k;
   apr_size_t len;
 
-  string = store_get(worker->params, "1");
+  string = (const unsigned char *)store_get(worker->params, "1");
   var = store_get(worker->params, "2");
 
   if (!string) {
@@ -78,15 +77,15 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
     return APR_EGENERAL;
   }
 
-  len = strlen(string);
+  len = strlen((const char *)string);
   /* allocate worste case -> every char enc with pattern %XX */
   result = apr_pcalloc(ptmp, 3 * len + 1);
 
   /** do the simple stuff */
   for (j = 0, i = 0; string[i]; i++) {
-    if (string[i] >= 'a' && string[i] <= 'z' ||
-        string[i] >= 'A' && string[i] <= 'Z' ||
-        string[i] >= '0' && string[i] <= '9' ||
+    if ((string[i] >= 'a' && string[i] <= 'z') ||
+        (string[i] >= 'A' && string[i] <= 'Z') ||
+        (string[i] >= '0' && string[i] <= '9') ||
         string[i] == '-' || string[i] == '_' || string[i] == '~') {
       result[j++] = string[i];
     }
@@ -94,12 +93,12 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
       result[j++] = '+';
     }
     else {
-	  strncpy(&result[j], apr_psprintf(ptmp, "%%%2X", string[i]), 3);
+	  strncpy((char *)&result[j], apr_psprintf(ptmp, "%%%2X", string[i]), 3);
 	  j += 3;
     }
   }
 
-  worker_var_set(parent, var, result);
+  worker_var_set(parent, var, (char *)result);
 
   return APR_SUCCESS;
 

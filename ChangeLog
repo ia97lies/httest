@@ -5,6 +5,9 @@ Changes with httest 2.3.2
              Useful if tests do only run on certain machine or plattforms or
 	     to tag slow tests.
 
+  *) httest: Charset translation support.
+
+
 Changes with httest 2.3.1
   *) httest: Various files were incorrect/incomplete, have to revoke 2.3.0
 
