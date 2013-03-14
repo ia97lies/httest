@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.3.2
+  *) httest: Add annotation to ignore/skip tests based on defined rules.
+             Useful if tests do only run on certain machine or plattforms or
+	     to tag slow tests.
+
 Changes with httest 2.3.1
   *) httest: Various files were incorrect/incomplete, have to revoke 2.3.0
 
