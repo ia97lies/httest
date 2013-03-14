@@ -17,16 +17,16 @@ if ($ARGV[0] eq "-e") {
   while (<STDIN>) {
     my $line = $_;
     chomp($line);
-    if ($line =~ m/^ *([<>])/) {
+    if ($line =~ m/^([0-9]+:)? *([<>])/) {
       # out: strong, in: light
       $strong = ($1 eq ">") ? "1" : "0";
-      if ($line =~ m/^[<>]/) {
+      if ($line =~ m/^([0-9]+:)?[<>]/) {
         # client: blue
         $color="34";
-      } elsif ($line =~ m/^ {24,24}[<>]/) {
+      } elsif ($line =~ m/^([0-9]+:)? {24,24}[<>]/) {
         # server: green
         $color="32";
-      } elsif ($line =~ m/^ {48,48}[<>]/) {
+      } elsif ($line =~ m/^([0-9]+:)? {48,48}[<>]/) {
         # server 2: purple
         $color="35";
       } else {
