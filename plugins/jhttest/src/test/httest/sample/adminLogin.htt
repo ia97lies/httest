@@ -1,0 +1,74 @@
+# httest sample script to login as admin01.
+# Script do
+#   - Get initial Login Page
+#   - Post user: admin01 with password: admin01 to j_security_check
+#   - Check if we get a redirect
+#   - Follow redirect
+#   - Follow meta refresh
+#
+# for a list of available commands run
+# /share/xpository/sourceforge/httest/$VERSION/$ARCH/dist-bin/bin/httest -L
+# for more explanation checkout the latest documentation found on
+# http://htt.sourceforge.net/
+# or ask cli@adnovum.ch
+
+INCLUDE build/test/resources/httest/config.htt
+
+CLIENT
+_AUTO_CLOSE on
+_AUTO_COOKIE on
+
+## Get initial login page
+_REQ $container_host SSL:$container_https_port
+__GET /moap3/jsf2app/ HTTP/1.1
+__Host: localhost:9943
+__Connection: keep-alive
+__Cookie: AUTO
+__
+# check if 200 OK and login fields
+_EXPECT headers "200 OK"
+_EXPECT body "Name:"
+_EXPECT body "Password:"
+_WAIT
+
+## Send credentials
+_REQ $container_host SSL:$container_https_port
+__POST /moap3/jsf2app/j_security_check HTTP/1.1
+__Host: localhost:9943
+__Connection: keep-alive
+__Cookie: AUTO
+__Content-Type: application/x-www-form-urlencoded
+__Content-Length: AUTO
+__
+__j_username=admin01&j_password=admin01&j_login=Login
+# check redirect
+_EXPECT headers "302"
+# cut location url to follow
+_MATCH headers "Location: https://localhost:9943(.*)" redirect_to
+_WAIT
+
+## Follow redirect
+_REQ $container_host SSL:$container_https_port
+__GET $redirect_to HTTP/1.1
+__Host: localhost:9943
+__Connection: keep-alive
+__Cookie: AUTO
+__
+# check 200 OK
+_EXPECT headers "200 OK"
+# cut meta refresh url
+_MATCH body "<meta http-equiv=\"refresh\" content=\"0; url=(.*)\" />" url
+_WAIT
+
+## Follow meta refresh
+_REQ $container_host SSL:$container_https_port
+__GET $redirect_to/$url HTTP/1.1
+__Host: localhost:9943
+__Connection: keep-alive
+__Cookie: AUTO
+__
+# check 200 OK
+_EXPECT headers "200 OK"
+_WAIT
+
+END
