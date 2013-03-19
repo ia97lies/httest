@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.53)
-AC_INIT(httest, 2.3.0, ia97lies@sourceforge.net)
+AC_INIT(httest, 2.3.1, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 
@@ -113,7 +113,7 @@ if test "$enable_iconv_support" = "yes"; then
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
-MODULES="charset perf dbg sys math coder date binary websocket socks udp tcp ssl" 
+MODULES="annotation charset perf dbg sys math coder date binary websocket socks udp tcp ssl" 
 
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then

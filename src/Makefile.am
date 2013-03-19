@@ -9,10 +9,10 @@ httest_SOURCES = \
 	modules.c ssl_module.c tcp_module.c skeleton_module.c date_module.c \
 	coder_module.c math_module.c sys_module.c binary_module.c \
 	udp_module.c socks_module.c websocket_module.c dbg_module.c \
-	perf_module.c charset_module.c
+	perf_module.c annotation_module.c charset_module.c
 
 EXTRA_httest_SOURCES = \
-	lua_crypto.c lua_module.c js_module.c html_module.c
+	lua_crypto.c lua_module.c js_module.c html_module.c xml_module.c
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)

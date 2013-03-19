@@ -1,5 +1,16 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.3.2
+  *) httest: Add annotation to ignore/skip tests based on defined rules.
+             Useful if tests do only run on certain machine or plattforms or
+	     to tag slow tests.
+
+  *) httest: Charset translation support.
+
+
+Changes with httest 2.3.1
+  *) httest: Various files were incorrect/incomplete, have to revoke 2.3.0
+
 Changes with httest 2.3.0
   *) httest: Mutex based logger to avoid scattered lines. Add optional thread
              id to be able to sort the output of multi threaded tests.
