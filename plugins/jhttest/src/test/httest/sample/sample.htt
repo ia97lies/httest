@@ -1,0 +1,30 @@
+# httest sample script to test some service is up and running.
+# Script do
+#   - Connect to your target server
+#   - Send a request
+#   - Wait for response containing 200 OK in the HTTP headers
+#   - Optional you could also expect "Name:" and "Password:" in the HTML body
+#     just uncomment it
+#
+# for a list of available commands run
+# /share/xpository/sourceforge/httest/$VERSION/$ARCH/dist-bin/bin/httest -L
+# for more explanation checkout the latest documentation found on
+# http://htt.sourceforge.net/
+
+INCLUDE src/test/resources/httest/config.htb
+
+CLIENT
+_AUTO_CLOSE on
+
+## Send on single request
+_REQ $host $http_port
+__GET /index.html HTTP/1.1
+__Host: $host
+__
+# check we get a 200 OK and not a 404 Not Found or the like
+_EXPECT headers "200 OK"
+# optional check if login fields int the http body are there
+#_EXPECT body "Name:"
+#_EXPECT body "Password:"
+_WAIT
+END
