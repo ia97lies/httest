@@ -6,11 +6,12 @@
 package ch.sf.htt;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Properties;
 
 /**
  * Wrapper for running httest.
@@ -23,7 +24,6 @@ public class Httest {
 	/** Constant for name of system property which holds httest version. */
 	public static final String VERSION_PROPERTY = "httest.version";
 
-	private File scriptsDir;
 	private File workingDir;
 	private Environment environment;
 	private boolean verbose = false;
@@ -45,7 +45,6 @@ public class Httest {
 	private List<HttestError> httestErrors = new ArrayList<HttestError>();
 
 	private final static OperatingSystem OS = OperatingSystem.get();
-	private final static Architecture ARCH = Architecture.get();
 
 	/**
 	 * Creates a new Httest instance.
@@ -53,9 +52,9 @@ public class Httest {
 	 * @return The Httest instance.
 	 * @throws RuntimeException If the instance could not be created.
 	 */
-	public static Httest instance() {
+	public static Httest instance(Properties props) {
 		try {
-			return new Httest();
+			return new Httest(props);
 		} catch (IOException e) {
 			throw new RuntimeException("could not create Httest instance", e);
 		}
@@ -71,12 +70,9 @@ public class Httest {
 	 * 
 	 * @throws IOException
 	 */
-	private Httest() throws IOException {
-		String basedir = System.getProperty("basedir");
-		String httestHome = System.getProperty("HTTEST_HOME");
+	private Httest(Properties props) throws IOException {
+		String httestHome = props.getProperty("HTTEST_HOME");
 		binariesDir = new File(httestHome);
-		scriptsDir = new File(basedir + "/src/test/httest");
-		workingDir = new File(basedir);
 		environment = new Environment();
 	}
 
@@ -102,7 +98,7 @@ public class Httest {
 	 * @throws IOException
 	 */
 	public ExecResult runScript(ITestListener console, String scriptFileName, String ... commandLineArgs) throws IOException, HttestFailedException {
-		File scriptFile = new File(scriptsDir, scriptFileName);
+		File scriptFile = new File(workingDir, scriptFileName);
 		if (!scriptFile.exists()) {
 			throw new FileNotFoundException("Missing script file: " + scriptFile.getAbsolutePath());
 		}
@@ -371,45 +367,45 @@ public class Httest {
 	 * 
 	 * @return the scriptsDir
 	 */
-	public File getScriptsDir() {
-		return scriptsDir;
-	}
-
-	/**
-	 * Sets the base directory for httest scripts.
-	 * 
-	 * @param scriptsDir the scriptsDir to set
-	 */
-	public void setScriptsDir(File scriptsDir) {
-		this.scriptsDir = scriptsDir;
-	}
-
-	/**
-	 * Gets the working directory to use when running httest.
-	 * 
-	 * @return the workingDir
-	 */
-	public File getWorkingDir() {
-		return workingDir;
-	}
-
-	/**
-	 * Sets the working directory to use when running httest.
-	 * 
-	 * @param workingDir the workingDir to set
-	 */
-	public void setWorkingDir(File workingDir) {
-		this.workingDir = workingDir;
-	}
-
-	/**
-	 * Gets the environment to use when running httest.
-	 * 
-	 * @return the environment
-	 */
-	public Environment getEnvironment() {
-		return environment;
-	}
+//	public File getScriptsDir() {
+//		return scriptsDir;
+//	}
+//
+//	/**
+//	 * Sets the base directory for httest scripts.
+//	 * 
+//	 * @param scriptsDir the scriptsDir to set
+//	 */
+//	public void setScriptsDir(File scriptsDir) {
+//		this.scriptsDir = scriptsDir;
+//	}
+//
+//	/**
+//	 * Gets the working directory to use when running httest.
+//	 * 
+//	 * @return the workingDir
+//	 */
+//	public File getWorkingDir() {
+//		return workingDir;
+//	}
+//
+//	/**
+//	 * Sets the working directory to use when running httest.
+//	 * 
+//	 * @param workingDir the workingDir to set
+//	 */
+//	public void setWorkingDir(File workingDir) {
+//		this.workingDir = workingDir;
+//	}
+//
+//	/**
+//	 * Gets the environment to use when running httest.
+//	 * 
+//	 * @return the environment
+//	 */
+//	public Environment getEnvironment() {
+//		return environment;
+//	}
 
 	/**
 	 * Sets the environment to use when running httest.

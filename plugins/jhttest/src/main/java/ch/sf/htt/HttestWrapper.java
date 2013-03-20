@@ -5,8 +5,8 @@
  */
 package ch.sf.htt;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.Properties;
 
 /**
  * Base test case for httest tests.
@@ -55,12 +55,16 @@ public class HttestWrapper {
 		return httest;
 	}
 
+	public void setUp() throws Exception {
+		
+	}
+	
 	/**
 	 * 
 	 * @throws Exception
 	 */
-	public void setUp() throws Exception {
-		httest = Httest.instance();
+	public void setUp(Properties props) throws Exception {
+		httest = Httest.instance(props);
 	}
 
 	/**
@@ -78,18 +82,18 @@ public class HttestWrapper {
 	 * 
 	 * @param scriptsDir httest scripts dir
 	 */
-	public void setScriptsDir(File scriptsDir) {
-		httest.setScriptsDir(scriptsDir);
-	}
-
-	/**
-	 * Convenience method for setting httest working dir.
-	 * 
-	 * @param workingDir httest working dir
-	 */
-	public void setWorkingDir(File workingDir) {
-		httest.setWorkingDir(workingDir);
-	}
+//	public void setScriptsDir(File scriptsDir) {
+//		httest.setScriptsDir(scriptsDir);
+//	}
+//
+//	/**
+//	 * Convenience method for setting httest working dir.
+//	 * 
+//	 * @param workingDir httest working dir
+//	 */
+//	public void setWorkingDir(File workingDir) {
+//		httest.setWorkingDir(workingDir);
+//	}
 
 	/**
 	 * Convenience method for setting httest environment.
