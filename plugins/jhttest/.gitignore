@@ -1,0 +1,7 @@
+build
+gradle.properties
+.classpath
+.classpath.bak
+.gradle/
+.svnignore
+
