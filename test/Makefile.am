@@ -55,6 +55,7 @@ EXTRA_DIST= \
 	break.htt \
 	ca2.cert.pem \
 	ca.cert.pem \
+	charset.htt \
 	chunk.htt \
 	chunk.visual \
 	client2.cert.pem \
