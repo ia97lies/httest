@@ -5,7 +5,10 @@
  */
 package ch.sf.htt;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Properties;
 
 /**
@@ -21,32 +24,13 @@ import java.util.Properties;
  */
 public class HttestWrapper {
 
-	private final String testName;
 	private Httest httest;
+	protected String file;
 
-	/**
-	 * Creates the test suite.
-	 */
-	public HttestWrapper() {
-		testName = null;
+	public HttestWrapper(String file) {
+		this.file = file;
 	}
-
-	/**
-	 * Creates the test suite.
-	 */
-	public HttestWrapper(String testName) {
-		this.testName = testName;
-	}
-
-	/**
-	 * Get test name.
-	 * 
-	 * @return test name
-	 */
-	public String getTestName() {
-		return testName;
-	}
-
+		
 	/** Gets httest instance.
 	 * 
 	 * @return instance
@@ -82,18 +66,7 @@ public class HttestWrapper {
 	 * 
 	 * @param scriptsDir httest scripts dir
 	 */
-//	public void setScriptsDir(File scriptsDir) {
-//		httest.setScriptsDir(scriptsDir);
-//	}
-//
-//	/**
-//	 * Convenience method for setting httest working dir.
-//	 * 
-//	 * @param workingDir httest working dir
-//	 */
-//	public void setWorkingDir(File workingDir) {
-//		httest.setWorkingDir(workingDir);
-//	}
+
 
 	/**
 	 * Convenience method for setting httest environment.
@@ -111,5 +84,30 @@ public class HttestWrapper {
 	 */
 	public void setVerbose(boolean verbose) {
 		httest.setVerbose(verbose);
+	}
+	
+	/**
+	 * Collect all files below a folder like $basedir/src/test/httest
+	 * @param file IN staring point to collect httest scripts
+	 * @param all IN a collection of script names
+	 */
+	public static Collection<Object[]> collectHttestScript(Properties props) {
+		Collection<Object[]> data = new ArrayList<Object[]>();
+		addHttestScripts(new File(props.getProperty("basedir")+"/"+props.getProperty("scriptdir")), data, props.getProperty("scriptdir"));	
+		return data;
+	}
+	
+	private static void addHttestScripts(File file, Collection<Object[]> all, String prefix) {
+		File[] children = file.listFiles();
+		if (children != null) {
+			for (File child : children) {
+				if (child.isFile()) {
+					String script = prefix+"/"+file.getName()+"/"+child.getName();
+					Object[] data = new Object[] { script };
+					all.add(data);
+				}
+				addHttestScripts(child, all, prefix);
+			}
+		}
 	}
 }

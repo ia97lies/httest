@@ -27,13 +27,19 @@ import ch.sf.htt.HttestWrapper;
 @RunWith(Parameterized.class)
 public class HttestIntTest extends HttestWrapper {
 
-	private String file;
-	private Properties props;
-
 	public HttestIntTest(String file) {
-		this.file = file;
+		super(file);
 	}
-
+	
+	private static Properties getProperties() throws Exception {
+		Properties props;
+		props = new Properties();
+		props.load(new FileInputStream("/home/cli/.htt/htt.properties"));
+		props.setProperty("basedir", "/home/cli/projects/htt/plugins/jhttest");
+		props.setProperty("scriptdir", "src/test/httest");
+		return props;
+	}
+	
 	/**
 	 * setup httest
 	 * @note: you could activate verbose as well here, should be able to set with properties
@@ -41,30 +47,8 @@ public class HttestIntTest extends HttestWrapper {
 	@Override
 	@Before
 	public void setUp() throws Exception {
-		props = new Properties();
-		props.load(new FileInputStream("/home/cli/.htt/htt.properties"));
-		props.setProperty("basedir", "/home/cli/projects/htt/plugins/jhttest");
-		super.setUp(props);
+		super.setUp(HttestIntTest.getProperties());
 		setVerbose(true);
-	}
-
-	/**
-	 * Collect all files below a folder like $basedir/src/test/httest
-	 * @param file IN staring point to collect httest scripts
-	 * @param all IN a collection of script names
-	 */
-	public static void addTree(File file, Collection<Object[]> all) {
-		File[] children = file.listFiles();
-		if (children != null) {
-			for (File child : children) {
-				if (child.isFile()) {
-					String script = "src/test/httest/"+file.getName()+"/"+child.getName();
-					Object[] data = new Object[] { script };
-					all.add(data);
-				}
-				addTree(child, all);
-			}
-		}
 	}
 
 	/**
@@ -73,11 +57,9 @@ public class HttestIntTest extends HttestWrapper {
 	 * @note: this is used vor parametrized junit tests
 	 */
 	@Parameters(name="{index}: {0}")
-	public static Collection<Object[]> data() {
-		//Object[][] data = new Object[][] { { "sample/adminLogin.htt" }, { "sample/upAndRunning.htt" } };
-		Collection<Object[]> data = new ArrayList<Object[]>();
-		addTree(new File("/home/cli/projects/htt/plugins/jhttest/src/test/httest"), data);
-		return data;
+	public static Collection<Object[]> data() throws Exception {
+		Properties props = HttestIntTest.getProperties();
+		return collectHttestScript(props);
 	}
 
 	/**
