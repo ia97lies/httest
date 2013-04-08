@@ -449,6 +449,7 @@ void worker_log_buf(worker_t * worker, int log_mode, const char *buf,
       if (worker->log_mutex) apr_thread_mutex_unlock(worker->log_mutex);
     } while (i < len);
   }
+  apr_file_flush(worker->out);
 }
 
 

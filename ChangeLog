@@ -1,5 +1,13 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.3.3
+  *) httest: Fixed segfault on httest -C <command-name> to print help text of
+             a given command <command-name>.
+  
+  *) httest: Fixed the problem where htest do not print the received body if an 
+             expect throws an error.
+
+
 Changes with httest 2.3.2
   *) httest: Add annotation to ignore/skip tests based on defined rules.
              Useful if tests do only run on certain machine or plattforms or
