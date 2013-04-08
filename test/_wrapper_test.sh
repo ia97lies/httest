@@ -5,6 +5,7 @@ TOP=..
 export TOP
 HTT_ERRORS=0
 PFX=.
+errors=0
 
 set +e
 

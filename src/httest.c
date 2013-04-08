@@ -3434,10 +3434,15 @@ int main(int argc, const char *const argv[]) {
       flags |= MAIN_FLAGS_PRINT_DURATION; 
       break;
     case 'L':
-      interpret(NULL, NULL, NULL, NULL, -1, pool, NULL, 0);
+      interpret(NULL, NULL, out, err, -1, pool, NULL, 0);
+	  apr_file_flush(out);
+	  apr_file_flush(err);
+      exit(0);
       break;
     case 'C':
-      interpret(NULL, NULL, NULL, NULL, -2, pool, apr_pstrdup(pool, optarg), 0);
+      interpret(NULL, NULL, out, err, -2, pool, apr_pstrdup(pool, optarg), 0);
+	  apr_file_flush(out);
+	  apr_file_flush(err);
       exit(0);
       break;
     case 'T':
