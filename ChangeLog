@@ -4,8 +4,8 @@ Changes with httest 2.3.3
   *) httest: Fixed segfault on httest -C <command-name> to print help text of
              a given command <command-name>.
   
-  *) httest: Fixed the problem where htest do not print the received body if an 
-             expect throws an error.
+  *) httest: Fixed the broken log output on various places due the refactoring
+             for the thread safe output implementation in release 2.3.0.
 
 
 Changes with httest 2.3.2
