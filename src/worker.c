@@ -420,10 +420,11 @@ void worker_log_buf(worker_t * worker, int log_mode, const char *buf,
       ++i;
       if (worker->log_mutex) apr_thread_mutex_lock(worker->log_mutex);
       if (worker->global->log_thread_no) {
-        apr_file_printf(worker->out, "\n%d:%s%s", worker->which, worker->prefix, prefix);
+        apr_file_printf(worker->out, "\n%d:%s%s", worker->which, 
+                        worker->prefix, prefix?prefix:"");
       }
       else {
-        apr_file_printf(worker->out, "\n%s%s", worker->prefix, prefix);
+        apr_file_printf(worker->out, "\n%s%s", worker->prefix, prefix?prefix:"");
       }
 
       for (; j < i; j++) {
