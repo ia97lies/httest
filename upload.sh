@@ -2,6 +2,8 @@
 
 VERSION=$1
 
+git push --tags
+
 if [ "$VERSION" != "snapshots" ]; then
   HTTEST=httest-${VERSION}
 else
