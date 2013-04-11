@@ -52,6 +52,7 @@
 #include "file.h"
 #include "socket.h"
 #include "worker.h"
+#include "logger.h"
 #include "conf.h"
 #include "util.h"
 #include "module.h"
