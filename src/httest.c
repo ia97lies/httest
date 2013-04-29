@@ -508,7 +508,6 @@ command_t local_commands[] = {
 
 global_t *process_global = NULL;
 int success = 1;
-int running_threads = 0;
      
 /************************************************************************
  * Private 
@@ -523,7 +522,7 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
  *
  * @param mutex IN mutex
  */
-static void sync_lock(apr_thread_mutex_t *mutex) {
+static void lock(apr_thread_mutex_t *mutex) {
   apr_status_t status;
   if ((status = apr_thread_mutex_lock(mutex)) != APR_SUCCESS) {
     apr_pool_t *ptmp;
@@ -540,7 +539,7 @@ static void sync_lock(apr_thread_mutex_t *mutex) {
  *
  * @param mutex IN mutex
  */
-static void sync_unlock(apr_thread_mutex_t *mutex) {
+static void unlock(apr_thread_mutex_t *mutex) {
   apr_status_t status;
   if ((status = apr_thread_mutex_unlock(mutex)) != APR_SUCCESS) {
     apr_pool_t *ptmp;
@@ -550,6 +549,64 @@ static void sync_unlock(apr_thread_mutex_t *mutex) {
 	    my_status_str(ptmp, status), status);
     exit(1);
   }
+}
+
+/**
+ * Increase threads by 1
+ * @param global IN global instanz
+ */
+static void inc_threads(global_t *global) {
+  lock(global->mutex);
+  ++global->cur_threads;
+  ++global->tot_threads;
+  unlock(global->mutex);
+}
+
+/**
+ * Increase threads by 1
+ * @param global IN global instanz
+ */
+static void dec_threads(global_t *global) {
+  lock(global->mutex);
+  --global->cur_threads;
+  unlock(global->mutex);
+}
+
+/**
+ * set threads to count 
+ * @param global IN global instanz
+ * @param count IN no of threads
+ */
+static void set_threads(global_t *global, int count) {
+  lock(global->mutex);
+  global->cur_threads = count;
+  unlock(global->mutex);
+}
+
+/**
+ * Get current number of threads.
+ * @param global IN global instanz
+ * @return threads
+ */
+static int get_threads(global_t *global) {
+  int ret;
+  lock(global->mutex);
+  ret = global->cur_threads;
+  unlock(global->mutex);
+  return ret;
+}
+
+/**
+ * Get total number of threads since start.
+ * @param global IN global instanz
+ * @return threads
+ */
+static int get_tot_threads(global_t *global) {
+  int ret;
+  lock(global->mutex);
+  ret = global->tot_threads;
+  unlock(global->mutex);
+  return ret;
 }
 
 /**
@@ -1418,9 +1475,9 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
  * @param self IN thread data object
  */
 static void worker_set_global_error(worker_t *worker) {
-  sync_lock(worker->mutex);
+  lock(worker->mutex);
   success = 0;
-  sync_unlock(worker->mutex);
+  unlock(worker->mutex);
 }
 
 /**
@@ -1513,20 +1570,18 @@ void worker_finally(worker_t *worker, apr_status_t status) {
     }
   }
 
-  sync_lock(worker->mutex);
   if (status != APR_SUCCESS) {
-    running_threads = 0;
+    set_threads(worker->global, 0);
   }
   else {
-    --running_threads;
+    dec_threads(worker->global);
   }
-  sync_unlock(worker->mutex);
 
   worker_var_set(worker, "__ERROR", my_status_str(worker->pbody, status));
   worker_var_set(worker, "__STATUS", apr_ltoa(worker->pbody, status));
   worker_var_set(worker, "__THREAD", worker->name);
 
-  if (running_threads == 0) { 
+  if (get_threads(worker->global) == 0) { 
     command_t *command = lookup_command(local_commands, "_CALL");
     if (command->func) {
       mode = logger_get_mode(worker->logger);
@@ -1576,9 +1631,9 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
 
   worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
-  sync_lock(worker->mutex);
-  ++running_threads;
-  sync_unlock(worker->mutex);
+  inc_threads(worker->global);
+  worker->which = get_tot_threads(worker->global);
+  worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
   
   logger_log(worker->logger, LOG_INFO, "%s start ...", worker->name);
 
@@ -1616,6 +1671,10 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
   worker->mythread = thread;
   worker->flags |= FLAGS_CLIENT;
 
+  inc_threads(worker->global);
+  worker->which = get_tot_threads(worker->global);
+  worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
+
   worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
   logger_log(worker->logger, LOG_INFO, "Daemon start ...");
@@ -1638,9 +1697,7 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
 
 error:
   /* no mather if there are other threads running set running threads to one */
-  sync_lock(worker->mutex);
-  running_threads = 1;
-  sync_unlock(worker->mutex);
+  set_threads(worker->global, 1);
   worker_finally(worker, status);
   return NULL;
 }
@@ -1688,9 +1745,9 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
   worker->mythread = thread;
   worker->flags |= FLAGS_SERVER;
 
-  sync_lock(worker->mutex);
-  ++running_threads;
-  sync_unlock(worker->mutex);
+  inc_threads(worker->global);
+  worker->which = get_tot_threads(worker->global);
+  worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
 
   status = worker_run_single_server(worker);
 
@@ -1797,9 +1854,9 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   worker->mythread = thread;
   worker->flags |= FLAGS_SERVER;
 
-  sync_lock(worker->mutex);
-  ++running_threads;
-  sync_unlock(worker->mutex);
+  inc_threads(worker->global);
+  worker->which = get_tot_threads(worker->global);
+  worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
 
   portname = apr_strtok(worker->additional, " ", &last);
 
@@ -1857,7 +1914,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
       goto error;
     }
   }
-  sync_unlock(worker->sync_mutex);
+  unlock(worker->sync_mutex);
   logger_log(worker->logger, LOG_DEBUG, "unlock %s", worker->name);
 
   if (threads != 0) {
@@ -1951,9 +2008,8 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   (*global)->state = GLOBAL_STATE_NONE;
   (*global)->socktmo = 300000000;
-  (*global)->prefix = apr_pstrdup(p, "");
 
-  worker_new(&(*global)->worker, NULL, (*global)->prefix, (*global), NULL);
+  worker_new(&(*global)->worker, NULL, (*global), NULL);
 
   (*global)->worker->modules = (*global)->modules;
   (*global)->worker->name = apr_pstrdup(p, "__htt_global__");
@@ -2075,7 +2131,6 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     --concurrent;
     called_name = apr_psprintf(global->pool, "%s-%d", name, concurrent);
     global->cur_worker->name = called_name;
-    global->cur_worker->which = concurrent;
     if (concurrent) {
       worker_clone(&clone, global->cur_worker);
     }
@@ -2113,7 +2168,7 @@ static apr_status_t global_worker(command_t *self, global_t *global, char *data,
                                   int state) {
   /* Client start */
   global->state = state;
-  worker_new(&global->cur_worker, data, global->prefix, global, 
+  worker_new(&global->cur_worker, data, global, 
              worker_interpret);
   return APR_SUCCESS;
 }
@@ -2131,8 +2186,6 @@ static apr_status_t global_CLIENT(command_t *self, global_t *global, char *data,
                                   apr_pool_t *ptmp) {
   apr_status_t status;
   status = global_worker(self, global, data, GLOBAL_STATE_CLIENT);
-  global->prefix = apr_pstrcat(global->pool, global->prefix, 
-			       "                        ", NULL);
   return status;
 }
 
@@ -2149,8 +2202,6 @@ static apr_status_t global_SERVER(command_t *self, global_t *global, char *data,
                                   apr_pool_t *ptmp) {
   apr_status_t status;
   status = global_worker(self, global, data, GLOBAL_STATE_SERVER);
-  global->prefix = apr_pstrcat(global->pool, global->prefix, 
-			       "                        ", NULL);
 
   return status;
 }
@@ -2180,8 +2231,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
   if ((status = htt_run_block_start(global, &data)) 
       == APR_ENOTIMPL) {
     /* Start a new worker */
-    worker_new(&global->cur_worker, data, global->prefix, global, 
-               worker_interpret);
+    worker_new(&global->cur_worker, data, global, worker_interpret);
   }
   else if (status != APR_SUCCESS) {
     logger_log(global->logger, LOG_ERR, 
@@ -2241,8 +2291,7 @@ static apr_status_t global_FILE(command_t * self, global_t * global,
   global->state = GLOBAL_STATE_FILE;
 
   /* Start a new worker */
-  worker_new(&global->cur_worker, data, global->prefix, global, 
-             worker_interpret);
+  worker_new(&global->cur_worker, data, global, worker_interpret);
 
   global->cur_worker->name = data;
 
@@ -2284,7 +2333,7 @@ static apr_status_t global_EXEC(command_t *self, global_t *global, char *data,
     ++i;
   }
 
-  worker_new(&worker, &data[i], "", global, worker_interpret);
+  worker_new(&worker, &data[i], global, worker_interpret);
 
   worker_add_line(worker, apr_psprintf(global->pool, "%s:%d", global->filename,
 	                               global->line_nr), 
@@ -2747,7 +2796,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   /* create all servers */
   e = (apr_table_entry_t *) apr_table_elts(global->servers)->elts;
   for (i = 0; i < apr_table_elts(global->servers)->nelts; ++i) {
-    sync_lock(global->sync_mutex);
+    lock(global->sync_mutex);
     worker = (void *)e[i].val;
     status = htt_run_server_create(worker, worker_thread_listener, &thread);
     if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
@@ -2766,8 +2815,8 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   apr_table_clear(global->servers);
 
   /* create clients */
-  sync_lock(global->sync_mutex);
-  sync_unlock(global->sync_mutex);
+  lock(global->sync_mutex);
+  unlock(global->sync_mutex);
   e = (apr_table_entry_t *) apr_table_elts(global->clients)->elts;
   for (i = 0; i < apr_table_elts(global->clients)->nelts; ++i) {
     worker = (void *)e[i].val;
@@ -2840,7 +2889,6 @@ static apr_status_t global_JOIN(command_t *self, global_t *global, char *data,
   apr_table_clear(global->threads);
 
   htt_run_worker_joined(global);
-  global->prefix = apr_pstrdup(global->pool, "");
   return APR_SUCCESS;
 }
  
@@ -2890,13 +2938,7 @@ static apr_status_t global_EXIT(command_t *self, global_t *global, char *data,
  * Recursiv interpreter. Can handle recursiv calls to with sub files i.e. INCLUDE.
  *
  * @param fp IN current open file
- * @param vars IN global variable table
- * @param log_mode IN log mode
- * @param p IN pool
- * @param threads IN table of running threads
- * @param CLTs IN number of current client
- * @param SRVs IN number of current server
- * @param recursiv IN recursiv level to avoid infinit recursion
+ * @param global IN global context
  *
  * @return apr status
  */

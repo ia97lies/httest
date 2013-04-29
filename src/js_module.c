@@ -258,7 +258,7 @@ static apr_status_t js_block_start(global_t *global, char **line) {
   js_gconf_t *gconf;
   if (strncmp(*line, ":JS ", 4) == 0) {
     *line += 4;
-    worker_new(&global->cur_worker, "", "", global, block_js_interpreter);
+    worker_new(&global->cur_worker, "", global, block_js_interpreter);
     wconf = js_get_worker_config(global->cur_worker);
     gconf = js_get_global_config(global);
     gconf->do_read_line = 1;
@@ -341,7 +341,7 @@ static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, ap
     return APR_EGENERAL;
   }
 
-  worker_new(&block, "", "", global, block_js_interpreter);
+  worker_new(&block, "", global, block_js_interpreter);
 
   if ((status = js_set_variable_names(block, signature)) != APR_SUCCESS) {
     return status;

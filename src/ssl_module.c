@@ -816,7 +816,7 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
   if (config->msg_worker) {
     worker_destroy(config->msg_worker);
   }
-  worker_new(&config->msg_worker, NULL, worker->prefix, worker->global, worker->interpret); 
+  worker_new(&config->msg_worker, NULL, worker->global, worker->interpret); 
   config->msg_worker->config = worker->config;
 
   if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {

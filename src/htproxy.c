@@ -812,7 +812,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
   global.modules = apr_hash_make(self->pool);
   global.blocks = apr_hash_make(self->pool);
   
-  worker_new(&server, "", "", &global, NULL);
+  worker_new(&server, "", &global, NULL);
 
 
   if ((status = call_command(client, command_TIMEOUT, "_TIMEOUT", "300000")) != APR_SUCCESS) {
@@ -1173,7 +1173,7 @@ int proxy(self_t *self) {
 
   tcp_module_init(&global);
 
-  worker_new(&listener, "", "", &global, NULL);
+  worker_new(&listener, "", &global, NULL);
 
   listener->listener_port = self->port;
 
@@ -1188,8 +1188,7 @@ int proxy(self_t *self) {
 
     /* test if main is back */
     
-    worker_new(&client, "", "                        ", &global, 
-	       NULL);
+    worker_new(&client, "", &global, NULL);
 
     worker_get_socket(client, "Default", "0");
     client->socket->socket_state = listener->socket->socket_state;

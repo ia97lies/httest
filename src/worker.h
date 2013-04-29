@@ -110,7 +110,6 @@ struct worker_s {
   int cmd_to;
   int which;
   char *name;
-  char *prefix;
   char *additional;
   char *file_and_line;
   const char *short_desc;
@@ -164,8 +163,10 @@ struct global_s {
   apr_table_t *servers;
   apr_table_t *daemons;
   logger_t *logger;
-  int CLTs; 
-  int SRVs; 
+  int CLTs;
+  int SRVs;
+  int cur_threads; 
+  int tot_threads; 
   apr_thread_mutex_t *sync_mutex;
   apr_thread_mutex_t *mutex;
   int line_nr;
@@ -180,7 +181,6 @@ struct global_s {
 #define GLOBAL_FILE_STATE_MODULE 1
   int file_state;
   int socktmo;
-  char *prefix;
   worker_t *worker;
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
@@ -340,7 +340,7 @@ apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
 
 /** helpers */
 void worker_new(worker_t ** self, char *additional,
-                        char *prefix, global_t *global, interpret_f interpret);
+                global_t *global, interpret_f interpret);
 void worker_clone(worker_t ** self, worker_t * orig); 
 apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
                                apr_size_t len); 

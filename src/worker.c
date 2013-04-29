@@ -3685,7 +3685,7 @@ apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data,
  * @param log_mode IN log mode  
  *
  */
-void worker_new(worker_t ** self, char *additional, char *prefix, global_t *global, 
+void worker_new(worker_t ** self, char *additional, global_t *global, 
                 interpret_f function) {
   apr_pool_t *p;
 
@@ -3703,7 +3703,6 @@ void worker_new(worker_t ** self, char *additional, char *prefix, global_t *glob
   (*self)->config = apr_hash_make(p);
   (*self)->filename = apr_pstrdup(p, "<none>");
   (*self)->socktmo = global->socktmo;
-  (*self)->prefix = apr_pstrdup(p, prefix);
   (*self)->additional = apr_pstrdup(p, additional);
   (*self)->sync_mutex = global->sync_mutex;
   (*self)->mutex = global->mutex;
@@ -3759,7 +3758,7 @@ void worker_new(worker_t ** self, char *additional, char *prefix, global_t *glob
 void worker_clone(worker_t ** self, worker_t * orig) {
   apr_pool_t *p;
 
-  worker_new(self, orig->additional, orig->prefix, orig->global, orig->interpret);
+  worker_new(self, orig->additional, orig->global, orig->interpret);
 
   p = (*self)->pbody;
   (*self)->flags = orig->flags;

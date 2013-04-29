@@ -504,7 +504,7 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
     lua_gconf_t *gconf = lua_get_global_config(global);
     gconf->do_read_line = 1;
     *line += 5;
-    worker_new(&global->cur_worker, "", "", global, block_lua_interpreter);
+    worker_new(&global->cur_worker, "", global, block_lua_interpreter);
     wconf = lua_get_worker_config(global->cur_worker);
     wconf->starting_line_nr = global->line_nr;
     lua_set_variable_names(global->cur_worker, *line);

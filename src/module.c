@@ -85,7 +85,7 @@ apr_status_t module_command_new(global_t *global, const char *module,
   worker_t *worker;
   apr_hash_t *blocks;
 
-  worker_new(&worker, "", "", global, function);
+  worker_new(&worker, "", global, function);
 
   /* descriptions */
   worker->short_desc = short_desc;
