@@ -84,7 +84,7 @@ static apr_status_t charset_xlate(worker_t *worker, apr_xlate_t *convset,
 
   status = apr_brigade_pflatten(bb, result, &len, ptmp);
   if (status != APR_SUCCESS) {
-	worker_log_error(worker, "Can't flatten converted buffer");
+	logger_log_error(worker->logger, "Can't flatten converted buffer");
     return status;
   }
   return APR_SUCCESS;
@@ -105,7 +105,7 @@ static apr_status_t block_CHARSET_CONVERT(worker_t *worker, worker_t *parent, ap
   apr_size_t outbytes;
 
   if ((status = apr_xlate_open(&convset, to, from, ptmp)) != APR_SUCCESS) {
-	worker_log_error(worker, "Can not open convert for conversion from %s to %s", from, to);
+	logger_log_error(worker->logger, "Can not open convert for conversion from %s to %s", from, to);
 	return status;
   }
 
@@ -114,7 +114,7 @@ static apr_status_t block_CHARSET_CONVERT(worker_t *worker, worker_t *parent, ap
   outbuf = apr_pcalloc(ptmp, outbytes);
   if ((status = charset_xlate(worker, convset, string, &outbuf, ptmp))
      != APR_SUCCESS) {
-	worker_log_error(worker, "Can not convert from %s to %s", from, to);
+	logger_log_error(worker->logger, "Can not convert from %s to %s", from, to);
 	return status;
   }
 

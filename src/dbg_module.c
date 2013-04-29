@@ -54,7 +54,7 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
   int pos = 0;
 
   if ((status = apr_file_open_stdout(&output, ptmp)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not open stdout");
+    logger_log_error(worker->logger, "Can not open stdout");
     return status;
   }
 
@@ -63,12 +63,12 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
   apr_file_flush(output);
 
   if ((status = apr_file_open_stdin(&input, ptmp)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not open stdin");
+    logger_log_error(worker->logger, "Can not open stdin");
     return status;
   }
 
   if ((status = bufreader_new(&bufreader, input, ptmp)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not create buffered reader for stdin");
+    logger_log_error(worker->logger, "Can not create buffered reader for stdin");
     return status;
   }
 
@@ -77,7 +77,7 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
     char *entry;
 
     if ((status = bufreader_read_line(bufreader, &line)) != APR_SUCCESS) {
-      worker_log_error(worker, "Can not read line from buffered stdin\n");
+      logger_log_error(worker->logger, "Can not read line from buffered stdin\n");
       return status;
     }
     if (!line[0]) {

@@ -67,17 +67,17 @@ static apr_status_t block_MATH_EVAL(worker_t *worker, worker_t *parent,
   math_eval_t *eval_hook = math_eval_make(ptmp);
 
   if (!value) {
-    worker_log_error(worker, "Missing expression");
+    logger_log_error(worker->logger, "Missing expression");
     return APR_EINVAL;
   }
 
   if (!var) {
-    worker_log_error(worker, "Missing variable");
+    logger_log_error(worker->logger, "Missing variable");
     return APR_EINVAL;
   }
 
   if ((status = math_evaluate(eval_hook, expr, &val)) != APR_SUCCESS) {
-    worker_log_error(worker, "Expression \"%s\" not valid", expr);
+    logger_log_error(worker->logger, "Expression \"%s\" not valid", expr);
     return status;
   }
 
@@ -102,27 +102,27 @@ static apr_status_t block_MATH_OP(worker_t *worker, worker_t *parent,
 
   param = store_get(worker->params, "1");
   if (param == NULL) {
-    worker_log(worker, LOG_ERR, "<left> value expected");
+    logger_log(worker->logger, LOG_ERR, "<left> value expected");
     return APR_EINVAL;
   }
   ileft = apr_atoi64(param);
 
   op = store_get(worker->params, "2");
   if (op == NULL) {
-    worker_log(worker, LOG_ERR, "ADD, SUB, MUL or DIV expected");
+    logger_log(worker->logger, LOG_ERR, "ADD, SUB, MUL or DIV expected");
     return APR_EINVAL;
   }
 
   param = store_get(worker->params, "3");
   if (param == NULL) {
-    worker_log(worker, LOG_ERR, "<right> value expected");
+    logger_log(worker->logger, LOG_ERR, "<right> value expected");
     return APR_EINVAL;
   }
   iright = apr_atoi64(param);
 
   param = store_get(worker->params, "4");
   if (param == NULL) {
-    worker_log(worker, LOG_ERR, "<var> expected");
+    logger_log(worker->logger, LOG_ERR, "<var> expected");
     return APR_EINVAL;
   }
 
@@ -138,13 +138,13 @@ static apr_status_t block_MATH_OP(worker_t *worker, worker_t *parent,
   }
   else if (strcasecmp(op, "DIV") == 0) {
     if (iright == 0) {
-      worker_log(worker, LOG_ERR, "Division by zero");
+      logger_log(worker->logger, LOG_ERR, "Division by zero");
       return APR_EINVAL;
     }
     result = ileft / iright;
   }
   else {
-    worker_log(worker, LOG_ERR, "Unknown operant %s", op);
+    logger_log(worker->logger, LOG_ERR, "Unknown operant %s", op);
     return APR_ENOTIMPL;
   }
 
@@ -169,21 +169,21 @@ static apr_status_t block_MATH_RAND(worker_t *worker, worker_t *parent,
 
   const char *val = store_get(worker->params, "1");
   if (val == NULL) {
-    worker_log(worker, LOG_ERR, "No start defined");
+    logger_log(worker->logger, LOG_ERR, "No start defined");
     return APR_EINVAL;
   }
   start = apr_atoi64(val);
 
   val = store_get(worker->params, "2");
   if (val == NULL) {
-    worker_log(worker, LOG_ERR, "No end defined");
+    logger_log(worker->logger, LOG_ERR, "No end defined");
     return APR_EINVAL;
   }
   end = apr_atoi64(val);
 
   val = store_get(worker->params, "3");
   if (val == NULL) {
-    worker_log(worker, LOG_ERR, "No variable name specified");
+    logger_log(worker->logger, LOG_ERR, "No variable name specified");
     return APR_EINVAL;
   }
   

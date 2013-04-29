@@ -70,7 +70,7 @@ apr_status_t block_DATE_GET_TIME(worker_t *worker, worker_t *parent, apr_pool_t 
   const char *var = store_get(worker->params, "1");
 
   if (!var) {
-    worker_log_error(worker, "Need a variable name to store time");
+    logger_log_error(worker->logger, "Need a variable name to store time");
   }
   
   worker_var_set(parent, var, apr_off_t_toa(worker->pbody, apr_time_as_msec(apr_time_now())));
@@ -104,15 +104,15 @@ apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent, apr_pool_t *p
   type = store_get(worker->params, "4");
 
   if (!time) {
-    worker_log(worker, LOG_ERR, "Time not specified");
+    logger_log(worker->logger, LOG_ERR, "Time not specified");
     return APR_EGENERAL;
   }
   if (!fmt) {
-    worker_log(worker, LOG_ERR, "Format not specified");
+    logger_log(worker->logger, LOG_ERR, "Format not specified");
     return APR_EGENERAL;
   }
   if (!var) {
-    worker_log(worker, LOG_ERR, "Variable not specified");
+    logger_log(worker->logger, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -200,7 +200,7 @@ apr_status_t block_DATE_TIMER(worker_t *worker, worker_t *parent,
     wconf->start_time = apr_time_now();
   }
   else {
-    worker_log_error(worker, "Timer command %s not implemented", cmd);
+    logger_log_error(worker->logger, "Timer command %s not implemented", cmd);
   }
   return APR_SUCCESS;
 }

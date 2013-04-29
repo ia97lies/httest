@@ -49,12 +49,12 @@ static int htmlInitParserCtxt(worker_t *worker,htmlParserCtxtPtr ctxt)
   memset(ctxt, 0, sizeof(htmlParserCtxt));
   ctxt->dict = xmlDictCreate();
   if (ctxt->dict == NULL) {
-     worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+     logger_log_error(worker->logger, "htmlInitParserCtxt: out of memory\n");
     return(-1);
   }
   sax = (htmlSAXHandler *) xmlMalloc(sizeof(htmlSAXHandler));
   if (sax == NULL) {
-    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    logger_log_error(worker->logger, "htmlInitParserCtxt: out of memory\n");
     return(-1);
   }
   else
@@ -62,7 +62,7 @@ static int htmlInitParserCtxt(worker_t *worker,htmlParserCtxtPtr ctxt)
 
   ctxt->inputTab = (htmlParserInputPtr *) xmlMalloc(5 * sizeof(htmlParserInputPtr));
   if (ctxt->inputTab == NULL) {
-    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    logger_log_error(worker->logger, "htmlInitParserCtxt: out of memory\n");
     ctxt->inputNr = 0;
     ctxt->inputMax = 0;
     ctxt->input = NULL;
@@ -78,7 +78,7 @@ static int htmlInitParserCtxt(worker_t *worker,htmlParserCtxtPtr ctxt)
 
   ctxt->nodeTab = (htmlNodePtr *) xmlMalloc(10 * sizeof(htmlNodePtr));
   if (ctxt->nodeTab == NULL) {
-    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    logger_log_error(worker->logger, "htmlInitParserCtxt: out of memory\n");
     ctxt->nodeNr = 0;
     ctxt->nodeMax = 0;
     ctxt->node = NULL;
@@ -93,7 +93,7 @@ static int htmlInitParserCtxt(worker_t *worker,htmlParserCtxtPtr ctxt)
 
   ctxt->nameTab = (const xmlChar **) xmlMalloc(10 * sizeof(xmlChar *));
   if (ctxt->nameTab == NULL) {
-    worker_log_error(worker, "htmlInitParserCtxt: out of memory\n");
+    logger_log_error(worker->logger, "htmlInitParserCtxt: out of memory\n");
     ctxt->nameNr = 0;
     ctxt->nameMax = 10;
     ctxt->name = NULL;
@@ -137,7 +137,7 @@ static htmlParserCtxtPtr htmlNewParserCtxt(worker_t *worker)
 {
   xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) xmlMalloc(sizeof(xmlParserCtxt));
   if (ctxt == NULL) {
-    worker_log_error(worker, "NewParserCtxt: out of memory\n");
+    logger_log_error(worker->logger, "NewParserCtxt: out of memory\n");
     return(NULL);
   }
   memset(ctxt, 0, sizeof(xmlParserCtxt));
@@ -203,7 +203,7 @@ static char *html_node2str(worker_t *worker, xmlXPathObjectPtr obj,
         xmlBufferFree(buf);
       } 
       else {
-        worker_log_error(worker, "Empty node set");
+        logger_log_error(worker->logger, "Empty node set");
         result = NULL;
       }
       break;
@@ -217,7 +217,7 @@ static char *html_node2str(worker_t *worker, xmlXPathObjectPtr obj,
       result = apr_psprintf(pool, "%s", obj->stringval);
       break;
     default:
-      worker_log_error(worker, "Unknown node type");
+      logger_log_error(worker->logger, "Unknown node type");
       break;
   }
 
@@ -242,14 +242,14 @@ static apr_status_t block_HTML_PARSE(worker_t *worker, worker_t *parent, apr_poo
 
   param = store_get(worker->params, "1");
   if (!param) {
-    worker_log_error(worker, "Need a html document as parameter");
+    logger_log_error(worker->logger, "Need a html document as parameter");
     return APR_EINVAL;
   }
   html = worker_get_value_from_param(worker, param, ptmp);
 
   wconf->doc = htmlCtxtReadDoc(wconf->parser_ctx, (xmlChar *)html, NULL, NULL, 0);
   if (!wconf->doc) {
-    worker_log_error(worker, "Could not parse HTML");
+    logger_log_error(worker->logger, "Could not parse HTML");
     return APR_EINVAL;
   }
   wconf->xpath = xmlXPathNewContext(wconf->doc);
@@ -274,23 +274,23 @@ static apr_status_t block_HTML_XPATH(worker_t *worker, worker_t *parent, apr_poo
 
   param = store_get(worker->params, "1");
   if (!param) {
-    worker_log_error(worker, "Need a xpath query");
+    logger_log_error(worker->logger, "Need a xpath query");
     return APR_EINVAL;
   }
 
   var = store_get(worker->params, "2");
   if (!var) {
-    worker_log_error(worker, "Need a variable to store the result");
+    logger_log_error(worker->logger, "Need a variable to store the result");
     return APR_EINVAL;
   }
 
   if (!wconf->xpath) {
-    worker_log_error(worker, "Do _HTML:PARSE first");
+    logger_log_error(worker->logger, "Do _HTML:PARSE first");
     return APR_EGENERAL;
   }
   
   if ((obj = xmlXPathEval((xmlChar *) param, wconf->xpath)) == NULL) {
-    worker_log_error(worker, "Xpath error");
+    logger_log_error(worker->logger, "Xpath error");
     return APR_EGENERAL;
   }
   val = html_node2str(worker, obj, ptmp);

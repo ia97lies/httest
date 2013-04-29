@@ -195,12 +195,12 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   const char *portname = store_get(worker->params, "2");
 
   if (!hostname) {
-    worker_log_error(worker, "No hostname specified");
+    logger_log_error(worker->logger, "No hostname specified");
     return APR_EINVAL;
   }
 
   if (!portname) {
-    worker_log_error(worker, "No port specified");
+    logger_log_error(worker->logger, "No port specified");
     return APR_EINVAL;
   }
 
@@ -222,7 +222,7 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
 				  SOCK_DGRAM, APR_PROTO_UDP,
 				  worker->pbody)) != APR_SUCCESS) {
     worker->socket->socket = NULL;
-    worker_log_error(worker, "Could not create socket");
+    logger_log_error(worker->logger, "Could not create socket");
     return status;
   }
 
@@ -231,7 +231,7 @@ static apr_status_t block_UDP_CONNECT(worker_t *worker, worker_t *parent,
   if ((status = apr_sockaddr_info_get(&config->sendto, hostname, AF_UNSPEC, port,
                                       APR_IPV4_ADDR_OK, worker->pbody))
      != APR_SUCCESS) {
-    worker_log_error(worker, "Could not resolve host \"%s\" and port \"%d\"", 
+    logger_log_error(worker->logger, "Could not resolve host \"%s\" and port \"%d\"", 
 	             hostname, port);
     return status;
   }
@@ -267,7 +267,7 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   const char *portname = store_get(worker->params, "1");
 
   if (!portname) {
-    worker_log_error(worker, "No port specified");
+    logger_log_error(worker->logger, "No port specified");
     return APR_EINVAL;
   }
 
@@ -280,7 +280,7 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
 				  SOCK_DGRAM, APR_PROTO_UDP,
 				  worker->pbody)) != APR_SUCCESS) {
     worker->socket->socket = NULL;
-    worker_log_error(worker, "Could not create socket");
+    logger_log_error(worker->logger, "Could not create socket");
     return status;
   }
 
@@ -289,13 +289,13 @@ static apr_status_t block_UDP_BIND(worker_t *worker, worker_t *parent,
   if ((status = apr_sockaddr_info_get(&config->recvfrom, "0.0.0.0", AF_UNSPEC, port,
                                       APR_IPV4_ADDR_OK, worker->pbody))
      != APR_SUCCESS) {
-    worker_log_error(worker, "Could not resolve host port \"%d\"", port);
+    logger_log_error(worker->logger, "Could not resolve host port \"%d\"", port);
     return status;
   }
 
   /** bind to port */
   if ((status = apr_socket_bind(worker->socket->socket, config->recvfrom)) != APR_SUCCESS) {
-    worker_log_error(worker, "Could not bind to host port \"%d\"", port);
+    logger_log_error(worker->logger, "Could not bind to host port \"%d\"", port);
     return status;
   }
 

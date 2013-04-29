@@ -129,7 +129,7 @@ apr_status_t module_check_global(worker_t *worker) {
     return APR_SUCCESS;
   }
   else {
-    worker_log_error(worker, "This command can be used only in global context");
+    logger_log_error(worker->logger, "This command can be used only in global context");
     return APR_EINVAL;
   }
 }

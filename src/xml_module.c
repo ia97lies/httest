@@ -92,7 +92,7 @@ static char *xml_node2str(worker_t *worker, xmlXPathObjectPtr obj,
         xmlBufferFree(buf);
       } 
       else {
-        worker_log_error(worker, "Empty node set");
+        logger_log_error(worker->logger, "Empty node set");
         result = NULL;
       }
       break;
@@ -106,7 +106,7 @@ static char *xml_node2str(worker_t *worker, xmlXPathObjectPtr obj,
       result = apr_psprintf(pool, "%s", obj->stringval);
       break;
     default:
-      worker_log_error(worker, "Unknown node type");
+      logger_log_error(worker->logger, "Unknown node type");
       break;
   }
 
@@ -131,14 +131,14 @@ static apr_status_t block_XML_PARSE(worker_t *worker, worker_t *parent, apr_pool
 
   param = store_get(worker->params, "1");
   if (!param) {
-    worker_log_error(worker, "Need a xml document as parameter");
+    logger_log_error(worker->logger, "Need a xml document as parameter");
     return APR_EINVAL;
   }
   xml = worker_get_value_from_param(worker, param, ptmp);
 
   wconf->doc = xmlCtxtReadDoc(wconf->parser_ctx, (xmlChar *)xml, NULL, NULL, 0);
   if (!wconf->doc) {
-    worker_log_error(worker, "Could not parse XML");
+    logger_log_error(worker->logger, "Could not parse XML");
     return APR_EINVAL;
   }
   wconf->xpath = xmlXPathNewContext(wconf->doc);
@@ -163,23 +163,23 @@ static apr_status_t block_XML_XPATH(worker_t *worker, worker_t *parent, apr_pool
 
   param = store_get(worker->params, "1");
   if (!param) {
-    worker_log_error(worker, "Need a xpath query");
+    logger_log_error(worker->logger, "Need a xpath query");
     return APR_EINVAL;
   }
 
   var = store_get(worker->params, "2");
   if (!var) {
-    worker_log_error(worker, "Need a variable to store the result");
+    logger_log_error(worker->logger, "Need a variable to store the result");
     return APR_EINVAL;
   }
 
   if (!wconf->xpath) {
-    worker_log_error(worker, "Do _XML:PARSE first");
+    logger_log_error(worker->logger, "Do _XML:PARSE first");
     return APR_EGENERAL;
   }
   
   if ((obj = xmlXPathEvalExpression((xmlChar *) param, wconf->xpath)) == NULL) {
-    worker_log_error(worker, "Xpath error");
+    logger_log_error(worker->logger, "Xpath error");
     return APR_EGENERAL;
   }
   val = xml_node2str(worker, obj, ptmp);

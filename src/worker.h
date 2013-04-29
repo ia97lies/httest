@@ -26,6 +26,7 @@
 #define HTTEST_WORKER_H
 
 #include <apr_hooks.h>
+#include "logger.h" 
 #include "transport.h" 
 #include "store.h" 
 
@@ -141,14 +142,7 @@ struct worker_s {
   apr_port_t listener_port;
   char *listener_addr;
   sockreader_t *sockreader;
-#define LOG_NONE 0
-#define LOG_ERR 1
-#define LOG_WARN 2
-#define LOG_INFO 3
-#define LOG_CMD 4
-#define LOG_ALL_CMD 5
-#define LOG_DEBUG 6
-  int log_mode;
+  logger_t *logger;
 #if APR_HAS_FORK
   apr_hash_t *procs;
 #endif
@@ -159,23 +153,20 @@ struct global_s {
   apr_hash_t *config;
   int flags;
   const char *path;
-  apr_file_t *out;
-  apr_file_t *err;
   const char *filename;
   store_t *vars;
   store_t *shared;
   apr_hash_t *modules;
   apr_hash_t *blocks;
   apr_table_t *files;
-  int log_mode;
   apr_table_t *threads;
   apr_table_t *clients;
   apr_table_t *servers;
   apr_table_t *daemons;
+  logger_t *logger;
   int CLTs; 
   int SRVs; 
   apr_thread_mutex_t *sync_mutex;
-  apr_thread_mutex_t *log_mutex;
   apr_thread_mutex_t *mutex;
   int line_nr;
 #define GLOBAL_STATE_NONE   0
@@ -194,7 +185,6 @@ struct global_s {
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
-  int log_thread_no;
 };
 
 typedef struct command_s command_t;
@@ -246,16 +236,16 @@ typedef struct line_s {
     ++data; \
   } \
   if(!*data) { \
-    worker_log(worker, LOG_ERR, err_text); \
+    logger_log(worker->logger, LOG_ERR, err_text); \
     return APR_EGENERAL; \
   } \
   copy = apr_pstrdup(ptmp, data); \
   copy = worker_replace_vars(worker, copy, NULL, ptmp); \
   if (self) { \
-    worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
+    logger_log(worker->logger, LOG_CMD, "%s %s", self->name, copy); \
   } \
   else { \
-    worker_log(worker, LOG_CMD, "%s", copy); \
+    logger_log(worker->logger, LOG_CMD, "%s", copy); \
   } \
 }
 
@@ -271,10 +261,10 @@ typedef struct line_s {
   copy = apr_pstrdup(ptmp, data); \
   copy = worker_replace_vars(worker, copy, NULL, ptmp); \
   if (self) { \
-    worker_log(worker, LOG_CMD, "%s %s", self->name, copy); \
+    logger_log(worker->logger, LOG_CMD, "%s %s", self->name, copy); \
   } \
   else { \
-    worker_log(worker, LOG_CMD, "%s", copy); \
+    logger_log(worker->logger, LOG_CMD, "%s", copy); \
   } \
 }
 
@@ -284,7 +274,7 @@ typedef struct line_s {
     fflush(stderr); \
   } \
   if (self) { \
-    worker_log(worker, LOG_CMD, "%s", self->name); \
+    logger_log(worker->logger, LOG_CMD, "%s", self->name); \
   }
 
 /** register */
@@ -423,10 +413,6 @@ apr_status_t command_VERSION(command_t *self, worker_t *worker, char *data, apr_
 apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 
 /** helper */
-void worker_log(worker_t * self, int log_mode, char *fmt, ...); 
-void worker_log_error(worker_t * self, char *fmt, ...); 
-void worker_log_buf(worker_t * self, int log_mode, const char *buf, char *prefix, 
-                    apr_size_t len); 
 void worker_var_set(worker_t * worker, const char *var, const char *val); 
 const char * worker_var_get(worker_t * worker, const char *var); 
 void worker_test_reset(worker_t * worker); 

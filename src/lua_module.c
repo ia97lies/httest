@@ -439,13 +439,13 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
     if (msg == NULL) {
       msg = "(error object is not a string)";
     }
-    worker_log_error(worker, "Lua error: %s", msg);
+    logger_log_error(worker->logger, "Lua error: %s", msg);
     lua_pop(L, 1);
     return APR_EGENERAL;
   }
   e = (apr_table_entry_t *) apr_table_elts(wconf->retvars)->elts;
   for (i = 0; i < apr_table_elts(wconf->retvars)->nelts; i++) {
-    worker_log(worker, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
+    logger_log(worker->logger, LOG_DEBUG, "param: %s; val: %s", e[i].key, e[i].val);
     if (lua_isstring(L, i + 1)) {
       store_set(worker->vars, store_get(worker->retvars, e[i].key), lua_tostring(L, i + 1));
     }

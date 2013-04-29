@@ -168,7 +168,7 @@ static apr_status_t worker_ssl_handshake(worker_t * worker) {
   
   if ((status = ssl_handshake(sconfig->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
-    worker_log(worker, LOG_ERR, "%s", error);
+    logger_log(worker->logger, LOG_ERR, "%s", error);
   }
   
   if (worker->flags & FLAGS_SSL_LEGACY) {
@@ -203,25 +203,25 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
   ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!(in = BIO_new_file(infile, "rb"))) {
-    worker_log_error(worker, "Could not open p12 \"%s\"", infile);
+    logger_log_error(worker->logger, "Could not open p12 \"%s\"", infile);
     return APR_EINVAL;
   }
   p12 = d2i_PKCS12_bio (in, NULL);
   if (PKCS12_parse(p12, pass, &pkey, &cert, &ca) != 0) {
-    worker_log(worker, LOG_ERR, "Could not load p12 \"%s\"", infile);
+    logger_log(worker->logger, LOG_ERR, "Could not load p12 \"%s\"", infile);
     return APR_EINVAL;
   }
 
-  worker_log(worker, LOG_DEBUG, "p12 cert: %p; key: %p; ca: %p\n", cert, pkey, ca);
+  logger_log(worker->logger, LOG_DEBUG, "p12 cert: %p; key: %p; ca: %p\n", cert, pkey, ca);
 
   if (pkey && SSL_CTX_use_PrivateKey(config->ssl_ctx, pkey) <= 0 && check) {
-    worker_log(worker, LOG_ERR, "Could not load private key of \"%s\"",
+    logger_log(worker->logger, LOG_ERR, "Could not load private key of \"%s\"",
 	       infile);
     return APR_EINVAL;
   }
 
   if (cert && SSL_CTX_use_certificate(config->ssl_ctx, cert) <= 0 && check) {
-    worker_log(worker, LOG_ERR, "Could not load certificate of \"%s\"",
+    logger_log(worker->logger, LOG_ERR, "Could not load certificate of \"%s\"",
 	       infile);
     return APR_EINVAL;
   }
@@ -301,7 +301,7 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
                        client_server ? "server": "client",
                        extname, type);
   apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
-  worker_log(worker, LOG_INFO, "%s", entry);
+  logger_log(worker->logger, LOG_INFO, "%s", entry);
 
 }
 
@@ -598,7 +598,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
   entry = apr_psprintf(config->msg_pool, "%s%s: %s%s%s", str_write_p, 
       str_version, str_content_type, str_details1, str_details2);
   apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
-  worker_log(worker, LOG_INFO, "%s", entry);
+  logger_log(worker->logger, LOG_INFO, "%s", entry);
 }
 
 /**
@@ -649,13 +649,13 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   wconf->keyfile = keyfile ? apr_pstrdup(wconf->cert_pool, keyfile) : NULL;
   wconf->cafile = ca ? apr_pstrdup(wconf->cert_pool, ca) : NULL;
 
-  worker_log(worker, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
+  logger_log(worker->logger, LOG_DEBUG, "cert: %s; key: %s; ca: %s\n", 
              certfile?certfile:"(null)",
              keyfile?keyfile:"(null)",
              ca?ca:"(null)");
   if (!wconf->ssl_ctx) {
     if (!(wconf->ssl_ctx = SSL_CTX_new(wconf->meth))) {
-      worker_log(worker, LOG_ERR, "Could not initialize SSL Context.");
+      logger_log(worker->logger, LOG_ERR, "Could not initialize SSL Context.");
       return APR_EINVAL;
     }
   }
@@ -664,42 +664,42 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   if (certfile) {
     len = strlen(certfile);
     if (len > 4) {
-      worker_log(worker, LOG_DEBUG, "certifcate suffix \"%s\"", &certfile[len-4]);
+      logger_log(worker->logger, LOG_DEBUG, "certifcate suffix \"%s\"", &certfile[len-4]);
     }  
   }
   if (len > 4 && strcmp(&certfile[len - 4], ".p12") == 0) {
     apr_status_t status;
-    worker_log(worker, LOG_DEBUG, "pkcs12 certifcate");
+    logger_log(worker->logger, LOG_DEBUG, "pkcs12 certifcate");
     if ((status = worker_ssl_ctx_p12(worker, certfile, keyfile, check))
 	!= APR_SUCCESS) {
       return status;
     }
   }
   else {
-    worker_log(worker, LOG_DEBUG, "pem formated cert and key");
+    logger_log(worker->logger, LOG_DEBUG, "pem formated cert and key");
     if (certfile && SSL_CTX_use_certificate_file(wconf->ssl_ctx, certfile, 
 						 SSL_FILETYPE_PEM) <= 0 && 
 	check) { 
-      worker_log(worker, LOG_ERR, "Could not load certifacte \"%s\"",
+      logger_log(worker->logger, LOG_ERR, "Could not load certifacte \"%s\"",
 		 certfile);
       return APR_EINVAL;
     }
     if (keyfile && SSL_CTX_use_PrivateKey_file(wconf->ssl_ctx, keyfile, 
 					       SSL_FILETYPE_PEM) <= 0 && 
 	check) {
-      worker_log(worker, LOG_ERR, "Could not load private key \"%s\"",
+      logger_log(worker->logger, LOG_ERR, "Could not load private key \"%s\"",
 		 keyfile);
       return APR_EINVAL;
     }
     if (ca && !SSL_CTX_load_verify_locations(wconf->ssl_ctx, ca,
 					     NULL) && check) {
-      worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", ca);
+      logger_log(worker->logger, LOG_ERR, "Could not load CA file \"%s\"", ca);
       return APR_EINVAL;
     }
 
     if (certfile && keyfile&& check && 
 	!SSL_CTX_check_private_key(wconf->ssl_ctx)) {
-      worker_log(worker, LOG_ERR, "Private key does not match the certificate public key");
+      logger_log(worker->logger, LOG_ERR, "Private key does not match the certificate public key");
       return APR_EINVAL;
     }
   }
@@ -820,7 +820,7 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
   config->msg_worker->config = worker->config;
 
   if ((sconfig->ssl = SSL_new(config->ssl_ctx)) == NULL) {
-    worker_log(worker, LOG_ERR, "SSL_new failed.");
+    logger_log(worker->logger, LOG_ERR, "SSL_new failed.");
     return APR_ECONNREFUSED;
   }
   SSL_set_ssl_method(sconfig->ssl, config->meth);
@@ -882,7 +882,7 @@ static apr_status_t worker_ssl_accept(worker_t * worker) {
 
   if ((status = ssl_accept(sconfig->ssl, &error, worker->pbody)) 
       != APR_SUCCESS) {
-    worker_log(worker, LOG_ERR, "%s", error);
+    logger_log(worker->logger, LOG_ERR, "%s", error);
   }
   return status;
 }
@@ -1041,13 +1041,13 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
 
   sslstr = store_get(worker->params, "1");
   if (!sslstr) {
-    worker_log_error(worker, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
+    logger_log_error(worker->logger, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
     return APR_EGENERAL;
   }
 
   is_ssl = worker_set_client_method(worker, sslstr);
   if (!is_ssl) {
-    worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
+    logger_log(worker->logger, LOG_ERR, "%s is not supported", sslstr);
     return APR_ENOTIMPL;
   }
   worker->socket->is_ssl = is_ssl;
@@ -1098,7 +1098,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
     }
   }
   else {
-    worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+    logger_log_error(worker->logger, "Can not do a SSL connect, cause no TCP connection available");
     return APR_EGENERAL;
   }
   return APR_SUCCESS;
@@ -1119,13 +1119,13 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
 
   sslstr = store_get(worker->params, "1");
   if (!sslstr) {
-    worker_log_error(worker, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
+    logger_log_error(worker->logger, "Missing type, must be one of SSL|SSL2|SSL3|TLS1");
     return APR_EGENERAL;
   }
 
   is_ssl = worker_set_server_method(worker, sslstr);
   if (!is_ssl) {
-    worker_log(worker, LOG_ERR, "%s is not supported", sslstr);
+    logger_log(worker->logger, LOG_ERR, "%s is not supported", sslstr);
     return APR_ENOTIMPL;
   }
   worker->socket->is_ssl = is_ssl;
@@ -1167,7 +1167,7 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
     }
   }
   else {
-    worker_log_error(worker, "Can not do a SSL connect, cause no TCP connection available");
+    logger_log_error(worker->logger, "Can not do a SSL connect, cause no TCP connection available");
     return APR_EGENERAL;
   }
   return APR_SUCCESS;
@@ -1199,12 +1199,12 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, a
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
-    worker_log_error(worker, "Missing varibale name to store session in");
+    logger_log_error(worker->logger, "Missing varibale name to store session in");
     return APR_EGENERAL;
   }
 
   if (!worker->socket || !worker->socket->socket || !worker->socket->is_ssl) {
-    worker_log_error(worker, "No established ssl socket");
+    logger_log_error(worker->logger, "No established ssl socket");
     return APR_ENOSOCKET;
   }
 
@@ -1244,12 +1244,12 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, a
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
-    worker_log_error(worker, "Missing session to set on SSL");
+    logger_log_error(worker->logger, "Missing session to set on SSL");
     return APR_EGENERAL;
   }
 
   if (!worker->socket) {
-    worker_log_error(worker, "No established ssl socket");
+    logger_log_error(worker->logger, "No established ssl socket");
     return APR_ENOSOCKET;
   }
 
@@ -1266,7 +1266,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, a
       sconfig->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
     }
     else {
-      worker_log_error(worker, "Variable \"%s\" does not exist", copy);
+      logger_log_error(worker->logger, "Variable \"%s\" does not exist", copy);
       return APR_ENOENT;
     }
   }
@@ -1289,12 +1289,12 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
   if (!copy) {
-    worker_log_error(worker, "Missing varibale name to store session in");
+    logger_log_error(worker->logger, "Missing varibale name to store session in");
     return APR_EGENERAL;
   }
 
   if (!worker->socket || !sconfig->ssl) {
-    worker_log_error(worker, "Need an ssl connection");
+    logger_log_error(worker->logger, "Need an ssl connection");
     return APR_ENOSOCKET;
   }
 
@@ -1335,7 +1335,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
   config->cert = NULL;
 
   if (!worker->socket->is_ssl || !sconfig->ssl) {
-    worker_log(worker, LOG_ERR, 
+    logger_log(worker->logger, LOG_ERR, 
 	       "No ssl connection established can not verify peer");
     return APR_ENOSOCKET;
   }
@@ -1343,7 +1343,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
   if (worker->flags & FLAGS_SERVER) {
     /* if we are server request the peer cert */
     if (copy && strcasecmp(copy, "verify") == 0) {
-      if (worker->log_mode >= LOG_DEBUG) {
+      if (logger_get_mode(worker->logger) >= LOG_DEBUG) {
         SSL_set_verify(sconfig->ssl,
                        SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                        debug_verify_callback);
@@ -1372,7 +1372,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
     }
 
     if((rc = SSL_renegotiate(sconfig->ssl) <= 0)) {
-      worker_log(worker, LOG_ERR, "SSL renegotiation a error: %d", rc);
+      logger_log(worker->logger, LOG_ERR, "SSL renegotiation a error: %d", rc);
       return APR_EACCES;
     }
     worker_ssl_handshake(worker);
@@ -1382,7 +1382,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
     config->cert = SSL_get_peer_certificate(sconfig->ssl);
     if (copy && strcasecmp(copy, "verify") == 0) {
       if (!config->cert) {
-	worker_log(worker, LOG_ERR, "No peer certificate");
+	logger_log(worker->logger, LOG_ERR, "No peer certificate");
 	return APR_EACCES;
       }
     }
@@ -1390,13 +1390,13 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
   else {
     config->cert = SSL_get_peer_certificate(sconfig->ssl);
     if (!config->cert) {
-      worker_log(worker, LOG_ERR, "No peer certificate");
+      logger_log(worker->logger, LOG_ERR, "No peer certificate");
       return APR_EACCES;
     }
 
     if (copy && strcasecmp(copy, "verify") == 0) {
       if((rc = SSL_get_verify_result(sconfig->ssl)) != X509_V_OK) {
-	worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
+	logger_log(worker->logger, LOG_ERR, "SSL peer verify failed: %s(%d)",
 	X509_verify_cert_error_string(rc), rc);
 	return APR_EACCES;
       }
@@ -1422,24 +1422,24 @@ static apr_status_t block_SSL_GET_CERT_VALUE(worker_t * worker, worker_t *parent
   ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!cmd) {
-    worker_log_error(worker, "SSL variable name is missing");
+    logger_log_error(worker->logger, "SSL variable name is missing");
     return APR_EGENERAL;
   }
 
   if (!var) {
-    worker_log_error(worker, "variable name to store result is missing");
+    logger_log_error(worker->logger, "variable name to store result is missing");
     return APR_EGENERAL;
   }
 
   if (!config || !config->cert) {
-    worker_log_error(worker, "no peer cert");
+    logger_log_error(worker->logger, "no peer cert");
     return APR_EINVAL;
   }
   
   val = ssl_var_lookup_ssl_cert(ptmp, config->cert, cmd);
 
   if (!val) {
-    worker_log_error(worker, "SSL value for \"%s\" not found", cmd);
+    logger_log_error(worker->logger, "SSL value for \"%s\" not found", cmd);
     return APR_ENOENT;
   }
 
@@ -1461,8 +1461,8 @@ static apr_status_t block_SSL_SET_ENGINE(worker_t * worker, worker_t *parent, ap
   const char *copy = store_get(worker->params, "1");
   BIO *bio_err = BIO_new_fp(stderr,BIO_NOCLOSE);
 
-  if (!setup_engine(bio_err, copy, worker->log_mode == LOG_DEBUG ? 1 : 0)) {
-    worker_log(worker, LOG_ERR, "Could not initialize engine \"%s\".", copy);
+  if (!setup_engine(bio_err, copy, logger_get_mode(worker->logger) == LOG_DEBUG ? 1 : 0)) {
+    logger_log(worker->logger, LOG_ERR, "Could not initialize engine \"%s\".", copy);
     return APR_EINVAL;
   }
 #endif
@@ -1531,7 +1531,7 @@ static apr_status_t block_SSL_LOAD_CERT(worker_t * worker, worker_t *parent, apr
   config->cert = PEM_read_bio_X509(mem,NULL,NULL,NULL);
 
   if (!config->cert) {
-    worker_log_error(worker, "Not a valid cert (PEM)");
+    logger_log_error(worker->logger, "Not a valid cert (PEM)");
     return APR_EINVAL;
   }
   return APR_SUCCESS;
@@ -1560,7 +1560,7 @@ static apr_status_t block_SSL_LOAD_KEY(worker_t * worker, worker_t *parent, apr_
   config->pkey = PEM_read_bio_PrivateKey(mem,NULL,NULL,NULL);
 
   if (!config->pkey) {
-    worker_log_error(worker, "Not a valid cert (PEM)");
+    logger_log_error(worker->logger, "Not a valid cert (PEM)");
     return APR_EINVAL;
   }
   return APR_SUCCESS;
@@ -1578,7 +1578,7 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
   ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!config->ssl_ctx) {
-    worker_log_error(worker, "Can not set cert, ssl not enabled in %s",
+    logger_log_error(worker->logger, "Can not set cert, ssl not enabled in %s",
 	             (worker->flags & FLAGS_SERVER) ? "SERVER" : "CLIENT");
     return APR_EINVAL;
   }
@@ -1598,12 +1598,12 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
 
   /* else set cert */
   if (!config || !config->cert) {
-    worker_log_error(worker, "No cert to use, get a cert with _SSL:LOAD_CERT");
+    logger_log_error(worker->logger, "No cert to use, get a cert with _SSL:LOAD_CERT");
     return APR_EINVAL;
   }
 
   if (SSL_CTX_use_certificate(config->ssl_ctx, config->cert) <=0) {
-    worker_log_error(worker, "Can not use this cert");
+    logger_log_error(worker->logger, "Can not use this cert");
     return APR_EINVAL;
   }
   return APR_SUCCESS;
@@ -1716,7 +1716,7 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
   ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!worker->socket) {
-    worker_log_error(worker, "No socket available");
+    logger_log_error(worker->logger, "No socket available");
     return APR_ENOSOCKET;
   }
 

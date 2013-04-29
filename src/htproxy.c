@@ -85,7 +85,7 @@ typedef struct self_s {
 #define SELF_FLAGS_NONE 0
 #define SELF_FLAGS_SKIP_COOKIE_FIRST_TIME 1
 #define SELF_FLAGS_GOT_SET_COOKIE 2
-  int log_mode;
+  logger_t *logger;
 } self_t;
 
 typedef struct request_s {
@@ -280,7 +280,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
          line[0] != 0) {
     /** get request line */
     if (i == 0) {
-      worker_log(worker, LOG_INFO, "Requested url: %s", line);
+      logger_log(worker->logger, LOG_INFO, "Requested url: %s", line);
       r->method = apr_strtok(line, " ", &r->url);
       if (strcasecmp(r->method, "CONNECT") != 0) {
 	r->protocol = apr_strtok(NULL, "://", &r->url);
@@ -311,7 +311,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
 					  r->url, r->version);
       }
       else {
-	worker_log(worker, LOG_ERR, "SSL tunneling is not supported");
+	logger_log(worker->logger, LOG_ERR, "SSL tunneling is not supported");
         call_command(worker, command_DATA, "_HTTP/1.1 400 Bad Request", "");
         call_command(worker, command_DATA, "__", "");
         call_command(worker, command_CLOSE, "_CLOSE", "");
@@ -319,7 +319,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
     }
     else {
       /* headers */
-      worker_log(worker, LOG_INFO, "<%s", line);
+      logger_log(worker->logger, LOG_INFO, "<%s", line);
       key = apr_strtok(line, ":", &last);
       val = last;
       if (val) {
@@ -647,7 +647,7 @@ static apr_status_t do_body(self_t *self, worker_t *worker, apr_pool_t *p,
       }
     }
     else {
-      worker_log(worker, LOG_INFO, "\n[Body len: %d]", len);
+      logger_log(worker->logger, LOG_INFO, "\n[Body len: %d]", len);
       if ((status = call_command(worker, command_FLUSH, "_FLUSH", "")) != APR_SUCCESS) {
 	return status;
       }
@@ -807,7 +807,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
   worker_t *client = self->client;
   
   memset(&global, 0, sizeof(global));
-  global.log_mode = self->log_mode;
+  global.logger = self->logger;
   global.socktmo = 1000 * 300000;
   global.modules = apr_hash_make(self->pool);
   global.blocks = apr_hash_make(self->pool);
@@ -845,7 +845,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
     
     /* CS BEGIN */
     apr_thread_mutex_lock(self->mutex);
-    worker_log(client, LOG_DEBUG, "Enter critical section");
+    logger_log(client->logger, LOG_DEBUG, "Enter critical section");
 
     if ((status = do_connect(self, server, ptmp, request.is_ssl, request.host, 
 	                     request.port, write)) != APR_SUCCESS) {
@@ -892,7 +892,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
 
     apr_thread_mutex_unlock(self->mutex);
     /* CS END */
-    worker_log(client, LOG_DEBUG, "Leave critical section");
+    logger_log(client->logger, LOG_DEBUG, "Leave critical section");
 
     if ((status = do_body(self, client, ptmp, response.headers, response.body,
 	                  response.len, 0)) != APR_SUCCESS) { goto error;
@@ -1162,7 +1162,7 @@ int proxy(self_t *self) {
 
   memset(&global, 0, sizeof(global));
   global.pool = self->pool;
-  global.log_mode = self->log_mode;
+  global.logger = self->logger;
   global.socktmo = 1000 * 300000;
   global.modules = apr_hash_make(self->pool);
   global.blocks = apr_hash_make(self->pool);
@@ -1259,6 +1259,8 @@ int main(int argc, const char *const argv[]) {
   const char *end_file = NULL;
   const char *cookie_pre = "COOKIE_";
   int flags = SELF_FLAGS_NONE;
+  apr_file_t *out;
+  apr_file_t *err;
 
   srand(apr_time_now()); 
   
@@ -1270,6 +1272,9 @@ int main(int argc, const char *const argv[]) {
   apr_signal_block(SIGPIPE);
 #endif
   
+  apr_file_open_flags_stderr(&err, APR_BUFFERED|APR_XTHREAD, pool);
+  apr_file_open_flags_stdout(&out, APR_BUFFERED|APR_XTHREAD, pool);
+
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);
   while ((status = apr_getopt_long(opt, options, &c, &optarg)) 
@@ -1410,7 +1415,7 @@ int main(int argc, const char *const argv[]) {
   /* overwrites config */
   self->pool = pool;
   self->port = port;
-  self->log_mode = log_mode;
+  self->logger = logger_new(pool, log_mode, 0, out, err);
   self->timeout = apr_pstrdup(pool, tmo);
   self->host_var = host_var ? apr_pstrdup(pool, host_var) : NULL;
   self->port_var = port_var ? apr_pstrdup(pool, port_var) : NULL;

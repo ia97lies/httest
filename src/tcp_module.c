@@ -141,7 +141,7 @@ static apr_status_t tcp_hook_connect(worker_t *worker) {
 
   transport_register(worker->socket, transport);
 
-  worker_log(worker, LOG_DEBUG, "tcp connect socket: %p transport: %p", worker->socket, transport);
+  logger_log(worker->logger, LOG_DEBUG, "tcp connect socket: %p transport: %p", worker->socket, transport);
 
   return APR_SUCCESS;
 }
@@ -162,7 +162,7 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
 			    tcp_transport_write);
   transport_register(worker->socket, transport);
 
-  worker_log(worker, LOG_DEBUG, "tcp accept socket: %p transport: %p", worker->socket, transport);
+  logger_log(worker->logger, LOG_DEBUG, "tcp accept socket: %p transport: %p", worker->socket, transport);
 
   return APR_SUCCESS;
 }
@@ -182,7 +182,7 @@ apr_status_t tcp_listen(worker_t *worker,  int backlog) {
   apr_sockaddr_t *local_addr;
   
   if (worker->listener) {
-    worker_log_error(worker, "Server allready up");
+    logger_log_error(worker->logger, "Server allready up");
     return APR_EGENERAL;
   }
 
@@ -203,15 +203,15 @@ apr_status_t tcp_listen(worker_t *worker,  int backlog) {
     return status;
   }
   
-  worker_log(worker, LOG_DEBUG, "--- bind");
+  logger_log(worker->logger, LOG_DEBUG, "--- bind");
   if ((status = apr_socket_bind(worker->listener, local_addr)) != APR_SUCCESS) {
-    worker_log_error(worker, "Could not bind");
+    logger_log_error(worker->logger, "Could not bind");
     return status;
   }
 
-  worker_log(worker, LOG_DEBUG, "--- listen");
+  logger_log(worker->logger, LOG_DEBUG, "--- listen");
   if ((status = apr_socket_listen(worker->listener, backlog)) != APR_SUCCESS) {
-    worker_log_error(worker, "Could not listen");
+    logger_log_error(worker->logger, "Could not listen");
     return status;
   }
 
@@ -233,19 +233,19 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
   int family = APR_INET;
 
   if (!hostname) {
-    worker_log(worker, LOG_ERR, "no host name specified");
+    logger_log(worker->logger, LOG_ERR, "no host name specified");
     return APR_EGENERAL;
   }
   
   if (!portname) {
-    worker_log(worker, LOG_ERR, "no portname name specified");
+    logger_log(worker->logger, LOG_ERR, "no portname name specified");
     return APR_EGENERAL;
   }
 
   /* remove tag from port */
   portname = apr_strtok(portname, ":", &tag);
   if (!portname) {
-    worker_log(worker, LOG_ERR, "no port specified");
+    logger_log(worker->logger, LOG_ERR, "no port specified");
     return APR_EGENERAL;
   }
   port = apr_atoi64(portname);
@@ -301,9 +301,9 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
 apr_status_t tcp_accept(worker_t *worker) {
   apr_status_t status = APR_SUCCESS;
 
-  worker_log(worker, LOG_DEBUG, "--- accept");
+  logger_log(worker->logger, LOG_DEBUG, "--- accept");
   if (!worker->listener) {
-    worker_log_error(worker, "Server down");
+    logger_log_error(worker->logger, "Server down");
     return APR_EGENERAL;
   }
 
@@ -367,7 +367,7 @@ static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_po
   char *backlog = store_get_copy(worker->params, ptmp, "2");
 
   if (!address) {
-    worker_log_error(worker, "no address specified");
+    logger_log_error(worker->logger, "no address specified");
     status = APR_EINVAL;
   }
 
@@ -376,7 +376,7 @@ static apr_status_t block_TCP_LISTEN(worker_t * worker, worker_t *parent, apr_po
   if ((status = apr_parse_addr_port(&worker->listener_addr, &scope_id, 
 	                            &worker->listener_port, address, 
 				    worker->pbody)) != APR_SUCCESS) {
-    worker_log_error(worker, "Can not parse '%s'", address);
+    logger_log_error(worker->logger, "Can not parse '%s'", address);
     return status;
   }
 
@@ -406,7 +406,7 @@ static apr_status_t block_TCP_CONNECT(worker_t * worker, worker_t *parent, apr_p
   hostname = store_get_copy(worker->params, ptmp, "1");
   portname = store_get_copy(worker->params, ptmp, "2");
 
-  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
+  logger_log(worker->logger, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
   worker_get_socket(worker, hostname, portname);
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
