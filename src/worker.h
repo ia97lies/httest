@@ -109,6 +109,7 @@ struct worker_s {
   int cmd_from;
   int cmd_to;
   int which;
+  int group;
   char *name;
   char *additional;
   char *file_and_line;
@@ -167,6 +168,7 @@ struct global_s {
   int SRVs;
   int cur_threads; 
   int tot_threads; 
+  int groups;
   apr_thread_mutex_t *sync_mutex;
   apr_thread_mutex_t *mutex;
   int line_nr;

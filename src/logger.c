@@ -63,8 +63,8 @@
 struct logger_s {
   int mode;
   int id;
+  int group;
   const char *file_and_line;
-  const char *prefix;
   apr_thread_mutex_t *mutex;
   /* this has to be moved to appender */
   apr_file_t *out;
@@ -95,7 +95,6 @@ logger_t *logger_new(apr_pool_t *pool, int mode, int id,
   logger->id = id;
   logger->out = out;
   logger->err = err;
-  logger->prefix = "";
 
   return logger;
 }
@@ -119,6 +118,7 @@ logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
   }
 
   logger->mutex = origin->mutex;
+  logger->group = origin->group;
   return logger;
 }
 
@@ -129,6 +129,15 @@ logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
  */
 void logger_update(logger_t *logger, const char *file_and_line) {
   logger->file_and_line = file_and_line;
+}
+
+/**
+ * Set group id
+ * @param logger IN logger instance
+ * @param group IN group id
+ */
+void logger_set_group(logger_t *logger, int group) {
+  logger->group = group;
 }
 
 /**
@@ -150,14 +159,16 @@ void logger_log_va(logger_t * logger, int mode, char *fmt, va_list va) {
     if (logger->mutex) apr_thread_mutex_lock(logger->mutex);
     if (mode == LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
-      tmp = apr_psprintf(pool, "%s: error: %s", logger->file_and_line?logger->file_and_line:"<none>",
+      tmp = apr_psprintf(pool, "%s: error: %s", 
+                         logger->file_and_line?logger->file_and_line:"<none>",
                          tmp);
-      apr_file_printf(logger->err, "\n%d:%-88s", logger->id, tmp);
+      apr_file_printf(logger->err, "\n%d:%d:%-88s", logger->id, logger->group,
+                      tmp);
       apr_file_flush(logger->err);
     }
     else {
       tmp = apr_pvsprintf(pool, fmt, va);
-      apr_file_printf(logger->out, "\n%d:%s", logger->id, logger->prefix);
+      apr_file_printf(logger->out, "\n%d:%d:=:", logger->id, logger->group);
       apr_file_printf(logger->out, "%s", tmp);
       apr_file_flush(logger->out);
     }
@@ -206,12 +217,12 @@ void logger_log_error(logger_t * logger, char *fmt, ...) {
  *                LOG_DEBUG for a lot of infos
  *                LOG_INFO for much infos
  *                LOG_ERR for only very few infos
+ * @param dir IN <,>,+,=
  * @param buf IN buf to print (binary data allowed)
- * @param prefix IN prefix before buf
  * @param len IN buf len
  */
-void logger_log_buf(logger_t * logger, int mode, const char *buf,
-                    char *prefix, apr_size_t len) {
+void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
+                    apr_size_t len) {
 
   if (logger->mode >= mode) {
     apr_size_t i;
@@ -229,8 +240,8 @@ void logger_log_buf(logger_t * logger, int mode, const char *buf,
       for (; i < len && buf[i] != '\n'; i++); 
       ++i;
       if (logger->mutex) apr_thread_mutex_lock(logger->mutex);
-      apr_file_printf(logger->out, "\n%d:%s%s", logger->id, 
-                      logger->prefix, prefix?prefix:"");
+      apr_file_printf(logger->out, "\n%d:%d:%c:", logger->id, logger->group,
+                      dir);
 
       for (; j < i; j++) {
         if ((unsigned char)buf[j] == '\n') {

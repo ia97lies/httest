@@ -361,7 +361,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     logger_log_error(worker->logger, "Could not send payload");
     return status;
   }
-  logger_log_buf(worker->logger, LOG_INFO, payload, ">", len);
+  logger_log_buf(worker->logger, LOG_INFO, '>', payload, len);
 
 
   return APR_SUCCESS;

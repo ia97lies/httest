@@ -610,6 +610,30 @@ static int get_tot_threads(global_t *global) {
 }
 
 /**
+ * Increase groups of threads
+ * @note: Every CLIENT, SERVER is a group
+ * @param global IN instance
+ */
+static void inc_groups(global_t *global) {
+  lock(global->mutex);
+  ++global->groups;
+  unlock(global->mutex);
+}
+
+/**
+ * Get current group id
+ * @param global IN instance
+ * @return group id
+ */
+static int get_tot_groups(global_t *global) {
+  int ret;
+  lock(global->mutex);
+  ret = global->groups;
+  unlock(global->mutex);
+  return ret;
+}
+
+/**
  * Lookup a block name in current module
  * @param worker IN worker object
  * @param line IN line with a possible block name
@@ -1631,9 +1655,10 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
 
   worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
-  inc_threads(worker->global);
   worker->which = get_tot_threads(worker->global);
+  inc_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
+  logger_set_group(worker->logger, worker->group);
   
   logger_log(worker->logger, LOG_INFO, "%s start ...", worker->name);
 
@@ -1671,8 +1696,8 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
   worker->mythread = thread;
   worker->flags |= FLAGS_CLIENT;
 
-  inc_threads(worker->global);
   worker->which = get_tot_threads(worker->global);
+  inc_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
 
   worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
@@ -1745,9 +1770,10 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
   worker->mythread = thread;
   worker->flags |= FLAGS_SERVER;
 
-  inc_threads(worker->global);
   worker->which = get_tot_threads(worker->global);
+  inc_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
+  logger_set_group(worker->logger, worker->group);
 
   status = worker_run_single_server(worker);
 
@@ -1854,9 +1880,10 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   worker->mythread = thread;
   worker->flags |= FLAGS_SERVER;
 
-  inc_threads(worker->global);
   worker->which = get_tot_threads(worker->global);
+  inc_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
+  logger_set_group(worker->logger, worker->group);
 
   portname = apr_strtok(worker->additional, " ", &last);
 
@@ -2054,6 +2081,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
   /* start client server deamon */
   switch (global->state) {
   case GLOBAL_STATE_CLIENT:
+    global->cur_worker->group = get_tot_groups(global);
+    inc_groups(global);
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
       logger_log(global->logger, LOG_ERR, 
                  "CLIENT not allowed in a MODULE file");
@@ -2077,6 +2106,8 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     ++global->CLTs;
     break; 
   case GLOBAL_STATE_SERVER:
+    global->cur_worker->group = get_tot_groups(global);
+    inc_groups(global);
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
       logger_log(global->logger, LOG_ERR, 
                  "SERVER not allowed in a MODULE file");

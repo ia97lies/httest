@@ -38,13 +38,14 @@ typedef struct logger_s logger_t;
 logger_t *logger_new(apr_pool_t *pool, int mode, int id, 
                      apr_file_t *out, apr_file_t *err);
 logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id);
+void logger_set_group(logger_t *logger, int group);
 void logger_update(logger_t *logger, const char *file_and_line);
 
 void logger_log_va(logger_t *logger, int log_mode, char *fmt, va_list va);
 void logger_log(logger_t * logger, int log_mode, char *fmt, ...);
 void logger_log_error(logger_t * logger, char *fmt, ...);
-void logger_log_buf(logger_t * logger, int log_mode, const char *buf,
-                    char *prefix, apr_size_t len);
+void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
+                    apr_size_t len); 
 void logger_set_mode(logger_t *logger, int mode);
 int logger_get_mode(logger_t *logger);
 

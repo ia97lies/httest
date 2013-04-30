@@ -1043,13 +1043,13 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
       }	
     }
     if (tmpbuf) {
-      logger_log_buf(worker->logger, LOG_INFO, tmpbuf, "<", len);
-      worker_match(worker, worker->match.dot, tmpbuf, len);
-      worker_match(worker, worker->match.body, tmpbuf, len);
-      worker_match(worker, worker->grep.dot, tmpbuf, len);
-      worker_match(worker, worker->grep.body, tmpbuf, len);
-      worker_expect(worker, worker->expect.dot, tmpbuf, len);
-      worker_expect(worker, worker->expect.body, tmpbuf, len);
+        logger_log_buf(worker->logger, LOG_INFO, '<', tmpbuf, len);
+        worker_match(worker, worker->match.dot, tmpbuf, len);
+        worker_match(worker, worker->match.body, tmpbuf, len);
+        worker_match(worker, worker->grep.dot, tmpbuf, len);
+        worker_match(worker, worker->grep.body, tmpbuf, len);
+        worker_expect(worker, worker->expect.dot, tmpbuf, len);
+        worker_expect(worker, worker->expect.body, tmpbuf, len);
     }
   }
   return status;
@@ -1321,7 +1321,7 @@ static apr_status_t worker_get_headers(worker_t *worker,
         recorder->flags & RECORDER_RECORD_HEADERS) {
       sockreader_push_line(recorder->sockreader, line);
     }
-    logger_log(worker->logger, LOG_INFO, "<%s", line);
+    logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
     worker_match(worker, worker->match.dot, line, strlen(line));
     worker_match(worker, worker->match.headers, line, strlen(line));
     worker_match(worker, worker->grep.dot, line, strlen(line));
@@ -1349,7 +1349,7 @@ static apr_status_t worker_get_headers(worker_t *worker,
     }
   }
   if (status == APR_SUCCESS && line[0] == 0) {
-    logger_log(worker->logger, LOG_INFO, "<");
+    logger_log_buf(worker->logger, LOG_INFO, '<', NULL, 0);
   }
   return status;
 }
@@ -1466,7 +1466,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 	recorder->flags & RECORDER_RECORD_STATUS) {
       sockreader_push_line(recorder->sockreader, line);
     }
-    logger_log(worker->logger, LOG_INFO, "<%s", line);
+    logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
     worker_match(worker, worker->match.dot, line, strlen(line));
     worker_match(worker, worker->match.headers, line, strlen(line));
     worker_match(worker, worker->grep.dot, line, strlen(line));
@@ -1483,13 +1483,13 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   }
   else {
     if (line[0] == 0) {
-      logger_log(worker->logger, LOG_INFO, "<%s", line);
+      logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
       logger_log_error(worker->logger, "No status line received");
       status = APR_EINVAL;
       goto out_err;
     }
     else {
-      logger_log(worker->logger, LOG_INFO, "<%s", line);
+      logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
       logger_log_error(worker->logger, "Network error");
       goto out_err;
     }
@@ -2568,7 +2568,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     }
 
     if (buf) {
-      logger_log(worker->logger, LOG_INFO, "<%s", buf);
+      logger_log_buf(worker->logger, LOG_INFO, '<', buf, len);
       worker_match(worker, worker->match.exec, buf, len);
       worker_match(worker, worker->grep.exec, buf, len);
       worker_expect(worker, worker->expect.exec, buf, len);
@@ -3766,6 +3766,7 @@ void worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->listener = NULL;
   (*self)->vars = store_copy(orig->vars, p);
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
+  (*self)->group = orig->group;
 
   logger_log((*self)->logger, LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
 }
@@ -3909,26 +3910,31 @@ apr_status_t worker_flush_part(worker_t *worker, int from, int to,
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
       line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {
-	logger_log_buf(worker->logger, LOG_INFO, line.buf, NULL, line.len);
+	logger_log_buf(worker->logger, LOG_INFO, '+', line.buf, line.len);
       }
       else {
-	logger_log_buf(worker->logger, LOG_INFO, line.buf, ">", line.len);
+	logger_log_buf(worker->logger, LOG_INFO, '>', line.buf, line.len);
       }
       nocrlf = 1;
     }
     else if (strcasecmp(line.info, "NOCRLF") == 0) {
       line.len = strlen(line.buf);
       if (nocrlf) {
-	logger_log_buf(worker->logger, LOG_INFO, line.buf, NULL, line.len);
+	logger_log_buf(worker->logger, LOG_INFO, '+', line.buf, line.len);
       }
       else {
-	logger_log_buf(worker->logger, LOG_INFO, line.buf, ">", line.len);
+	logger_log_buf(worker->logger, LOG_INFO, '>', line.buf, line.len);
       }
       nocrlf = 1;
     } 
     else {
       line.len = strlen(line.buf);
-      logger_log(worker->logger, LOG_INFO, ">%s", line.buf);
+      if (nocrlf) {
+	logger_log_buf(worker->logger, LOG_INFO, '+', line.buf, line.len);
+      }
+      else {
+	logger_log_buf(worker->logger, LOG_INFO, '>', line.buf, line.len);
+      }
       nocrlf = 0;
     }
 
@@ -3970,7 +3976,7 @@ apr_status_t worker_flush_chunk(worker_t *worker, char *chunked, int from, int t
   int len;
 
   if (chunked) {
-    logger_log_buf(worker->logger, LOG_INFO, chunked, ">", strlen(chunked));
+    logger_log_buf(worker->logger, LOG_INFO, '>', chunked, strlen(chunked));
   }
 
   if (chunked) {
