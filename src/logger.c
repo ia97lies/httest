@@ -55,6 +55,7 @@
 #include "worker.h"
 
 #include "logger.h"
+#include "appender.h"
 
 
 /************************************************************************
@@ -66,9 +67,7 @@ struct logger_s {
   int group;
   const char *file_and_line;
   apr_thread_mutex_t *mutex;
-  /* this has to be moved to appender */
-  apr_file_t *out;
-  apr_file_t *err;
+  appender_t *appender;
 };
 
 /************************************************************************
@@ -82,19 +81,15 @@ struct logger_s {
 
 /**
  * Constructor for logger
+ * @param pool IN pool
  * @param mode IN logger mode set outside
  * @param id IN thread id 
- * @param out IN output file descriptor
- * @param err IN output error file descriptor
  * @return logger
  */
-logger_t *logger_new(apr_pool_t *pool, int mode, int id, 
-                     apr_file_t *out, apr_file_t *err) {
+logger_t *logger_new(apr_pool_t *pool, int mode, int id) {
   logger_t *logger = apr_pcalloc(pool, sizeof(*logger));
   logger->mode = mode;
   logger->id = id;
-  logger->out = out;
-  logger->err = err;
 
   return logger;
 }
@@ -107,19 +102,20 @@ logger_t *logger_new(apr_pool_t *pool, int mode, int id,
  * @return logger
  */
 logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
-  logger_t *logger = logger_new(pool, origin->mode, id, origin->out,
-                                origin->err);
-  if (!origin->mutex) {
-    if (apr_thread_mutex_create(&origin->mutex, APR_THREAD_MUTEX_DEFAULT,
-                                pool) != APR_SUCCESS) {
-      apr_file_printf(origin->err, "\nCould not create log mutex");
-      return NULL;
-    }
-  }
-
+  logger_t *logger = logger_new(pool, origin->mode, id);
   logger->mutex = origin->mutex;
   logger->group = origin->group;
+  logger->appender = origin->appender;
   return logger;
+}
+
+/**
+ * Add an appender
+ * @param logger IN instance
+ * @param appender IN appender to add
+ */
+void logger_add_appender(logger_t *logger, appender_t *appender) {
+  logger->appender = appender;
 }
 
 /**
@@ -162,15 +158,13 @@ void logger_log_va(logger_t * logger, int mode, char *fmt, va_list va) {
       tmp = apr_psprintf(pool, "%s: error: %s", 
                          logger->file_and_line?logger->file_and_line:"<none>",
                          tmp);
-      apr_file_printf(logger->err, "\n%d:%d:%-88s", logger->id, logger->group,
-                      tmp);
-      apr_file_flush(logger->err);
+      appender_print(logger->appender, 1, logger->id, logger->group, '=', NULL, 
+                     tmp, strlen(tmp));
     }
     else {
       tmp = apr_pvsprintf(pool, fmt, va);
-      apr_file_printf(logger->out, "\n%d:%d:=:", logger->id, logger->group);
-      apr_file_printf(logger->out, "%s", tmp);
-      apr_file_flush(logger->out);
+      appender_print(logger->appender, 0, logger->id, logger->group, '=', NULL, 
+                     tmp, strlen(tmp));
     }
     if (logger->mutex) apr_thread_mutex_unlock(logger->mutex);
     apr_pool_destroy(pool);
@@ -225,48 +219,9 @@ void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
                     apr_size_t len) {
 
   if (logger->mode >= mode) {
-    apr_size_t i;
-    apr_size_t j;
-    char *null="<null>";
-
-    if (!buf) {
-      buf = null;
-      len = strlen(buf);
-    }
-    
-    i = 0;
-    j = 0;
-    do {
-      for (; i < len && buf[i] != '\n'; i++); 
-      ++i;
-      if (logger->mutex) apr_thread_mutex_lock(logger->mutex);
-      apr_file_printf(logger->out, "\n%d:%d:%c:", logger->id, logger->group,
-                      dir);
-
-      for (; j < i; j++) {
-        if ((unsigned char)buf[j] == '\n') {
-          /*
-          apr_size_t l = 2;
-          apr_file_write(logger->out, "\\n", &l);
-          */
-        }
-        else if ((unsigned char)buf[j] == '\r') {
-          /*
-          apr_size_t l = 2;
-          apr_file_write(logger->out, "\\r", &l);
-          */
-        }
-        else if ((unsigned char)buf[j] < 0x20) {
-          apr_file_putc('.', logger->out);
-        }
-        else {
-          apr_file_putc(buf[j], logger->out);
-        }
-      }
-      if (logger->mutex) apr_thread_mutex_unlock(logger->mutex);
-    } while (i < len);
+    appender_print(logger->appender, 0, logger->id, logger->group, dir, NULL, 
+                   buf, len);
   }
-  apr_file_flush(logger->out);
 }
 
 /**

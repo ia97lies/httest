@@ -62,6 +62,8 @@
 #endif
 
 #include "file.h"
+#include "appender_simple.h"
+#include "logger.h"
 #include "transport.h"
 #include "socket.h"
 #include "regex.h"
@@ -1973,6 +1975,7 @@ error:
 static apr_status_t global_new(global_t **global, store_t *vars, 
                                int log_mode, apr_pool_t *p, apr_file_t *out,
                                apr_file_t *err, int log_thread_no) {
+  appender_t *appender;
   apr_status_t status;
   apr_pool_t *pmutex;
 
@@ -1990,7 +1993,9 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->modules = apr_hash_make(p);
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
-  (*global)->logger = logger_new(p, log_mode, 0, out, err);
+  (*global)->logger = logger_new(p, log_mode, 0);
+  appender = appender_simple_new(p, out, err);
+  logger_add_appender((*global)->logger, appender);
 
   /* set default blocks for blocks with no module name */
   apr_hash_set((*global)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*global)->blocks);

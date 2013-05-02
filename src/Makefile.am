@@ -5,7 +5,8 @@ dist_man_MANS = httest.1 htproxy.1 htntlm.1 htremote.1
 
 httest_SOURCES = \
 	httest.c file.c socket.c regex.c util.c replacer.c ssl.c worker.c \
-	module.c transport.c store.c eval.c logger.c \
+	module.c transport.c store.c eval.c logger.c appender.c \
+	appender_simple.c \
 	modules.c ssl_module.c tcp_module.c skeleton_module.c date_module.c \
 	coder_module.c math_module.c sys_module.c binary_module.c \
 	udp_module.c socks_module.c websocket_module.c dbg_module.c \
@@ -19,7 +20,8 @@ httest_DEPENDENCIES = $(HTTEST_MODULES)
 
 htproxy_SOURCES = \
 	htproxy.c file.c socket.c regex.c util.c ssl.c replacer.c worker.c \
-	module.c conf.c transport.c store.c tcp_module.c eval.c logger.c
+	module.c conf.c transport.c store.c tcp_module.c eval.c logger.c \
+	appender.c appender_simple.c
 
 htremote_SOURCES = \
 	htremote.c util.c store.c
@@ -30,7 +32,7 @@ htntlm_SOURCES = \
 noinst_HEADERS = \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
-	lua_crypto.h logger.h httest.ext
+	lua_crypto.h logger.h appender.h httest.ext
 
      
 httest.1: httest.c $(top_srcdir)/configure.in

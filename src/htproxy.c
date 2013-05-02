@@ -53,6 +53,7 @@
 #include "socket.h"
 #include "worker.h"
 #include "logger.h"
+#include "appender_simple.h"
 #include "conf.h"
 #include "util.h"
 #include "module.h"
@@ -1260,6 +1261,7 @@ int main(int argc, const char *const argv[]) {
   int flags = SELF_FLAGS_NONE;
   apr_file_t *out;
   apr_file_t *err;
+  appender_t *appender;
 
   srand(apr_time_now()); 
   
@@ -1414,7 +1416,9 @@ int main(int argc, const char *const argv[]) {
   /* overwrites config */
   self->pool = pool;
   self->port = port;
-  self->logger = logger_new(pool, log_mode, 0, out, err);
+  self->logger = logger_new(pool, log_mode, 0);
+  appender = appender_simple_new(pool, out, err);
+  logger_add_appender(self->logger, appender);
   self->timeout = apr_pstrdup(pool, tmo);
   self->host_var = host_var ? apr_pstrdup(pool, host_var) : NULL;
   self->port_var = port_var ? apr_pstrdup(pool, port_var) : NULL;

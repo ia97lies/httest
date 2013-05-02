@@ -19,21 +19,15 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool log appender
+ * Interface of the HTTP Test Tool simple appender
  */
 
-#ifndef HTTEST_APPENDER_H
-#define HTTEST_APPENDER_H
+#ifndef HTTEST_APPENDER_SIMPLE_H
+#define HTTEST_APPENDER_SIMPLE_H
 
-typedef struct appender_s appender_t;
-typedef void (*printer_f)(appender_t *appender, int is_error, int thread, 
-                          int group, char dir, const char *custom, 
-                          const char *buf, apr_size_t len);
+#include "appender.h"
 
-appender_t *appender_new(apr_pool_t *pool, printer_f printer, void *user_data);
-void *appender_get_user_data(appender_t *appender);
-void appender_print(appender_t *appender, int is_error, int thread, 
-                    int group, char dir, const char *custom, 
-                    const char *buf, apr_size_t len);
+appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out, 
+                                apr_file_t *err);
 
 #endif

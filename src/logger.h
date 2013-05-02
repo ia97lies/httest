@@ -33,11 +33,13 @@
 #define LOG_ALL_CMD 5
 #define LOG_DEBUG 6
 
+#include "appender.h"
+
 typedef struct logger_s logger_t;
 
-logger_t *logger_new(apr_pool_t *pool, int mode, int id, 
-                     apr_file_t *out, apr_file_t *err);
+logger_t *logger_new(apr_pool_t *pool, int mode, int id);
 logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id);
+void logger_add_appender(logger_t *logger, appender_t *appender); 
 void logger_set_group(logger_t *logger, int group);
 void logger_update(logger_t *logger, const char *file_and_line);
 
