@@ -215,9 +215,11 @@ apr_status_t bufreader_read_eof(bufreader_t * self,
   do {
     block = BLOCK_MAX;
     status = bufreader_read_block(self, read, &block);
-    b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
-    APR_BRIGADE_INSERT_TAIL(bb, b);
-    read = apr_pcalloc(self->pool, BLOCK_MAX);
+    if (status == APR_SUCCESS) {
+      b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
+      APR_BRIGADE_INSERT_TAIL(bb, b);
+      read = apr_pcalloc(self->pool, BLOCK_MAX);
+    }
   } while (status == APR_SUCCESS); 
 
   apr_brigade_pflatten(bb, buf, len, self->pool);

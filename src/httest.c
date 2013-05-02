@@ -561,7 +561,6 @@ static void unlock(apr_thread_mutex_t *mutex) {
 static void inc_threads(global_t *global) {
   lock(global->mutex);
   ++global->cur_threads;
-  ++global->tot_threads;
   unlock(global->mutex);
 }
 
@@ -572,6 +571,16 @@ static void inc_threads(global_t *global) {
 static void dec_threads(global_t *global) {
   lock(global->mutex);
   --global->cur_threads;
+  unlock(global->mutex);
+}
+
+/**
+ * Count total threads
+ * @param global IN global instanz
+ */
+static void inc_tot_threads(global_t *global) {
+  lock(global->mutex);
+  ++global->tot_threads;
   unlock(global->mutex);
 }
 
@@ -1660,6 +1669,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
 
   worker->which = get_tot_threads(worker->global);
   inc_threads(worker->global);
+  inc_tot_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
   logger_set_group(worker->logger, worker->group);
   
@@ -1700,7 +1710,7 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
   worker->flags |= FLAGS_CLIENT;
 
   worker->which = get_tot_threads(worker->global);
-  inc_threads(worker->global);
+  inc_tot_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
 
   worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
@@ -1775,6 +1785,7 @@ static void * APR_THREAD_FUNC worker_thread_server(apr_thread_t * thread, void *
 
   worker->which = get_tot_threads(worker->global);
   inc_threads(worker->global);
+  inc_tot_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
   logger_set_group(worker->logger, worker->group);
 
@@ -1885,6 +1896,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
 
   worker->which = get_tot_threads(worker->global);
   inc_threads(worker->global);
+  inc_tot_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
   logger_set_group(worker->logger, worker->group);
 

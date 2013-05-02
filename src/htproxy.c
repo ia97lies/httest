@@ -1417,7 +1417,7 @@ int main(int argc, const char *const argv[]) {
   self->pool = pool;
   self->port = port;
   self->logger = logger_new(pool, log_mode, 0);
-  appender = appender_simple_new(pool, out, err);
+  appender = appender_simple_new(pool, out);
   logger_add_appender(self->logger, appender);
   self->timeout = apr_pstrdup(pool, tmo);
   self->host_var = host_var ? apr_pstrdup(pool, host_var) : NULL;

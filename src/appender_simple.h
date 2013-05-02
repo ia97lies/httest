@@ -27,7 +27,6 @@
 
 #include "appender.h"
 
-appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out, 
-                                apr_file_t *err);
+appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out);
 
 #endif
