@@ -63,6 +63,7 @@
 
 #include "file.h"
 #include "appender_simple.h"
+#include "appender_std.h"
 #include "logger.h"
 #include "transport.h"
 #include "socket.h"
@@ -1994,7 +1995,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
   (*global)->logger = logger_new(p, log_mode, 0);
-  appender = appender_simple_new(p, out, err);
+  appender = appender_std_new(p, out, err);
   logger_add_appender((*global)->logger, appender);
 
   /* set default blocks for blocks with no module name */
