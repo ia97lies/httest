@@ -63,6 +63,7 @@
 typedef struct appender_simple_s {
   apr_thread_mutex_t *mutex;
   apr_file_t *out;
+  apr_file_t *err;
 } appender_simple_t;
 
 /************************************************************************
@@ -80,12 +81,15 @@ void appender_simple_printer(appender_t *appender, int is_error, int thread,
  * Constructor for simple appender
  * @param pool IN pool
  * @param out IN output file
+ * @param err IN error file
  * @return appender
  */
-appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out) {
+appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out,
+                                apr_file_t *err) {
   appender_t *appender;
   appender_simple_t *simple = apr_pcalloc(pool, sizeof(*simple));
   simple->out = out;
+  simple->err = err;
   if (apr_thread_mutex_create(&simple->mutex, APR_THREAD_MUTEX_DEFAULT,
                               pool) != APR_SUCCESS) {
     apr_file_printf(simple->out, "\nCould not create log mutex");
@@ -111,6 +115,7 @@ appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out) {
 void appender_simple_printer(appender_t *appender, int is_error, int thread, 
                              int group, char dir, const char *custom, 
                              const char *buf, apr_size_t len) {
+  apr_file_t *cur;
   apr_size_t i;
   apr_size_t j;
   char *null="";
@@ -121,35 +126,42 @@ void appender_simple_printer(appender_t *appender, int is_error, int thread,
     len = strlen(buf);
   }
 
+  if (is_error) {
+    cur = simple->err;
+  }
+  else {
+    cur = simple->out;
+  }
+
   i = 0;
   j = 0;
   do {
     for (; i < len && buf[i] != '\n'; i++); 
     ++i;
     apr_thread_mutex_lock(simple->mutex);
-    apr_file_printf(simple->out, "\n%d:%d:%c:", thread, group, dir);
+    apr_file_printf(cur, "\n%d:%d:%c:", thread, group, dir);
 
     for (; j < i; j++) {
       if ((unsigned char)buf[j] == '\n') {
-        /*
         apr_size_t l = 2;
-        apr_file_write(simple->out, "\\n", &l);
-        */
+        apr_file_write(cur, "\\n", &l);
       }
       else if ((unsigned char)buf[j] == '\r') {
-        /*
         apr_size_t l = 2;
-        apr_file_write(simple->out, "\\r", &l);
-        */
+        apr_file_write(cur, "\\r", &l);
+      }
+      else if ((unsigned char)buf[j] == '\0') {
+        apr_size_t l = 2;
+        apr_file_write(cur, "\\0", &l);
       }
       else if ((unsigned char)buf[j] < 0x20) {
-        apr_file_putc('.', simple->out);
+        apr_file_putc('.', cur);
       }
       else {
-        apr_file_putc(buf[j], simple->out);
+        apr_file_putc(buf[j], cur);
       }
     }
-    apr_file_flush(simple->out);
+    apr_file_flush(cur);
     apr_thread_mutex_unlock(simple->mutex);
   } while (i < len);
 }

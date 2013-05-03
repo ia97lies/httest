@@ -215,7 +215,7 @@ apr_status_t bufreader_read_eof(bufreader_t * self,
   do {
     block = BLOCK_MAX;
     status = bufreader_read_block(self, read, &block);
-    if (status == APR_SUCCESS) {
+    if (status == APR_SUCCESS || status == APR_EOF) {
       b = apr_bucket_pool_create(read, block, self->pool, self->alloc);
       APR_BRIGADE_INSERT_TAIL(bb, b);
       read = apr_pcalloc(self->pool, BLOCK_MAX);

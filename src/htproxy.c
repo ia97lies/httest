@@ -53,7 +53,7 @@
 #include "socket.h"
 #include "worker.h"
 #include "logger.h"
-#include "appender_simple.h"
+#include "appender_std.h"
 #include "conf.h"
 #include "util.h"
 #include "module.h"
@@ -1417,7 +1417,7 @@ int main(int argc, const char *const argv[]) {
   self->pool = pool;
   self->port = port;
   self->logger = logger_new(pool, log_mode, 0);
-  appender = appender_simple_new(pool, out);
+  appender = appender_std_new(pool, out, err);
   logger_add_appender(self->logger, appender);
   self->timeout = apr_pstrdup(pool, tmo);
   self->host_var = host_var ? apr_pstrdup(pool, host_var) : NULL;

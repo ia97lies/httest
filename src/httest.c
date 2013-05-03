@@ -1540,12 +1540,14 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     apr_pool_t *ptmp;
 
     apr_pool_create(&ptmp, NULL);
-    worker->file_and_line = e[worker->cmd].key;
+    logger_update(worker->logger, e[worker->cmd].key);
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
-      /* dirty hack */
+      logger_update(worker->logger, e[worker->cmd].key);
+      /* dirty hack 
       worker->file_and_line = e[worker->cmd].key;
+       */ 
       status = worker_check_error(parent, status);
     }
     else {

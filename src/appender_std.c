@@ -140,31 +140,26 @@ void appender_std_printer(appender_t *appender, int is_error, int thread,
   do {
     for (; i < len && buf[i] != '\n'; i++); 
     ++i;
+    /* set color on dir \e[1;31mFAILED\e[0m */
     apr_thread_mutex_lock(std->mutex);
-    apr_file_printf(cur, "\n%d:", thread);
+    if (!is_error) {
+      apr_file_printf(cur, "\n%d:", thread);
+    }
+    else {
+      apr_file_printf(cur, "\n");
+    }
     for (k = 0; k < group; k++) {
       apr_file_printf(cur, APPENDER_STD_PFX);
     }
-    apr_file_printf(cur, "%c:", dir);
+    if (dir == '>' || dir == '<' || dir == '+') {
+      apr_file_printf(cur, "%c", dir);
+    }
 
     for (; j < i; j++) {
-      if ((unsigned char)buf[j] == '\n') {
-        /*
-        apr_size_t l = 2;
-        apr_file_write(cur, "\\n", &l);
-        */
-      }
-      else if ((unsigned char)buf[j] == '\r') {
-        /*
-        apr_size_t l = 2;
-        apr_file_write(cur, "\\r", &l);
-        */
-      }
-      else if ((unsigned char)buf[j] == '\0') {
-        /*
-        apr_size_t l = 2;
-        apr_file_write(cur, "\\0", &l);
-        */
+      if ((unsigned char)buf[j] == '\n' ||
+          (unsigned char)buf[j] == '\r' || 
+          (unsigned char)buf[j] == '\0') {
+        /* do nothing */
       }
       else if ((unsigned char)buf[j] < 0x20) {
         apr_file_putc('.', cur);
