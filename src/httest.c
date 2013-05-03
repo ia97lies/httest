@@ -2006,7 +2006,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
   (*global)->logger = logger_new(p, log_mode, 0);
-  appender = appender_std_new(p, out, err);
+  appender = appender_std_new(p, out, err, log_thread_no?APPENDER_STD_THREAD_NO:APPENDER_STD_NONE);
   logger_add_appender((*global)->logger, appender);
 
   /* set default blocks for blocks with no module name */

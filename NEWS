@@ -1,3 +1,7 @@
+Version 2.4.0
+ - New      httest: logger/appender concept. Three appender implementation 
+                    exist currently. 
+
 Version 2.3.0
  - New      httest: Improve logging for better analysis.
  - Planed   htunit: httest executor with junit like output

@@ -27,7 +27,11 @@
 
 #include "appender.h"
 
+#define APPENDER_STD_NONE 0x00
+#define APPENDER_STD_THREAD_NO 0x01
+#define APPENDER_STD_COLOR 0x02
+
 appender_t *appender_std_new(apr_pool_t *pool, apr_file_t *out, 
-                             apr_file_t *err);
+                             apr_file_t *err, int flags);
 
 #endif

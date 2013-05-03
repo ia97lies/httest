@@ -55,12 +55,14 @@
 #include "worker.h"
 
 #include "appender.h"
+#include "appender_std.h"
 
 
 /************************************************************************
  * Definitions 
  ***********************************************************************/
 typedef struct appender_std_s {
+  int flags;
   apr_thread_mutex_t *mutex;
   apr_file_t *out;
   apr_file_t *err;
@@ -83,14 +85,19 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
  * Constructor for std appender
  * @param pool IN pool
  * @param out IN output file
+ * @param err IN error output file
+ * @param flags IN APPENDER_STD_THREAD_NO: print thread no
+ *                 APPENDER_STD_COLOR: print colored
+ *                 APPENDER_NONE: no extention
  * @return appender
  */
 appender_t *appender_std_new(apr_pool_t *pool, apr_file_t *out, 
-                             apr_file_t *err) {
+                             apr_file_t *err, int flags) {
   appender_t *appender;
   appender_std_t *std = apr_pcalloc(pool, sizeof(*std));
   std->out = out;
   std->err = err;
+  std->flags = flags;
   if (apr_thread_mutex_create(&std->mutex, APR_THREAD_MUTEX_DEFAULT,
                               pool) != APR_SUCCESS) {
     apr_file_printf(std->err, "\nCould not create log mutex");
@@ -143,7 +150,12 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
     /* set color on dir \e[1;31mFAILED\e[0m */
     apr_thread_mutex_lock(std->mutex);
     if (mode != LOG_ERR) {
-      apr_file_printf(cur, "\n%d:", thread);
+      if (std->flags & APPENDER_STD_THREAD_NO) {
+        apr_file_printf(cur, "\n%d:", thread);
+      }
+      else {
+        apr_file_printf(cur, "\n");
+      }
     }
     else {
       if (pos) {

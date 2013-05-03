@@ -139,20 +139,14 @@ void appender_simple_printer(appender_t *appender, int mode, const char *pos,
     for (; i < len && buf[i] != '\n'; i++); 
     ++i;
     apr_thread_mutex_lock(simple->mutex);
-    apr_file_printf(cur, "\n%s:%d:%d:%d:%c:", pos, mode, thread, group, dir);
+    apr_file_printf(cur, "\n%c:", dir);
 
     for (; j < i; j++) {
       if ((unsigned char)buf[j] == '\n') {
-        apr_size_t l = 2;
-        apr_file_write(cur, "\\n", &l);
       }
       else if ((unsigned char)buf[j] == '\r') {
-        apr_size_t l = 2;
-        apr_file_write(cur, "\\r", &l);
       }
       else if ((unsigned char)buf[j] == '\0') {
-        apr_size_t l = 2;
-        apr_file_write(cur, "\\0", &l);
       }
       else if ((unsigned char)buf[j] < 0x20) {
         apr_file_putc('.', cur);

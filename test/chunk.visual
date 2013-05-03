@@ -1,32 +1,32 @@
-                        __HTTP/1.1 200 OK
-                        __Transfer-Encoding: chunked
-                        _FLUSH
-                        >HTTP/1.1 200 OK
-                        >Transfer-Encoding: chunked
-                        __BEGIN
-                        _CHUNK
-                        >
-                        >7
-                        >BEGIN
-                        __AS2
-                        _CHUNK
-                        >
-                        >5
-                        >AS2
-                        __END
-                        _CHUNK
-                        >
-                        >5
-                        >END
-                        _CHUNK
-                        >
-                        >0
-                        __Trailing1: Stuff
-                        __Trailing2: Stuff
-                        __
-                        >Trailing1: Stuff
-                        >Trailing2: Stuff
-                        >
+                      __HTTP/1.1 200 OK
+                      __Transfer-Encoding: chunked
+                      _FLUSH
+                      >HTTP/1.1 200 OK
+                      >Transfer-Encoding: chunked
+                      __BEGIN
+                      _CHUNK
+                      >
+                      >7
+                      >BEGIN
+                      __AS2
+                      _CHUNK
+                      >
+                      >5
+                      >AS2
+                      __END
+                      _CHUNK
+                      >
+                      >5
+                      >END
+                      _CHUNK
+                      >
+                      >0
+                      __Trailing1: Stuff
+                      __Trailing2: Stuff
+                      __
+                      >Trailing1: Stuff
+                      >Trailing2: Stuff
+                      >
 _WAIT 
 <HTTP/1.1 200 OK
 <Transfer-Encoding: chunked
