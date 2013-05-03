@@ -19,7 +19,7 @@ __User-Agent: mozilla
 __Data: $DATA
 __
 _EXPECT . "HTTP/1.1 200 OK"
-_IF ($NO == 1)
+_IF ($NO == 2)
   _EXPECT . "FOO"
 _ELSE
   _EXPECT . "AS1"

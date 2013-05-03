@@ -2282,7 +2282,7 @@ static apr_status_t global_BLOCK(command_t * self, global_t * global,
     worker_new(&global->cur_worker, data, global, worker_interpret);
   }
   else if (status != APR_SUCCESS) {
-    logger_log(global->logger, LOG_ERR, 
+    logger_log(global->logger, LOG_ERR, NULL,
                "Failed on block start %s(%d)", 
                my_status_str(global->pool, status), status);  
     return status;

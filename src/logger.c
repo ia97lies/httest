@@ -137,17 +137,9 @@ void logger_log_va(logger_t * logger, int mode, const char *pos, char *fmt,
     apr_pool_t *pool;
 
     apr_pool_create(&pool, NULL);
-    if (mode == LOG_ERR) {
-      tmp = apr_pvsprintf(pool, fmt, va);
-      tmp = apr_psprintf(pool, "%s: error: %s", pos?pos:"<none>", tmp);
-      appender_print(logger->appender, 1, logger->id, logger->group, '=', NULL, 
-                     tmp, strlen(tmp));
-    }
-    else {
-      tmp = apr_pvsprintf(pool, fmt, va);
-      appender_print(logger->appender, 0, logger->id, logger->group, '=', NULL, 
-                     tmp, strlen(tmp));
-    }
+    tmp = apr_pvsprintf(pool, fmt, va);
+    appender_print(logger->appender, mode, pos, logger->id, logger->group, '=', NULL, 
+                   tmp, strlen(tmp));
     apr_pool_destroy(pool);
   }
 }
@@ -186,8 +178,8 @@ void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
                     apr_size_t len) {
 
   if (logger->mode >= mode) {
-    appender_print(logger->appender, 0, logger->id, logger->group, dir, NULL, 
-                   buf, len);
+    appender_print(logger->appender, mode, NULL, logger->id, logger->group, 
+                   dir, NULL, buf, len);
   }
 }
 

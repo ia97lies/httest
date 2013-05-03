@@ -69,8 +69,8 @@ typedef struct appender_simple_s {
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
-void appender_simple_printer(appender_t *appender, int is_error, int thread,
-                             int group, char dir, const char *custom,
+void appender_simple_printer(appender_t *appender, int mode, const char *pos,
+                             int thread, int group, char dir, const char *custom,
                              const char *buf, apr_size_t len);
 
 /************************************************************************
@@ -112,8 +112,8 @@ appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out,
  * @param buf IN buffer to print
  * @param len IN buffer len
  */
-void appender_simple_printer(appender_t *appender, int is_error, int thread, 
-                             int group, char dir, const char *custom, 
+void appender_simple_printer(appender_t *appender, int mode, const char *pos,
+                             int thread, int group, char dir, const char *custom, 
                              const char *buf, apr_size_t len) {
   apr_file_t *cur;
   apr_size_t i;
@@ -126,7 +126,7 @@ void appender_simple_printer(appender_t *appender, int is_error, int thread,
     len = strlen(buf);
   }
 
-  if (is_error) {
+  if (mode == LOG_ERR) {
     cur = simple->err;
   }
   else {
@@ -139,7 +139,7 @@ void appender_simple_printer(appender_t *appender, int is_error, int thread,
     for (; i < len && buf[i] != '\n'; i++); 
     ++i;
     apr_thread_mutex_lock(simple->mutex);
-    apr_file_printf(cur, "\n%d:%d:%c:", thread, group, dir);
+    apr_file_printf(cur, "\n%s:%d:%d:%d:%c:", pos, mode, thread, group, dir);
 
     for (; j < i; j++) {
       if ((unsigned char)buf[j] == '\n') {

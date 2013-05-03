@@ -101,7 +101,8 @@ void *appender_get_user_data(appender_t *appender) {
 /**
  * Print buf
  * @param appender IN appender instance
- * @param is_error IN is this an error
+ * @param mode IN one of the defined mode int logger.h
+ * @param pos IN filename and position or NULL if none
  * @param thread IN thread id
  * @param group IN group id
  * @param dir IN <,>,+,=
@@ -109,11 +110,11 @@ void *appender_get_user_data(appender_t *appender) {
  * @param buf IN buffer to print
  * @param len IN buffer length
  */
-void appender_print(appender_t *appender, int is_error, int thread, int group,
-                    char dir, const char *custom, const char *buf, 
-                    apr_size_t len) {
+void appender_print(appender_t *appender, int mode, const char *pos, 
+                    int thread, int group, char dir, const char *custom, 
+                    const char *buf, apr_size_t len) {
   if (appender->printer) {
-    appender->printer(appender, is_error, thread, group, dir, custom, buf, len);
+    appender->printer(appender, mode, pos, thread, group, dir, custom, buf, len);
   }
 }
 

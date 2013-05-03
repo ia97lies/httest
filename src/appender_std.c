@@ -71,9 +71,9 @@ typedef struct appender_std_s {
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
-void appender_std_printer(appender_t *appender, int is_error, int thread,
-                             int group, char dir, const char *custom,
-                             const char *buf, apr_size_t len);
+void appender_std_printer(appender_t *appender, int mode, const char *pos,
+                          int thread, int group, char dir, const char *custom,
+                          const char *buf, apr_size_t len);
 
 /************************************************************************
  * Implementation
@@ -113,9 +113,9 @@ appender_t *appender_std_new(apr_pool_t *pool, apr_file_t *out,
  * @param buf IN buffer to print
  * @param len IN buffer len
  */
-void appender_std_printer(appender_t *appender, int is_error, int thread, 
-                             int group, char dir, const char *custom, 
-                             const char *buf, apr_size_t len) {
+void appender_std_printer(appender_t *appender, int mode, const char *pos,
+                          int thread, int group, char dir, const char *custom, 
+                          const char *buf, apr_size_t len) {
   apr_size_t i;
   apr_size_t j;
   apr_size_t k;
@@ -128,7 +128,7 @@ void appender_std_printer(appender_t *appender, int is_error, int thread,
     len = strlen(buf);
   }
 
-  if (is_error) {
+  if (mode == LOG_ERR) {
     cur = std->err;
   }
   else {
@@ -142,11 +142,16 @@ void appender_std_printer(appender_t *appender, int is_error, int thread,
     ++i;
     /* set color on dir \e[1;31mFAILED\e[0m */
     apr_thread_mutex_lock(std->mutex);
-    if (!is_error) {
+    if (mode != LOG_ERR) {
       apr_file_printf(cur, "\n%d:", thread);
     }
     else {
-      apr_file_printf(cur, "\n");
+      if (pos) {
+        apr_file_printf(cur, "\n%s: error: ", pos);
+      }
+      else {
+        apr_file_printf(cur, "\nerror: ");
+      }
     }
     for (k = 0; k < group; k++) {
       apr_file_printf(cur, APPENDER_STD_PFX);
