@@ -753,20 +753,20 @@ static apr_status_t worker_body(worker_t **body, worker_t *worker) {
 
     if (command && command->flags & COMMAND_FLAGS_BODY) {
       ++ends;
-      logger_log(worker->logger, LOG_DEBUG, "Increment bodies: %d for line %s", ends, line);
+      worker_log(worker, LOG_DEBUG, "Increment bodies: %d for line %s", ends, line);
     }
     if (ends == 1 && strlen(line) >= end_len && strncmp(line, end, end_len) == 0) {
       break;
     }
     else if (strlen(line) >= end_len && strncmp(line, end, end_len) == 0) {
       --ends;
-      logger_log(worker->logger, LOG_DEBUG, "Decrement bodies: %d for line %s", ends, line);
+      worker_log(worker, LOG_DEBUG, "Decrement bodies: %d for line %s", ends, line);
     }
     apr_table_addn((*body)->lines, file_and_line, line);
   }
   /* check for end */
   if (strlen(line) < end_len || strncmp(line, end, end_len) != 0) {
-    logger_log(worker->logger, LOG_ERR, "Interpreter failed: no %s found", end);
+    worker_log(worker, LOG_ERR, "Interpreter failed: no %s found", end);
     return APR_EGENERAL;
   }
 
@@ -809,7 +809,7 @@ static apr_status_t command_EXIT(command_t * self, worker_t * worker,
     exit(0);
   }
   else {
-    logger_log_error(worker->logger, "EXIT");
+    worker_log(worker, LOG_ERR, "EXIT");
     worker_set_global_error(worker);
     worker_destroy(worker);
     exit(1);
@@ -853,11 +853,11 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
     /* count numbers of same kinds to include all their ends */
     if (strlen(line) >= kind_len && strncmp(line, kind, kind_len) == 0) {
       ++ends;
-      logger_log(worker->logger, LOG_DEBUG, "Increment: %d for line %s", ends, line);
+      worker_log(worker, LOG_DEBUG, "Increment: %d for line %s", ends, line);
     }
     /* check end and if it is our end */
     if (ends == 1 && strlen(line) >= my_else_len && strncmp(line, my_else, my_else_len) == 0) {
-      logger_log(worker->logger, LOG_DEBUG, "Found _ELSE in line %d", worker->cmd);
+      worker_log(worker, LOG_DEBUG, "Found _ELSE in line %d", worker->cmd);
       *else_pos = worker->cmd;
       return APR_SUCCESS;
       break;
@@ -865,11 +865,11 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
     /* no is not our end, decrement ends */
     else if (strlen(line) >= end_len && strncmp(line, end, end_len) == 0) {
       --ends;
-      logger_log(worker->logger, LOG_DEBUG, "Decrement: %d for line %s", ends, line);
+      worker_log(worker, LOG_DEBUG, "Decrement: %d for line %s", ends, line);
     }
   }
 
-  logger_log(worker->logger, LOG_DEBUG, "No _ELSE found");
+  worker_log(worker, LOG_DEBUG, "No _ELSE found");
   return APR_ENOENT;
 }
 
@@ -901,13 +901,13 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     ++copy;
     len = strlen(copy);
     if (len < 1) {
-      logger_log_error(worker->logger, "Empty condition");
+      worker_log(worker, LOG_ERR, "Empty condition");
       return APR_EINVAL;
     }
     copy[len-1] = 0;
 
     if ((status = math_evaluate(math, copy, &val)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Invalid condition");
+      worker_log(worker, LOG_ERR, "Invalid condition");
       return status;
     }
     doit = val;
@@ -936,7 +936,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     right = argv[i];
    
     if (!left || !middle || !right) {
-      logger_log(worker->logger, LOG_ERR, "%s: Syntax error '%s'", self->name, data);
+      worker_log(worker, LOG_ERR, "%s: Syntax error '%s'", self->name, data);
       return APR_EGENERAL;
     }
     
@@ -947,7 +947,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
    
     if (strcmp(middle, "MATCH") == 0) {
       if (!(compiled = pregcomp(ptmp, right, &err, &off))) {
-	logger_log(worker->logger, LOG_ERR, "IF MATCH regcomp failed: %s", right);
+	worker_log(worker, LOG_ERR, "IF MATCH regcomp failed: %s", right);
 	return APR_EINVAL;
       }
       len = strlen(left);
@@ -1020,10 +1020,10 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
       body->cmd_from = 0;
       body->cmd_to = else_pos;
       status = body->interpret(body, worker, NULL);
-      logger_log(worker->logger, LOG_CMD, "_ELSE");
+      worker_log(worker, LOG_CMD, "_ELSE");
     }
     else {
-      logger_log(worker->logger, LOG_CMD, "_ELSE");
+      worker_log(worker, LOG_CMD, "_ELSE");
       body->cmd_from = else_pos + 1;
       body->cmd_to = 0;
       status = body->interpret(body, worker, NULL);
@@ -1038,7 +1038,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
   }
 
-  logger_log(worker->logger, LOG_CMD, "_END IF");
+  worker_log(worker, LOG_CMD, "_END IF");
 
   worker_body_end(body, worker);
  
@@ -1119,10 +1119,10 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   }
   
   if (status != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Error in loop with count = %d", i);
+    worker_log(worker, LOG_ERR, "Error in loop with count = %d", i);
   }
   
-  logger_log(worker->logger, LOG_CMD, "_END LOOP");
+  worker_log(worker, LOG_CMD, "_END LOOP");
   
   worker_body_end(body, worker);
   return status;
@@ -1175,7 +1175,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
     status = APR_SUCCESS;
   }
   
-  logger_log(worker->logger, LOG_CMD, "_END FOR");
+  worker_log(worker, LOG_CMD, "_END FOR");
   
   worker_body_end(body, worker);
   
@@ -1250,7 +1250,7 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
   }
   
 end:
-  logger_log(worker->logger, LOG_CMD, "_END BPS");
+  worker_log(worker, LOG_CMD, "_END BPS");
   
   worker_body_end(body, worker);
   
@@ -1326,7 +1326,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   }
   
 end:
-  logger_log(worker->logger, LOG_CMD, "_END RPS");
+  worker_log(worker, LOG_CMD, "_END RPS");
   
   worker_body_end(body, worker);
   
@@ -1357,18 +1357,18 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
  
  if ((status = my_tokenize_to_argv(copy, &argv, ptmp, 0)) == APR_SUCCESS) {
     if (!argv[0]) {
-      logger_log_error(worker->logger, "No argument found, need an regex for expected errof.");
+      worker_log(worker, LOG_ERR, "No argument found, need an regex for expected errof.");
       return APR_EINVAL;
     }
   }
   else {
-    logger_log_error(worker->logger, "Could not read argument");
+    worker_log(worker, LOG_ERR, "Could not read argument");
     return status;
   }
 
   /* store value by his index */
   if (!(compiled = pregcomp(ptmp, argv[0], &err, &off))) {
-    logger_log(worker->logger, LOG_ERR, "ERROR condition compile failed: \"%s\"", argv[0]);
+    worker_log(worker, LOG_ERR, "ERROR condition compile failed: \"%s\"", argv[0]);
     return APR_EINVAL;
   }
 
@@ -1382,7 +1382,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
   
   status_str = my_status_str(ptmp, status);
   if (regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
-    logger_log_error(worker->logger, "Did expect error \"%s\" but got \"%s\"", argv[0], 
+    worker_log(worker, LOG_ERR, "Did expect error \"%s\" but got \"%s\"", argv[0], 
 	             status_str);
     return APR_EINVAL;
   }
@@ -1390,7 +1390,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
     status = APR_SUCCESS;
   }
 
-  logger_log(worker->logger, LOG_CMD, "_END ERROR");
+  worker_log(worker, LOG_CMD, "_END ERROR");
   
   if (worker->socket) {
     worker->socket->config = apr_hash_make(worker->pbody);
@@ -1418,7 +1418,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
   COMMAND_NO_ARG;
 
   if (!worker->socket) {
-    logger_log_error(worker->logger, "Call _RES or REQ before you spawn a long life _SOCKET");
+    worker_log(worker, LOG_ERR, "Call _RES or REQ before you spawn a long life _SOCKET");
     return APR_ENOSOCKET;
   }
 
@@ -1441,7 +1441,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
  
   status = body->interpret(body, worker, NULL);
   
-  logger_log(worker->logger, LOG_CMD, "_END SOCKET");
+  worker_log(worker, LOG_CMD, "_END SOCKET");
   
 error:
   apr_pool_destroy(pool);
@@ -1482,7 +1482,7 @@ static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *dat
     status = body->interpret(body, worker, NULL);
   
     /* terminate */
-    logger_log(worker->logger, LOG_CMD, "_END PROCESS");
+    worker_log(worker, LOG_CMD, "_END PROCESS");
     worker_body_end(body, worker);
     if (status != APR_SUCCESS) {
       exit(1);
@@ -1540,14 +1540,11 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     apr_pool_t *ptmp;
 
     apr_pool_create(&ptmp, NULL);
-    logger_update(worker->logger, e[worker->cmd].key);
+    worker->file_and_line = e[worker->cmd].key;
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
-      logger_update(worker->logger, e[worker->cmd].key);
-      /* dirty hack 
       worker->file_and_line = e[worker->cmd].key;
-       */ 
       status = worker_check_error(parent, status);
     }
     else {
@@ -1572,7 +1569,7 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
           status = worker_check_error(parent, status);
         }
         else {
-          logger_log_error(worker->logger, "%s syntax error", worker->name);
+          worker_log(worker, LOG_ERR, "%s syntax error", worker->name);
           worker_set_global_error(worker);
           status = APR_EINVAL;
         }
@@ -1675,7 +1672,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
   logger_set_group(worker->logger, worker->group);
   
-  logger_log(worker->logger, LOG_INFO, "%s start ...", worker->name);
+  worker_log(worker, LOG_INFO, "%s start ...", worker->name);
 
   if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
@@ -1717,9 +1714,9 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
 
   worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
-  logger_log(worker->logger, LOG_INFO, "Daemon start ...");
+  worker_log(worker, LOG_INFO, "Daemon start ...");
 
-  logger_log(worker->logger, LOG_DEBUG, "unlock %s", worker->name);
+  worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
 
   if ((status = worker->interpret(worker, worker, NULL)) != APR_SUCCESS) {
     goto error;
@@ -1840,9 +1837,9 @@ static apr_status_t worker_run_server_threads(worker_t *worker, int threads) {
       return status;
     }
     clone->listener = worker->listener;
-    logger_log(worker->logger, LOG_DEBUG, "--- accept");
+    worker_log(worker, LOG_DEBUG, "--- accept");
     if (!worker->listener) {
-      logger_log_error(worker->logger, "Server down");
+      worker_log(worker, LOG_ERR, "Server down");
       status = APR_EGENERAL;
       return status;
     }
@@ -1852,7 +1849,7 @@ static apr_status_t worker_run_server_threads(worker_t *worker, int threads) {
     if ((status = htt_run_accept(clone, "")) != APR_SUCCESS) {
       return status;
     }
-    logger_log(worker->logger, LOG_DEBUG, "--- create thread");
+    worker_log(worker, LOG_DEBUG, "--- create thread");
     clone->socket->socket_state = SOCKET_CONNECTED;
     clone->which = i;
     if ((status =
@@ -1911,7 +1908,7 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
   }
 
   if (!portname) {
-    logger_log_error(worker->logger, "No port defined");
+    worker_log(worker, LOG_ERR, "No port defined");
     status = APR_EGENERAL;
     goto error;
   }
@@ -1948,18 +1945,18 @@ static void * APR_THREAD_FUNC worker_thread_listener(apr_thread_t * thread, void
     }
   }
   
-  logger_log(worker->logger, LOG_INFO, "%s start on %s%s:%d", worker->name, 
+  worker_log(worker, LOG_INFO, "%s start on %s%s:%d", worker->name, 
              worker->socket->is_ssl ? "SSL:" : "", worker->listener_addr, 
 	     worker->listener_port);
 
   if (!nolistener) {
     if ((status = worker_listener_up(worker, LISTENBACKLOG_DEFAULT)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "%s(%d)", my_status_str(worker->pbody, status), status);
+      worker_log(worker, LOG_ERR, "%s(%d)", my_status_str(worker->pbody, status), status);
       goto error;
     }
   }
   unlock(worker->sync_mutex);
-  logger_log(worker->logger, LOG_DEBUG, "unlock %s", worker->name);
+  worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
 
   if (threads != 0) {
     status = worker_run_server_threads(worker, threads);
@@ -2017,7 +2014,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   if ((status = apr_threadattr_create(&(*global)->tattr, (*global)->pool)) 
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, 
+    logger_log((*global)->logger, LOG_ERR, NULL,
                "Global creation: could not create thread attr");
     return status;
   }
@@ -2025,14 +2022,14 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_threadattr_stacksize_set((*global)->tattr, 
                                              DEFAULT_THREAD_STACKSIZE))
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, 
+    logger_log((*global)->logger, LOG_ERR, NULL,
                "Global creation: could not set stacksize");
     return status;
   }
 
   if ((status = apr_threadattr_detach_set((*global)->tattr, 0)) 
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, 
+    logger_log((*global)->logger, LOG_ERR, NULL,
                "Global creation: could not set detach");
     return status;
   }
@@ -2040,7 +2037,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, 
+    logger_log((*global)->logger, LOG_ERR, NULL,
                "Global creation: could not create sync mutex");
     return status;
   }
@@ -2048,7 +2045,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, 
+    logger_log((*global)->logger, LOG_ERR, NULL,
                "Global creation: could not create mutex");
     return status;
   }
@@ -2104,7 +2101,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     global->cur_worker->group = get_tot_groups(global);
     inc_groups(global);
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
-      logger_log(global->logger, LOG_ERR, 
+      logger_log(global->logger, LOG_ERR, NULL,
                  "CLIENT not allowed in a MODULE file");
       return APR_EINVAL;
     }
@@ -2113,7 +2110,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     if (val) {
       concurrent = apr_atoi64(val);
       if (concurrent <= 0) {
-        logger_log(global->logger, LOG_ERR, 
+        logger_log(global->logger, LOG_ERR, NULL,
                    "Number of concurrent clients must be > 0");
 	return EINVAL;
       }
@@ -2129,7 +2126,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     global->cur_worker->group = get_tot_groups(global);
     inc_groups(global);
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
-      logger_log(global->logger, LOG_ERR, 
+      logger_log(global->logger, LOG_ERR, NULL,
                  "SERVER not allowed in a MODULE file");
       return APR_EINVAL;
     }
@@ -2146,7 +2143,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     break; 
   case GLOBAL_STATE_DAEMON:
     if (global->file_state == GLOBAL_FILE_STATE_MODULE) {
-      logger_log(global->logger, LOG_ERR, 
+      logger_log(global->logger, LOG_ERR, NULL,
                 "DAEMON not allowed in a MODULE file");
       return APR_EINVAL;
     }
@@ -2158,7 +2155,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     /* write file */
     if ((status = worker_to_file(global->cur_worker)) != APR_SUCCESS) {
       worker_set_global_error(global->cur_worker);
-      logger_log(global->logger, LOG_ERR, "Could not create %s: %s(%d)", 
+      logger_log(global->logger, LOG_ERR, NULL, "Could not create %s: %s(%d)", 
                  global->cur_worker->name, 
 	      my_status_str(global->pool, status), status);
       return status;
@@ -2170,7 +2167,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
     return APR_SUCCESS;
     break; 
   default: 
-    logger_log(global->logger, LOG_ERR, "Unknown close of a body definition");
+    logger_log(global->logger, LOG_ERR, NULL, "Unknown close of a body definition");
     return APR_ENOTIMPL;
     break; 
   }
@@ -2422,8 +2419,8 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data,
   key = apr_strtok(&data[i], "=", &last);
   for (i = 0; key[i] != 0 && strchr(VAR_ALLOWED_CHARS, key[i]); i++); 
   if (key[i] != 0) {
-    logger_log(global->logger, LOG_ERR, "Char '%c' is not allowed in \"%s\"", 
-               key[i], key);
+    logger_log(global->logger, LOG_ERR, NULL, 
+               "Char '%c' is not allowed in \"%s\"", key[i], key);
     success = 0;
     return APR_EINVAL;
   }
@@ -2465,7 +2462,7 @@ static apr_status_t global_GLOBAL(command_t *self, global_t *global, char *data,
   while (var) {
     for (i = 0; var[i] != 0 && strchr(VAR_ALLOWED_CHARS, var[i]); i++); 
     if (var[i] != 0) {
-      logger_log(global->logger, LOG_ERR, 
+      logger_log(global->logger, LOG_ERR, NULL,
                  "Char '%c' is not allowed in \"%s\"", var[i], var);
       success = 0;
       return APR_EINVAL;
@@ -2495,7 +2492,7 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
   global->file_state = GLOBAL_FILE_STATE_MODULE;
  
   if (strcmp(data, "DEFAULT") == 0) {
-    logger_log(global->logger, LOG_ERR, 
+    logger_log(global->logger, LOG_ERR, NULL,
                "Module name \"%s\" is not allowed", data);
     return APR_EINVAL;
   }
@@ -2567,7 +2564,7 @@ static apr_status_t global_REQUIRE_VERSION(command_t * self, global_t * global,
   }
 
   if (APR_STATUS_IS_EGENERAL(status)) {
-    logger_log(global->logger, LOG_ERR, 
+    logger_log(global->logger, LOG_ERR, NULL,
                "Given version \"%s\" is not valid, must be of the form "
                "<major>.<minor>.<maint>", data);
   }
@@ -2668,7 +2665,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   }
 
   if (status != APR_SUCCESS) {
-    logger_log(global->logger, LOG_ERR, 
+    logger_log(global->logger, LOG_ERR, NULL,
                "Include file %s not found", data);
     return APR_ENOENT;
   }
@@ -2679,7 +2676,7 @@ static apr_status_t global_INCLUDE(command_t *self, global_t *global, char *data
   status = interpret_recursiv(fp, global);
   --global->recursiv;
   if (!(global->blocks = apr_hash_get(global->modules, "DEFAULT", APR_HASH_KEY_STRING))) {
-    logger_log(global->logger, LOG_ERR, "DEFAULT module not found?!\n");
+    logger_log(global->logger, LOG_ERR, NULL, "DEFAULT module not found?!\n");
     return APR_EGENERAL;
   }
   global->file_state = GLOBAL_FILE_STATE_NORMAL;
@@ -2767,7 +2764,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
     ++i; 
   } 
   if(!data[i]) { 
-    logger_log(global->logger, LOG_ERR, "Number missing");
+    logger_log(global->logger, LOG_ERR, NULL, "Number missing");
     return APR_EGENERAL; 
   } 
   copy = apr_pstrdup(global->pool, &data[i]); 
@@ -2777,7 +2774,7 @@ static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data
   var = apr_strtok(NULL, " ", &last);
 
   if (!no) {
-    logger_log(global->logger, LOG_ERR, "Number missing");
+    logger_log(global->logger, LOG_ERR, NULL, "Number missing");
     return APR_EGENERAL;
   }
 
@@ -2839,7 +2836,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
     if ((status =
 	 apr_thread_create(&thread, global->tattr, worker_thread_daemon,
 			   worker, global->pool)) != APR_SUCCESS) {
-      logger_log(global->logger, LOG_ERR, "Could not create deamon thread");
+      logger_log(global->logger, LOG_ERR, NULL, "Could not create deamon thread");
       return status;
     }
   }
@@ -2854,7 +2851,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
       if ((status =
            apr_thread_create(&thread, global->tattr, worker_thread_listener,
                              worker, global->pool)) != APR_SUCCESS) {
-        logger_log(global->logger, LOG_ERR, "Could not create server thread");
+        logger_log(global->logger, LOG_ERR, NULL, "Could not create server thread");
         return status;
       }
     }
@@ -2876,7 +2873,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
       if ((status =
            apr_thread_create(&thread, global->tattr, worker_thread_client,
                              worker, global->pool)) != APR_SUCCESS) {
-        logger_log(global->logger, LOG_ERR, "Could not create client thread");
+        logger_log(global->logger, LOG_ERR, NULL, "Could not create client thread");
         return status;
       }
     }
@@ -2894,8 +2891,8 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
     thread = (apr_thread_t *) e[i].val;
     status = htt_run_thread_start(global, thread);
-    if (status != APR_SUCCESS) {
-      logger_log(global->logger, LOG_ERR, "Could not start thread: %d", status);
+    if (status != APR_SUCCESS)  {
+      logger_log(global->logger, LOG_ERR, NULL, "Could not start thread: %d", status);
       return status;
     }
   }
@@ -2926,13 +2923,13 @@ static apr_status_t global_JOIN(command_t *self, global_t *global, char *data,
     status = htt_run_thread_join(global, thread);
     if (status == APR_ENOTHREAD || status == APR_ENOTIMPL) {
       if ((retstat = apr_thread_join(&status, thread))) {
-        logger_log(global->logger, LOG_ERR, "Could not join thread: %d", 
+        logger_log(global->logger, LOG_ERR, NULL, "Could not join thread: %d", 
                    retstat);
         return retstat;
       }
     }
     else if (status != APR_SUCCESS) {
-      logger_log(global->logger, LOG_ERR, "Could not join thread: %d", 
+      logger_log(global->logger, LOG_ERR, NULL, "Could not join thread: %d", 
                  status);
       return status;
     }
@@ -3006,13 +3003,13 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   replacer_hook->store = global->vars;
 
   if (global->recursiv > 8) {
-    logger_log(global->logger, LOG_ERR, "Recursiv inlcudes too deep");
+    logger_log(global->logger, LOG_ERR, NULL, "Recursiv inlcudes too deep");
     success = 0;
     exit(1);
   }
 
   if ((status = bufreader_new(&bufreader, fp, global->pool)) != APR_SUCCESS) {
-    logger_log(global->logger, LOG_ERR, "Could not create buf reader for interpreter");
+    logger_log(global->logger, LOG_ERR, NULL, "Could not create buf reader for interpreter");
     return status;
   }
 
@@ -3022,7 +3019,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
     global->line_nr = line_nr;
     i = 0;
     if ((status = htt_run_read_line(global, &line)) != APR_SUCCESS) { 
-      logger_log(global->logger, LOG_ERR, "Failed on read line %s(%d)", 
+      logger_log(global->logger, LOG_ERR, NULL, "Failed on read line %s(%d)", 
                  my_status_str(global->pool, status), status);  
       return status;
     }
@@ -3033,7 +3030,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	  i += 3;
 	  if ((status = global_END(&global_commands[0], global, &line[i], NULL)) 
 	      != APR_SUCCESS) {
-            logger_log(global->logger, LOG_ERR, "Error on global END");
+            logger_log(global->logger, LOG_ERR, NULL, "Error on global END");
 	    return status;
 	  }
         }
@@ -3041,7 +3038,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 					   apr_psprintf(global->pool, "%s:%d", 
 					   global->filename, line_nr), line)) 
 	    != APR_SUCCESS) {
-          logger_log(global->logger, LOG_ERR, "Could not add line lines table");
+          logger_log(global->logger, LOG_ERR, NULL, "Could not add line lines table");
           return status;
         }
       }
@@ -3078,7 +3075,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
   }
 
   if (global->state != GLOBAL_STATE_NONE) {
-    logger_log(global->logger, LOG_ERR, "Missing END");
+    logger_log(global->logger, LOG_ERR, NULL, "Missing END");
     return APR_EGENERAL;
   }
 
@@ -3104,7 +3101,7 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars, apr_file_t *out,
 
   if ((status = global_new(&global, vars, log_mode, p, out, err, log_thread_no)) 
       != APR_SUCCESS) {
-    logger_log(global->logger, LOG_ERR, "Could not create global");
+    logger_log(global->logger, LOG_ERR, NULL, "Could not create global");
     return status;
   }
 
@@ -3389,12 +3386,12 @@ static void show_command_help(apr_pool_t *p, global_t *global,
       block_name = apr_pstrdup(p, last);
     }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
-      logger_log(global->logger, LOG_ERR, "command: %s does not exist\n\n", 
+      logger_log(global->logger, LOG_ERR, NULL, "command: %s does not exist\n\n", 
                  command);
       exit(1);
     }
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      logger_log(global->logger, LOG_ERR, "command: %s does not exist\n", 
+      logger_log(global->logger, LOG_ERR, NULL, "command: %s does not exist\n", 
                  command);
       exit(1);
     }
@@ -3402,12 +3399,12 @@ static void show_command_help(apr_pool_t *p, global_t *global,
       char *help;
       char *val;
       char *last;
-      logger_log(global->logger, LOG_INFO, "%s %s", command, 
+      logger_log(global->logger, LOG_INFO, NULL, "%s %s", command, 
                  worker->short_desc?worker->short_desc:"");
       help = apr_pstrdup(p, worker->desc);
       val = apr_strtok(help, "\n", &last);
       while (val) {
-        logger_log(global->logger, LOG_INFO, "\t%s", val);
+        logger_log(global->logger, LOG_INFO, NULL, "\t%s", val);
 	val = apr_strtok(NULL, "\n", &last);
       }
       goto exit;
@@ -3415,12 +3412,12 @@ static void show_command_help(apr_pool_t *p, global_t *global,
 
   }
 
-  logger_log(global->logger, LOG_INFO, "command: %s does not exist\n\n", 
+  logger_log(global->logger, LOG_INFO, NULL, "command: %s does not exist\n\n", 
              command);
   exit(1);
 
 exit:
-  logger_log(global->logger, LOG_INFO, "");
+  logger_log(global->logger, LOG_INFO, NULL, "");
   fflush(stdout);
 }
 

@@ -476,7 +476,7 @@ static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp,
   apr_exit_why_e exitwhy;
   int exitcode;
 
-  logger_log(worker->logger, LOG_DEBUG, "write to stdin, read from stdout");
+  worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
   /* start write thread */
   write_buf_to_file.buf = *buf;
   write_buf_to_file.len = *len;
@@ -605,7 +605,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
 
     n = apr_table_elts(vtbl)->nelts;
     if (n > 10) {
-      logger_log(worker->logger, LOG_ERR, "Too many vars defined for _MATCH statement, max 10 vars allowed");
+      worker_log(worker, LOG_ERR, "Too many vars defined for _MATCH statement, max 10 vars allowed");
       status = APR_EINVAL;
       goto error;
     }
@@ -686,7 +686,7 @@ static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match,
   for (i = 0; i < apr_table_elts(match)->nelts; ++i) {
     regex_t *regex = (regex_t *) e[i].val;
     if (!regdidmatch(regex)) {
-      logger_log(worker->logger, LOG_ERR, "%s: Did expect %s", namespace, regexpattern(regex));
+      worker_log(worker, LOG_ERR, "%s: Did expect %s", namespace, regexpattern(regex));
       if (status == APR_SUCCESS) {
         status = APR_EINVAL;
       }
@@ -719,14 +719,14 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
   for (i = 0; i < apr_table_elts(expect)->nelts; ++i) {
     regex_t *regex = (regex_t *) e[i].val;
     if (e[i].key[0] != '!' && !regdidmatch(regex)) {
-      logger_log(worker->logger, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
+      worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
 	         regexpattern(regex));
       if (status == APR_SUCCESS) {
         status = APR_EINVAL;
       }
     }
     if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
-      logger_log(worker->logger, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
+      worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
 	         &e[i].key[1]);
       if (status == APR_SUCCESS) {
         status = APR_EINVAL;
@@ -794,7 +794,7 @@ apr_status_t worker_assert(worker_t * worker, apr_status_t status) {
   /* check if match sequence is empty */
 
   if (worker->match_seq && worker->match_seq[0] != 0) {
-    logger_log(worker->logger, LOG_ERR, "The following match sequence \"%s\" was not in correct order", worker->match_seq);
+    worker_log(worker, LOG_ERR, "The following match sequence \"%s\" was not in correct order", worker->match_seq);
     status = APR_EINVAL;
     goto exit;
   }
@@ -845,12 +845,12 @@ apr_status_t worker_check_error(worker_t *worker, apr_status_t status) {
     e = (apr_table_entry_t *) apr_table_elts(worker->expect.error)->elts;
     for (i = 0; i < apr_table_elts(worker->expect.error)->nelts; ++i) {
       if (e[i].key[0] != '!' && !regdidmatch((regex_t *) e[i].val)) {
-	logger_log(worker->logger, LOG_ERR, "EXPECT: Did expect error \"%s\"", e[i].key);
+	worker_log(worker, LOG_ERR, "EXPECT: Did expect error \"%s\"", e[i].key);
 	status = APR_EINVAL;
 	goto error;
       }
       if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
-	logger_log(worker->logger, LOG_ERR, "EXPECT: Did not expect error \"%s\"", &e[i].key[1]);
+	worker_log(worker, LOG_ERR, "EXPECT: Did not expect error \"%s\"", &e[i].key[1]);
 	status = APR_EINVAL;
 	goto error;
       }
@@ -863,7 +863,7 @@ apr_status_t worker_check_error(worker_t *worker, apr_status_t status) {
     e = (apr_table_entry_t *) apr_table_elts(worker->match.error)->elts;
     for (i = 0; i < apr_table_elts(worker->match.error)->nelts; ++i) {
       if (!regdidmatch((regex_t *) e[i].val)) {
-	logger_log(worker->logger, LOG_ERR, "MATCH error: Did expect %s", e[i].key);
+	worker_log(worker, LOG_ERR, "MATCH error: Did expect %s", e[i].key);
 	status = APR_EINVAL;
       }
     }
@@ -872,10 +872,10 @@ apr_status_t worker_check_error(worker_t *worker, apr_status_t status) {
 
 error:
   if (status == APR_SUCCESS) {
-    logger_log(worker->logger, LOG_INFO, "%s %s", worker->name, error);
+    worker_log(worker, LOG_INFO, "%s %s", worker->name, error);
   }
   else {
-    logger_log_error(worker->logger, "%s %s", worker->name, error);
+    worker_log(worker, LOG_ERR, "%s %s", worker->name, error);
   }
   return status;
 }
@@ -903,31 +903,31 @@ void worker_test_reset(worker_t * worker) {
  */
 apr_status_t worker_test_unused(worker_t * worker) {
   if (apr_table_elts(worker->match.dot)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused MATCH .");
+    worker_log(worker, LOG_ERR, "There are unused MATCH .");
     return APR_EGENERAL;
   }
   if (apr_table_elts(worker->match.headers)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused MATCH headers");
+    worker_log(worker, LOG_ERR, "There are unused MATCH headers");
     return APR_EGENERAL;
   }
   if (apr_table_elts(worker->match.body)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused MATCH body");
+    worker_log(worker, LOG_ERR, "There are unused MATCH body");
     return APR_EGENERAL;
   }
   if (apr_table_elts(worker->match.exec)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused MATCH exec");
+    worker_log(worker, LOG_ERR, "There are unused MATCH exec");
     return APR_EGENERAL;
   }
   if (apr_table_elts(worker->expect.dot)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused EXPECT .");
+    worker_log(worker, LOG_ERR, "There are unused EXPECT .");
     return APR_EGENERAL;
   }
   if (apr_table_elts(worker->expect.headers)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused EXPECT headers");
+    worker_log(worker, LOG_ERR, "There are unused EXPECT headers");
     return APR_EGENERAL;
   }
   if (apr_table_elts(worker->expect.body)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused EXPECT body");
+    worker_log(worker, LOG_ERR, "There are unused EXPECT body");
     return APR_EGENERAL;
   }
 
@@ -943,12 +943,12 @@ apr_status_t worker_test_unused(worker_t * worker) {
  */
 apr_status_t worker_test_unused_errors(worker_t * worker) {
   if (apr_table_elts(worker->expect.error)->nelts) { 
-    logger_log(worker->logger, LOG_ERR, "There are unused EXPECT ERROR");
+    worker_log(worker, LOG_ERR, "There are unused EXPECT ERROR");
     return APR_EGENERAL;
   }
 
   if (apr_table_elts(worker->match.error)->nelts) {
-    logger_log(worker->logger, LOG_ERR, "There are unused MATCH ERROR");
+    worker_log(worker, LOG_ERR, "There are unused MATCH ERROR");
     return APR_EGENERAL;
   }
  
@@ -1043,7 +1043,7 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
       }	
     }
     if (tmpbuf) {
-        logger_log_buf(worker->logger, LOG_INFO, '<', tmpbuf, len);
+        worker_log_buf(worker, LOG_INFO, '<', tmpbuf, len);
         worker_match(worker, worker->match.dot, tmpbuf, len);
         worker_match(worker, worker->match.body, tmpbuf, len);
         worker_match(worker, worker->grep.dot, tmpbuf, len);
@@ -1165,7 +1165,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   while (*data == ' ') ++data; 
   copy = apr_pstrdup(call_pool, data);
   copy = worker_replace_vars(worker, copy, NULL, call_pool); 
-  logger_log(worker->logger, LOG_CMD, "%s", copy); 
+  worker_log(worker, LOG_CMD, "%s", copy); 
 
   /** get args from copy */
   my_get_args(copy, params, call_pool);
@@ -1183,7 +1183,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       block_name = apr_pstrdup(call_pool, last);
     }
     if (!(blocks = apr_hash_get(worker->modules, module, APR_HASH_KEY_STRING))) {
-      logger_log_error(worker->logger, "Could not find module \"%s\"", module);
+      worker_log(worker, LOG_ERR, "Could not find module \"%s\"", module);
       return APR_EINVAL;
     }
   }
@@ -1195,7 +1195,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   /* CR BEGIN */
   apr_thread_mutex_lock(worker->mutex);
   if (!(block = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-    logger_log_error(worker->logger, "Could not find block %s", block_name);
+    worker_log(worker, LOG_ERR, "Could not find block %s", block_name);
     /* CR END */
     apr_thread_mutex_unlock(worker->mutex);
     status = APR_ENOENT;
@@ -1214,13 +1214,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     for (i = 1; i < store_get_size(block->params); i++) {
       index = apr_itoa(call_pool, i);
       if (!(arg = store_get(block->params, index))) {
-        logger_log_error(worker->logger, "Param missmatch for block \"%s\"", block->name);
+        worker_log(worker, LOG_ERR, "Param missmatch for block \"%s\"", block->name);
         apr_thread_mutex_unlock(worker->mutex);
         status = APR_EGENERAL;
         goto error;
       }
       if (!(val = store_get(params, index))) {
-        logger_log_error(worker->logger, "Param missmatch for block \"%s\"", block->name);
+        worker_log(worker, LOG_ERR, "Param missmatch for block \"%s\"", block->name);
         apr_thread_mutex_unlock(worker->mutex);
         status = APR_EGENERAL;
         goto error;
@@ -1236,13 +1236,13 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     for (i = 0; i < store_get_size(block->retvars); i++, j++) {
       index = apr_itoa(call_pool, j);
       if (!(arg = store_get(block->retvars, index))) {
-        logger_log_error(worker->logger, "Return variables missmatch for block \"%s\"", block->name);
+        worker_log(worker, LOG_ERR, "Return variables missmatch for block \"%s\"", block->name);
         apr_thread_mutex_unlock(worker->mutex);
         status = APR_EGENERAL;
         goto error;
       }
       if (!(val = store_get(params, index))) {
-        logger_log_error(worker->logger, "Return variables missmatch for block \"%s\"", block->name);
+        worker_log(worker, LOG_ERR, "Return variables missmatch for block \"%s\"", block->name);
         apr_thread_mutex_unlock(worker->mutex);
         status = APR_EGENERAL;
         goto error;
@@ -1295,6 +1295,40 @@ error:
 }
  
 /**
+ * log formated wrapper
+ * @param worker IN thread data object
+ * @param mode IN log mode
+ *                LOG_DEBUG for a lot of infos
+ *                LOG_INFO for much infos
+ *                LOG_ERR for only very few infos
+ * @param fmt IN printf format string
+ * @param ... IN params for format strings
+ */
+void worker_log(worker_t * worker, int mode, char *fmt, ...) {
+  va_list va;
+  va_start(va, fmt);
+  logger_log_va(worker->logger, mode, worker->file_and_line, fmt, va);
+  va_end(va);
+}
+
+/**
+ * log buffer wrapper
+ * @param logger IN thread data object
+ * @param mode IN log mode
+ *                LOG_DEBUG for a lot of infos
+ *                LOG_INFO for much infos
+ *                LOG_ERR for only very few infos
+ * @param dir IN <,>,+,=
+ * @param buf IN buf to print (binary data allowed)
+ * @param len IN buf len
+ */
+void worker_log_buf(worker_t * worker, int mode, char dir, const char *buf,
+                    apr_size_t len) {
+  logger_log_buf(worker->logger, mode, dir, buf, len);
+}
+
+
+/**
  * Read headers from transport
  * @param worker IN thread data object
  * @param sockreader IN reader
@@ -1321,7 +1355,7 @@ static apr_status_t worker_get_headers(worker_t *worker,
         recorder->flags & RECORDER_RECORD_HEADERS) {
       sockreader_push_line(recorder->sockreader, line);
     }
-    logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
+    worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
     worker_match(worker, worker->match.dot, line, strlen(line));
     worker_match(worker, worker->match.headers, line, strlen(line));
     worker_match(worker, worker->grep.dot, line, strlen(line));
@@ -1335,7 +1369,7 @@ static apr_status_t worker_get_headers(worker_t *worker,
     while (*val == ' ') ++val;
     if (worker->headers_allow) {
       if (!apr_table_get(worker->headers_allow, key)) {
-        logger_log(worker->logger, LOG_ERR, "%s header not allowed", key);
+        worker_log(worker, LOG_ERR, "%s header not allowed", key);
         return APR_EGENERAL;
       }
     }
@@ -1349,7 +1383,7 @@ static apr_status_t worker_get_headers(worker_t *worker,
     }
   }
   if (status == APR_SUCCESS && line[0] == 0) {
-    logger_log_buf(worker->logger, LOG_INFO, '<', NULL, 0);
+    worker_log_buf(worker, LOG_INFO, '<', NULL, 0);
   }
   return status;
 }
@@ -1466,7 +1500,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
 	recorder->flags & RECORDER_RECORD_STATUS) {
       sockreader_push_line(recorder->sockreader, line);
     }
-    logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
+    worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
     worker_match(worker, worker->match.dot, line, strlen(line));
     worker_match(worker, worker->match.headers, line, strlen(line));
     worker_match(worker, worker->grep.dot, line, strlen(line));
@@ -1475,7 +1509,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     worker_expect(worker, worker->expect.headers, line, strlen(line));
 
     if (!strstr(line, "HTTP/") && !strstr(line, "ICAP/")) {
-      logger_log(worker->logger, LOG_DEBUG, "Not HTTP or ICAP version in \"%s\", must be HTTP/0.9", line); 
+      worker_log(worker, LOG_DEBUG, "Not HTTP or ICAP version in \"%s\", must be HTTP/0.9", line); 
       apr_table_add(worker->headers, "Connection", "close");
       status = sockreader_push_line(sockreader, line);
       goto http_0_9;
@@ -1483,14 +1517,14 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   }
   else {
     if (line[0] == 0) {
-      logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
-      logger_log_error(worker->logger, "No status line received");
+      worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
+      worker_log(worker, LOG_ERR, "No status line received");
       status = APR_EINVAL;
       goto out_err;
     }
     else {
-      logger_log_buf(worker->logger, LOG_INFO, '<', line, strlen(line));
-      logger_log_error(worker->logger, "Network error");
+      worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
+      worker_log(worker, LOG_ERR, "Network error");
       goto out_err;
     }
   }
@@ -1559,7 +1593,7 @@ http_0_9:
     if (doreadtrailing) {
       /* read trailing headers */
       if ((status = worker_get_headers(worker, sockreader, pool)) != APR_SUCCESS) {
-        logger_log_error(worker->logger, "Missing trailing empty header(s) after chunked encoded body");
+        worker_log(worker, LOG_ERR, "Missing trailing empty header(s) after chunked encoded body");
       }
     }
 
@@ -1694,7 +1728,7 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
    * additional tags and infos which are possible resolved in the following
    * hook
    */
-  logger_log(worker->logger, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
+  worker_log(worker, LOG_DEBUG, "get socket \"%s:%s\"", hostname, portname);
   worker_get_socket(worker, hostname, portname);
 
   if ((status = htt_run_client_port_args(worker, portname, &portname, last)) != APR_SUCCESS) {
@@ -1770,7 +1804,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
     int interim;
 
     if ((status = tcp_accept(worker)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Accept TCP connection aborted");
+      worker_log(worker, LOG_ERR, "Accept TCP connection aborted");
       return status;
     }
     
@@ -1781,7 +1815,7 @@ apr_status_t command_RES(command_t * self, worker_t * worker,
         worker->socket->peeklen = 1;
         status = transport_read(worker->socket->transport, worker->socket->peek, &worker->socket->peeklen);
         if (status != APR_SUCCESS && status != APR_EOF) {
-          logger_log_error(worker->logger, "Peek abort");
+          worker_log(worker, LOG_ERR, "Peek abort");
           return status;
         }
         else if (status == APR_SUCCESS) {
@@ -1896,13 +1930,13 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   if (last) {
     while (*last == ' ') ++last;
     if (*last != 0) {
-      logger_log(worker->logger, LOG_ERR, "there is more stuff behind last quote");
+      worker_log(worker, LOG_ERR, "there is more stuff behind last quote");
       return APR_EGENERAL;
     }
   }
 
   if (!type) {
-    logger_log(worker->logger, LOG_ERR, "Type not specified");
+    worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
   }
   
@@ -1915,7 +1949,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   match = apr_pstrdup(pool, interm);
 
   if (!match) {
-    logger_log(worker->logger, LOG_ERR, "Regex not specified");
+    worker_log(worker, LOG_ERR, "Regex not specified");
     return APR_EGENERAL;
   }
 
@@ -1924,7 +1958,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   }
   
   if (!(compiled = pregcomp(pool, interm, &err, &off))) {
-    logger_log(worker->logger, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
+    worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
     return APR_EINVAL;
   }
 
@@ -1961,12 +1995,12 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
 	                          APR_SUCCESS);
     }
     else {
-      logger_log(worker->logger, LOG_ERR, "Variable \"%s\" does not exist", var);
+      worker_log(worker, LOG_ERR, "Variable \"%s\" does not exist", var);
       return APR_EINVAL;
     }
   }
   else {
-    logger_log(worker->logger, LOG_ERR, "EXPECT type \"%s\" unknown", type);
+    worker_log(worker, LOG_ERR, "EXPECT type \"%s\" unknown", type);
     return APR_EINVAL;
   }
 
@@ -2004,7 +2038,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   tmp = apr_strtok(NULL, "", &last);
 
   if (!type) {
-    logger_log(worker->logger, LOG_ERR, "Type not specified");
+    worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
   }
   
@@ -2017,12 +2051,12 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   vars = apr_pstrdup(pool, tmp);
 
   if (!match) {
-    logger_log(worker->logger, LOG_ERR, "Regex not specified");
+    worker_log(worker, LOG_ERR, "Regex not specified");
     return APR_EGENERAL;
   }
 
   if (!vars) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -2035,7 +2069,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   }
 
   if (!(compiled = pregcomp(pool, match, &err, &off))) {
-    logger_log(worker->logger, LOG_ERR, "MATCH regcomp failed: %s", last);
+    worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
   if (strcmp(type, ".") == 0) {
@@ -2075,7 +2109,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     }
   }
   else {
-    logger_log(worker->logger, LOG_ERR, "Match type %s does not exist", type);
+    worker_log(worker, LOG_ERR, "Match type %s does not exist", type);
     return APR_ENOENT;
   }
 
@@ -2113,7 +2147,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   tmp = apr_strtok(NULL, "", &last);
 
   if (!type) {
-    logger_log(worker->logger, LOG_ERR, "Type not specified");
+    worker_log(worker, LOG_ERR, "Type not specified");
     return APR_EGENERAL;
   }
 
@@ -2126,12 +2160,12 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   vars = apr_pstrdup(pool, tmp);
 
   if (!grep) {
-    logger_log(worker->logger, LOG_ERR, "Regex not specified");
+    worker_log(worker, LOG_ERR, "Regex not specified");
     return APR_EGENERAL;
   }
 
   if (!vars) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -2144,7 +2178,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   }
 
   if (!(compiled = pregcomp(pool, grep, &err, &off))) {
-    logger_log(worker->logger, LOG_ERR, "MATCH regcomp failed: %s", last);
+    worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
   if (strcmp(type, ".") == 0) {
@@ -2182,7 +2216,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     }
   }
   else {
-    logger_log(worker->logger, LOG_ERR, "Grep type %s does not exist", type);
+    worker_log(worker, LOG_ERR, "Grep type %s does not exist", type);
     return APR_ENOENT;
   }
 
@@ -2212,23 +2246,23 @@ apr_status_t command_ASSERT(command_t * self, worker_t * worker,
   my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
   if (!argv[0]) {
-    logger_log_error(worker->logger, "Need an expression"); 
+    worker_log(worker, LOG_ERR, "Need an expression"); 
     return APR_EINVAL;
   }
 
   len = strlen(argv[0]);
   if (len < 1) {
-    logger_log_error(worker->logger, "Empty expression");
+    worker_log(worker, LOG_ERR, "Empty expression");
     return APR_EINVAL;
   }
 
   if ((status = math_evaluate(math, argv[0], &val)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Invalid expression");
+    worker_log(worker, LOG_ERR, "Invalid expression");
     return status;
   }
 
   if (!val) {
-    logger_log_error(worker->logger, "Did expect \"%s\"", argv[0]);
+    worker_log(worker, LOG_ERR, "Did expect \"%s\"", argv[0]);
     return APR_EINVAL;
   }
 
@@ -2257,19 +2291,19 @@ apr_status_t command_SET(command_t * self, worker_t * worker,
   vars_key = apr_strtok(copy, "=", &vars_last);
   for (i = 0; vars_key[i] != 0 && strchr(VAR_ALLOWED_CHARS, vars_key[i]); i++); 
   if (vars_key[i] != 0) {
-    logger_log(worker->logger, LOG_ERR, "Char '%c' is not allowed in \"%s\"", vars_key[i], vars_key);
+    worker_log(worker, LOG_ERR, "Char '%c' is not allowed in \"%s\"", vars_key[i], vars_key);
     return APR_EINVAL;
   }
 
   vars_val = apr_strtok(NULL, "", &vars_last);
 
   if (!vars_key) {
-    logger_log(worker->logger, LOG_ERR, "Key not specified");
+    worker_log(worker, LOG_ERR, "Key not specified");
     return APR_EGENERAL;
   }
 
   if (!vars_val) {
-    logger_log(worker->logger, LOG_ERR, "Value not specified");
+    worker_log(worker, LOG_ERR, "Value not specified");
     return APR_EGENERAL;
   }
   
@@ -2298,7 +2332,7 @@ apr_status_t command_UNSET(command_t * self, worker_t * worker,
   var = copy;
   for (i = 0; var[i] != 0 && strchr(VAR_ALLOWED_CHARS, var[i]); i++); 
   if (var[i] != 0) {
-    logger_log(worker->logger, LOG_ERR, "Char '%c' is not allowed in \"%s\"", var[i], var);
+    worker_log(worker, LOG_ERR, "Char '%c' is not allowed in \"%s\"", var[i], var);
     return APR_EINVAL;
   }
 
@@ -2332,7 +2366,7 @@ apr_status_t command_DATA(command_t * self, worker_t * worker,
     
   copy = apr_pstrdup(ptmp, data); 
   copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
-  logger_log(worker->logger, LOG_CMD, "%s%s", self->name, copy); 
+  worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
 
   if (strncasecmp(copy, "Content-Length: AUTO", 20) == 0) {
@@ -2434,7 +2468,7 @@ apr_status_t worker_file_to_http(worker_t *worker, apr_file_t *file, int flags, 
     apr_table_addn(worker->cache, 
 		   apr_psprintf(worker->pcache, "NOCRLF:%"APR_SIZE_T_FMT, len), buf);
     if (flags & FLAGS_CHUNKED) {
-      logger_log(worker->logger, LOG_DEBUG, "--- chunk size: %"APR_SIZE_T_FMT, len);
+      worker_log(worker, LOG_DEBUG, "--- chunk size: %"APR_SIZE_T_FMT, len);
       apr_table_add(worker->cache, "CHUNKED", "CHUNKED");
       if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
 	return status;
@@ -2506,7 +2540,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   progname = args[0];
 
   if (!progname) {
-    logger_log(worker->logger, LOG_ERR, "No program name specified");
+    worker_log(worker, LOG_ERR, "No program name specified");
     return APR_EGENERAL;
   }
   
@@ -2543,7 +2577,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
   }
 
   if (flags & FLAGS_PIPE) {
-    logger_log(worker->logger, LOG_DEBUG, "write stdout to http: %s", progname);
+    worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
     if ((status = worker_file_to_http(worker, worker->proc.out, flags, ptmp)) 
 	!= APR_SUCCESS) {
       return status;
@@ -2557,7 +2591,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     apr_size_t len = 0;
     char *buf = NULL;
 
-    logger_log(worker->logger, LOG_DEBUG, "read stdin: %s", progname);
+    worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
     status = bufreader_new(&br, worker->proc.out, worker->pbody);
     if (status == APR_SUCCESS || APR_STATUS_IS_EOF(status)) {
       status = APR_SUCCESS;
@@ -2568,7 +2602,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     }
 
     if (buf) {
-      logger_log_buf(worker->logger, LOG_INFO, '<', buf, len);
+      worker_log_buf(worker, LOG_INFO, '<', buf, len);
       worker_match(worker, worker->match.exec, buf, len);
       worker_match(worker, worker->grep.exec, buf, len);
       worker_expect(worker, worker->expect.exec, buf, len);
@@ -2582,7 +2616,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
 	                        status);
   }
 
-  logger_log(worker->logger, LOG_DEBUG, "wait for: %s", progname);
+  worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
   apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
 
   apr_file_close(worker->proc.in);
@@ -2625,7 +2659,7 @@ apr_status_t command_SENDFILE(command_t * self, worker_t * worker,
     if ((status =
          apr_file_open(&fp, argv[i], APR_READ, APR_OS_DEFAULT,
                        ptmp)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "\nCan not send file: File \"%s\" not found", copy);
+      worker_log(worker, LOG_ERR, "\nCan not send file: File \"%s\" not found", copy);
       return APR_ENOENT;
     }
     
@@ -2666,7 +2700,7 @@ apr_status_t command_PIPE(command_t * self, worker_t * worker,
     val = NULL;
   }
   
-  logger_log(worker->logger, LOG_DEBUG, "additional: %s, value: %s", add, val);
+  worker_log(worker, LOG_DEBUG, "additional: %s, value: %s", add, val);
   
   if (add && strncasecmp(add, "chunked", 7) == 0) {
     worker->chunksize = val ? apr_atoi64(val) : BLOCK_MAX;
@@ -2694,7 +2728,7 @@ apr_status_t command_NOCRLF(command_t * self, worker_t * worker,
 
   copy = apr_pstrdup(ptmp, data); 
   copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
-  logger_log(worker->logger, LOG_CMD, "%s%s", self->name, copy); 
+  worker_log(worker, LOG_CMD, "%s%s", self->name, copy); 
 
   if (unresolved) {
     apr_table_add(worker->cache, "NOCRLF;resolve", copy);
@@ -2791,7 +2825,7 @@ apr_status_t command_DEBUG(command_t *self, worker_t *worker, char *data,
   COMMAND_OPTIONAL_ARG;
 
   /* Using LOG_NONE so this prints, regardless of httest internal log level */
-  logger_log(worker->logger, LOG_NONE, "%s", copy);
+  worker_log(worker, LOG_NONE, "%s", copy);
 
   return APR_SUCCESS;
 }
@@ -2855,7 +2889,7 @@ apr_status_t command_DOWN(command_t *self, worker_t *worker, char *data,
   COMMAND_NO_ARG;
 
   if (!worker->listener) {
-    logger_log_error(worker->logger, "Server allready down", self->name);
+    worker_log(worker, LOG_ERR, "Server allready down", self->name);
     return APR_EGENERAL;
   }
   
@@ -3200,7 +3234,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, worker->pbody))
 	  != APR_SUCCESS) {
-	logger_log(worker->logger, LOG_ERR, "Could not mk temp file %s(%d)", 
+	worker_log(worker, LOG_ERR, "Could not mk temp file %s(%d)", 
 	           my_status_str(ptmp, status), status);
 	return status;
       }
@@ -3208,12 +3242,12 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
     
     len = strlen(copy);
     if ((status = file_write(worker->tmpf, copy, len)) != APR_SUCCESS) {
-      logger_log(worker->logger, LOG_ERR, "Could not write to temp file");
+      worker_log(worker, LOG_ERR, "Could not write to temp file");
       return status;
     }
     len = 1;
     if ((status = file_write(worker->tmpf, "\n", len)) != APR_SUCCESS) {
-      logger_log(worker->logger, LOG_ERR, "Could not write to temp file");
+      worker_log(worker, LOG_ERR, "Could not write to temp file");
       return status;
     }
   }
@@ -3267,16 +3301,16 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
   apr_size_t peeklen;
 
   if (!(worker->flags & FLAGS_SERVER)) {
-    logger_log_error(worker->logger, "This command is only valid in a SERVER");
+    worker_log(worker, LOG_ERR, "This command is only valid in a SERVER");
     return APR_EGENERAL;
   }
 
   if (worker->socket->socket_state == SOCKET_CLOSED) {
-    logger_log_error(worker->logger, "Socket to client is closed\n");
+    worker_log(worker, LOG_ERR, "Socket to client is closed\n");
     return APR_ECONNREFUSED;
   }
 
-  logger_log(worker->logger, LOG_DEBUG, "--- tunnel\n");
+  worker_log(worker, LOG_DEBUG, "--- tunnel\n");
 
   apr_pool_create(&client.pool, NULL);
   apr_pool_create(&backend.pool, NULL);
@@ -3354,7 +3388,7 @@ error1:
   worker_get_socket(worker, "Default", "0");
   apr_pool_destroy(client.pool);
   apr_pool_destroy(backend.pool);
-  logger_log(worker->logger, LOG_DEBUG, "--- tunnel end\n");
+  worker_log(worker, LOG_DEBUG, "--- tunnel end\n");
   return status;
 }
 
@@ -3445,7 +3479,7 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
   COMMAND_NEED_ARG("<name>*");
 
   if (!worker->procs) {
-    logger_log_error(worker->logger, "No processes to wait for");
+    worker_log(worker, LOG_ERR, "No processes to wait for");
     return APR_EINVAL;
   }
 
@@ -3455,12 +3489,12 @@ apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data,
     apr_exit_why_e why;
     apr_proc_t *proc = apr_hash_get(worker->procs, var, APR_HASH_KEY_STRING);
     if (!proc) {
-      logger_log_error(worker->logger, "Process \"%s\" does not exist", var);
+      worker_log(worker, LOG_ERR, "Process \"%s\" does not exist", var);
       return APR_EINVAL;
     }
     apr_proc_wait(proc, &exitcode, &why, APR_WAIT); 
     if (exitcode != 0) {
-      logger_log_error(worker->logger, "Process \"%s\" FAILED", var);
+      worker_log(worker, LOG_ERR, "Process \"%s\" FAILED", var);
       status = APR_EINVAL;
     }
     var = apr_strtok(NULL, " ", &last);
@@ -3512,7 +3546,7 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data,
   COMMAND_NEED_ARG("RES [ALL] {STATUS|HEADERS|BODY}*");
 
   if (strncmp(copy, "RES", 3) != 0) {
-    logger_log_error(worker->logger, "Only response recording supported yet");
+    worker_log(worker, LOG_ERR, "Only response recording supported yet");
     return APR_EINVAL;
   }
 
@@ -3562,7 +3596,7 @@ apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data,
     recorder->on = RECORDER_PLAY;
   }
   else {
-    logger_log_error(worker->logger, "Can not play cause recorder is not in recording mode");
+    worker_log(worker, LOG_ERR, "Can not play cause recorder is not in recording mode");
     return APR_EINVAL;
   }
   return APR_SUCCESS;
@@ -3608,7 +3642,7 @@ apr_status_t command_USE(command_t *self, worker_t *worker, char *data,
   COMMAND_NEED_ARG("<module>");
 
   if (!(worker->blocks = apr_hash_get(worker->modules, copy, APR_HASH_KEY_STRING))) {
-    logger_log_error(worker->logger, "Could not finde module \"%s\"", copy);
+    worker_log(worker, LOG_ERR, "Could not finde module \"%s\"", copy);
     return APR_EINVAL;
   }
 
@@ -3637,7 +3671,7 @@ apr_status_t command_IGNORE_BODY(command_t *self, worker_t *worker, char *data,
     worker->flags &= ~FLAGS_IGNORE_BODY;
   }
   else {
-    logger_log_error(worker->logger, "Do not understand \"%s\"", copy);
+    worker_log(worker, LOG_ERR, "Do not understand \"%s\"", copy);
     return APR_EINVAL;
   }
   return APR_SUCCESS;
@@ -3744,7 +3778,7 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
   store_set((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
 	    logger_get_mode(global->logger)));
   
-  logger_log((*self)->logger, LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
+  worker_log((*self), LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
 }
 
 /**
@@ -3768,7 +3802,7 @@ void worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
   (*self)->group = orig->group;
 
-  logger_log((*self)->logger, LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
+  worker_log((*self), LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
 }
 
 /**
@@ -3777,7 +3811,7 @@ void worker_clone(worker_t ** self, worker_t * orig) {
  * @param worker IN thread data object
  */
 void worker_destroy(worker_t * worker) {
-  logger_log(worker->logger, LOG_DEBUG, "worker_destroy: %p, pbody: %p", worker->pbody, worker->pbody);
+  worker_log(worker, LOG_DEBUG, "worker_destroy: %p, pbody: %p", worker->pbody, worker->pbody);
   apr_pool_destroy(worker->heartbeat);
 }
 
@@ -3807,7 +3841,7 @@ apr_status_t worker_add_line(worker_t * worker, const char *file_and_line,
 apr_status_t worker_socket_send(worker_t *worker, char *buf, 
                                 apr_size_t len) {
 
-  logger_log(worker->logger, LOG_DEBUG, "send socket: %p transport: %p", 
+  worker_log(worker, LOG_DEBUG, "send socket: %p transport: %p", 
              worker->socket, worker->socket->transport);
   return transport_write(worker->socket->transport, buf, len);
 }
@@ -3910,30 +3944,30 @@ apr_status_t worker_flush_part(worker_t *worker, int from, int to,
     if (strncasecmp(line.info, "NOCRLF:", 7) == 0) { 
       line.len = apr_atoi64(&line.info[7]);
       if (nocrlf) {
-	logger_log_buf(worker->logger, LOG_INFO, '+', line.buf, line.len);
+	worker_log_buf(worker, LOG_INFO, '+', line.buf, line.len);
       }
       else {
-	logger_log_buf(worker->logger, LOG_INFO, '>', line.buf, line.len);
+	worker_log_buf(worker, LOG_INFO, '>', line.buf, line.len);
       }
       nocrlf = 1;
     }
     else if (strcasecmp(line.info, "NOCRLF") == 0) {
       line.len = strlen(line.buf);
       if (nocrlf) {
-	logger_log_buf(worker->logger, LOG_INFO, '+', line.buf, line.len);
+	worker_log_buf(worker, LOG_INFO, '+', line.buf, line.len);
       }
       else {
-	logger_log_buf(worker->logger, LOG_INFO, '>', line.buf, line.len);
+	worker_log_buf(worker, LOG_INFO, '>', line.buf, line.len);
       }
       nocrlf = 1;
     } 
     else {
       line.len = strlen(line.buf);
       if (nocrlf) {
-	logger_log_buf(worker->logger, LOG_INFO, '+', line.buf, line.len);
+	worker_log_buf(worker, LOG_INFO, '+', line.buf, line.len);
       }
       else {
-	logger_log_buf(worker->logger, LOG_INFO, '>', line.buf, line.len);
+	worker_log_buf(worker, LOG_INFO, '>', line.buf, line.len);
       }
       nocrlf = 0;
     }
@@ -3976,7 +4010,7 @@ apr_status_t worker_flush_chunk(worker_t *worker, char *chunked, int from, int t
   int len;
 
   if (chunked) {
-    logger_log_buf(worker->logger, LOG_INFO, '>', chunked, strlen(chunked));
+    worker_log_buf(worker, LOG_INFO, '>', chunked, strlen(chunked));
   }
 
   if (chunked) {

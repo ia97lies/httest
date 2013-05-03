@@ -99,7 +99,7 @@ static js_wconf_t *js_get_worker_config(worker_t *worker) {
 /* The error reporter callback. */  
 static void js_log_error(JSContext *cx, const char *message, JSErrorReport *report) {  
   worker_t *worker = JS_GetContextPrivate(cx);
-  logger_log_error(worker->logger, "%s:%d:%s", 
+  worker_log(worker, LOG_ERR, "%s:%d:%s", 
                    report->filename ? report->filename : "<no filename=\"filename\">", 
                    report->lineno,  message);  
 }  
@@ -137,7 +137,7 @@ static apr_status_t js_set_variable_names(worker_t *worker, const char *line) {
         input = -1;
       }
       else {
-        logger_log_error(worker->logger, "Javascript BLOCKs support only one return value");
+        worker_log(worker, LOG_ERR, "Javascript BLOCKs support only one return value");
         return APR_EGENERAL;
       }
       i++;
@@ -162,12 +162,12 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
   js_wconf_t *bconf = js_get_worker_config(worker->block);
 
   if ((rt = JS_NewRuntime(8 * 1024 * 1024)) == NULL) {
-    logger_log_error(worker->logger, "Could not create javascript runtime");
+    worker_log(worker, LOG_ERR, "Could not create javascript runtime");
     return APR_EGENERAL;
   } 
 
   if ((cx = JS_NewContext(rt, 8192)) == NULL) {
-    logger_log_error(worker->logger, "Could not create javascript context");
+    worker_log(worker, LOG_ERR, "Could not create javascript context");
     return APR_EGENERAL;
   }
 
@@ -177,12 +177,12 @@ static apr_status_t block_js_interpreter(worker_t *worker, worker_t *parent,
   JS_SetErrorReporter(cx, js_log_error);
 
   if ((global = JS_NewCompartmentAndGlobalObject(cx, &global_class, NULL)) == NULL) {
-    logger_log_error(worker->logger, "Could not create javascript compartment");
+    worker_log(worker, LOG_ERR, "Could not create javascript compartment");
     return APR_EGENERAL;
   }
 
   if (!JS_InitStandardClasses(cx, global)) {
-    logger_log_error(worker->logger, "Could not initialize javascript standard classes");
+    worker_log(worker, LOG_ERR, "Could not initialize javascript standard classes");
     return APR_EGENERAL;
   } 
 
@@ -331,13 +331,13 @@ static apr_status_t block_JS_BLOCK_CREATE(worker_t *worker, worker_t *parent, ap
 
   signature = store_get(worker->params, "1");
   if (!signature) {
-    logger_log_error(worker->logger, "Need a signature");
+    worker_log(worker, LOG_ERR, "Need a signature");
     return APR_EGENERAL;
   }
 
   param = store_get(worker->params, "2");
   if (!param) {
-    logger_log_error(worker->logger, "Need a script");
+    worker_log(worker, LOG_ERR, "Need a script");
     return APR_EGENERAL;
   }
 

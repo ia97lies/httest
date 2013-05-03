@@ -80,7 +80,7 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
   apr_size_t len;
  
   if (!worker->socket) {
-    logger_log_error(worker->logger, "Can not send initial SOCKS bytes");
+    worker_log(worker, LOG_ERR, "Can not send initial SOCKS bytes");
     return APR_ENOSOCKET;
   }
 
@@ -88,18 +88,18 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
 
   buf[0] = 5; buf[1] = 1; buf[2] = 0;
   if ((status = transport_write(transport, (char *)buf, 3)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Can not send initial SOCKS bytes");
+    worker_log(worker, LOG_ERR, "Can not send initial SOCKS bytes");
     return status;
   }
   
   len = 2;
   if ((status = transport_read(transport, (char *)buf, &len)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Can not read initial SOCKS bytes");
+    worker_log(worker, LOG_ERR, "Can not read initial SOCKS bytes");
     return status;
   }    
 
   if (len != 2 || buf[0] != 5 || buf[1] != 0) {
-    logger_log_error(worker->logger, "Wrong protocol bytes received");
+    worker_log(worker, LOG_ERR, "Wrong protocol bytes received");
     return APR_EINVAL;
   }
 
@@ -123,7 +123,7 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
       buf[4 + i] = ip.digit[i];
     }
     if ((status = transport_write(transport, (char *)buf, 8)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Can not send IP to SOCKS proxy");
+      worker_log(worker, LOG_ERR, "Can not send IP to SOCKS proxy");
       return status;
     }
   }
@@ -132,11 +132,11 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
     buf[3] = 3;
     buf[4] = strlen(hostname);
     if ((status = transport_write(transport, (char *)buf, 5)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Can not send hostname to SOCKS proxy");
+      worker_log(worker, LOG_ERR, "Can not send hostname to SOCKS proxy");
       return status;
     }
     if ((status = transport_write(transport, hostname, buf[4])) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Can not send hostname to SOCKS proxy");
+      worker_log(worker, LOG_ERR, "Can not send hostname to SOCKS proxy");
       return status;
     }
   }
@@ -145,13 +145,13 @@ static apr_status_t block_SOCKS_CONNECT(worker_t *worker, worker_t *parent,
   port.port = htons(port.port);
 
   if ((status = transport_write(transport, (char *)port.digit, 2)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Can not send port to SOCKS proxy");
+    worker_log(worker, LOG_ERR, "Can not send port to SOCKS proxy");
     return status;
   }
 
   len = 10;
   if ((status = transport_read(transport, (char *)buf, &len)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Can not read final SOCKS bytes");
+    worker_log(worker, LOG_ERR, "Can not read final SOCKS bytes");
     return status;
   }    
   return APR_SUCCESS;

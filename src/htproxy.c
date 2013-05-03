@@ -281,7 +281,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
          line[0] != 0) {
     /** get request line */
     if (i == 0) {
-      logger_log(worker->logger, LOG_INFO, "Requested url: %s", line);
+      worker_log(worker, LOG_INFO, "Requested url: %s", line);
       r->method = apr_strtok(line, " ", &r->url);
       if (strcasecmp(r->method, "CONNECT") != 0) {
 	r->protocol = apr_strtok(NULL, "://", &r->url);
@@ -312,7 +312,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
 					  r->url, r->version);
       }
       else {
-	logger_log(worker->logger, LOG_ERR, "SSL tunneling is not supported");
+	worker_log(worker, LOG_ERR, "SSL tunneling is not supported");
         call_command(worker, command_DATA, "_HTTP/1.1 400 Bad Request", "");
         call_command(worker, command_DATA, "__", "");
         call_command(worker, command_CLOSE, "_CLOSE", "");
@@ -320,7 +320,7 @@ static apr_status_t wait_request(worker_t * worker, request_t *r) {
     }
     else {
       /* headers */
-      logger_log(worker->logger, LOG_INFO, "<%s", line);
+      worker_log(worker, LOG_INFO, "<%s", line);
       key = apr_strtok(line, ":", &last);
       val = last;
       if (val) {
@@ -648,7 +648,7 @@ static apr_status_t do_body(self_t *self, worker_t *worker, apr_pool_t *p,
       }
     }
     else {
-      logger_log(worker->logger, LOG_INFO, "\n[Body len: %d]", len);
+      worker_log(worker, LOG_INFO, "\n[Body len: %d]", len);
       if ((status = call_command(worker, command_FLUSH, "_FLUSH", "")) != APR_SUCCESS) {
 	return status;
       }
@@ -846,7 +846,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
     
     /* CS BEGIN */
     apr_thread_mutex_lock(self->mutex);
-    logger_log(client->logger, LOG_DEBUG, "Enter critical section");
+    worker_log(client, LOG_DEBUG, "Enter critical section");
 
     if ((status = do_connect(self, server, ptmp, request.is_ssl, request.host, 
 	                     request.port, write)) != APR_SUCCESS) {
@@ -893,7 +893,7 @@ static void *APR_THREAD_FUNC proxy_thread(apr_thread_t * thread, void *selfv) {
 
     apr_thread_mutex_unlock(self->mutex);
     /* CS END */
-    logger_log(client->logger, LOG_DEBUG, "Leave critical section");
+    worker_log(client, LOG_DEBUG, "Leave critical section");
 
     if ((status = do_body(self, client, ptmp, response.headers, response.body,
 	                  response.len, 0)) != APR_SUCCESS) { goto error;

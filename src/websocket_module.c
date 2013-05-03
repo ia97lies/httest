@@ -106,15 +106,15 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   const char *len_param = store_get(worker->params, "2");
 
   if (!worker->sockreader) {
-    logger_log_error(worker->logger, "Websockets need a open HTTP stream, use _SOCKET");
+    worker_log(worker, LOG_ERR, "Websockets need a open HTTP stream, use _SOCKET");
     return APR_ENOSOCKET;
   }
 
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&op, &len)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Could not read first frame byte");
+    worker_log(worker, LOG_ERR, "Could not read first frame byte");
   }
-  logger_log(worker->logger, LOG_DEBUG, "Got opcode 0x%X", op);
+  worker_log(worker, LOG_DEBUG, "Got opcode 0x%X", op);
   type = NULL;
   if ((op >> 7) & 1) {
     type = apr_pstrcat(ptmp, "FIN", type?",":NULL, type, NULL);
@@ -143,14 +143,14 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
 
   len = 1;
   if ((status = sockreader_read_block(worker->sockreader, (char *)&pl_len, &len)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Could not read first frame byte");
+    worker_log(worker, LOG_ERR, "Could not read first frame byte");
   }
-  logger_log(worker->logger, LOG_DEBUG, "Got first len byte %x", pl_len);
+  worker_log(worker, LOG_DEBUG, "Got first len byte %x", pl_len);
   masked = (pl_len & 0x80);
   if (masked) {
     type = apr_pstrcat(ptmp, "MASKED", type?",":NULL, type, NULL);
   }
-  logger_log(worker->logger, LOG_DEBUG, "Opcode: %s", type);
+  worker_log(worker, LOG_DEBUG, "Opcode: %s", type);
   if (type_param) {
     worker_var_set(worker, type_param, type?type:"<NONE>");
   }
@@ -160,7 +160,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     uint16_t length;
     len = 2;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not read 16 bit payload length");
+      worker_log(worker, LOG_ERR, "Could not read 16 bit payload length");
     }
 #if APR_IS_BIGENDIAN
 	payload_len = length;
@@ -172,7 +172,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     uint64_t length;
     len = 8;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&length, &len)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not read 32 bit payload length");
+      worker_log(worker, LOG_ERR, "Could not read 32 bit payload length");
     }
 #if APR_IS_BIGENDIAN
 	payload_len = length;
@@ -187,7 +187,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if (masked) {
     len = 4;
     if ((status = sockreader_read_block(worker->sockreader, (char *)&mask, &len)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not read mask");
+      worker_log(worker, LOG_ERR, "Could not read mask");
     }
   }
 
@@ -195,12 +195,12 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if (len_param) {
     worker_var_set(worker, len_param, apr_itoa(ptmp, len));
   }
-  logger_log(worker->logger, LOG_DEBUG, "Payload-Length: %ld", len);
+  worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", len);
   payload = apr_pcalloc(worker->pbody, len + 1);
   status = sockreader_read_block(worker->sockreader, payload, &len);
-  logger_log(worker->logger, LOG_DEBUG, "Got: %ld bytes; Status: %d", len, status);
+  worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", len, status);
   if (status != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Could not read payload");
+    worker_log(worker, LOG_ERR, "Could not read payload");
     return status;
   }
 
@@ -242,11 +242,11 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   apr_size_t len;
 
   if (!worker->socket || !worker->socket->transport) {
-    logger_log_error(worker->logger, "No established socket for websocket protocol");
+    worker_log(worker, LOG_ERR, "No established socket for websocket protocol");
     return APR_ENOSOCKET;
   }
 
-  logger_log(worker->logger, LOG_DEBUG, "payload: \"%s\"", payload);
+  worker_log(worker, LOG_DEBUG, "payload: \"%s\"", payload);
 
   e = apr_strtok(op_param, ",", &last);
   while (e) {
@@ -273,7 +273,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     }
     e = apr_strtok(NULL, ",", &last);
   }
-  logger_log(worker->logger, LOG_DEBUG, "Send opcod 0x%X", op);
+  worker_log(worker, LOG_DEBUG, "Send opcod 0x%X", op);
   
   if (strcmp(payload_len, "AUTO") == 0) {
     if (payload) {
@@ -287,7 +287,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     len = apr_atoi64(payload_len);
   }
 
-  logger_log(worker->logger, LOG_DEBUG, "Payload length: %ld", len);
+  worker_log(worker, LOG_DEBUG, "Payload length: %ld", len);
 
   if (len < 126) {
     pl_len_8 = len;
@@ -314,32 +314,32 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   }
 
   pl_len_8 = pl_len_8;
-  logger_log(worker->logger, LOG_DEBUG, "pl_len: %0x", pl_len_8);
+  worker_log(worker, LOG_DEBUG, "pl_len: %0x", pl_len_8);
   if (mask_str) {
     pl_len_8 |= 0x80;
   }
-  logger_log(worker->logger, LOG_DEBUG, "pl_len_8: %0x, pl_len_16: %ld, pl_len_64: %ld", pl_len_8, pl_len_16, pl_len_64);
+  worker_log(worker, LOG_DEBUG, "pl_len_8: %0x, pl_len_16: %ld, pl_len_64: %ld", pl_len_8, pl_len_16, pl_len_64);
 
   if ((status = transport_write(worker->socket->transport, (const char *)&op, 1)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Could not send Opcode");
+    worker_log(worker, LOG_ERR, "Could not send Opcode");
     return status;
   }
 
   if ((status = transport_write(worker->socket->transport, (const char *)&pl_len_8, 1)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Could not send first len byte");
+    worker_log(worker, LOG_ERR, "Could not send first len byte");
     return status;
   }
 
   if (pl_len_16) {
     if ((status = transport_write(worker->socket->transport, (const char *)&pl_len_16, 2)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not send 16 bit len bytes");
+      worker_log(worker, LOG_ERR, "Could not send 16 bit len bytes");
       return status;
     }
   }
 
   if (pl_len_64) {
     if ((status = transport_write(worker->socket->transport, (const char *)&pl_len_64, 8)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not send 64 bit len bytes");
+      worker_log(worker, LOG_ERR, "Could not send 64 bit len bytes");
       return status;
     }
   }
@@ -352,13 +352,13 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
       payload[i] ^= ((uint8_t *)&mask)[j];
     }
     if ((status = transport_write(worker->socket->transport, (const char *)&mask, 4)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not send mask bytes");
+      worker_log(worker, LOG_ERR, "Could not send mask bytes");
       return status;
     }
   }
 
   if ((status = transport_write(worker->socket->transport, payload, len)) != APR_SUCCESS) {
-    logger_log_error(worker->logger, "Could not send payload");
+    worker_log(worker, LOG_ERR, "Could not send payload");
     return status;
   }
   logger_log_buf(worker->logger, LOG_INFO, '>', payload, len);

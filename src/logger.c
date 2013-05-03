@@ -35,10 +35,6 @@
 #include <apr_lib.h>
 #include <apr_errno.h>
 #include <apr_strings.h>
-#include <apr_network_io.h>
-#include <apr_thread_proc.h>
-#include <apr_thread_cond.h>
-#include <apr_thread_mutex.h>
 #include <apr_portable.h>
 #include <apr_hash.h>
 #include <apr_base64.h>
@@ -65,8 +61,6 @@ struct logger_s {
   int mode;
   int id;
   int group;
-  const char *file_and_line;
-  apr_thread_mutex_t *mutex;
   appender_t *appender;
 };
 
@@ -103,7 +97,6 @@ logger_t *logger_new(apr_pool_t *pool, int mode, int id) {
  */
 logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
   logger_t *logger = logger_new(pool, origin->mode, id);
-  logger->mutex = origin->mutex;
   logger->group = origin->group;
   logger->appender = origin->appender;
   return logger;
@@ -116,15 +109,6 @@ logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
  */
 void logger_add_appender(logger_t *logger, appender_t *appender) {
   logger->appender = appender;
-}
-
-/**
- * Update internal stuff id can change from command to command
- * @param logger IN logger instance
- * @param file_and_line IN file and line string
- */
-void logger_update(logger_t *logger, const char *file_and_line) {
-  logger->file_and_line = file_and_line;
 }
 
 /**
@@ -144,20 +128,18 @@ void logger_set_group(logger_t *logger, int group) {
  *                LOG_INFO for much infos
  *                LOG_ERR for only very few infos
  * @param fmt IN printf format string
- * @param ... IN params for format strings
+ * @param va IN params for format strings as va_list
  */
-void logger_log_va(logger_t * logger, int mode, char *fmt, va_list va) {
+void logger_log_va(logger_t * logger, int mode, const char *pos, char *fmt, 
+                   va_list va) {
   if (logger->mode >= mode) {
     char *tmp;
     apr_pool_t *pool;
 
     apr_pool_create(&pool, NULL);
-    if (logger->mutex) apr_thread_mutex_lock(logger->mutex);
     if (mode == LOG_ERR) {
       tmp = apr_pvsprintf(pool, fmt, va);
-      tmp = apr_psprintf(pool, "%s: error: %s", 
-                         logger->file_and_line?logger->file_and_line:"<none>",
-                         tmp);
+      tmp = apr_psprintf(pool, "%s: error: %s", pos?pos:"<none>", tmp);
       appender_print(logger->appender, 1, logger->id, logger->group, '=', NULL, 
                      tmp, strlen(tmp));
     }
@@ -166,14 +148,13 @@ void logger_log_va(logger_t * logger, int mode, char *fmt, va_list va) {
       appender_print(logger->appender, 0, logger->id, logger->group, '=', NULL, 
                      tmp, strlen(tmp));
     }
-    if (logger->mutex) apr_thread_mutex_unlock(logger->mutex);
     apr_pool_destroy(pool);
   }
 }
-
+ 
 /**
- * a simple log mechanisme
- * @param logger IN thread data object
+ * log formated 
+ * @param worker IN thread data object
  * @param mode IN log mode
  *                LOG_DEBUG for a lot of infos
  *                LOG_INFO for much infos
@@ -181,27 +162,13 @@ void logger_log_va(logger_t * logger, int mode, char *fmt, va_list va) {
  * @param fmt IN printf format string
  * @param ... IN params for format strings
  */
-void logger_log(logger_t * logger, int mode, char *fmt, ...) {
+
+void logger_log(logger_t * logger, int log_mode, const char *pos, char *fmt, 
+                ...) {
   va_list va;
   va_start(va, fmt);
-  logger_log_va(logger, mode, fmt, va);
+  logger_log_va(logger, log_mode, pos, fmt, va);
   va_end(va);
-}
-
-/**
- * a simple error log mechanisme
- * @param logger IN thread data object
- * @param fmt IN printf format string
- * @param ... IN params for format strings
- */
-void logger_log_error(logger_t * logger, char *fmt, ...) {
-
-  if (logger->mode >= LOG_ERR) {
-    va_list va;
-    va_start(va, fmt);
-    logger_log_va(logger, LOG_ERR, fmt, va);
-    va_end(va);
-  }
 }
 
 /**

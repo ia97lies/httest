@@ -626,11 +626,11 @@ static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread,
       logger_log(host->worker->logger, LOG_INFO, "[%s]: %s", host->name, buf);
       status = sockreader_read_line(sockreader, &buf); 
     }
-    logger_log(host->worker->logger, LOG_INFO, "Remote host finished: %d\n", status);
+    worker_log(host->worker, LOG_INFO, "Remote host finished: %d\n", status);
   }
   else {
-    logger_log_error(host->worker->logger, "Lost connection to remote host \"%s\"\n", 
-                     host->name);
+    worker_log(host->worker, LOG_ERR, "Lost connection to remote host \"%s\"\n", 
+               host->name);
   }
 
   apr_thread_mutex_unlock(host->sync);
@@ -675,7 +675,7 @@ static apr_status_t perf_distribute_host(worker_t *worker,
 
     if ((status = tcp_connect(worker, hostname, portname)) != APR_SUCCESS) {
       host->state = PERF_HOST_ERROR;
-      logger_log_error(worker->logger, "Could not connect to httestd \"%s\" SKIP", 
+      worker_log(worker, LOG_ERR, "Could not connect to httestd \"%s\" SKIP", 
                        host->name);
       apr_pool_destroy(ptmp);
       return status;
@@ -687,7 +687,7 @@ static apr_status_t perf_distribute_host(worker_t *worker,
     if ((status = apr_thread_mutex_create(&host->sync, 
                                           APR_THREAD_MUTEX_DEFAULT,
                                           global->pool)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not create supervisor thread sync mutex for remote host");
+      worker_log(worker, LOG_ERR, "Could not create supervisor thread sync mutex for remote host");
       apr_pool_destroy(ptmp);
       return status;
     }
@@ -695,19 +695,19 @@ static apr_status_t perf_distribute_host(worker_t *worker,
     if ((status = apr_thread_create(thread, global->tattr, perf_thread_super,
                                     host, global->pool)) 
         != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not create supervisor thread for remote host");
+      worker_log(worker, LOG_ERR, "Could not create supervisor thread for remote host");
       apr_pool_destroy(ptmp);
       return status;
     }
     if ((status = apr_thread_data_set(host, "host", 
                                       perf_host_cleanup, *thread)) != APR_SUCCESS) {
-      logger_log_error(worker->logger, "Could not store remote host to thread");
+      worker_log(worker, LOG_ERR, "Could not store remote host to thread");
       apr_pool_destroy(ptmp);
       return status;
     }
   }
   else if (host->state == PERF_HOST_ERROR) {
-    logger_log_error(worker->logger, "Could not connect to httestd \"%s\" SKIP", host->name);
+    worker_log(worker, LOG_ERR, "Could not connect to httestd \"%s\" SKIP", host->name);
     apr_pool_destroy(ptmp);
     return APR_ECONNREFUSED;
   }
@@ -733,13 +733,13 @@ static apr_status_t perf_client_create(worker_t *worker, apr_thread_start_t func
   
   if (gconf->flags & PERF_GCONF_FLAGS_DIST) {
     if (!gconf->clients.cur_host_i) {
-      logger_log(worker->logger, LOG_INFO, "Distribute CLIENT to my self");
+      worker_log(worker, LOG_INFO, "Distribute CLIENT to my self");
       perf_get_first_host(global, worker);
       status = APR_ENOTHREAD;
     }
     else {
       /* distribute to remote host */
-      logger_log(worker->logger, LOG_INFO, "Distribute CLIENT to %s", 
+      worker_log(worker, LOG_INFO, "Distribute CLIENT to %s", 
                  gconf->clients.cur_host->name);
       status = perf_distribute_host(worker, gconf->clients.cur_host, new_thread);
       if (*new_thread) {
@@ -798,11 +798,11 @@ static apr_status_t perf_server_create(worker_t *worker, apr_thread_start_t func
     apr_collapse_spaces(remote_host, remote_host);
     host->name = remote_host;
     host->worker = worker;
-    logger_log(worker->logger, LOG_DEBUG, "distribute server to \"%s\"\n", remote_host);
+    worker_log(worker, LOG_DEBUG, "distribute server to \"%s\"\n", remote_host);
     status = perf_distribute_host(worker, host, new_thread);
     if (status != APR_SUCCESS) {
       status = APR_EINVAL;
-      logger_log_error(worker->logger, "Can not serialize server to remote host \"%s\"", remote_host);
+      worker_log(worker, LOG_ERR, "Can not serialize server to remote host \"%s\"", remote_host);
     }
     else {
       apr_hash_set(gconf->clients.my_threads, *new_thread, sizeof(*new_thread),
@@ -812,7 +812,7 @@ static apr_status_t perf_server_create(worker_t *worker, apr_thread_start_t func
       perf_serialize(host, "GO\n");
       perf_serialize(host, "EXIT OK\n");
       apr_sleep(apr_time_from_sec(1));
-      logger_log(worker->logger, LOG_DEBUG, "unlock %s", worker->name);
+      worker_log(worker, LOG_DEBUG, "unlock %s", worker->name);
       apr_thread_mutex_unlock(worker->sync_mutex);
     }
     return status;
@@ -900,12 +900,12 @@ static apr_status_t block_PERF_STAT(worker_t * worker, worker_t *parent,
       if ((status = apr_file_open(&gconf->log_file, filename, 
                                   APR_READ|APR_WRITE|APR_CREATE|APR_APPEND|APR_XTHREAD, 
                                   APR_OS_DEFAULT, global->pool)) != APR_SUCCESS) {
-        logger_log_error(worker->logger, "Could not open log file \"%s\"", filename);
+        worker_log(worker, LOG_ERR, "Could not open log file \"%s\"", filename);
         return status;
       }
     }
     else {
-      logger_log_error(worker->logger, "No file specified for PERF:LOG command");
+      worker_log(worker, LOG_ERR, "No file specified for PERF:LOG command");
       return APR_EINVAL;
     }
   }
@@ -939,11 +939,11 @@ static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
       gconf->clients.rampup.interval = 1000 * apr_atoi64(interval_str);
     }
     else if (!clients_str) {
-      logger_log_error(worker->logger, "Number of clients per interval not specified");
+      worker_log(worker, LOG_ERR, "Number of clients per interval not specified");
       status = APR_ENOENT;
     }
     else {
-      logger_log_error(worker->logger, "Interval not specified");
+      worker_log(worker, LOG_ERR, "Interval not specified");
       status = APR_ENOENT;
     }
   }

@@ -25,7 +25,7 @@
 #ifndef HTTEST_LOGGER_H
 #define HTTEST_LOGGER_H
 
-#define LOG_NONE 0
+#define LOG_NONE 0 
 #define LOG_ERR 1
 #define LOG_WARN 2
 #define LOG_INFO 3
@@ -41,11 +41,10 @@ logger_t *logger_new(apr_pool_t *pool, int mode, int id);
 logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id);
 void logger_add_appender(logger_t *logger, appender_t *appender); 
 void logger_set_group(logger_t *logger, int group);
-void logger_update(logger_t *logger, const char *file_and_line);
-
-void logger_log_va(logger_t *logger, int log_mode, char *fmt, va_list va);
-void logger_log(logger_t * logger, int log_mode, char *fmt, ...);
-void logger_log_error(logger_t * logger, char *fmt, ...);
+void logger_log_va(logger_t *logger, int log_mode, const char *pos, char *fmt, 
+                   va_list va);
+void logger_log(logger_t * logger, int log_mode, const char *pos, char *fmt, 
+                ...);
 void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
                     apr_size_t len); 
 void logger_set_mode(logger_t *logger, int mode);

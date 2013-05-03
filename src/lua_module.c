@@ -439,7 +439,7 @@ static apr_status_t block_lua_interpreter(worker_t *worker, worker_t *parent,
     if (msg == NULL) {
       msg = "(error object is not a string)";
     }
-    logger_log_error(worker->logger, "Lua error: %s", msg);
+    worker_log(worker, LOG_ERR, "Lua error: %s", msg);
     lua_pop(L, 1);
     return APR_EGENERAL;
   }

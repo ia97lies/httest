@@ -69,11 +69,11 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
   var = store_get(worker->params, "2");
 
   if (!string) {
-    logger_log(worker->logger, LOG_ERR, "Nothing to decode");
+    worker_log(worker, LOG_ERR, "Nothing to decode");
     return APR_EGENERAL;
   }
   if (!var) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -127,11 +127,11 @@ apr_status_t block_CODER_URLDEC(worker_t *worker, worker_t *parent, apr_pool_t *
   var = store_get(worker->params, "2");
 
   if (!string) {
-    logger_log(worker->logger, LOG_ERR, "Nothing to decode");
+    worker_log(worker, LOG_ERR, "Nothing to decode");
     return APR_EGENERAL;
   }
   if (!var) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -185,11 +185,11 @@ apr_status_t block_CODER_HTMLDEC(worker_t *worker, worker_t *parent, apr_pool_t 
   var = store_get(worker->params, "2");
 
   if (!string) {
-    logger_log(worker->logger, LOG_ERR, "Nothing to decode");
+    worker_log(worker, LOG_ERR, "Nothing to decode");
     return APR_EGENERAL;
   }
   if (!var) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -232,11 +232,11 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *
   var = store_get(worker->params, "2");
 
   if (!string) {
-    logger_log(worker->logger, LOG_ERR, "Nothing to decode");
+    worker_log(worker, LOG_ERR, "Nothing to decode");
     return APR_EGENERAL;
   }
   if (!var) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
@@ -268,11 +268,11 @@ apr_status_t block_CODER_B64DEC(worker_t *worker, worker_t *parent, apr_pool_t *
   var = store_get(worker->params, "2");
 
   if (!string) {
-    logger_log(worker->logger, LOG_ERR, "Nothing to decode");
+    worker_log(worker, LOG_ERR, "Nothing to decode");
     return APR_EGENERAL;
   }
   if (!var) {
-    logger_log(worker->logger, LOG_ERR, "Variable not specified");
+    worker_log(worker, LOG_ERR, "Variable not specified");
     return APR_EGENERAL;
   }
 
