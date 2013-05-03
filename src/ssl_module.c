@@ -1622,7 +1622,7 @@ static apr_status_t block_SSL_SET_CA(worker_t * worker, worker_t *parent, apr_po
 
   /* check if we have parameters */
   if (store_get_size(worker->params)) {
-    config->set_ca = store_get(worker->params, "1");
+    config->set_ca = store_get_copy(worker->params, worker->pbody, "1");
     return  APR_SUCCESS;
   }
 
