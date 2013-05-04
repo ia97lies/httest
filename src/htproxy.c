@@ -654,7 +654,7 @@ static apr_status_t do_body(self_t *self, worker_t *worker, apr_pool_t *p,
       }
 
       if (chunked) { 
-	line = apr_psprintf(worker->pbody, "%x\r\n", len);
+	line = apr_psprintf(worker->pbody, "%x\r\n", (unsigned int)len);
 	if ((status = worker_socket_send(worker, line, strlen(line))) != APR_SUCCESS) {
 	  return status;
 	}

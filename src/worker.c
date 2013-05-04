@@ -4250,7 +4250,7 @@ apr_status_t worker_flush(worker_t * self, apr_pool_t *ptmp) {
 	len += strlen(e[i].val);
       }
     }
-    chunked = apr_psprintf(self->pbody, "\r\n%x\r\n", len);
+    chunked = apr_psprintf(self->pbody, "\r\n%x\r\n", (unsigned int)len);
   }
   if (icap_body) {
     /* send all except the req/res body */
