@@ -1986,7 +1986,7 @@ error:
  */
 static apr_status_t global_new(global_t **global, store_t *vars, 
                                int log_mode, apr_pool_t *p, apr_file_t *out,
-                               apr_file_t *err, int log_thread_no) {
+                               apr_file_t *err, int logger_flags) {
   appender_t *appender;
   apr_status_t status;
   apr_pool_t *pmutex;
@@ -2006,7 +2006,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
   (*global)->logger = logger_new(p, log_mode, 0);
-  appender = appender_std_new(p, out, err, log_thread_no?APPENDER_STD_THREAD_NO:APPENDER_STD_NONE);
+  appender = appender_std_new(p, out, err, logger_flags);
   logger_add_appender((*global)->logger, appender);
 
   /* set default blocks for blocks with no module name */
@@ -3157,6 +3157,7 @@ apr_getopt_option_t options[] = {
   { "shell", 'S', 0, "Shell mode" },
   { "define", 'D', 1, "Define variables" },
   { "log-thread-number", 'l', 0, "Show the thread number for every printed line" },
+  { "color", 'b', 0, "Colored output" },
   { NULL, 0, 0, NULL }
 };
 
@@ -3465,8 +3466,8 @@ int main(int argc, const char *const argv[]) {
 #define MAIN_FLAGS_USE_STDIN 0x0002
 #define MAIN_FLAGS_NO_OUTPUT 0x0004
 #define MAIN_FLAGS_PRINT_DURATION 0x0008
-#define MAIN_FLAGS_LOG_THREAD_NO 0x0010
   int flags;
+  int logger_flags = 0;
   apr_time_t time = 0;
   char time_str[256];
   apr_file_t *out;
@@ -3566,7 +3567,10 @@ int main(int argc, const char *const argv[]) {
       }
       break;
     case 'l':
-      flags |= MAIN_FLAGS_LOG_THREAD_NO; 
+      logger_flags |= APPENDER_STD_THREAD_NO; 
+      break;
+    case 'b':
+      logger_flags |= APPENDER_STD_COLOR; 
       break;
     }
   }
@@ -3655,7 +3659,7 @@ int main(int argc, const char *const argv[]) {
     }
     /* interpret current file */
     if ((status = interpret(fp, vars, out, err, log_mode, pool, NULL, 
-                            flags & MAIN_FLAGS_LOG_THREAD_NO)) 
+                            logger_flags)) 
         != APR_SUCCESS) {
       success = 0;
       apr_file_flush(out);

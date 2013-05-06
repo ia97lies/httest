@@ -144,10 +144,18 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
 
   i = 0;
   j = 0;
+  /* set color on dir \e[1;31mFAILED\e[0m */
+  if (std->flags & APPENDER_STD_COLOR) {
+    if (dir == '<') {
+      apr_file_printf(cur, "\e[0;35m");
+    }
+    else if (dir == '>') {
+      apr_file_printf(cur, "\e[0;34m");
+    }
+  }
   do {
     for (; i < len && buf[i] != '\n'; i++); 
     ++i;
-    /* set color on dir \e[1;31mFAILED\e[0m */
     apr_thread_mutex_lock(std->mutex);
     if (mode != LOG_ERR) {
       if (std->flags & APPENDER_STD_THREAD_NO) {
@@ -188,5 +196,8 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
     apr_file_flush(cur);
     apr_thread_mutex_unlock(std->mutex);
   } while (i < len);
+  if (std->flags & APPENDER_STD_COLOR) {
+    apr_file_printf(cur, "\e[0m");
+  }
 }
 
