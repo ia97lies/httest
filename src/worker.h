@@ -417,7 +417,7 @@ apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf,
                                apr_size_t len); 
 
 void worker_log(worker_t * worker, int mode, char *fmt, ...); 
-void worker_log_buf(worker_t * logger, int mode, char dir, const char *buf,
+void worker_log_buf(worker_t * worker, int mode, char dir, const char *buf,
                     apr_size_t len); 
 void worker_var_set(worker_t * worker, const char *var, const char *val); 
 const char * worker_var_get(worker_t * worker, const char *var); 

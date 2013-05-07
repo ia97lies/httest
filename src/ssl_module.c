@@ -297,11 +297,11 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
 
   }
 
-  entry = apr_psprintf(config->msg_pool, "+TLS %s extension, %s, id=%d", 
+  entry = apr_psprintf(config->msg_pool, "TLS %s extension, %s, id=%d", 
                        client_server ? "server": "client",
                        extname, type);
   apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
-  worker_log(worker, LOG_INFO, "%s", entry);
+  worker_log_buf(worker, LOG_INFO, '+', entry, strlen(entry));
 
 }
 
@@ -319,10 +319,10 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 {
   worker_t *worker = arg;
   char *entry;
-  const char *str_write_p, *str_version, *str_content_type = "", *str_details1 = "", *str_details2= "";
+  char dir, *str_version, *str_content_type = "", *str_details1 = "", *str_details2= "";
   ssl_wconf_t *config = ssl_get_worker_config(worker);
 
-  str_write_p = write_p ? ">" : "<";
+  dir = write_p ? '>' : '<';
 
   switch (version) {
     case SSL2_VERSION:
@@ -595,10 +595,10 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 #endif
   }
 
-  entry = apr_psprintf(config->msg_pool, "%s%s: %s%s%s", str_write_p, 
-      str_version, str_content_type, str_details1, str_details2);
+  entry = apr_psprintf(config->msg_pool, "%s: %s%s%s", str_version, 
+                       str_content_type, str_details1, str_details2);
   apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
-  worker_log(worker, LOG_INFO, "%s", entry);
+  worker_log_buf(worker, LOG_INFO, dir, entry, strlen(entry));
 }
 
 /**
