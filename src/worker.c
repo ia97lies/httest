@@ -107,10 +107,46 @@ typedef struct recorder_s {
 /************************************************************************
  * Globals 
  ***********************************************************************/
+extern int success;
 
 /************************************************************************
  * Implementation
  ***********************************************************************/
+
+/**
+ * checked lock function, will exit FAILED if status not ok
+ *
+ * @param mutex IN mutex
+ */
+void lock(apr_thread_mutex_t *mutex) {
+  apr_status_t status;
+  if ((status = apr_thread_mutex_lock(mutex)) != APR_SUCCESS) {
+    apr_pool_t *ptmp;
+    apr_pool_create(&ptmp, NULL);
+    success = 0;
+    fprintf(stderr, "could not lock: %s(%d)\n", 
+	    my_status_str(ptmp, status), status);
+    exit(1);
+  }
+}
+
+/**
+ * checked unlock function, will exit FAILED if status not ok
+ *
+ * @param mutex IN mutex
+ */
+void unlock(apr_thread_mutex_t *mutex) {
+  apr_status_t status;
+  if ((status = apr_thread_mutex_unlock(mutex)) != APR_SUCCESS) {
+    apr_pool_t *ptmp;
+    apr_pool_create(&ptmp, NULL);
+    success = 0;
+    fprintf(stderr, "could not unlock: %s(%d)\n", 
+	    my_status_str(ptmp, status), status);
+    exit(1);
+  }
+}
+
 /**
  * Get recorder struct from worker config
  * @param worker IN thread object

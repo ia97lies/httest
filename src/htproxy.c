@@ -121,6 +121,7 @@ apr_status_t tcp_module_init(global_t *global);
  ***********************************************************************/
 char *none = "";
 int new_session = 0;
+int success = 1;
 
 /**
  * Helper
