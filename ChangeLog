@@ -1,8 +1,11 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.0
-  *) httest: Overworked logger with three appenders, simple, standard and
-             junit.
+  *) httest: Overworked logger with two appenders, simple and standard.
+
+  *) httest: Fixed LOCK command which could lead to deadlock while
+             SERVER/CLIENT start up, because all three used the same mutex.
+
 
 Changes with httest 2.3.3
   *) httest: Fixed segfault on httest -C <command-name> to print help text of
