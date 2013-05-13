@@ -57,17 +57,29 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+typedef struct logger_entry_s {
+  int lo_mode;
+  int hi_mode;
+  appender_t *appender;
+} logger_entry_t;
+
 struct logger_s {
+  apr_pool_t *pool;
   int mode;
   int id;
   int group;
+  apr_table_t *appenders;
+  int lo_mode;
+  int hi_mode;
   appender_t *appender;
 };
 
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
-
+static void logger_print(logger_t *logger, int mode, const char *pos, 
+                         int thread, int group, char dir, const char *custom, 
+                         const char *buf, apr_size_t len);
 
 /************************************************************************
  * Implementation
@@ -84,6 +96,8 @@ logger_t *logger_new(apr_pool_t *pool, int mode, int id) {
   logger_t *logger = apr_pcalloc(pool, sizeof(*logger));
   logger->mode = mode;
   logger->id = id;
+  logger->pool = pool;
+  logger->appenders = apr_table_make(pool, 5);
 
   return logger;
 }
@@ -99,6 +113,10 @@ logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
   logger_t *logger = logger_new(pool, origin->mode, id);
   logger->group = origin->group;
   logger->appender = origin->appender;
+  logger->hi_mode = origin->hi_mode;
+  logger->lo_mode = origin->lo_mode;
+  logger->pool = pool;
+  logger->appenders = apr_table_copy(pool, origin->appenders);
   return logger;
 }
 
@@ -106,9 +124,27 @@ logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id) {
  * Add an appender
  * @param logger IN instance
  * @param appender IN appender to add
+ * @param name IN appender name
+ * @param lo_mode IN the higgest mode
+ * @param hi_mode IN the lowest mode
  */
-void logger_add_appender(logger_t *logger, appender_t *appender) {
-  logger->appender = appender;
+void logger_set_appender(logger_t *logger, appender_t *appender, 
+                         const char *name, int lo_mode, int hi_mode) {
+  logger_entry_t *entry = apr_pcalloc(logger->pool, sizeof(*entry));
+  entry->lo_mode = lo_mode;
+  entry->hi_mode = hi_mode;
+  entry->appender = appender;
+  apr_table_setn(logger->appenders, apr_pstrdup(logger->pool, name), 
+                 (void *)entry);
+}
+
+/**
+ * Delete given appender
+ * @param logger IN instance
+ * @param name IN name of appender to delete
+ */
+void logger_del_appender(logger_t *logger, const char *name) {
+  apr_table_unset(logger->appenders, name);
 }
 
 /**
@@ -118,6 +154,22 @@ void logger_add_appender(logger_t *logger, appender_t *appender) {
  */
 void logger_set_group(logger_t *logger, int group) {
   logger->group = group;
+}
+
+static void logger_print(logger_t *logger, int mode, const char *pos, 
+                         int thread, int group, char dir, const char *custom, 
+                         const char *buf, apr_size_t len) {
+  int i;
+  apr_table_entry_t *e;
+
+  e = (apr_table_entry_t *) apr_table_elts(logger->appenders)->elts;
+  for (i = 0; i < apr_table_elts(logger->appenders)->nelts; ++i) {
+    logger_entry_t *le = (void *)e[i].val;
+    if (mode <= le->hi_mode && mode >= le->lo_mode) {
+      appender_print(le->appender, mode, pos, logger->id, logger->group, '=', custom, 
+                     buf, len);
+    }
+  }
 }
 
 /**
@@ -138,8 +190,8 @@ void logger_log_va(logger_t * logger, int mode, const char *pos, char *fmt,
 
     apr_pool_create(&pool, NULL);
     tmp = apr_pvsprintf(pool, fmt, va);
-    appender_print(logger->appender, mode, pos, logger->id, logger->group, '=', NULL, 
-                   tmp, strlen(tmp));
+    logger_print(logger, mode, pos, logger->id, logger->group, '=', NULL, tmp, 
+                 strlen(tmp));
     apr_pool_destroy(pool);
   }
 }
@@ -178,8 +230,7 @@ void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
                     apr_size_t len) {
 
   if (logger->mode >= mode) {
-    appender_print(logger->appender, mode, NULL, logger->id, logger->group, 
-                   dir, NULL, buf, len);
+    logger_print(logger, mode, NULL, logger->id, logger->group, dir, NULL, buf, len);
   }
 }
 

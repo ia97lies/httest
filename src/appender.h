@@ -32,6 +32,10 @@ typedef void (*printer_f)(appender_t *appender, int mode, const char *pos,
 
 appender_t *appender_new(apr_pool_t *pool, printer_f printer, void *user_data);
 void *appender_get_user_data(appender_t *appender);
+void appender_set_mutex(appender_t *appender, apr_thread_mutex_t *mutex); 
+apr_thread_mutex_t *appender_get_mutex(appender_t *appender); 
+void appender_lock(appender_t *appender); 
+void appender_unlock(appender_t *appender);
 void appender_print(appender_t *appender, int mode, const char *pos, 
                     int thread, int group, char dir, const char *custom, 
                     const char *buf, apr_size_t len);

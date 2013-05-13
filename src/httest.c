@@ -1956,6 +1956,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   appender_t *appender;
   apr_status_t status;
   apr_pool_t *pmutex;
+  apr_thread_mutex_t *mutex;
 
   *global = apr_pcalloc(p, sizeof(global_t));
 
@@ -1972,15 +1973,30 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
   (*global)->logger = logger_new(p, log_mode, 0);
-  appender = appender_std_new(p, out, err, logger_flags);
-  logger_add_appender((*global)->logger, appender);
+
+  if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                        (*global)->pool)) != APR_SUCCESS) {
+    apr_file_printf(err, "\n"
+               "Global creation: could not create sync mutex");
+    return status;
+  }
+  if (log_mode >= LOG_INFO) {
+    appender = appender_std_new(p, out, logger_flags);
+    appender_set_mutex(appender, mutex);
+    logger_set_appender((*global)->logger, appender, "std", LOG_INFO, log_mode);
+  }
+  if (log_mode >= LOG_ERR) {
+    appender = appender_std_new(p, err, logger_flags);
+    appender_set_mutex(appender, mutex);
+    logger_set_appender((*global)->logger, appender, "err", LOG_NONE, LOG_ERR);
+  }
 
   /* set default blocks for blocks with no module name */
   apr_hash_set((*global)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*global)->blocks);
 
   if ((status = apr_threadattr_create(&(*global)->tattr, (*global)->pool)) 
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not create thread attr");
     return status;
   }
@@ -1988,14 +2004,14 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_threadattr_stacksize_set((*global)->tattr, 
                                              DEFAULT_THREAD_STACKSIZE))
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not set stacksize");
     return status;
   }
 
   if ((status = apr_threadattr_detach_set((*global)->tattr, 0)) 
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not set detach");
     return status;
   }
@@ -2003,7 +2019,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not create sync mutex");
     return status;
   }
@@ -2011,7 +2027,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not create mutex");
     return status;
   }
@@ -3067,7 +3083,7 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars, apr_file_t *out,
 
   if ((status = global_new(&global, vars, log_mode, p, out, err, log_thread_no)) 
       != APR_SUCCESS) {
-    logger_log(global->logger, LOG_ERR, NULL, "Could not create global");
+    apr_file_printf(err, "\nCould not create global");
     return status;
   }
 
@@ -3111,7 +3127,6 @@ apr_getopt_option_t options[] = {
   { "suppress", 'n', 0, "do no print start and OK|FAILED" },
   { "silent", 's', 0, "silent mode" },
   { "error", 'e', 0, "log level error" },
-  { "warn", 'w', 0, "log level warn" },
   { "info", 'i', 0, "log level info" },
   { "debug", 'd', 0, "log level debug for script debugging" },
   { "debug-system", 'p', 0, "log level debug-system to log more details" },
@@ -3483,9 +3498,6 @@ int main(int argc, const char *const argv[]) {
     case 'p':
       log_mode = LOG_DEBUG;
       break;
-    case 'w':
-      log_mode = LOG_WARN;
-      break;
     case 'i':
       log_mode = LOG_INFO;
       break;
@@ -3633,7 +3645,7 @@ int main(int argc, const char *const argv[]) {
       exit(1);
     }
 
-    if (log_mode > LOG_WARN) {
+    if (log_mode >= LOG_INFO) {
       apr_file_printf(out, "\n");
       apr_file_flush(out);
     }

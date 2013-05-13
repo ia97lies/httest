@@ -27,11 +27,10 @@
 
 #define LOG_NONE 0 
 #define LOG_ERR 1
-#define LOG_WARN 2
-#define LOG_INFO 3
-#define LOG_CMD 4
-#define LOG_ALL_CMD 5
-#define LOG_DEBUG 6
+#define LOG_INFO 2
+#define LOG_CMD 3
+#define LOG_ALL_CMD 4
+#define LOG_DEBUG 5
 
 #include "appender.h"
 
@@ -39,7 +38,9 @@ typedef struct logger_s logger_t;
 
 logger_t *logger_new(apr_pool_t *pool, int mode, int id);
 logger_t *logger_clone(apr_pool_t *pool, logger_t *origin, int id);
-void logger_add_appender(logger_t *logger, appender_t *appender); 
+void logger_set_appender(logger_t *logger, appender_t *appender, 
+                         const char *name, int from_mode, int to_mode); 
+void logger_del_appender(logger_t *logger, const char *name); 
 void logger_set_group(logger_t *logger, int group);
 void logger_log_va(logger_t *logger, int log_mode, const char *pos, char *fmt, 
                    va_list va);
