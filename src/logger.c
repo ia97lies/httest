@@ -166,7 +166,7 @@ static void logger_print(logger_t *logger, int mode, const char *pos,
   for (i = 0; i < apr_table_elts(logger->appenders)->nelts; ++i) {
     logger_entry_t *le = (void *)e[i].val;
     if (mode <= le->hi_mode && mode >= le->lo_mode) {
-      appender_print(le->appender, mode, pos, logger->id, logger->group, '=', custom, 
+      appender_print(le->appender, mode, pos, logger->id, logger->group, dir, custom, 
                      buf, len);
     }
   }

@@ -1,7 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.0
-  *) httest: Overworked logger with two appenders, simple and standard.
+  *) httest: Logger with appender concept introduced to be able to add and use
+             different appenders. Default a standard appender is active.
+
+  *) httest: Added colored output in the standard appender.
 
   *) httest: Fixed LOCK command which could lead to deadlock while
              SERVER/CLIENT start up, because all three used the same mutex.
