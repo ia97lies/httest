@@ -3814,7 +3814,9 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
   store_set((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
 	    logger_get_mode(global->logger)));
   
-  worker_log((*self), LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
+  worker_log((*self), LOG_DEBUG, 
+             "worker_new: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+             (*self)->pbody, (*self)->pbody);
 }
 
 /**
@@ -3838,7 +3840,9 @@ void worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
   (*self)->group = orig->group;
 
-  worker_log((*self), LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
+  worker_log((*self), LOG_DEBUG, 
+             "worker_clone: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+             (*self)->pbody, (*self)->pbody);
 }
 
 /**
@@ -3847,7 +3851,9 @@ void worker_clone(worker_t ** self, worker_t * orig) {
  * @param worker IN thread data object
  */
 void worker_destroy(worker_t * worker) {
-  worker_log(worker, LOG_DEBUG, "worker_destroy: %p, pbody: %p", worker->pbody, worker->pbody);
+  worker_log(worker, LOG_DEBUG, 
+             "worker_destroy: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+             worker->pbody, worker->pbody);
   apr_pool_destroy(worker->heartbeat);
 }
 
@@ -3877,7 +3883,8 @@ apr_status_t worker_add_line(worker_t * worker, const char *file_and_line,
 apr_status_t worker_socket_send(worker_t *worker, char *buf, 
                                 apr_size_t len) {
 
-  worker_log(worker, LOG_DEBUG, "send socket: %p transport: %p", 
+  worker_log(worker, LOG_DEBUG, 
+             "send socket: %"APR_UINT64_T_HEX_FMT" transport: %"APR_UINT64_T_HEX_FMT, 
              worker->socket, worker->socket->transport);
   return transport_write(worker->socket->transport, buf, len);
 }

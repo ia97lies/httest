@@ -35,10 +35,6 @@
 #include <apr_lib.h>
 #include <apr_errno.h>
 #include <apr_strings.h>
-#include <apr_network_io.h>
-#include <apr_thread_proc.h>
-#include <apr_thread_cond.h>
-#include <apr_thread_mutex.h>
 #include <apr_portable.h>
 #include <apr_hash.h>
 #include <apr_base64.h>
@@ -61,9 +57,7 @@
  * Definitions 
  ***********************************************************************/
 typedef struct appender_simple_s {
-  apr_thread_mutex_t *mutex;
   apr_file_t *out;
-  apr_file_t *err;
 } appender_simple_t;
 
 /************************************************************************
@@ -81,21 +75,12 @@ void appender_simple_printer(appender_t *appender, int mode, const char *pos,
  * Constructor for simple appender
  * @param pool IN pool
  * @param out IN output file
- * @param err IN error file
  * @return appender
  */
-appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out,
-                                apr_file_t *err) {
+appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out) {
   appender_t *appender;
   appender_simple_t *simple = apr_pcalloc(pool, sizeof(*simple));
   simple->out = out;
-  simple->err = err;
-  if (apr_thread_mutex_create(&simple->mutex, APR_THREAD_MUTEX_DEFAULT,
-                              pool) != APR_SUCCESS) {
-    apr_file_printf(simple->out, "\nCould not create log mutex");
-    return NULL;
-  }
-
   appender = appender_new(pool, appender_simple_printer, simple);
 
   return appender;
@@ -104,7 +89,7 @@ appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out,
 /**
  * Simple appender printer
  * @param appender IN appender instance
- * @param is_error IN error
+ * @param mode IN mode 
  * @param thread IN thread id
  * |@param group IN group id
  * @param dir IN >,<,+,=
@@ -115,48 +100,38 @@ appender_t *appender_simple_new(apr_pool_t *pool, apr_file_t *out,
 void appender_simple_printer(appender_t *appender, int mode, const char *pos,
                              int thread, int group, char dir, const char *custom, 
                              const char *buf, apr_size_t len) {
-  apr_file_t *cur;
-  apr_size_t i;
-  apr_size_t j;
-  char *null="";
   appender_simple_t *simple = appender_get_user_data(appender);
 
   if (!buf) {
-    buf = null;
+    buf = "";
     len = strlen(buf);
   }
 
-  if (mode == LOG_ERR) {
-    cur = simple->err;
-  }
-  else {
-    cur = simple->out;
-  }
 
-  i = 0;
-  j = 0;
-  do {
-    for (; i < len && buf[i] != '\n'; i++); 
-    ++i;
-    apr_thread_mutex_lock(simple->mutex);
-    apr_file_printf(cur, "\n%c:", dir);
+  if (simple->out) {
+    apr_size_t i = 0;
+    apr_size_t j = 0;
+    do {
+      for (; i < len && buf[i] != '\n'; i++); 
+      ++i;
+      apr_file_printf(simple->out, "\n%c:", dir);
 
-    for (; j < i; j++) {
-      if ((unsigned char)buf[j] == '\n') {
+      for (; j < i; j++) {
+        if ((unsigned char)buf[j] == '\n') {
+        }
+        else if ((unsigned char)buf[j] == '\r') {
+        }
+        else if ((unsigned char)buf[j] == '\0') {
+        }
+        else if ((unsigned char)buf[j] < 0x20) {
+          apr_file_putc('.', simple->out);
+        }
+        else {
+          apr_file_putc(buf[j], simple->out);
+        }
       }
-      else if ((unsigned char)buf[j] == '\r') {
-      }
-      else if ((unsigned char)buf[j] == '\0') {
-      }
-      else if ((unsigned char)buf[j] < 0x20) {
-        apr_file_putc('.', cur);
-      }
-      else {
-        apr_file_putc(buf[j], cur);
-      }
-    }
-    apr_file_flush(cur);
-    apr_thread_mutex_unlock(simple->mutex);
-  } while (i < len);
+      apr_file_flush(simple->out);
+    } while (i < len);
+  }
 }
 

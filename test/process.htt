@@ -1,6 +1,7 @@
 INCLUDE $TOP/test/config.htb
 
 CLIENT
+_SLEEP 200
 _PROCESS a
 _REQ $YOUR_HOST $YOUR_PORT
 __POST /foo/1 HTTP/1.1

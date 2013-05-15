@@ -212,7 +212,9 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
     return APR_EINVAL;
   }
 
-  worker_log(worker, LOG_DEBUG, "p12 cert: %p; key: %p; ca: %p\n", cert, pkey, ca);
+  worker_log(worker, LOG_DEBUG, "p12 cert: %"APR_UINT64_T_HEX_FMT"; "
+             "key: %"APR_UINT64_T_HEX_FMT"; ca: %"APR_UINT64_T_HEX_FMT, 
+             cert, pkey, ca);
 
   if (pkey && SSL_CTX_use_PrivateKey(config->ssl_ctx, pkey) <= 0 && check) {
     worker_log(worker, LOG_ERR, "Could not load private key of \"%s\"",

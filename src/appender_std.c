@@ -35,10 +35,6 @@
 #include <apr_lib.h>
 #include <apr_errno.h>
 #include <apr_strings.h>
-#include <apr_network_io.h>
-#include <apr_thread_proc.h>
-#include <apr_thread_cond.h>
-#include <apr_thread_mutex.h>
 #include <apr_portable.h>
 #include <apr_hash.h>
 #include <apr_base64.h>
@@ -112,73 +108,72 @@ appender_t *appender_std_new(apr_pool_t *pool, apr_file_t *out, int flags) {
 void appender_std_printer(appender_t *appender, int mode, const char *pos,
                           int thread, int group, char dir, const char *custom, 
                           const char *buf, apr_size_t len) {
-  apr_size_t i;
-  apr_size_t j;
-  apr_size_t k;
-  char *null="";
   appender_std_t *std = appender_get_user_data(appender);
 
   if (!buf) {
-    buf = null;
+    buf = "";
     len = strlen(buf);
   }
 
-  i = 0;
-  j = 0;
-  /* set color on dir \e[1;31mFAILED\e[0m */
-  if (std->flags & APPENDER_STD_COLOR) {
-    if (dir == '<') {
-      apr_file_printf(std->out, "\e[0;35m");
+  if (std->out) {
+    apr_size_t i = 0;
+    apr_size_t j = 0;
+    apr_size_t k;
+    /* set color on dir \e[1;31mFAILED\e[0m */
+    if (std->flags & APPENDER_STD_COLOR) {
+      if (dir == '<') {
+        apr_file_printf(std->out, "\e[0;35m");
+      }
+      else if (dir == '>') {
+        apr_file_printf(std->out, "\e[0;34m");
+      }
     }
-    else if (dir == '>') {
-      apr_file_printf(std->out, "\e[0;34m");
-    }
-  }
-  do {
-    for (; i < len && buf[i] != '\n'; i++); 
-    ++i;
-    appender_lock(appender);
-    if (mode != LOG_ERR) {
-      if (std->flags & APPENDER_STD_THREAD_NO) {
-        apr_file_printf(std->out, "\n%d:", thread);
+    do {
+      for (; i < len && buf[i] != '\n'; i++); 
+      ++i;
+      appender_lock(appender);
+      if (mode != LOG_ERR) {
+        if (std->flags & APPENDER_STD_THREAD_NO) {
+          apr_file_printf(std->out, "\n%d:", thread);
+        }
+        else {
+          apr_file_printf(std->out, "\n");
+        }
       }
       else {
-        apr_file_printf(std->out, "\n");
+        if (pos) {
+          apr_file_printf(std->out, "\n%s: error: ", pos);
+        }
+        else {
+          apr_file_printf(std->out, "\nerror: ");
+        }
       }
-    }
-    else {
-      if (pos) {
-        apr_file_printf(std->out, "\n%s: error: ", pos);
+      for (k = 0; k < group; k++) {
+        apr_file_printf(std->out, APPENDER_STD_PFX);
       }
-      else {
-        apr_file_printf(std->out, "\nerror: ");
+      if (dir == '>' || dir == '<' || dir == '+') {
+        apr_file_printf(std->out, "%c", dir);
       }
-    }
-    for (k = 0; k < group; k++) {
-      apr_file_printf(std->out, APPENDER_STD_PFX);
-    }
-    if (dir == '>' || dir == '<' || dir == '+') {
-      apr_file_printf(std->out, "%c", dir);
-    }
 
-    for (; j < i; j++) {
-      if ((unsigned char)buf[j] == '\n' ||
-          (unsigned char)buf[j] == '\r' || 
-          (unsigned char)buf[j] == '\0') {
-        /* do nothing */
+      for (; j < i; j++) {
+        if ((unsigned char)buf[j] == '\n' ||
+            (unsigned char)buf[j] == '\r' || 
+            (unsigned char)buf[j] == '\0') {
+          /* do nothing */
+        }
+        else if ((unsigned char)buf[j] < 0x20) {
+          apr_file_putc('.', std->out);
+        }
+        else {
+          apr_file_putc(buf[j], std->out);
+        }
       }
-      else if ((unsigned char)buf[j] < 0x20) {
-        apr_file_putc('.', std->out);
-      }
-      else {
-        apr_file_putc(buf[j], std->out);
-      }
+      apr_file_flush(std->out);
+      appender_unlock(appender);
+    } while (i < len);
+    if (std->flags & APPENDER_STD_COLOR) {
+      apr_file_printf(std->out, "\e[0m");
     }
-    apr_file_flush(std->out);
-    appender_unlock(appender);
-  } while (i < len);
-  if (std->flags & APPENDER_STD_COLOR) {
-    apr_file_printf(std->out, "\e[0m");
   }
 }
 
