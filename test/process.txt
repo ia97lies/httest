@@ -1,5 +1,0 @@
-
-process.hte:11: error: EXPECT headers: Did expect "200 OK"                              
-process.hte:5: error: CLT0-0 Invalid argument(22)                                       
-process.hte:23: error: Process "a" FAILED                                               
-process.hte:23: error: CLT0-0 Invalid argument(22)                                      

@@ -143,9 +143,6 @@ struct worker_s {
   char *listener_addr;
   sockreader_t *sockreader;
   logger_t *logger;
-#if APR_HAS_FORK
-  apr_hash_t *procs;
-#endif
 };
 
 struct global_s {
@@ -393,9 +390,6 @@ apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data, apr_po
 apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
-#if APR_HAS_FORK
-apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
-#endif
 apr_status_t command_MATCH_SEQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 

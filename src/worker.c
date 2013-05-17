@@ -3495,52 +3495,6 @@ apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * PROC_WAIT command 
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN named process to wait for 
- *
- * @return APR_SUCCESS or apr error code
- * @note: only for unix systems
- */
-#if APR_HAS_FORK
-apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, 
-                               apr_pool_t *ptmp) {
-  char *copy;
-  char *var;
-  char *last;
-  apr_status_t status = APR_SUCCESS;
-
-  COMMAND_NEED_ARG("<name>*");
-
-  if (!worker->procs) {
-    worker_log(worker, LOG_ERR, "No processes to wait for");
-    return APR_EINVAL;
-  }
-
-  var = apr_strtok(copy, " ", &last);
-  while (var) {
-    int exitcode;
-    apr_exit_why_e why;
-    apr_proc_t *proc = apr_hash_get(worker->procs, var, APR_HASH_KEY_STRING);
-    if (!proc) {
-      worker_log(worker, LOG_ERR, "Process \"%s\" does not exist", var);
-      return APR_EINVAL;
-    }
-    apr_proc_wait(proc, &exitcode, &why, APR_WAIT); 
-    if (exitcode != 0) {
-      worker_log(worker, LOG_ERR, "Process \"%s\" FAILED", var);
-      status = APR_EINVAL;
-    }
-    var = apr_strtok(NULL, " ", &last);
-  }
-
-  return status;
-}
-#endif
-
-/**
  * MATCH_SEQ command
  *
  * @param self IN command
@@ -3794,9 +3748,6 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
   (*self)->grep.error = apr_table_make(p, 2);
   (*self)->grep.exec = apr_table_make(p, 2);
   (*self)->sockets = apr_hash_make(p);
-#if APR_HAS_FORK
-  (*self)->procs = NULL;
-#endif
   (*self)->headers_allow = NULL;
   (*self)->headers_filter = NULL;
   (*self)->params = store_make(p);

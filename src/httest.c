@@ -110,8 +110,6 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker,
                                  char *data, apr_pool_t *ptmp); 
 static apr_status_t command_SOCKET(command_t *self, worker_t *worker, 
                                    char *data, apr_pool_t *ptmp); 
-static apr_status_t command_PROCESS(command_t *self, worker_t *worker, 
-                                   char *data, apr_pool_t *ptmp); 
 static apr_status_t command_ERROR(command_t *self, worker_t *worker, 
                                   char *data, apr_pool_t *ptmp); 
 
@@ -149,8 +147,6 @@ static apr_status_t global_TIMEOUT(command_t *self, global_t *global,
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, 
 				      char *data, apr_pool_t *ptmp); 
-static apr_status_t global_PROCESS(command_t *self, global_t *global, 
-				   char *data, apr_pool_t *ptmp); 
 static apr_status_t global_MODULE(command_t *self, global_t *global, 
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_REQUIRE_VERSION(command_t *self, global_t *global, 
@@ -215,11 +211,6 @@ command_t global_commands[] = {
   {"AUTO_CLOSE", (command_f )global_AUTO_CLOSE, "on|off", 
   "Handle Connection: close header and close automaticaly the given connection",
   COMMAND_FLAGS_NONE},
-#if APR_HAS_FORK
-  {"PROCESS", (command_f )global_PROCESS, "<n>", 
-  "Run the script in <n> process simultanous",
-  COMMAND_FLAGS_NONE},
-#endif
   {"BLOCK", (command_f )global_BLOCK, "<name>", 
   "Store a block of commands to call it from a CLIENT/SERVER/BLOCK",
   COMMAND_FLAGS_NONE},
@@ -312,11 +303,6 @@ command_t local_commands[] = {
   {"_BREAK", (command_f )command_BREAK, "", 
    "Break a loop",
   COMMAND_FLAGS_NONE},
-#if APR_HAS_FORK
-  {"_PROC_WAIT", (command_f )command_PROC_WAIT, "<name>*", 
-  "Wait for processes <name>*\n",
-  COMMAND_FLAGS_NONE},
-#endif
   {"_TIMEOUT", (command_f )command_TIMEOUT, "<miliseconds>", 
    "Set socket timeout of current socket",
   COMMAND_FLAGS_NONE},
@@ -466,12 +452,6 @@ command_t local_commands[] = {
   "We do expect specific error on body exit\n"
   "close body with _END",
   COMMAND_FLAGS_BODY},
-#if APR_HAS_FORK
-  {"_PROCESS", (command_f )command_PROCESS, "<name>", 
-  "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
-  "close body with _END",
-  COMMAND_FLAGS_BODY},
-#endif
 
   /* Link section */
   {"_OP", NULL, "_MATH:OP", NULL, COMMAND_FLAGS_LINK},
@@ -1414,62 +1394,6 @@ error:
   worker_body_end(body, worker);
   return status;
 }
-
-/**
- * PROCESS command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN header name (spaces are possible) 
- *
- * @return APR_SUCCESS
- */
-#if APR_HAS_FORK
-static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *data, 
-                                    apr_pool_t *ptmp) {
-  apr_status_t status;
-  worker_t *body;
-  apr_proc_t *proc;
-  char *copy;
-
-  COMMAND_NEED_ARG("<name>");
-
-  /* create a new worker body */
-  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
-    return status;
-  }
-  
-  /* fork  */
-  proc = apr_pcalloc(worker->pbody, sizeof(apr_proc_t));
-  status = apr_proc_fork(proc, worker->pbody);
-
-  if (APR_STATUS_IS_INCHILD(status)) {
-    /* interpret */
-    status = body->interpret(body, worker, NULL);
-  
-    /* terminate */
-    worker_log(worker, LOG_CMD, "_END PROCESS");
-    worker_body_end(body, worker);
-    if (status != APR_SUCCESS) {
-      exit(1);
-    }
-    else {
-      exit(0);
-    }
-  }
-  else {
-    apr_pool_note_subprocess(worker->global->pool, proc, APR_KILL_ALWAYS);
-  }
-
-  if (!worker->procs) {
-    worker->procs = apr_hash_make(worker->pbody);
-  }
-
-  apr_hash_set(worker->procs, apr_pstrdup(worker->pbody, copy), APR_HASH_KEY_STRING, proc);
-
-  return APR_SUCCESS; 
-}
-#endif
 
 /**
  * Unset global success
@@ -2717,81 +2641,6 @@ static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, char *d
   
   return APR_SUCCESS;
 }
-
-/**
- * Global PROCESS command
- *
- * @param self IN command
- * @param global IN global object
- * @param data IN n 
- *
- * @return APR_SUCCESS
- */
-#if APR_HAS_FORK
-static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data, 
-                                   apr_pool_t *ptmp) {
-  apr_proc_t proc;
-  apr_status_t status;
-  int n;
-  char *copy;
-  char *last;
-  char *no;
-  char *var;
-  int i = 0; 
-  global_replacer_t *replacer_hook = apr_pcalloc(ptmp, sizeof(*replacer_hook));
-  replacer_hook->ptmp = ptmp;
-  replacer_hook->store = global->vars;
-
-  while (data[i] == ' ') { 
-    ++i; 
-  } 
-  if(!data[i]) { 
-    logger_log(global->logger, LOG_ERR, NULL, "Number missing");
-    return APR_EGENERAL; 
-  } 
-  copy = apr_pstrdup(global->pool, &data[i]); 
-  copy = replacer(global->pool, copy, replacer_hook, global_replacer);
-
-  no = apr_strtok(copy, " ", &last);
-  var = apr_strtok(NULL, " ", &last);
-
-  if (!no) {
-    logger_log(global->logger, LOG_ERR, NULL, "Number missing");
-    return APR_EGENERAL;
-  }
-
-  n = apr_atoi64(no);
-
-  for (i = 0; i < n; i++) {
-    status = apr_proc_fork(&proc, global->pool);
-    if (APR_STATUS_IS_INCHILD(status)) {
-      if (var && strlen(var)) {
-        store_set(global->vars, var, apr_itoa(global->pool, i));
-      }
-      return APR_SUCCESS;
-    }
-    else {
-      apr_pool_note_subprocess(global->pool, &proc, APR_KILL_ALWAYS);
-    }
-  }
-
-  for (i = 0; i < n; i++) {
-    /* wait for termination */
-    int exitcode;
-    apr_exit_why_e why;
-    apr_proc_wait_all_procs(&proc, &exitcode, &why, APR_WAIT, global->pool); 
-    if (exitcode != 0) {
-      success = 1;
-    }
-  }
-
-  /* and exit */
-  if (success != 0) {
-    exit(1);
-  }
-  exit(0);
-}
-#endif
 
 /**
  * Global START command starts all so far defined threads 
