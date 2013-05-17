@@ -95,7 +95,7 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
 
   apr_pool_create(&pool, NULL);
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
     if ((status = sockreader_new(&sockreader, worker->socket->transport,
@@ -104,7 +104,7 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
     }
   }
   else {
-    sockreader = worker->sockreader;
+    sockreader = worker->socket->sockreader;
   }
 
   if ((status = content_length_reader(sockreader, &buf, &recv_len, "")) != APR_SUCCESS) {

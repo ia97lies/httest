@@ -1469,7 +1469,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   }
 
   if (recorder->on == RECORDER_PLAY) {
-    worker->sockreader = recorder->sockreader;
+    worker->socket->sockreader = recorder->sockreader;
   }
 
   /**
@@ -1479,7 +1479,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     goto out_err;
   }
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
     if ((status = sockreader_new(&sockreader, worker->socket->transport,
@@ -1488,7 +1488,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
   else {
-    sockreader = worker->sockreader;
+    sockreader = worker->socket->sockreader;
   }
 
   /* bodies were read but not store */
@@ -1649,7 +1649,7 @@ out_err:
   if (recorder->on == RECORDER_PLAY) {
     apr_pool_destroy(recorder->pool);
     recorder->on = RECORDER_OFF;
-    worker->sockreader = NULL;
+    worker->socket->sockreader = NULL;
   }
   else {
     ++worker->req_cnt;
@@ -3025,7 +3025,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
 
   apr_pool_create(&pool, NULL);
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
     if ((status = sockreader_new(&sockreader, worker->socket->transport,
@@ -3034,7 +3034,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
     }
   }
   else {
-    sockreader = worker->sockreader;
+    sockreader = worker->socket->sockreader;
   }
 
   if (strcasecmp(val, "CHUNKED") == 0) {
@@ -3095,7 +3095,7 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
 
   apr_pool_create(&pool, NULL);
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
     if ((status = sockreader_new(&sockreader, worker->socket->transport,
@@ -3104,7 +3104,7 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
     }
   }
   else {
-    sockreader = worker->sockreader;
+    sockreader = worker->socket->sockreader;
   }
 
   if ((status = sockreader_read_line(sockreader, &buf)) != APR_SUCCESS) {
@@ -3356,17 +3356,17 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
       != APR_SUCCESS) {
     goto error1;
   }
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    sockreader_new(&client.sockreader, worker->socket->transport,
-		   worker->socket->peek, peeklen, client.pool);
+    status = sockreader_new(&client.sockreader, worker->socket->transport,
+	   	            worker->socket->peek, peeklen, client.pool);
     if (status != APR_SUCCESS && !APR_STATUS_IS_TIMEUP(status)) {
       goto error1;
     }
   }
   else {
-    client.sockreader = worker->sockreader;
+    client.sockreader = worker->socket->sockreader;
   }
   backend.sendto = worker->socket;
 
@@ -3378,8 +3378,8 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
       != APR_SUCCESS) {
     goto error2;
   }
-  sockreader_new(&backend.sockreader, worker->socket->transport,
-		 NULL, 0, backend.pool);
+  status = sockreader_new(&backend.sockreader, worker->socket->transport,
+		          NULL, 0, backend.pool);
   if (status != APR_SUCCESS && !APR_STATUS_IS_TIMEUP(status)) {
     goto error2;
   }
