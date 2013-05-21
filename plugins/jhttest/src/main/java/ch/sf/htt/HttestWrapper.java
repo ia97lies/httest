@@ -93,20 +93,20 @@ public class HttestWrapper {
 	 */
 	public static Collection<Object[]> collectHttestScript(Properties props) {
 		Collection<Object[]> data = new ArrayList<Object[]>();
-		addHttestScripts(new File(props.getProperty("basedir")+"/"+props.getProperty("scriptdir")), data, props.getProperty("scriptdir"));	
+		addHttestScripts(new File(props.getProperty("basedir")+"/"+props.getProperty("scriptdir")), data);	
 		return data;
 	}
 	
-	private static void addHttestScripts(File file, Collection<Object[]> all, String prefix) {
+	private static void addHttestScripts(File file, Collection<Object[]> all) {
 		File[] children = file.listFiles();
 		if (children != null) {
 			for (File child : children) {
 				if (child.isFile()) {
-					String script = prefix+"/"+file.getName()+"/"+child.getName();
+					String script = file.getName()+"/"+child.getName();
 					Object[] data = new Object[] { script };
 					all.add(data);
 				}
-				addHttestScripts(child, all, prefix);
+				addHttestScripts(child, all);
 			}
 		}
 	}
