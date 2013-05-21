@@ -119,8 +119,10 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
  * @note: sockreader will be set to NULL
  */
 void sockreader_destroy(sockreader_t **sockreader) {
-  apr_pool_destroy((*sockreader)->pool);
-  *sockreader = NULL;
+  if ((*sockreader) != NULL) {
+    apr_pool_destroy((*sockreader)->pool);
+    *sockreader = NULL;
+  }
 }
 
 /**

@@ -1019,6 +1019,8 @@ apr_status_t worker_conn_close(worker_t * self, char *info) {
     self->socket->socket_state = SOCKET_CLOSED;
   }
 
+  sockreader_destroy(&self->socket->sockreader);
+
   return APR_SUCCESS;
 }
 
