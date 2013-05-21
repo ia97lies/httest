@@ -31,7 +31,6 @@
 #define APPENDER_STD_THREAD_NO 0x01
 #define APPENDER_STD_COLOR 0x02
 
-appender_t *appender_std_new(apr_pool_t *pool, apr_file_t *out, 
-                             apr_file_t *err, int flags);
+appender_t *appender_std_new(apr_pool_t *pool, apr_file_t *out, int flags);
 
 #endif

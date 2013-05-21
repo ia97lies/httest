@@ -30,6 +30,10 @@
 /************************************************************************
  * Definitions 
  ***********************************************************************/
+const char * sys_module = "sys_module";
+typedef struct sys_gconf_s {
+  apr_thread_mutex_t *sync;
+} sys_gconf_t;
 
 /************************************************************************
  * Globals 
@@ -38,6 +42,30 @@
 /************************************************************************
  * Local 
  ***********************************************************************/
+
+/**
+ * Get ssl config from global 
+ *
+ * @param global IN global 
+ * @return ssl config
+ */
+static sys_gconf_t *sys_get_global_config(global_t *global) {
+  sys_gconf_t *config = module_get_config(global->config, sys_module);
+  if (config == NULL) {
+    lock(global->mutex);
+    config = module_get_config(global->config, sys_module);
+    if (config == NULL) {
+      config = apr_pcalloc(global->pool, sizeof(*config));
+      module_set_config(global->config, apr_pstrdup(global->pool, sys_module), config);
+      if (apr_thread_mutex_create(&config->sync, APR_THREAD_MUTEX_DEFAULT, 
+                                  global->pool) != APR_SUCCESS) {
+        config = NULL;
+      }
+    }
+    unlock(global->mutex);
+  }
+  return config;
+}
 
 /************************************************************************
  * Commands 
@@ -74,8 +102,14 @@ static apr_status_t block_THREAD_GET_NUMBER(worker_t *worker, worker_t *parent, 
  */
 static apr_status_t block_PROC_LOCK(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
+  sys_gconf_t *gconf = sys_get_global_config(worker->global);
 
-  if ((status = apr_thread_mutex_lock(worker->sync_mutex)) != APR_SUCCESS) {
+  if (gconf == NULL) {
+    worker_log(worker, LOG_ERR, "Could not create lock mutex");
+    return APR_EGENERAL;
+  }
+
+  if ((status = apr_thread_mutex_lock(gconf->sync)) != APR_SUCCESS) {
     return status;
   }
 
@@ -93,8 +127,14 @@ static apr_status_t block_PROC_LOCK(worker_t *worker, worker_t *parent, apr_pool
  */
 static apr_status_t block_PROC_UNLOCK(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
+  sys_gconf_t *gconf = sys_get_global_config(worker->global);
 
-  if ((status = apr_thread_mutex_unlock(worker->sync_mutex)) != APR_SUCCESS) {
+  if (gconf == NULL) {
+    worker_log(worker, LOG_ERR, "Could not create lock mutex");
+    return APR_EGENERAL;
+  }
+
+  if ((status = apr_thread_mutex_unlock(gconf->sync)) != APR_SUCCESS) {
     return status;
   }
 

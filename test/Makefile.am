@@ -68,7 +68,6 @@ EXTRA_DIST= \
 	custom_commands.htt \
 	daemon2.htt \
 	daemon.htt \
-	dawn_of_the_deads.htt \
 	dummy2.htb \
 	dummy3.htb \
 	dummy4.htb \
@@ -208,9 +207,6 @@ EXTRA_DIST= \
 	pop3_simple.htt \
 	pop3_tls.htt \
 	print_hex_match.htt \
-	process.hte \
-	process.htt \
-	process.txt \
 	proxy_main_functionality.htt \
 	random.htt \
 	recursiv.htb \
@@ -352,6 +348,7 @@ EXTRA_DIST= \
 	_wrapper_test.sh 
 
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
+test_file_SOURCES=test_file.c $(top_srcdir)/src/file.c $(top_srcdir)/src/util.c $(top_srcdir)/src/store.c
 AM_CFLAGS=-I$(top_srcdir)/src
-check_PROGRAMS=test_store
-TESTS = test_store test_run_help.sh test_run_all.sh test_run_errors.sh test_run_visual.sh test_run_ntlm.sh test_check_coredumps.sh
+check_PROGRAMS=test_store test_file
+TESTS = test_store test_file test_run_help.sh test_run_all.sh test_run_errors.sh test_run_visual.sh test_run_ntlm.sh test_check_coredumps.sh

@@ -121,6 +121,7 @@ apr_status_t tcp_module_init(global_t *global);
  ***********************************************************************/
 char *none = "";
 int new_session = 0;
+int success = 1;
 
 /**
  * Helper
@@ -1417,8 +1418,8 @@ int main(int argc, const char *const argv[]) {
   self->pool = pool;
   self->port = port;
   self->logger = logger_new(pool, log_mode, 0);
-  appender = appender_std_new(pool, out, err, APPENDER_STD_NONE);
-  logger_add_appender(self->logger, appender);
+  appender = appender_std_new(pool, out, APPENDER_STD_NONE);
+  logger_set_appender(self->logger, appender, "std", LOG_NONE, LOG_DEBUG);
   self->timeout = apr_pstrdup(pool, tmo);
   self->host_var = host_var ? apr_pstrdup(pool, host_var) : NULL;
   self->port_var = port_var ? apr_pstrdup(pool, port_var) : NULL;

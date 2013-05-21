@@ -107,10 +107,46 @@ typedef struct recorder_s {
 /************************************************************************
  * Globals 
  ***********************************************************************/
+extern int success;
 
 /************************************************************************
  * Implementation
  ***********************************************************************/
+
+/**
+ * checked lock function, will exit FAILED if status not ok
+ *
+ * @param mutex IN mutex
+ */
+void lock(apr_thread_mutex_t *mutex) {
+  apr_status_t status;
+  if ((status = apr_thread_mutex_lock(mutex)) != APR_SUCCESS) {
+    apr_pool_t *ptmp;
+    apr_pool_create(&ptmp, NULL);
+    success = 0;
+    fprintf(stderr, "could not lock: %s(%d)\n", 
+	    my_status_str(ptmp, status), status);
+    exit(1);
+  }
+}
+
+/**
+ * checked unlock function, will exit FAILED if status not ok
+ *
+ * @param mutex IN mutex
+ */
+void unlock(apr_thread_mutex_t *mutex) {
+  apr_status_t status;
+  if ((status = apr_thread_mutex_unlock(mutex)) != APR_SUCCESS) {
+    apr_pool_t *ptmp;
+    apr_pool_create(&ptmp, NULL);
+    success = 0;
+    fprintf(stderr, "could not unlock: %s(%d)\n", 
+	    my_status_str(ptmp, status), status);
+    exit(1);
+  }
+}
+
 /**
  * Get recorder struct from worker config
  * @param worker IN thread object
@@ -3459,52 +3495,6 @@ apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data,
 }
 
 /**
- * PROC_WAIT command 
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN named process to wait for 
- *
- * @return APR_SUCCESS or apr error code
- * @note: only for unix systems
- */
-#if APR_HAS_FORK
-apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, 
-                               apr_pool_t *ptmp) {
-  char *copy;
-  char *var;
-  char *last;
-  apr_status_t status = APR_SUCCESS;
-
-  COMMAND_NEED_ARG("<name>*");
-
-  if (!worker->procs) {
-    worker_log(worker, LOG_ERR, "No processes to wait for");
-    return APR_EINVAL;
-  }
-
-  var = apr_strtok(copy, " ", &last);
-  while (var) {
-    int exitcode;
-    apr_exit_why_e why;
-    apr_proc_t *proc = apr_hash_get(worker->procs, var, APR_HASH_KEY_STRING);
-    if (!proc) {
-      worker_log(worker, LOG_ERR, "Process \"%s\" does not exist", var);
-      return APR_EINVAL;
-    }
-    apr_proc_wait(proc, &exitcode, &why, APR_WAIT); 
-    if (exitcode != 0) {
-      worker_log(worker, LOG_ERR, "Process \"%s\" FAILED", var);
-      status = APR_EINVAL;
-    }
-    var = apr_strtok(NULL, " ", &last);
-  }
-
-  return status;
-}
-#endif
-
-/**
  * MATCH_SEQ command
  *
  * @param self IN command
@@ -3758,9 +3748,6 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
   (*self)->grep.error = apr_table_make(p, 2);
   (*self)->grep.exec = apr_table_make(p, 2);
   (*self)->sockets = apr_hash_make(p);
-#if APR_HAS_FORK
-  (*self)->procs = NULL;
-#endif
   (*self)->headers_allow = NULL;
   (*self)->headers_filter = NULL;
   (*self)->params = store_make(p);
@@ -3778,7 +3765,9 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
   store_set((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
 	    logger_get_mode(global->logger)));
   
-  worker_log((*self), LOG_DEBUG, "worker_new: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
+  worker_log((*self), LOG_DEBUG, 
+             "worker_new: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+             (*self)->pbody, (*self)->pbody);
 }
 
 /**
@@ -3802,7 +3791,9 @@ void worker_clone(worker_t ** self, worker_t * orig) {
   (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
   (*self)->group = orig->group;
 
-  worker_log((*self), LOG_DEBUG, "worker_clone: pool: %p, pbody: %p\n", (*self)->pbody, (*self)->pbody);
+  worker_log((*self), LOG_DEBUG, 
+             "worker_clone: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+             (*self)->pbody, (*self)->pbody);
 }
 
 /**
@@ -3811,7 +3802,9 @@ void worker_clone(worker_t ** self, worker_t * orig) {
  * @param worker IN thread data object
  */
 void worker_destroy(worker_t * worker) {
-  worker_log(worker, LOG_DEBUG, "worker_destroy: %p, pbody: %p", worker->pbody, worker->pbody);
+  worker_log(worker, LOG_DEBUG, 
+             "worker_destroy: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+             worker->pbody, worker->pbody);
   apr_pool_destroy(worker->heartbeat);
 }
 
@@ -3841,7 +3834,8 @@ apr_status_t worker_add_line(worker_t * worker, const char *file_and_line,
 apr_status_t worker_socket_send(worker_t *worker, char *buf, 
                                 apr_size_t len) {
 
-  worker_log(worker, LOG_DEBUG, "send socket: %p transport: %p", 
+  worker_log(worker, LOG_DEBUG, 
+             "send socket: %"APR_UINT64_T_HEX_FMT" transport: %"APR_UINT64_T_HEX_FMT, 
              worker->socket, worker->socket->transport);
   return transport_write(worker->socket->transport, buf, len);
 }

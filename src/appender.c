@@ -63,6 +63,7 @@
 struct appender_s {
   printer_f printer;
   void *user_data;
+  apr_thread_mutex_t *mutex;
 };
 
 /************************************************************************
@@ -96,6 +97,33 @@ appender_t *appender_new(apr_pool_t *pool, printer_f printer, void *user_data) {
  */
 void *appender_get_user_data(appender_t *appender) {
   return appender->user_data;
+}
+
+/**
+ * Set mutex to std appender
+ * @param appender IN appender instance
+ * @param mutex IN mutex
+ * @note: If set to NULL, no lock can be draw
+ */
+void appender_set_mutex(appender_t *appender, apr_thread_mutex_t *mutex) {
+  appender->mutex = mutex;
+}
+
+/**
+ * Get registered mutex
+ * @param appender IN appender instance
+ * @return mutex
+ */
+apr_thread_mutex_t *appender_get_mutex(appender_t *appender) {
+  return appender->mutex;
+}
+
+void appender_lock(appender_t *appender) {
+  if (appender->mutex) apr_thread_mutex_lock(appender->mutex);
+}
+
+void appender_unlock(appender_t *appender) {
+  if (appender->mutex) apr_thread_mutex_unlock(appender->mutex);
 }
 
 /**

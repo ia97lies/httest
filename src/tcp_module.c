@@ -141,7 +141,8 @@ static apr_status_t tcp_hook_connect(worker_t *worker) {
 
   transport_register(worker->socket, transport);
 
-  worker_log(worker, LOG_DEBUG, "tcp connect socket: %p transport: %p", worker->socket, transport);
+  worker_log(worker, LOG_DEBUG, "tcp connect socket: %"APR_UINT64_T_HEX_FMT" "
+             "transport: %"APR_UINT64_T_HEX_FMT, worker->socket, transport);
 
   return APR_SUCCESS;
 }
@@ -162,7 +163,8 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
 			    tcp_transport_write);
   transport_register(worker->socket, transport);
 
-  worker_log(worker, LOG_DEBUG, "tcp accept socket: %p transport: %p", worker->socket, transport);
+  worker_log(worker, LOG_DEBUG, "tcp accept socket: %"APR_UINT64_T_HEX_FMT" "
+             "transport: %"APR_UINT64_T_HEX_FMT, worker->socket, transport);
 
   return APR_SUCCESS;
 }

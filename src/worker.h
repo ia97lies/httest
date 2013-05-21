@@ -143,9 +143,6 @@ struct worker_s {
   char *listener_addr;
   sockreader_t *sockreader;
   logger_t *logger;
-#if APR_HAS_FORK
-  apr_hash_t *procs;
-#endif
 };
 
 struct global_s {
@@ -340,13 +337,6 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_joined,
 apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
 
-/** helpers */
-void worker_new(worker_t ** self, char *additional,
-                global_t *global, interpret_f interpret);
-void worker_clone(worker_t ** self, worker_t * orig); 
-apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
-                               apr_size_t len); 
-
 /** commands */
 apr_status_t command_CALL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_REQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
@@ -400,9 +390,6 @@ apr_status_t command_BREAK(command_t *self, worker_t *worker, char *data, apr_po
 apr_status_t command_PRINT_HEX(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_CLOSE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_AUTO_COOKIE(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
-#if APR_HAS_FORK
-apr_status_t command_PROC_WAIT(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
-#endif
 apr_status_t command_MATCH_SEQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_PLAY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
@@ -415,8 +402,16 @@ apr_status_t command_VERSION(command_t *self, worker_t *worker, char *data, apr_
 apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 
 /** helper */
+void lock(apr_thread_mutex_t *mutex); 
+void unlock(apr_thread_mutex_t *mutex); 
+void worker_new(worker_t ** self, char *additional,
+                global_t *global, interpret_f interpret);
+void worker_clone(worker_t ** self, worker_t * orig); 
+apr_status_t worker_handle_buf(worker_t *worker, apr_pool_t *pool, char *buf, 
+                               apr_size_t len); 
+
 void worker_log(worker_t * worker, int mode, char *fmt, ...); 
-void worker_log_buf(worker_t * logger, int mode, char dir, const char *buf,
+void worker_log_buf(worker_t * worker, int mode, char dir, const char *buf,
                     apr_size_t len); 
 void worker_var_set(worker_t * worker, const char *var, const char *val); 
 const char * worker_var_get(worker_t * worker, const char *var); 

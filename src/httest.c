@@ -110,8 +110,6 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker,
                                  char *data, apr_pool_t *ptmp); 
 static apr_status_t command_SOCKET(command_t *self, worker_t *worker, 
                                    char *data, apr_pool_t *ptmp); 
-static apr_status_t command_PROCESS(command_t *self, worker_t *worker, 
-                                   char *data, apr_pool_t *ptmp); 
 static apr_status_t command_ERROR(command_t *self, worker_t *worker, 
                                   char *data, apr_pool_t *ptmp); 
 
@@ -149,8 +147,6 @@ static apr_status_t global_TIMEOUT(command_t *self, global_t *global,
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, 
 				      char *data, apr_pool_t *ptmp); 
-static apr_status_t global_PROCESS(command_t *self, global_t *global, 
-				   char *data, apr_pool_t *ptmp); 
 static apr_status_t global_MODULE(command_t *self, global_t *global, 
 				  char *data, apr_pool_t *ptmp); 
 static apr_status_t global_REQUIRE_VERSION(command_t *self, global_t *global, 
@@ -215,11 +211,6 @@ command_t global_commands[] = {
   {"AUTO_CLOSE", (command_f )global_AUTO_CLOSE, "on|off", 
   "Handle Connection: close header and close automaticaly the given connection",
   COMMAND_FLAGS_NONE},
-#if APR_HAS_FORK
-  {"PROCESS", (command_f )global_PROCESS, "<n>", 
-  "Run the script in <n> process simultanous",
-  COMMAND_FLAGS_NONE},
-#endif
   {"BLOCK", (command_f )global_BLOCK, "<name>", 
   "Store a block of commands to call it from a CLIENT/SERVER/BLOCK",
   COMMAND_FLAGS_NONE},
@@ -312,11 +303,6 @@ command_t local_commands[] = {
   {"_BREAK", (command_f )command_BREAK, "", 
    "Break a loop",
   COMMAND_FLAGS_NONE},
-#if APR_HAS_FORK
-  {"_PROC_WAIT", (command_f )command_PROC_WAIT, "<name>*", 
-  "Wait for processes <name>*\n",
-  COMMAND_FLAGS_NONE},
-#endif
   {"_TIMEOUT", (command_f )command_TIMEOUT, "<miliseconds>", 
    "Set socket timeout of current socket",
   COMMAND_FLAGS_NONE},
@@ -466,12 +452,6 @@ command_t local_commands[] = {
   "We do expect specific error on body exit\n"
   "close body with _END",
   COMMAND_FLAGS_BODY},
-#if APR_HAS_FORK
-  {"_PROCESS", (command_f )command_PROCESS, "<name>", 
-  "Fork a process to run body in. Process termination handling see _PROC_WAIT\n"
-  "close body with _END",
-  COMMAND_FLAGS_BODY},
-#endif
 
   /* Link section */
   {"_OP", NULL, "_MATH:OP", NULL, COMMAND_FLAGS_LINK},
@@ -519,40 +499,6 @@ int success = 1;
 static void worker_set_global_error(worker_t *worker); 
 static apr_status_t worker_interpret(worker_t * worker, worker_t *parent, 
                                      apr_pool_t *ptmp); 
-
-/**
- * checked lock function, will exit FAILED if status not ok
- *
- * @param mutex IN mutex
- */
-static void lock(apr_thread_mutex_t *mutex) {
-  apr_status_t status;
-  if ((status = apr_thread_mutex_lock(mutex)) != APR_SUCCESS) {
-    apr_pool_t *ptmp;
-    apr_pool_create(&ptmp, NULL);
-    success = 0;
-    fprintf(stderr, "could not lock: %s(%d)\n", 
-	    my_status_str(ptmp, status), status);
-    exit(1);
-  }
-}
-
-/**
- * checked unlock function, will exit FAILED if status not ok
- *
- * @param mutex IN mutex
- */
-static void unlock(apr_thread_mutex_t *mutex) {
-  apr_status_t status;
-  if ((status = apr_thread_mutex_unlock(mutex)) != APR_SUCCESS) {
-    apr_pool_t *ptmp;
-    apr_pool_create(&ptmp, NULL);
-    success = 0;
-    fprintf(stderr, "could not unlock: %s(%d)\n", 
-	    my_status_str(ptmp, status), status);
-    exit(1);
-  }
-}
 
 /**
  * Increase threads by 1
@@ -1450,62 +1396,6 @@ error:
 }
 
 /**
- * PROCESS command
- *
- * @param self IN command
- * @param worker IN thread data object
- * @param data IN header name (spaces are possible) 
- *
- * @return APR_SUCCESS
- */
-#if APR_HAS_FORK
-static apr_status_t command_PROCESS(command_t *self, worker_t *worker, char *data, 
-                                    apr_pool_t *ptmp) {
-  apr_status_t status;
-  worker_t *body;
-  apr_proc_t *proc;
-  char *copy;
-
-  COMMAND_NEED_ARG("<name>");
-
-  /* create a new worker body */
-  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
-    return status;
-  }
-  
-  /* fork  */
-  proc = apr_pcalloc(worker->pbody, sizeof(apr_proc_t));
-  status = apr_proc_fork(proc, worker->pbody);
-
-  if (APR_STATUS_IS_INCHILD(status)) {
-    /* interpret */
-    status = body->interpret(body, worker, NULL);
-  
-    /* terminate */
-    worker_log(worker, LOG_CMD, "_END PROCESS");
-    worker_body_end(body, worker);
-    if (status != APR_SUCCESS) {
-      exit(1);
-    }
-    else {
-      exit(0);
-    }
-  }
-  else {
-    apr_pool_note_subprocess(worker->global->pool, proc, APR_KILL_ALWAYS);
-  }
-
-  if (!worker->procs) {
-    worker->procs = apr_hash_make(worker->pbody);
-  }
-
-  apr_hash_set(worker->procs, apr_pstrdup(worker->pbody, copy), APR_HASH_KEY_STRING, proc);
-
-  return APR_SUCCESS; 
-}
-#endif
-
-/**
  * Unset global success
  *
  * @param self IN thread data object
@@ -1986,10 +1876,11 @@ error:
  */
 static apr_status_t global_new(global_t **global, store_t *vars, 
                                int log_mode, apr_pool_t *p, apr_file_t *out,
-                               apr_file_t *err, int log_thread_no) {
+                               apr_file_t *err, int logger_flags) {
   appender_t *appender;
   apr_status_t status;
   apr_pool_t *pmutex;
+  apr_thread_mutex_t *mutex;
 
   *global = apr_pcalloc(p, sizeof(global_t));
 
@@ -2006,15 +1897,30 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
   (*global)->logger = logger_new(p, log_mode, 0);
-  appender = appender_std_new(p, out, err, log_thread_no?APPENDER_STD_THREAD_NO:APPENDER_STD_NONE);
-  logger_add_appender((*global)->logger, appender);
+
+  if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                        (*global)->pool)) != APR_SUCCESS) {
+    apr_file_printf(err, "\n"
+               "Global creation: could not create sync mutex");
+    return status;
+  }
+  if (log_mode >= LOG_INFO) {
+    appender = appender_std_new(p, out, logger_flags);
+    appender_set_mutex(appender, mutex);
+    logger_set_appender((*global)->logger, appender, "std", LOG_INFO, log_mode);
+  }
+  if (log_mode >= LOG_ERR) {
+    appender = appender_std_new(p, err, logger_flags);
+    appender_set_mutex(appender, mutex);
+    logger_set_appender((*global)->logger, appender, "err", LOG_NONE, LOG_ERR);
+  }
 
   /* set default blocks for blocks with no module name */
   apr_hash_set((*global)->modules, "DEFAULT", APR_HASH_KEY_STRING, (*global)->blocks);
 
   if ((status = apr_threadattr_create(&(*global)->tattr, (*global)->pool)) 
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not create thread attr");
     return status;
   }
@@ -2022,14 +1928,14 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_threadattr_stacksize_set((*global)->tattr, 
                                              DEFAULT_THREAD_STACKSIZE))
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not set stacksize");
     return status;
   }
 
   if ((status = apr_threadattr_detach_set((*global)->tattr, 0)) 
       != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not set detach");
     return status;
   }
@@ -2037,7 +1943,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not create sync mutex");
     return status;
   }
@@ -2045,7 +1951,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
                                         pmutex)) != APR_SUCCESS) {
-    logger_log((*global)->logger, LOG_ERR, NULL,
+    apr_file_printf(err, "\n"
                "Global creation: could not create mutex");
     return status;
   }
@@ -2737,81 +2643,6 @@ static apr_status_t global_AUTO_CLOSE(command_t *self, global_t *global, char *d
 }
 
 /**
- * Global PROCESS command
- *
- * @param self IN command
- * @param global IN global object
- * @param data IN n 
- *
- * @return APR_SUCCESS
- */
-#if APR_HAS_FORK
-static apr_status_t global_PROCESS(command_t *self, global_t *global, char *data, 
-                                   apr_pool_t *ptmp) {
-  apr_proc_t proc;
-  apr_status_t status;
-  int n;
-  char *copy;
-  char *last;
-  char *no;
-  char *var;
-  int i = 0; 
-  global_replacer_t *replacer_hook = apr_pcalloc(ptmp, sizeof(*replacer_hook));
-  replacer_hook->ptmp = ptmp;
-  replacer_hook->store = global->vars;
-
-  while (data[i] == ' ') { 
-    ++i; 
-  } 
-  if(!data[i]) { 
-    logger_log(global->logger, LOG_ERR, NULL, "Number missing");
-    return APR_EGENERAL; 
-  } 
-  copy = apr_pstrdup(global->pool, &data[i]); 
-  copy = replacer(global->pool, copy, replacer_hook, global_replacer);
-
-  no = apr_strtok(copy, " ", &last);
-  var = apr_strtok(NULL, " ", &last);
-
-  if (!no) {
-    logger_log(global->logger, LOG_ERR, NULL, "Number missing");
-    return APR_EGENERAL;
-  }
-
-  n = apr_atoi64(no);
-
-  for (i = 0; i < n; i++) {
-    status = apr_proc_fork(&proc, global->pool);
-    if (APR_STATUS_IS_INCHILD(status)) {
-      if (var && strlen(var)) {
-        store_set(global->vars, var, apr_itoa(global->pool, i));
-      }
-      return APR_SUCCESS;
-    }
-    else {
-      apr_pool_note_subprocess(global->pool, &proc, APR_KILL_ALWAYS);
-    }
-  }
-
-  for (i = 0; i < n; i++) {
-    /* wait for termination */
-    int exitcode;
-    apr_exit_why_e why;
-    apr_proc_wait_all_procs(&proc, &exitcode, &why, APR_WAIT, global->pool); 
-    if (exitcode != 0) {
-      success = 1;
-    }
-  }
-
-  /* and exit */
-  if (success != 0) {
-    exit(1);
-  }
-  exit(0);
-}
-#endif
-
-/**
  * Global START command starts all so far defined threads 
  *
  * @param self IN command
@@ -3101,7 +2932,7 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars, apr_file_t *out,
 
   if ((status = global_new(&global, vars, log_mode, p, out, err, log_thread_no)) 
       != APR_SUCCESS) {
-    logger_log(global->logger, LOG_ERR, NULL, "Could not create global");
+    apr_file_printf(err, "\nCould not create global");
     return status;
   }
 
@@ -3145,7 +2976,6 @@ apr_getopt_option_t options[] = {
   { "suppress", 'n', 0, "do no print start and OK|FAILED" },
   { "silent", 's', 0, "silent mode" },
   { "error", 'e', 0, "log level error" },
-  { "warn", 'w', 0, "log level warn" },
   { "info", 'i', 0, "log level info" },
   { "debug", 'd', 0, "log level debug for script debugging" },
   { "debug-system", 'p', 0, "log level debug-system to log more details" },
@@ -3157,6 +2987,7 @@ apr_getopt_option_t options[] = {
   { "shell", 'S', 0, "Shell mode" },
   { "define", 'D', 1, "Define variables" },
   { "log-thread-number", 'l', 0, "Show the thread number for every printed line" },
+  { "color", 'b', 0, "Colored output" },
   { NULL, 0, 0, NULL }
 };
 
@@ -3465,8 +3296,8 @@ int main(int argc, const char *const argv[]) {
 #define MAIN_FLAGS_USE_STDIN 0x0002
 #define MAIN_FLAGS_NO_OUTPUT 0x0004
 #define MAIN_FLAGS_PRINT_DURATION 0x0008
-#define MAIN_FLAGS_LOG_THREAD_NO 0x0010
   int flags;
+  int logger_flags = 0;
   apr_time_t time = 0;
   char time_str[256];
   apr_file_t *out;
@@ -3516,9 +3347,6 @@ int main(int argc, const char *const argv[]) {
     case 'p':
       log_mode = LOG_DEBUG;
       break;
-    case 'w':
-      log_mode = LOG_WARN;
-      break;
     case 'i':
       log_mode = LOG_INFO;
       break;
@@ -3566,7 +3394,10 @@ int main(int argc, const char *const argv[]) {
       }
       break;
     case 'l':
-      flags |= MAIN_FLAGS_LOG_THREAD_NO; 
+      logger_flags |= APPENDER_STD_THREAD_NO; 
+      break;
+    case 'b':
+      logger_flags |= APPENDER_STD_COLOR; 
       break;
     }
   }
@@ -3655,7 +3486,7 @@ int main(int argc, const char *const argv[]) {
     }
     /* interpret current file */
     if ((status = interpret(fp, vars, out, err, log_mode, pool, NULL, 
-                            flags & MAIN_FLAGS_LOG_THREAD_NO)) 
+                            logger_flags)) 
         != APR_SUCCESS) {
       success = 0;
       apr_file_flush(out);
@@ -3663,7 +3494,7 @@ int main(int argc, const char *const argv[]) {
       exit(1);
     }
 
-    if (log_mode > LOG_WARN) {
+    if (log_mode >= LOG_INFO) {
       apr_file_printf(out, "\n");
       apr_file_flush(out);
     }
