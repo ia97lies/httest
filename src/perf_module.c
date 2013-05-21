@@ -610,17 +610,15 @@ static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread,
                                                 void *selfv) {
   perf_host_t *host = selfv;
   apr_status_t status;
-  apr_pool_t *pool;
   apr_size_t len = 1;
   char *buf;
   sockreader_t *sockreader;
 
-  apr_pool_create(&pool, NULL);
   apr_thread_mutex_lock(host->sync);
   status = transport_read(host->socket->transport, buf, &len);
 
   if ((status = sockreader_new(&sockreader, host->socket->transport,
-                               NULL, 0, pool)) == APR_SUCCESS) {
+                               NULL, 0)) == APR_SUCCESS) {
     status = sockreader_read_line(sockreader, &buf); 
     while (status == APR_SUCCESS) {
       logger_log(host->worker->logger, LOG_INFO, "[%s]: %s", host->name, buf);
@@ -634,7 +632,7 @@ static void * APR_THREAD_FUNC perf_thread_super(apr_thread_t * thread,
   }
 
   apr_thread_mutex_unlock(host->sync);
-  apr_pool_destroy(pool);
+  sockreader_destroy(&sockreader);
 
   apr_thread_exit(thread, APR_SUCCESS);
   return NULL;

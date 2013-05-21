@@ -1358,8 +1358,6 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
                                    char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  apr_size_t peeklen;
-  apr_pool_t *pool;
 
   COMMAND_NO_ARG;
 
@@ -1375,23 +1373,10 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
     return status;
   }
 
-  apr_pool_create(&pool, NULL);
-
-  peeklen = body->socket->peeklen;
-  body->socket->peeklen = 0;
-
-  if ((status = sockreader_new(&body->socket->sockreader, body->socket->transport,
-                               body->socket->peek, peeklen, pool)) != APR_SUCCESS) {
-    goto error;
-  }
- 
   status = body->interpret(body, worker, NULL);
   
   worker_log(worker, LOG_CMD, "_END SOCKET");
   
-error:
-  body->socket->sockreader = NULL;
-  apr_pool_destroy(pool);
   worker_body_end(body, worker);
   return status;
 }

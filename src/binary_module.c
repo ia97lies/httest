@@ -98,14 +98,14 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
   if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->transport,
-				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
+    if ((status = sockreader_new(&worker->socket->sockreader, 
+                                 worker->socket->transport,
+				 worker->socket->peek, peeklen)) 
+        != APR_SUCCESS) {
       goto out_err;
     }
   }
-  else {
-    sockreader = worker->socket->sockreader;
-  }
+  sockreader = worker->socket->sockreader;
 
   if ((status = content_length_reader(sockreader, &buf, &recv_len, "")) != APR_SUCCESS) {
     if (poll && APR_STATUS_IS_INCOMPLETE(status)) {
