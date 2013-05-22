@@ -35,6 +35,10 @@ typedef struct sockreader_s sockreader_t;
 apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t * transport,
                             char *rest, apr_size_t len);
 void sockreader_destroy(sockreader_t **sockreader);
+void sockreader_set_transport(sockreader_t *sockreader, 
+                              transport_t *transport); 
+apr_socket_t * sockreader_get_socket(sockreader_t *self);
+void sockreader_set_options(sockreader_t *self, int options); 
 apr_status_t sockreader_push_back(sockreader_t * self, const char *buf, 
                                   apr_size_t len); 
 apr_status_t sockreader_push_line(sockreader_t * self, const char *line);
@@ -51,7 +55,5 @@ apr_status_t eof_reader(sockreader_t * sockreader, char **buf,
 apr_status_t encapsulated_reader(sockreader_t * sockreader, char **buf,
                                  apr_size_t *len, const char *enc_info,
 				 const char *preview); 
-apr_socket_t * sockreader_get_socket(sockreader_t *self);
-void sockreader_set_options(sockreader_t *self, int options); 
 
 #endif

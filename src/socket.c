@@ -126,6 +126,17 @@ void sockreader_destroy(sockreader_t **sockreader) {
 }
 
 /**
+ * Set transport for upgrading facilities
+ * @param sockreader IN sockreader instance
+ * @param transport IN transport object
+ */
+void sockreader_set_transport(sockreader_t *sockreader, 
+                              transport_t *transport) {
+  sockreader->transport = transport;
+}
+
+
+/**
  * Set options
  *
  * @param self IN sockreader object

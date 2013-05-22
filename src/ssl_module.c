@@ -1097,6 +1097,9 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
 				ssl_transport_read, 
 				ssl_transport_write);
       transport_register(worker->socket, transport);
+      if (worker->socket->sockreader) {
+        sockreader_set_transport(worker->socket->sockreader, transport);
+      }
     }
   }
   else {
@@ -1166,6 +1169,9 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
 				ssl_transport_read, 
 				ssl_transport_write);
       transport_register(worker->socket, transport);
+      if (worker->socket->sockreader) {
+        sockreader_set_transport(worker->socket->sockreader, transport);
+      }
     }
   }
   else {
@@ -1830,6 +1836,9 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
 			      ssl_transport_read, 
 			      ssl_transport_write);
     transport_register(worker->socket, transport);
+    if (worker->socket->sockreader) {
+      sockreader_set_transport(worker->socket->sockreader, transport);
+    }
   }
 
   return APR_SUCCESS;
@@ -1888,6 +1897,9 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
 			      ssl_transport_read, 
 			      ssl_transport_write);
     transport_register(worker->socket, transport);
+    if (worker->socket->sockreader) {
+      sockreader_set_transport(worker->socket->sockreader, transport);
+    }
   }
 
   return APR_SUCCESS;
