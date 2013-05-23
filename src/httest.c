@@ -269,6 +269,9 @@ command_t local_commands[] = {
   "<tag>: Additional tag info do support multiple connection to one target\n"
   "<cert-file>, <key-file> and <ca-cert-file> are optional for client/server authentication",
   COMMAND_FLAGS_NONE},	
+  {"_POLL", (command_f )command_POLL, "{<port>[:<tag>]}",
+   "Wait for input on a set of ports openend with _REQ and not yet closed",
+   COMMAND_FLAGS_NONE},
   {"_RESWAIT", (command_f )command_RESWAIT, "", 
    "Do use _RES IGNORE_MONITORS instead" ,
   COMMAND_FLAGS_DEPRECIATED},
@@ -447,7 +450,7 @@ command_t local_commands[] = {
   {"_SOCKET", (command_f )command_SOCKET, "", 
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
   "close body with _END",
-  COMMAND_FLAGS_BODY},
+  COMMAND_FLAGS_BODY|COMMAND_FLAGS_DEPRECIATED},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
   "close body with _END",

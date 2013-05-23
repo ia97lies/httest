@@ -12,6 +12,9 @@ Changes with httest 2.4.0
   *) httest: Removed PROCESS, _PROCESS and the corresponding _PROC_WAIT from
              httest. This function are useless and do not work as expected.
 
+  *) httest: Command _SOCKET is not used any more and is marked depreciated.
+             you can remove this command without change your scripts behavour.
+
 
 Changes with httest 2.3.3
   *) httest: Fixed segfault on httest -C <command-name> to print help text of

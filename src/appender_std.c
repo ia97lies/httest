@@ -148,8 +148,10 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
           apr_file_printf(std->out, "\nerror: ");
         }
       }
-      for (k = 0; k < group; k++) {
-        apr_file_printf(std->out, APPENDER_STD_PFX);
+      if (mode != LOG_ERR) {
+        for (k = 0; k < group; k++) {
+          apr_file_printf(std->out, APPENDER_STD_PFX);
+        }
       }
       if (dir == '>' || dir == '<' || dir == '+') {
         apr_file_printf(std->out, "%c", dir);
