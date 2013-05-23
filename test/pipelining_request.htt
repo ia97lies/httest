@@ -20,7 +20,6 @@ __Host: $YOUR_HOST
 __
 _FLUSH
 
-_SOCKET
 _EXPECT body "OK 0"
 _EXPECT body "!OK 1"
 _EXPECT body "!OK 2"
@@ -33,7 +32,6 @@ _EXPECT body "!OK 0"
 _EXPECT body "!OK 1"
 _EXPECT body "OK 2"
 _WAIT
-_END SOCKET
 
 END
 
