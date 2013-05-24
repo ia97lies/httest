@@ -19,7 +19,7 @@ import ch.sf.htt.HttestClassRunner.HttSubDir;
 import ch.sf.htt.HttestWrapper;
 
 /**
- * @author AdNovum Informatik AG
+ * @author ia97lies@sourceforge.net
  */
 @RunWith(HttestClassRunner.class)
 public class HttestIntTestClassRunner extends HttestWrapper {

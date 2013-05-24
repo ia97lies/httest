@@ -12,7 +12,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 /**
- * @author AdNovum Informatik AG
+ * @author ia97lies@sourceforge.net
  */
 public class TestReportListener implements ITestListener {
     private BufferedWriter reportWriter;

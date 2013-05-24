@@ -21,7 +21,8 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 
 /**
- * @author AdNovum Informatik AG
+ * @author ia97lies@sourceforge.net
+ * @note experimental stuff
  */
 public class HttestClassRunner extends BlockJUnit4ClassRunner {
 	String subdir;
