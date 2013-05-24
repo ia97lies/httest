@@ -22,7 +22,7 @@ __GET /index.html HTTP/1.1
 __Host: $host
 __
 # check we get a 200 OK and not a 404 Not Found or the like
-_EXPECT headers "200 OK"
+#_EXPECT headers "200 OK"
 # optional check if login fields int the http body are there
 #_EXPECT body "Name:"
 #_EXPECT body "Password:"

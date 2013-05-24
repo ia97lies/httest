@@ -22,7 +22,7 @@ import ch.sf.htt.TestReportListener;
 
 /**
  * A test class to run all httest scripts below $basedir/src/test/httest
- * @author AdNovum Informatik AG
+ * @author ia97lies@sourceforge.net
  */
 @RunWith(Parameterized.class)
 public class HttestIntTest extends HttestWrapper {
