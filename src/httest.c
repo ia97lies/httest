@@ -108,6 +108,8 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker,
                                 char *data, apr_pool_t *ptmp); 
 static apr_status_t command_RPS(command_t *self, worker_t *worker, 
                                  char *data, apr_pool_t *ptmp); 
+static apr_status_t command_POLL(command_t * self, worker_t * worker, 
+                                 char *data, apr_pool_t *ptmp); 
 static apr_status_t command_SOCKET(command_t *self, worker_t *worker, 
                                    char *data, apr_pool_t *ptmp); 
 static apr_status_t command_ERROR(command_t *self, worker_t *worker, 
@@ -269,9 +271,6 @@ command_t local_commands[] = {
   "<tag>: Additional tag info do support multiple connection to one target\n"
   "<cert-file>, <key-file> and <ca-cert-file> are optional for client/server authentication",
   COMMAND_FLAGS_NONE},	
-  {"_POLL", (command_f )command_POLL, "{<port>[:<tag>]}",
-   "Wait for input on a set of ports openend with _REQ and not yet closed",
-   COMMAND_FLAGS_NONE},
   {"_RESWAIT", (command_f )command_RESWAIT, "", 
    "Do use _RES IGNORE_MONITORS instead" ,
   COMMAND_FLAGS_DEPRECIATED},
@@ -447,6 +446,10 @@ command_t local_commands[] = {
   "Request is count on every _WAIT call\n"
   "close body with _END",
   COMMAND_FLAGS_BODY},
+  {"_POLL", (command_f )command_POLL, "<n> {<port>[:<tag>]}",
+   "Poll for input on a set of ports openend with _REQ and not yet closed <n> times\n"
+    "close body with _END\n",
+   COMMAND_FLAGS_BODY},
   {"_SOCKET", (command_f )command_SOCKET, "", 
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
   "close body with _END",
@@ -987,7 +990,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
   }
 
-  worker_log(worker, LOG_CMD, "_END IF");
+  worker_log(worker, LOG_CMD, "_END");
 
   worker_body_end(body, worker);
  
@@ -1071,7 +1074,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     worker_log(worker, LOG_ERR, "Error in loop with count = %d", i);
   }
   
-  worker_log(worker, LOG_CMD, "_END LOOP");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   return status;
@@ -1124,7 +1127,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
     status = APR_SUCCESS;
   }
   
-  worker_log(worker, LOG_CMD, "_END FOR");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   
@@ -1199,7 +1202,7 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
   }
   
 end:
-  worker_log(worker, LOG_CMD, "_END BPS");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   
@@ -1275,7 +1278,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   }
   
 end:
-  worker_log(worker, LOG_CMD, "_END RPS");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   
@@ -1339,7 +1342,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
     status = APR_SUCCESS;
   }
 
-  worker_log(worker, LOG_CMD, "_END ERROR");
+  worker_log(worker, LOG_CMD, "_END");
   
   if (worker->socket) {
     worker->socket->config = apr_hash_make(worker->pbody);
@@ -1378,9 +1381,74 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
 
   status = body->interpret(body, worker, NULL);
   
-  worker_log(worker, LOG_CMD, "_END SOCKET");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
+  return status;
+}
+
+/**
+ * Command poll to select socket
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
+ * @param data IN aditional data
+ * @param ptmp IN temp pool
+ *
+ * @return an apr status
+ */
+apr_status_t command_POLL(command_t * self, worker_t * worker,
+                          char *data, apr_pool_t *ptmp) {
+  apr_status_t status;
+  apr_size_t size;
+  store_t *params;
+  int i;
+  char *copy;
+  char *host_and_port;
+  socket_t *socket;
+  worker_t *body;
+
+  COMMAND_NEED_ARG("list of \"hostname [SSL:]<port>[:<tag>]\" opended with _REQ before");
+
+  params = store_make(ptmp);
+  my_get_args(copy, params, ptmp);
+  size = store_get_size(params); 
+
+  for (i = 1; i < size; i++) {
+    char *hostname;
+    char *portname;
+    host_and_port = store_get_copy(params, ptmp, apr_itoa(ptmp, i));
+    hostname = apr_strtok(host_and_port, " ", &portname);
+    fprintf(stderr, "XXX: |%s|%s|", hostname, portname);
+    socket = 
+      apr_hash_get(worker->sockets, apr_pstrcat(ptmp, hostname, portname, 
+                                              NULL),
+                   APR_HASH_KEY_STRING);
+    if (!socket) {
+      worker_log(worker, LOG_ERR, "\"%s %s\" do not exist", hostname, portname);
+      return APR_EINVAL;
+    }
+    /* TODO: add socket to poll set
+     */
+
+  }
+
+  /* TODO: poll added sockets, and return if one of them is POLLIN and set this socket to default socket, so _WAIT can read it!
+   */
+
+  worker_flush(worker, ptmp);
+
+  /* create a new worker body */
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
+    return status;
+  }
+
+  status = body->interpret(body, worker, NULL);
+  
+  worker_log(worker, LOG_CMD, "_END");
+  
+  worker_body_end(body, worker);
+
   return status;
 }
 

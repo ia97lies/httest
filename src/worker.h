@@ -340,7 +340,6 @@ apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
 /** commands */
 apr_status_t command_CALL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_REQ(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
-apr_status_t command_POLL(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_RESWAIT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_RES(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);
 apr_status_t command_WAIT(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp);

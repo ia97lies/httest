@@ -107,7 +107,7 @@ syn match httStatement          "\<_UDP:CONNECT\>"
 syn match httStatement          "\<_WS:RECV\>"
 syn match httStatement          "\<_WS:SEND\>"
 syn match httStatement          "\<_WS:VERSION\>"
-syn keyword httRepeat           _LOOP _FOR _BPS _RPS _SOCKET _IGNORE_BODY _END
+syn keyword httRepeat           _LOOP _FOR _BPS _RPS _POLL _IGNORE_BODY _END
 syn keyword httConditional      _IF _ELSE _ERROR _END
 
 " Constants
