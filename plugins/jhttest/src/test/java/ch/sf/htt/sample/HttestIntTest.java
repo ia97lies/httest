@@ -6,9 +6,7 @@
 
 package ch.sf.htt.sample;
 
-import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 
@@ -19,6 +17,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import ch.sf.htt.HttestWrapper;
+import ch.sf.htt.ITestListener;
+import ch.sf.htt.TestReportListener;
 
 /**
  * A test class to run all httest scripts below $basedir/src/test/httest
@@ -37,6 +37,7 @@ public class HttestIntTest extends HttestWrapper {
 		props.load(new FileInputStream("/home/cli/.htt/htt.properties"));
 		props.setProperty("basedir", "/home/cli/projects/htt/plugins/jhttest");
 		props.setProperty("scriptdir", "src/test/httest");
+		props.setProperty("reportdir", "spool/reports");
 		return props;
 	}
 	
@@ -68,7 +69,8 @@ public class HttestIntTest extends HttestWrapper {
 	 */
 	@Test
 	public void httTests() throws Exception {
-		getHttest().runScript(file);
+		ITestListener console = new TestReportListener(HttestIntTest.getProperties().getProperty("reportdir")+"/"+file+".out");
+		
+		getHttest().runScript(console, HttestIntTest.getProperties().getProperty("scriptdir")+"/"+file);
 	}
-
 }
