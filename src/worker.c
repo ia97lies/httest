@@ -1831,11 +1831,13 @@ apr_status_t command_POLL(command_t * self, worker_t * worker,
       worker_log(worker, LOG_ERR, "\"%s %s\" do not exist");
       return APR_EINVAL;
     }
-    // TODO: add socket to poll set
+    /* TODO: add socket to poll set
+     */
 
   }
 
-  // TODO: poll added sockets, and return if one of them is POLLIN and set this socket to default socket, so _WAIT can read it!
+  /* TODO: poll added sockets, and return if one of them is POLLIN and set this socket to default socket, so _WAIT can read it!
+   */
 
   return APR_SUCCESS;
 }
