@@ -1793,6 +1793,54 @@ apr_status_t command_REQ(command_t * self, worker_t * worker,
 }
 
 /**
+ * Command poll to select socket
+ *
+ * @param self IN command object
+ * @param worker IN thread data object
+ * @param data IN aditional data
+ * @param ptmp IN temp pool
+ *
+ * @return an apr status
+ */
+apr_status_t command_POLL(command_t * self, worker_t * worker,
+                          char *data, apr_pool_t *ptmp) {
+  apr_size_t size;
+  store_t *params;
+  int i;
+  char *copy;
+  char *host_and_port;
+  socket_t *socket;
+
+  COMMAND_NEED_ARG("list of \"hostname [SSL:]<port>[:<tag>]\" opended with _REQ before");
+
+  params = store_make(ptmp);
+  my_get_args(copy, params, ptmp);
+  size = store_get_size(params); 
+
+  for (i = 0; i < size; i++) {
+    char *hostname;
+    char *portname;
+    host_and_port = store_get_copy(params, ptmp, apr_itoa(ptmp, i));
+    hostname = apr_strtok(host_and_port, " ", &portname);
+    fprintf(stderr, "XXX: |%s|%s|", hostname, portname);
+    socket = 
+      apr_hash_get(worker->sockets, apr_pstrcat(ptmp, hostname, portname, 
+                                              NULL),
+                   APR_HASH_KEY_STRING);
+    if (!socket) {
+      worker_log(worker, LOG_ERR, "\"%s %s\" do not exist");
+      return APR_EINVAL;
+    }
+    // TODO: add socket to poll set
+
+  }
+
+  // TODO: poll added sockets, and return if one of them is POLLIN and set this socket to default socket, so _WAIT can read it!
+
+  return APR_SUCCESS;
+}
+
+/**
  * Setup a connection to host
  *
  * @param self IN command object
