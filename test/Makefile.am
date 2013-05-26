@@ -204,7 +204,6 @@ EXTRA_DIST= \
 	pipe_simple.htt \
 	pipe_to_file.htt \
 	plain2ssl.htt \
-	poll.htt \
 	pop3_simple.htt \
 	pop3_tls.htt \
 	print_hex_match.htt \
