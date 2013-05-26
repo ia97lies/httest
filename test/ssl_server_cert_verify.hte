@@ -20,12 +20,5 @@ END
 
 SERVER SSL:$YOUR_PORT
 _RES 
-_WAIT
-__HTTP/1.1 200 OK
-__Content-Length: AUTO 
-__Content-Type: text/html
-__
-__==AS1 - 0==
-__
 END
 
