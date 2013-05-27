@@ -74,6 +74,35 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
 /************************************************************************
  * Implementation
  ***********************************************************************/
+static void appender_std_prefix(appender_std_t *std, int mode, const char *pos,
+                                int thread, int group, char dir, 
+                                const char *custom) {
+  if (mode != LOG_ERR) {
+    if (std->flags & APPENDER_STD_THREAD_NO) {
+      apr_file_printf(std->out, "\n%d:", thread);
+    }
+    else {
+      apr_file_printf(std->out, "\n");
+    }
+  }
+  else {
+    if (pos) {
+      apr_file_printf(std->out, "\n%s: error: ", pos);
+    }
+    else {
+      apr_file_printf(std->out, "\nerror: ");
+    }
+  }
+  if (mode != LOG_ERR) {
+    int i;
+    for (i = 0; i < group; i++) {
+      apr_file_printf(std->out, APPENDER_STD_PFX);
+    }
+  }
+  if (dir == '>' || dir == '<' || dir == '+') {
+    apr_file_putc(dir, std->out);
+  }
+}
 
 /**
  * Constructor for std appender
@@ -118,7 +147,6 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
   if (std->out) {
     apr_size_t i = 0;
     apr_size_t j = 0;
-    apr_size_t k;
     /* set color on dir \e[1;31mFAILED\e[0m */
     if (std->flags & APPENDER_STD_COLOR) {
       if (dir == '<') {
@@ -129,46 +157,33 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
       }
     }
     do {
-      for (; i < len && buf[i] != '\n'; i++); 
+      int mark = 0;
+      for (; i < len && buf[i] != '\n'; i++) {
+        if ((unsigned char)buf[i] < 0x20) {
+          mark = 1;
+        }
+      }
       ++i;
       appender_lock(appender);
-      if (mode != LOG_ERR) {
-        if (std->flags & APPENDER_STD_THREAD_NO) {
-          apr_file_printf(std->out, "\n%d:", thread);
-        }
-        else {
-          apr_file_printf(std->out, "\n");
+      appender_std_prefix(std, mode, pos, thread, group, dir, custom);
+      if (mark) {
+        for (; j < i; j++) {
+          if ((unsigned char)buf[j] == '\n' ||
+              (unsigned char)buf[j] == '\r' || 
+              (unsigned char)buf[j] == '\0') {
+            /* do nothing */
+          }
+          else if ((unsigned char)buf[j] < 0x20) {
+            apr_file_putc('.', std->out);
+          }
+          else {
+            apr_file_putc(buf[j], std->out);
+          }
         }
       }
       else {
-        if (pos) {
-          apr_file_printf(std->out, "\n%s: error: ", pos);
-        }
-        else {
-          apr_file_printf(std->out, "\nerror: ");
-        }
-      }
-      if (mode != LOG_ERR) {
-        for (k = 0; k < group; k++) {
-          apr_file_printf(std->out, APPENDER_STD_PFX);
-        }
-      }
-      if (dir == '>' || dir == '<' || dir == '+') {
-        apr_file_printf(std->out, "%c", dir);
-      }
-
-      for (; j < i; j++) {
-        if ((unsigned char)buf[j] == '\n' ||
-            (unsigned char)buf[j] == '\r' || 
-            (unsigned char)buf[j] == '\0') {
-          /* do nothing */
-        }
-        else if ((unsigned char)buf[j] < 0x20) {
-          apr_file_putc('.', std->out);
-        }
-        else {
-          apr_file_putc(buf[j], std->out);
-        }
+        apr_size_t l = i-j;
+        apr_file_write(std->out, &buf[j], &l);
       }
       apr_file_flush(std->out);
       appender_unlock(appender);
