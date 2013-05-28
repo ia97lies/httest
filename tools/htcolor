@@ -19,7 +19,7 @@ if ($ARGV[0] eq "-e") {
     chomp($line);
     if ($line =~ m/^([0-9]+:)? *([<>])/) {
       # out: strong, in: light
-      $strong = ($1 eq ">") ? "1" : "0";
+      $strong = ($2 eq ">") ? "1" : "0";
       if ($line =~ m/^([0-9]+:)?[<>]/) {
         # client: blue
         $color="34";

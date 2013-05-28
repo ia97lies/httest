@@ -64,6 +64,9 @@ typedef struct appender_std_s {
 
 #define APPENDER_STD_PFX "                      "
 
+/* \e is not ESC on windows */
+#define ESC "\x1b"
+
 /************************************************************************
  * Forward declaration 
  ***********************************************************************/
@@ -192,7 +195,7 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
       appender_unlock(appender);
     } while (i < len);
     if (std->flags & APPENDER_STD_COLOR) {
-      apr_file_printf(std->out, "\e[0m");
+      apr_file_printf(std->out, ESC "[0m");
     }
   }
 }
