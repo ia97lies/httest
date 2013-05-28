@@ -1106,14 +1106,14 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
   }
   
   /* for */
-  cur = apr_strtok(list, " ", &last);
+  cur = apr_strtok(list, " \n\t", &last);
   while (cur) {
     /* interpret */
     worker_var_set(body, var, cur);
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
-    cur = apr_strtok(NULL, " ", &last);
+    cur = apr_strtok(NULL, " \n\t", &last);
   }
   
   /* special case to break the loop */
