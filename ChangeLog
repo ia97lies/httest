@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.1
+  *) httest: New you can close the body of _IF simply with a _END command
+             instead with "_END IF".
+  
+
 Changes with httest 2.4.0
   *) httest: Logger with appender concept introduced to be able to add and use
              different appenders. Default a standard appender is active.

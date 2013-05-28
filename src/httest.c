@@ -785,7 +785,7 @@ static apr_status_t worker_where_is_else(worker_t *worker, int *else_pos) {
 
   *else_pos = 0;
 
-  end = "_END IF";
+  end = "_END";
   end_len = strlen(end);
   kind = "_IF";
   kind_len = strlen(kind);
@@ -984,7 +984,7 @@ static apr_status_t command_IF(command_t * self, worker_t * worker,
     }
   }
 
-  worker_log(worker, LOG_CMD, "_END IF");
+  worker_log(worker, LOG_CMD, "_END");
 
   worker_body_end(body, worker);
  
@@ -1068,7 +1068,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     worker_log(worker, LOG_ERR, "Error in loop with count = %d", i);
   }
   
-  worker_log(worker, LOG_CMD, "_END LOOP");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   return status;
@@ -1121,7 +1121,7 @@ static apr_status_t command_FOR(command_t *self, worker_t *worker,
     status = APR_SUCCESS;
   }
   
-  worker_log(worker, LOG_CMD, "_END FOR");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   
@@ -1196,7 +1196,7 @@ static apr_status_t command_BPS(command_t *self, worker_t *worker, char *data,
   }
   
 end:
-  worker_log(worker, LOG_CMD, "_END BPS");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   
@@ -1272,7 +1272,7 @@ static apr_status_t command_RPS(command_t *self, worker_t *worker, char *data,
   }
   
 end:
-  worker_log(worker, LOG_CMD, "_END RPS");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   
@@ -1336,7 +1336,7 @@ static apr_status_t command_ERROR(command_t *self, worker_t *worker,
     status = APR_SUCCESS;
   }
 
-  worker_log(worker, LOG_CMD, "_END ERROR");
+  worker_log(worker, LOG_CMD, "_END");
   
   if (worker->socket) {
     worker->socket->config = apr_hash_make(worker->pbody);
@@ -1375,7 +1375,7 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
 
   status = body->interpret(body, worker, NULL);
   
-  worker_log(worker, LOG_CMD, "_END SOCKET");
+  worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
   return status;
