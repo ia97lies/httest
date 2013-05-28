@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.2
+  *) httest: Add a change from Alain Stalder for coloring on windows.
+
+
 Changes with httest 2.4.1
   *) httest: New you can close the body of _IF simply with a _END command
              instead with "_END IF".
