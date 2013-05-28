@@ -1,0 +1,32 @@
+REQUIRE_MODULE HTML
+
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET / HTTP/1.1
+__Host: $YOUR_HOST:$YOUR_PORT
+__
+_WAIT BUF
+
+_XML:PARSE VAR(BUF)
+_XML:XPATH /xml/foo/data R
+_FOR I "$R"
+_EXPECT VAR(I) "blabla[0-9]"
+_END
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/html
+__Content-Length: AUTO
+__
+__<xml>
+__  <foo>
+__   <data>blabla1</data>
+__   <data>blabla2</data>
+__  </foo>
+__</xml>
+END
