@@ -77,6 +77,16 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
 static void appender_std_prefix(appender_std_t *std, int mode, const char *pos,
                                 int thread, int group, char dir, 
                                 const char *custom) {
+  /* set color on dir \e[1;31mFAILED\e[0m */
+  if (std->flags & APPENDER_STD_COLOR) {
+    if (dir == '<') {
+      apr_file_printf(std->out, "\e[0;35m");
+    }
+    else if (dir == '>') {
+      apr_file_printf(std->out, "\e[0;34m");
+    }
+  }
+
   if (mode != LOG_ERR) {
     if (std->flags & APPENDER_STD_THREAD_NO) {
       apr_file_printf(std->out, "\n%d:", thread);
@@ -147,15 +157,6 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
   if (std->out) {
     apr_size_t i = 0;
     apr_size_t j = 0;
-    /* set color on dir \e[1;31mFAILED\e[0m */
-    if (std->flags & APPENDER_STD_COLOR) {
-      if (dir == '<') {
-        apr_file_printf(std->out, "\e[0;35m");
-      }
-      else if (dir == '>') {
-        apr_file_printf(std->out, "\e[0;34m");
-      }
-    }
     do {
       int mark = 0;
       for (; i < len && buf[i] != '\n'; i++) {
@@ -163,7 +164,6 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
           mark = 1;
         }
       }
-      ++i;
       appender_lock(appender);
       appender_std_prefix(std, mode, pos, thread, group, dir, custom);
       if (mark) {
@@ -184,7 +184,10 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
       else {
         apr_size_t l = i-j;
         apr_file_write(std->out, &buf[j], &l);
+        j += l;
       }
+      ++i;
+      ++j;
       apr_file_flush(std->out);
       appender_unlock(appender);
     } while (i < len);
