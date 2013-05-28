@@ -1,3 +1,0 @@
-
-threaded_server.hte:27: error: EXPECT .: Did expect "FOO"                               
-threaded_server.hte:27: error: CLT0-1 Invalid argument(22)                              

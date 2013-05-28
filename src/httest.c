@@ -447,7 +447,7 @@ command_t local_commands[] = {
   {"_SOCKET", (command_f )command_SOCKET, "", 
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
   "close body with _END",
-  COMMAND_FLAGS_BODY},
+  COMMAND_FLAGS_BODY|COMMAND_FLAGS_DEPRECIATED},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
   "close body with _END",
@@ -1358,8 +1358,6 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
                                    char *data, apr_pool_t *ptmp) {
   apr_status_t status;
   worker_t *body;
-  apr_size_t peeklen;
-  apr_pool_t *pool;
 
   COMMAND_NO_ARG;
 
@@ -1375,22 +1373,10 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
     return status;
   }
 
-  apr_pool_create(&pool, NULL);
-
-  peeklen = body->socket->peeklen;
-  body->socket->peeklen = 0;
-
-  if ((status = sockreader_new(&body->sockreader, body->socket->transport,
-                               body->socket->peek, peeklen, pool)) != APR_SUCCESS) {
-    goto error;
-  }
- 
   status = body->interpret(body, worker, NULL);
   
   worker_log(worker, LOG_CMD, "_END SOCKET");
   
-error:
-  apr_pool_destroy(pool);
   worker_body_end(body, worker);
   return status;
 }
@@ -1912,7 +1898,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if (log_mode >= LOG_ERR) {
     appender = appender_std_new(p, err, logger_flags);
     appender_set_mutex(appender, mutex);
-    logger_set_appender((*global)->logger, appender, "err", LOG_NONE, LOG_ERR);
+    logger_set_appender((*global)->logger, appender, "err", LOG_ERR, LOG_ERR);
   }
 
   /* set default blocks for blocks with no module name */

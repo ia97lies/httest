@@ -247,9 +247,7 @@ EXTRA_DIST= \
 	simple.visual \
 	skeleton.htt \
 	smtp_simple.htt \
-	socketbody.hte \
 	socketbody.htt \
-	socketbody.txt \
 	socks_domain_name.htt \
 	socks.htt \
 	sockstate.htt \
@@ -303,9 +301,7 @@ EXTRA_DIST= \
 	test_run_shell.sh \
 	test_run_visual.sh \
 	threaded.htt \
-	threaded_server.hte \
 	threaded_server.htt \
-	threaded_server.txt \
 	time.htt \
 	timeout.htt \
 	trace_on_failure_2.htb \

@@ -1,7 +1,0 @@
-INCLUDE $TOP/test/config.htb
-
-CLIENT
-_SOCKET
-_END SOCKET
-END
-

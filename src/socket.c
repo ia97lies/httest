@@ -75,25 +75,26 @@ static char *my_strcasestr(const char *s1, const char *s2);
  *
  * @param sockreader OUT new sockreader object
  * @param socket IN connected socket
- * @param p IN pool
  *
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
-                            char *rest, apr_size_t len, apr_pool_t * p) {
+                            char *rest, apr_size_t len) {
   apr_status_t status;
   apr_allocator_t *allocator;
+  apr_pool_t *pool;
 
-  *sockreader = apr_pcalloc(p, sizeof(sockreader_t));
-  (*sockreader)->buf = apr_pcalloc(p, BLOCK_MAX + 1);
-  (*sockreader)->alloc = apr_bucket_alloc_create(p);
-  (*sockreader)->line = apr_brigade_create(p, (*sockreader)->alloc);
+  apr_pool_create(&pool, NULL);
+  *sockreader = apr_pcalloc(pool, sizeof(sockreader_t));
+  (*sockreader)->buf = apr_pcalloc(pool, BLOCK_MAX + 1);
+  (*sockreader)->alloc = apr_bucket_alloc_create(pool);
+  (*sockreader)->line = apr_brigade_create(pool, (*sockreader)->alloc);
 
   (*sockreader)->transport = transport;
-  allocator = apr_pool_allocator_get(p);
+  allocator = apr_pool_allocator_get(pool);
   apr_allocator_max_free_set(allocator, 1024*1024);
-  (*sockreader)->pool = p;
-  apr_pool_create(&(*sockreader)->pool, p);
+  (*sockreader)->pool = pool;
+  apr_pool_create(&(*sockreader)->pool, pool);
 
   if (len > BLOCK_MAX) {
     return APR_ENOMEM;
@@ -111,6 +112,29 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
 
   return APR_SUCCESS;
 }
+
+/**
+ * Destroy sockreader
+ * @param sockreader INOUT instance
+ * @note: sockreader will be set to NULL
+ */
+void sockreader_destroy(sockreader_t **sockreader) {
+  if ((*sockreader) != NULL) {
+    apr_pool_destroy((*sockreader)->pool);
+    *sockreader = NULL;
+  }
+}
+
+/**
+ * Set transport for upgrading facilities
+ * @param sockreader IN sockreader instance
+ * @param transport IN transport object
+ */
+void sockreader_set_transport(sockreader_t *sockreader, 
+                              transport_t *transport) {
+  sockreader->transport = transport;
+}
+
 
 /**
  * Set options

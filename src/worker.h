@@ -43,6 +43,7 @@ typedef struct socket_s {
   char peek[32];
   apr_table_t *cookies;
   char *cookie;
+  sockreader_t *sockreader;
 } socket_t;
 
 typedef struct validation_s {
@@ -141,7 +142,6 @@ struct worker_s {
   socket_t *socket;
   apr_port_t listener_port;
   char *listener_addr;
-  sockreader_t *sockreader;
   logger_t *logger;
 };
 

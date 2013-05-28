@@ -72,7 +72,6 @@ typedef struct write_buf_to_file_s {
 } write_buf_to_file_t;
 
 typedef struct tunnel_s {
-  apr_pool_t *pool;
   sockreader_t *sockreader;
   socket_t *sendto;
 } tunnel_t;
@@ -100,7 +99,6 @@ typedef struct recorder_s {
 #define RECORDER_RECORD_HEADERS 2
 #define RECORDER_RECORD_BODY 4
 #define RECORDER_RECORD_ALL RECORDER_RECORD_STATUS|RECORDER_RECORD_HEADERS|RECORDER_RECORD_BODY 
-  apr_pool_t *pool;
   sockreader_t *sockreader;
 } recorder_t;
 
@@ -1021,6 +1019,8 @@ apr_status_t worker_conn_close(worker_t * self, char *info) {
     self->socket->socket_state = SOCKET_CLOSED;
   }
 
+  sockreader_destroy(&self->socket->sockreader);
+
   return APR_SUCCESS;
 }
 
@@ -1469,7 +1469,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   }
 
   if (recorder->on == RECORDER_PLAY) {
-    worker->sockreader = recorder->sockreader;
+    worker->socket->sockreader = recorder->sockreader;
   }
 
   /**
@@ -1479,17 +1479,17 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     goto out_err;
   }
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->transport,
-				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
+    if ((status = sockreader_new(&worker->socket->sockreader, 
+                                 worker->socket->transport,
+				 worker->socket->peek, peeklen)) 
+        != APR_SUCCESS) {
       goto out_err;
     }
   }
-  else {
-    sockreader = worker->sockreader;
-  }
+  sockreader = worker->socket->sockreader;
 
   /* bodies were read but not store */
   if (worker->flags & FLAGS_IGNORE_BODY) {
@@ -1647,9 +1647,9 @@ http_0_9:
 
 out_err:
   if (recorder->on == RECORDER_PLAY) {
-    apr_pool_destroy(recorder->pool);
+    sockreader_destroy(&recorder->sockreader);
     recorder->on = RECORDER_OFF;
-    worker->sockreader = NULL;
+    worker->socket->sockreader = NULL;
   }
   else {
     ++worker->req_cnt;
@@ -3025,17 +3025,17 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
 
   apr_pool_create(&pool, NULL);
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->transport,
-				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
+    if ((status = sockreader_new(&worker->socket->sockreader, 
+                                 worker->socket->transport,
+				 worker->socket->peek, peeklen)) 
+        != APR_SUCCESS) {
       goto out_err;
     }
   }
-  else {
-    sockreader = worker->sockreader;
-  }
+  sockreader = worker->socket->sockreader;
 
   if (strcasecmp(val, "CHUNKED") == 0) {
     if ((status = transfer_enc_reader(sockreader, &buf, &recv_len, "chunked")) != APR_SUCCESS) {
@@ -3095,17 +3095,17 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
 
   apr_pool_create(&pool, NULL);
 
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    if ((status = sockreader_new(&sockreader, worker->socket->transport,
-				 worker->socket->peek, peeklen, pool)) != APR_SUCCESS) {
+    if ((status = sockreader_new(&worker->socket->sockreader, 
+                                 worker->socket->transport,
+				 worker->socket->peek, peeklen)) 
+        != APR_SUCCESS) {
       goto out_err;
     }
   }
-  else {
-    sockreader = worker->sockreader;
-  }
+  sockreader = worker->socket->sockreader;
 
   if ((status = sockreader_read_line(sockreader, &buf)) != APR_SUCCESS) {
     goto out_err;
@@ -3348,25 +3348,22 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
 
   worker_log(worker, LOG_DEBUG, "--- tunnel\n");
 
-  apr_pool_create(&client.pool, NULL);
-  apr_pool_create(&backend.pool, NULL);
-
   /* client side */
   if ((status = transport_set_timeout(worker->socket->transport, 100000)) 
       != APR_SUCCESS) {
     goto error1;
   }
-  if (worker->sockreader == NULL) {
+  if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
-    sockreader_new(&client.sockreader, worker->socket->transport,
-		   worker->socket->peek, peeklen, client.pool);
+    status = sockreader_new(&client.sockreader, worker->socket->transport,
+	   	            worker->socket->peek, peeklen);
     if (status != APR_SUCCESS && !APR_STATUS_IS_TIMEUP(status)) {
       goto error1;
     }
   }
   else {
-    client.sockreader = worker->sockreader;
+    client.sockreader = worker->socket->sockreader;
   }
   backend.sendto = worker->socket;
 
@@ -3378,8 +3375,8 @@ apr_status_t command_TUNNEL(command_t *self, worker_t *worker, char *data,
       != APR_SUCCESS) {
     goto error2;
   }
-  sockreader_new(&backend.sockreader, worker->socket->transport,
-		 NULL, 0, backend.pool);
+  status = sockreader_new(&backend.sockreader, worker->socket->transport,
+		          NULL, 0);
   if (status != APR_SUCCESS && !APR_STATUS_IS_TIMEUP(status)) {
     goto error2;
   }
@@ -3422,8 +3419,8 @@ error2:
   command_CLOSE(self, worker, "do not test expects", ptmp);
 error1:
   worker_get_socket(worker, "Default", "0");
-  apr_pool_destroy(client.pool);
-  apr_pool_destroy(backend.pool);
+  sockreader_destroy(&client.sockreader);
+  sockreader_destroy(&backend.sockreader);
   worker_log(worker, LOG_DEBUG, "--- tunnel end\n");
   return status;
 }
@@ -3555,13 +3552,11 @@ apr_status_t command_RECORD(command_t *self, worker_t *worker, char *data,
 
   if (recorder->on) {
     /* restart the recorder by dropping the sockreader pool */
-    apr_pool_destroy(recorder->pool);
+    sockreader_destroy(&recorder->sockreader);
   }
 
-  apr_pool_create(&recorder->pool, NULL);
-
   /* setup a sockreader for recording */
-  sockreader_new(&recorder->sockreader, NULL, NULL, 0, recorder->pool);
+  sockreader_new(&recorder->sockreader, NULL, NULL, 0);
 
   recorder->on = RECORDER_RECORD;
 
