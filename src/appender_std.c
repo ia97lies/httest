@@ -83,10 +83,10 @@ static void appender_std_prefix(appender_std_t *std, int mode, const char *pos,
   /* set color on dir \e[1;31mFAILED\e[0m */
   if (std->flags & APPENDER_STD_COLOR) {
     if (dir == '<') {
-      apr_file_printf(std->out, "\e[0;35m");
+      apr_file_printf(std->out, "\x1b[0;35m");
     }
     else if (dir == '>') {
-      apr_file_printf(std->out, "\e[0;34m");
+      apr_file_printf(std->out, "\x1b[0;34m");
     }
   }
 
@@ -191,12 +191,12 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
       }
       ++i;
       ++j;
+      if (std->flags & APPENDER_STD_COLOR) {
+        apr_file_printf(std->out, ESC "[0m");
+      }
       apr_file_flush(std->out);
       appender_unlock(appender);
     } while (i < len);
-    if (std->flags & APPENDER_STD_COLOR) {
-      apr_file_printf(std->out, ESC "[0m");
-    }
   }
 }
 

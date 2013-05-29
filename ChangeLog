@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.3
+  *) httest: Correct color on|off to avoid scrambled colors in some cases.
+  
+
 Changes with httest 2.4.2
   *) httest: Add a change from Alain Stalder for coloring on windows.
 
