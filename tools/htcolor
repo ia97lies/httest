@@ -23,10 +23,10 @@ if ($ARGV[0] eq "-e") {
       if ($line =~ m/^([0-9]+:)?[<>]/) {
         # client: blue
         $color="34";
-      } elsif ($line =~ m/^([0-9]+:)? {24,24}[<>]/) {
+      } elsif ($line =~ m/^([0-9]+:)? {1,24}[<>]/) {
         # server: green
         $color="32";
-      } elsif ($line =~ m/^([0-9]+:)? {48,48}[<>]/) {
+      } elsif ($line =~ m/^([0-9]+:)? {25,48}[<>]/) {
         # server 2: purple
         $color="35";
       } else {
