@@ -112,6 +112,8 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
                                    char *data, apr_pool_t *ptmp); 
 static apr_status_t command_ERROR(command_t *self, worker_t *worker, 
                                   char *data, apr_pool_t *ptmp); 
+static apr_status_t command_MILESTONE(command_t *self, worker_t *worker, 
+                                      char *data, apr_pool_t *ptmp); 
 
 static apr_status_t global_GO(command_t *self, global_t *global, 
 			     char *data, apr_pool_t *ptmp); 
@@ -448,6 +450,9 @@ command_t local_commands[] = {
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
   "close body with _END",
   COMMAND_FLAGS_BODY|COMMAND_FLAGS_DEPRECIATED},
+  {"_MILESTONE", (command_f )command_MILESTONE, "", 
+  "close body with _END",
+  COMMAND_FLAGS_BODY},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
   "close body with _END",
@@ -1009,10 +1014,12 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   char **argv;
   int i;
   char *var;
+  char *last;
   apr_time_t duration = 0;
   apr_time_t start;
+  int initial = 0;
 
-  COMMAND_NEED_ARG("<number>[s|ms]|FOREVER"); 
+  COMMAND_NEED_ARG("<number>[s|ms]|FOREVER [<variable>[=<initial>]]"); 
  
   my_tokenize_to_argv(copy, &argv, ptmp, 0);
 
@@ -1039,6 +1046,11 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
     var = NULL;
   }
   
+  if (var && strchr(var, '=')) {
+    var = apr_strtok(var, "=", &last);
+    initial = apr_atoi64(last);
+  }
+
   /* create a new worker body */
   if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
     return status;
@@ -1049,7 +1061,7 @@ static apr_status_t command_LOOP(command_t *self, worker_t *worker,
   for (i = 0; loop == -1 || i < loop; i++) {
     /* interpret */
     if (var) {
-      worker_var_set(body, var, apr_itoa(ptmp, i));
+      worker_var_set(body, var, apr_itoa(ptmp, i + initial));
     }
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
@@ -1379,6 +1391,20 @@ static apr_status_t command_SOCKET(command_t *self, worker_t *worker,
   
   worker_body_end(body, worker);
   return status;
+}
+
+/**
+ * MILESTONE command
+ *
+ * @param self IN command
+ * @param worker IN thread data object
+ * @param data IN unused 
+ *
+ * @return APR_SUCCESS
+ */
+static apr_status_t command_MILESTONE(command_t *self, worker_t *worker, 
+                                      char *data, apr_pool_t *ptmp) {
+  return APR_ENOTIMPL;
 }
 
 /**

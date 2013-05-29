@@ -2,6 +2,9 @@
    
 Changes with httest 2.4.3
   *) httest: Correct color on|off to avoid scrambled colors in some cases.
+
+  *) httest: Improve _LOOP new it is possible to initialize the loop variable
+             with an initial value. Default this is still 0.
   
 
 Changes with httest 2.4.2
