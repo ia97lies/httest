@@ -1,0 +1,24 @@
+REQUIRE_MODULE LUA
+
+INCLUDE $TOP/test/config.htb
+
+BLOCK:LUA readFile name : ret 
+  assert(io.input(name))
+  local buf = io.read("*all")
+  return buf
+END
+
+BLOCK attack name code
+  _DEBUG XXX: $name:$code
+END
+
+CLIENT
+  readFile "$TOP/test/xssAttacks.xml" BUF 
+  _XML:PARSE VAR(BUF)
+  _LOOP 113 i=1
+    _XML:XPATH /xss/attack[$i]/name name 
+    _XML:XPATH /xss/attack[$i]/code code 
+    attack VAR(name) VAR(code)
+  _END
+END
+
