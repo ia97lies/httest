@@ -1191,11 +1191,18 @@ static apr_status_t global_new(global_t **global, store_t *vars,
                "Global creation: could not create sync mutex");
     return status;
   }
+
+  {
+    appender = appender_std_new(p, out, logger_flags);
+    logger_set_appender((*global)->logger, appender, "none", LOG_NONE, LOG_NONE);
+  }
+
   if (log_mode >= LOG_INFO) {
     appender = appender_std_new(p, out, logger_flags);
     appender_set_mutex(appender, mutex);
     logger_set_appender((*global)->logger, appender, "std", LOG_INFO, log_mode);
   }
+
   if (log_mode >= LOG_ERR) {
     appender = appender_std_new(p, err, logger_flags);
     appender_set_mutex(appender, mutex);

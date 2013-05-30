@@ -799,11 +799,31 @@ apr_status_t command_SOCKET(command_t *self, worker_t *worker, char *data,
  * @param self IN command
  * @param worker IN thread data object
  * @param data IN unused 
+ * @note: dependency to finally, tests MUST fail if one milestone failed
  *
  * @return APR_SUCCESS
  */
 apr_status_t command_MILESTONE(command_t *self, worker_t *worker, char *data, 
                                apr_pool_t *ptmp) {
-  return APR_ENOTIMPL;
+  apr_status_t status;
+  worker_t *body;
+  char *copy;
+
+  COMMAND_NEED_ARG("Name of milestone");
+
+  worker_log(worker, LOG_NONE, "Milestone \"%s\"", copy);
+  worker_flush(worker, ptmp);
+
+  /* create a new worker body */
+  if ((status = worker_body(&body, worker)) != APR_SUCCESS) {
+    return status;
+  }
+
+  status = body->interpret(body, worker, NULL);
+  
+  worker_log(worker, LOG_CMD, "_END");
+  
+  worker_body_end(body, worker);
+  return status;
 }
 
