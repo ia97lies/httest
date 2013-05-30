@@ -29,6 +29,7 @@
 #include "logger.h" 
 #include "transport.h" 
 #include "store.h" 
+#include "socket.h" 
 
 typedef struct socket_s {
   int is_ssl;
