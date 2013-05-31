@@ -768,6 +768,12 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
  */
 void worker_finally(worker_t *worker, apr_status_t status) {
   int mode;
+  apr_status_t alt_status;
+
+  alt_status = htt_run_worker_finally(worker); 
+  if (alt_status != APR_SUCCESS) {
+    status = alt_status;
+  }
 
   if (worker->tmpf) {
     const char *name;
@@ -821,7 +827,6 @@ void worker_finally(worker_t *worker, apr_status_t status) {
     exit(1);
   }
 exodus:
-  htt_run_worker_finally(worker); 
   worker_conn_close_all(worker);
   apr_thread_exit(worker->mythread, APR_SUCCESS);
 }

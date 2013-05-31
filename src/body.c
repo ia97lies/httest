@@ -54,6 +54,7 @@
 #include "regex.h"
 #include "util.h"
 #include "body.h"
+#include "module.h"
 
 /************************************************************************
  * Defines 
@@ -62,6 +63,11 @@
 /************************************************************************
  * Structurs
  ***********************************************************************/
+typedef struct milestone_s {
+  int failures;
+  int milestones;
+  apr_status_t status;
+} milestone_t;
 
 /************************************************************************
  * Globals 
@@ -808,8 +814,9 @@ apr_status_t command_MILESTONE(command_t *self, worker_t *worker, char *data,
   apr_status_t status;
   worker_t *body;
   char *copy;
+  milestone_t *milestone;
 
-  COMMAND_NEED_ARG("Name of milestone");
+  COMMAND_NEED_ARG("<name>");
 
   worker_log(worker, LOG_NONE, "Milestone \"%s\"", copy);
   worker_flush(worker, ptmp);
@@ -824,6 +831,20 @@ apr_status_t command_MILESTONE(command_t *self, worker_t *worker, char *data,
   worker_log(worker, LOG_CMD, "_END");
   
   worker_body_end(body, worker);
-  return status;
+
+  /* store status but do not evaluate it */
+  milestone = module_get_config(worker->config, "_MILESTONE");
+  if (!milestone) {
+    milestone = apr_pcalloc(worker->pbody, sizeof(*milestone));
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, "MILESTONE "), 
+                      milestone);
+  }
+  if (status != APR_SUCCESS) {
+    ++milestone->failures;
+  }
+  ++milestone->milestones;
+  milestone->status = status;
+
+  return APR_SUCCESS;
 }
 
