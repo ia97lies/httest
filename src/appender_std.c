@@ -80,6 +80,11 @@ void appender_std_printer(appender_t *appender, int mode, const char *pos,
 static void appender_std_prefix(appender_std_t *std, int mode, const char *pos,
                                 int thread, int group, char dir, 
                                 const char *custom) {
+  /* check if prefix is needed */
+  if (dir == '-') {
+    return;
+  }
+
   /* set color on dir \e[1;31mFAILED\e[0m */
   if (std->flags & APPENDER_STD_COLOR) {
     if (dir == '<') {
