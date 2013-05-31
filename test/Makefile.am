@@ -341,7 +341,8 @@ EXTRA_DIST= \
 	wait0.htt \
 	wait.htt \
 	websocket.htt \
-	_wrapper_test.sh 
+	_wrapper_test.sh \
+	xml.htt 
 
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
 test_file_SOURCES=test_file.c $(top_srcdir)/src/file.c $(top_srcdir)/src/util.c $(top_srcdir)/src/store.c

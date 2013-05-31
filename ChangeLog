@@ -1,5 +1,28 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.3
+  *) httest: Correct color on|off to avoid scrambled colors in some cases.
+
+  *) httest: Improve _LOOP new it is possible to initialize the loop variable
+             with an initial value. Default this is still 0.
+  
+
+Changes with httest 2.4.2
+  *) httest: Add a change from Alain Stalder for coloring on windows.
+
+
+Changes with httest 2.4.1
+  *) httest: New you can close the body of _IF simply with a _END command
+             instead with "_END IF".
+  
+  *) httest: Bugfixed _FOR command, if variable contains newline this also
+             counts as separator.
+
+  *) httest: Bugfix appender_std, threads messup colors
+
+  *) httest: Bugfix appender_std, variable with newlines did messup output.
+
+
 Changes with httest 2.4.0
   *) httest: Logger with appender concept introduced to be able to add and use
              different appenders. Default a standard appender is active.

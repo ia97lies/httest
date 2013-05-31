@@ -9,11 +9,11 @@ _LOOP 2
 _IF "$COND" MATCH "bar"
   _IF "Bla" MATCH "Fasel"
     _DEBUG Blub
-  _END IF
+  _END
   __GET /nope HTTP/1.1
 _ELSE
   __GET /yes HTTP/1.1
-_END IF
+_END
 _EXPECT . "AS"
 __Host: $YOUR_HOST 
 __
