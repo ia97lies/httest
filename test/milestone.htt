@@ -1,6 +1,9 @@
 CLIENT
   _MILESTONE first
+    _DEBUG bla
+    _REQ foobar 999
   _END
   _MILESTONE second
+    _DEBUG fasel
   _END
 END

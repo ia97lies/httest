@@ -25,6 +25,8 @@
 #ifndef HTTEST_BODY_H
 #define HTTEST_BODY_H
 
+apr_status_t worker_body(worker_t **body, worker_t *worker); 
+void worker_body_end(worker_t *body, worker_t *worker); 
 apr_status_t command_IF(command_t * self, worker_t * worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_LOOP(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 
 apr_status_t command_FOR(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 

@@ -103,6 +103,9 @@ static command_t *lookup_command(command_t *commands, const char *line) {
   return &commands[k];
 }
 
+/************************************************************************
+ * Public 
+ ***********************************************************************/
 /**
  * Clone and copy a body of lines
  *
@@ -112,7 +115,7 @@ static command_t *lookup_command(command_t *commands, const char *line) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t worker_body(worker_t **body, worker_t *worker) {
+apr_status_t worker_body(worker_t **body, worker_t *worker) {
   char *file_and_line;
   char *line = "";
   apr_table_entry_t *e; 
@@ -166,7 +169,7 @@ static apr_status_t worker_body(worker_t **body, worker_t *worker) {
  * @param body IN body which has been copied
  * @param worker IN  worker from which we copy the lines for body
  */
-static void worker_body_end(worker_t *body, worker_t *worker) {
+void worker_body_end(worker_t *body, worker_t *worker) {
   worker->flags = body->flags;
   /* write back sockets and state */
   worker->socket = body->socket;
@@ -800,6 +803,21 @@ apr_status_t command_SOCKET(command_t *self, worker_t *worker, char *data,
 }
 
 /**
+ * Handle stored status by command_MILESTONE
+ * @param worker IN worker instance
+ * @return stored status
+ */
+static apr_status_t milestone_worker_finally(worker_t *worker) {
+  milestone_t *milestone = module_get_config(worker->config, "_MILESTONE");
+  if (milestone) {
+    worker_log(worker, LOG_ERR, "milestons: %d; failed: %d\n", 
+               milestone->milestones, milestone->failures);
+    return milestone->status;
+  }
+  return APR_SUCCESS;
+}
+
+/**
  * MILESTONE command
  *
  * @param self IN command
@@ -836,15 +854,26 @@ apr_status_t command_MILESTONE(command_t *self, worker_t *worker, char *data,
   milestone = module_get_config(worker->config, "_MILESTONE");
   if (!milestone) {
     milestone = apr_pcalloc(worker->pbody, sizeof(*milestone));
-    module_set_config(worker->config, apr_pstrdup(worker->pbody, "MILESTONE "), 
+    module_set_config(worker->config, apr_pstrdup(worker->pbody, "_MILESTONE"), 
                       milestone);
   }
   if (status != APR_SUCCESS) {
     ++milestone->failures;
   }
   ++milestone->milestones;
-  milestone->status = status;
+  if (status != APR_SUCCESS) {
+    milestone->status = APR_EGENERAL;
+  }
 
   return APR_SUCCESS;
 }
 
+/**
+ * Register hooks for body commands if needed
+ * @param global IN global instance singelton
+ * @return APR_SUCCESS
+ */
+apr_status_t body_init(global_t *global) {
+  htt_hook_worker_finally(milestone_worker_finally, NULL, NULL, 0);
+  return APR_SUCCESS;
+}

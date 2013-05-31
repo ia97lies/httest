@@ -26,6 +26,7 @@ cat > $TARGET << EOF
 extern module_t modules[];
 
 /* MODULES_DECLARATION */
+apr_status_t body_init(global_t *global); 
 EOF
 
 for I in $LIST; do
@@ -36,6 +37,7 @@ cat >> $TARGET << EOF
 
 module_t modules[] = {
   /* MODULES_REGISTRATION */
+  { body_init },
 EOF
 
 for I in $LIST; do
