@@ -230,6 +230,9 @@ void logger_log_buf(logger_t * logger, int mode, char dir, const char *buf,
                     apr_size_t len) {
 
   if (logger->mode >= mode) {
+    if (buf && !len) {
+      len = strlen(buf);
+    }
     logger_print(logger, mode, NULL, logger->id, logger->group, dir, NULL, buf, len);
   }
 }
