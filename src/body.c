@@ -810,8 +810,9 @@ apr_status_t command_SOCKET(command_t *self, worker_t *worker, char *data,
 static apr_status_t milestone_worker_finally(worker_t *worker) {
   milestone_t *milestone = module_get_config(worker->config, "_MILESTONE");
   if (milestone) {
-    worker_log(worker, LOG_ERR, "milestons: %d; failed: %d\n", 
+    worker_log(worker, LOG_NONE, "milestons: %d; failed: %d", 
                milestone->milestones, milestone->failures);
+    worker_log(worker, LOG_NONE, ""); 
     return milestone->status;
   }
   return APR_SUCCESS;
@@ -862,7 +863,11 @@ apr_status_t command_MILESTONE(command_t *self, worker_t *worker, char *data,
   }
   ++milestone->milestones;
   if (status != APR_SUCCESS) {
+    worker_log_buf(worker, LOG_NONE, '=', "failed", 0);
     milestone->status = APR_EGENERAL;
+  }
+  else {
+    worker_log_buf(worker, LOG_NONE, '=', "success", 0);
   }
 
   return APR_SUCCESS;
