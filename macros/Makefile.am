@@ -1,8 +1,10 @@
 EXTRA_DIST= \
-	simple_request.htb \
-	simple_multipart.htb \
-	simple_request.htb \
-	simple_urlenc.htb \
-	smtp.htb \
-	pop3.htb \
-	xml.lua
+  Buffered.lua \
+  html.lua \
+  HTTP.lua \
+  pop3.htb \
+  simple_multipart.htb \
+  simple_request.htb \
+  simple_urlenc.htb \
+  smtp.htb \
+  xml.lua
