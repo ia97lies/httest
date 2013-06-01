@@ -527,14 +527,14 @@ apr_status_t command_FOR(command_t *self, worker_t *worker, char *data,
   }
   
   /* for */
-  cur = apr_strtok(list, " \t", &last);
+  cur = apr_strtok(list, " \t\n", &last);
   while (cur) {
     /* interpret */
     worker_var_set(body, var, cur);
     if ((status = body->interpret(body, worker, NULL)) != APR_SUCCESS) {
       break;
     }
-    cur = apr_strtok(NULL, " \t", &last);
+    cur = apr_strtok(NULL, " \t\n", &last);
   }
   
   /* special case to break the loop */
