@@ -1,0 +1,5 @@
+CLIENT
+  _SET foo=(|"*%]}
+  _CODER:URLENC VAR(foo) result
+  _EXPECT VAR(result) "%28%7C%22%2A%25%5D%7D"
+END
