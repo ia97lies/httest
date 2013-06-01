@@ -36,10 +36,9 @@ END
 
 # some kind of pop3 commands do expect multi line answers
 BLOCK _WAIT_MULTI
-_LOCAL __DO __STATUS
-_SET __DOT=UNDEF
-_SET __STATUS=UNDEF
-_SOCKET
+  _LOCAL __DO __STATUS
+  _SET __DOT=UNDEF
+  _SET __STATUS=UNDEF
   _GREP . "(.[^ ]+)" __STATUS
   _READLINE DO_NOT_CHECK
   # on error no multi line answer will be sent
@@ -52,7 +51,6 @@ _SOCKET
       _END IF
     _END LOOP
   _END IF
-_END SOCKET 
-_CHECK
+  _CHECK
 END
 

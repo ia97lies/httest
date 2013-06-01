@@ -2,7 +2,7 @@ INCLUDE $TOP/test/config.htb
 INCLUDE $TOP/macros/request_simple.htb
 
 CLIENT
-_SIMPLE_GET http://foo/bla/fasel HTTP/1.1
-_WAIT
+  _SIMPLE:GET http://foo/bla/fasel HTTP/1.1
+  _WAIT
 END
 

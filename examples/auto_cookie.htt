@@ -1,17 +1,18 @@
 CLIENT
-_AUTO_COOKIE on
-_REQ foo.bar.com 80
-__GET / HTTP/1.1
-__Host: foo.bar.com
-# this is not neccessary here, but do not bother the script or the functionality
-__Cookie: AUTO
-_
-_WAIT
+  _AUTO_COOKIE on
+  _REQ foo.bar.com 80
+  __GET / HTTP/1.1
+  __Host: foo.bar.com
+  # this is not neccessary here, but do not bother the script or the functionality
+  __Cookie: AUTO
+  _
+  _WAIT
 
-__GET /foo HTTP/1.1
-__Host: foo.bar.com
-# if a cookies was received by the last GET, this cookie will be set here instead
-# of AUTO
-__Cookie: AUTO
-_
-_WAIT
+  __GET /foo HTTP/1.1
+  __Host: foo.bar.com
+  # if a cookies was received by the last GET, this cookie will be set here instead
+  # of AUTO
+  __Cookie: AUTO
+  _
+  _WAIT
+END

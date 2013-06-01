@@ -9,18 +9,16 @@ CLIENT
   __Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
   __Sec-WebSocket-Version: 13
   __
-  _SOCKET  # spawn a websocket
-    _WAIT
-    _WS:SEND FIN,TEXT AUTO "cli"
-    _WS:RECV OP LEN
-    _DEBUG $OP $LEN
-    _WS:SEND FIN,TEXT AUTO "halllloooooooo"
-    _WS:RECV OP LEN
-    _DEBUG $OP $LEN
-    _WS:SEND FIN,TEXT AUTO "bla bla bla bla"
-    _WS:RECV OP LEN
-    _DEBUG $OP $LEN
-  _END
+  _WAIT
+  _WS:SEND FIN,TEXT AUTO "cli"
+  _WS:RECV OP LEN
+  _DEBUG $OP $LEN
+  _WS:SEND FIN,TEXT AUTO "halllloooooooo"
+  _WS:RECV OP LEN
+  _DEBUG $OP $LEN
+  _WS:SEND FIN,TEXT AUTO "bla bla bla bla"
+  _WS:RECV OP LEN
+  _DEBUG $OP $LEN
   _CLOSE
 END
 

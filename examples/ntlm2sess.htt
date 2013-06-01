@@ -11,41 +11,41 @@ SET URI=/
 
 CLIENT
 
-_REQ $HOST $PORT
-__GET $URI HTTP/1.1
-__Host: $HOST_HDR
-__User-Agent: mozilla
-__
-_EXPECT . "WWW-Authenticate: NTLM"
-_WAIT
-_CLOSE
+  _REQ $HOST $PORT
+  __GET $URI HTTP/1.1
+  __Host: $HOST_HDR
+  __User-Agent: mozilla
+  __
+  _EXPECT . "WWW-Authenticate: NTLM"
+  _WAIT
+  _CLOSE
 
-_MATCH EXEC "(.*)" B64MSG
-_EXEC $TOP/src/htntlm --type=1 --write --flags="neg-oem neg-ntlm2-key req-target"
+  _MATCH EXEC "(.*)" B64MSG
+  _EXEC $TOP/src/htntlm --type=1 --write --flags="neg-oem neg-ntlm2-key req-target"
 
-_REQ $HOST $PORT
-__GET $URI HTTP/1.1
-__Host: $HOST_HDR
-__Authorization: NTLM $B64MSG
-__User-Agent: mozilla
-__
-_MATCH headers "WWW-Authenticate: NTLM (.*)" MSG2
-_WAIT
+  _REQ $HOST $PORT
+  __GET $URI HTTP/1.1
+  __Host: $HOST_HDR
+  __Authorization: NTLM $B64MSG
+  __User-Agent: mozilla
+  __
+  _MATCH headers "WWW-Authenticate: NTLM (.*)" MSG2
+  _WAIT
 
-_MATCH EXEC "\nchallenge: (.*)" CHL
-_EXEC $TOP/src/htntlm --read=$MSG2 --info
+  _MATCH EXEC "\nchallenge: (.*)" CHL
+  _EXEC $TOP/src/htntlm --read=$MSG2 --info
 
-_MATCH EXEC "(.*)" B64MSG
-_EXEC $TOP/src/htntlm --type=3 --write --challenge=$CHL --workstation=akira --domain=$DOMAIN --challenge=$CHL --user=$USER --password=$PASSWD --response="ntlm2-session"
+  _MATCH EXEC "(.*)" B64MSG
+  _EXEC $TOP/src/htntlm --type=3 --write --challenge=$CHL --workstation=akira --domain=$DOMAIN --challenge=$CHL --user=$USER --password=$PASSWD --response="ntlm2-session"
 
-_REQ $HOST $PORT
-__GET $URI HTTP/1.1
-__Host: $HOST_HDR
-__Authorization: NTLM $B64MSG
-__User-Agent: mozilla
-__
-_EXPECT . "200 OK"
-_WAIT
+  _REQ $HOST $PORT
+  __GET $URI HTTP/1.1
+  __Host: $HOST_HDR
+  __Authorization: NTLM $B64MSG
+  __User-Agent: mozilla
+  __
+  _EXPECT . "200 OK"
+  _WAIT
 
 END
 

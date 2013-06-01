@@ -6,31 +6,31 @@ SET YOUR_PORT=8080
 # runs exactly one time
 CLIENT
 
-_REQ $YOUR_HOST SSL:$YOUR_PORT
-__GET /your/path/to/your/resource?your=params HTTP/1.1
-__Host: $YOUR_HOST 
-__User-Agent: mozilla
-__
-_EXPECT . "Regex of what you expect within headers or body"
-_EXPECT . "Another regex of what you expect also within headers or body"
-_MATCH headers "YourCookie=(.*)" YOUR_COOKIE_VAL 
-_WAIT
+  _REQ $YOUR_HOST SSL:$YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: $YOUR_HOST 
+  __User-Agent: mozilla
+  __
+  _EXPECT . "Regex of what you expect within headers or body"
+  _EXPECT . "Another regex of what you expect also within headers or body"
+  _MATCH headers "YourCookie=(.*)" YOUR_COOKIE_VAL 
+  _WAIT
 
-_REQ $YOUR_HOST SSL2:$YOUR_PORT
-__GET /your/path/to/your/resource?your=params HTTP/1.1
-__Host: www.your.name 
-__User-Agent: mozilla
-__Cookie: YourCookie=$YOUR_COOKIE_VAL
-__
-_WAIT
+  _REQ $YOUR_HOST SSL2:$YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: www.your.name 
+  __User-Agent: mozilla
+  __Cookie: YourCookie=$YOUR_COOKIE_VAL
+  __
+  _WAIT
 
-_REQ $YOUR_HOST TLS1:$YOUR_PORT
-__GET /your/path/to/your/resource?your=params HTTP/1.1
-__Host: www.your.name 
-__User-Agent: mozilla
-__Cookie: YourCookie=$YOUR_COOKIE_VAL
-__
-_WAIT
+  _REQ $YOUR_HOST TLS1:$YOUR_PORT
+  __GET /your/path/to/your/resource?your=params HTTP/1.1
+  __Host: www.your.name 
+  __User-Agent: mozilla
+  __Cookie: YourCookie=$YOUR_COOKIE_VAL
+  __
+  _WAIT
 
-_END
+END
 
