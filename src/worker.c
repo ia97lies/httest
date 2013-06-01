@@ -1246,7 +1246,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     const char *val;
 
     /** prepare call */
-    /* iterate over params and resolve VAR(foo) stuff*/
+    /* iterate over indexed params and resolve VAR(foo) stuff*/
     for (i = 1; i < store_get_size(params); i++) {
       index = apr_itoa(call_pool, i);
       if ((val = store_get(params, index))) {
