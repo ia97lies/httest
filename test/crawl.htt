@@ -1,0 +1,29 @@
+INCLUDE $TOP/test/config.htb
+INCLUDE $TOP/macros/simple_request.htb
+
+BLOCK doSomeThing href
+  _MATCH VAR(href) "\"(.*)\"" URL
+  _DEBUG XXXX::: $URL
+END
+
+CLIENT
+  _SIMPLE:CRAWL http://$YOUR_HOST:$YOUR_PORT/foo/bar doSomeThing
+END
+
+SERVER $YOUR_PORT
+  _RES
+  _WAIT
+  __HTTP/1.1 200 OK
+  __Content-Length: AUTO
+  __Content-Type: text/html
+  __
+  __<html>
+  __  <body>
+  __    <a href="/foo/bar/bla/fasel">hello kitty</a>
+  __    <a href="/foo/bar/fasel">hello kitty</a>
+  __    <a href="/foo/bar/bla/bla/bla/bla/bla/fasel">hello kitty</a>
+  __    <a href="/foo/bar/fasel2">hello kitty</a>
+  __  </body>
+  __</html>
+END
+

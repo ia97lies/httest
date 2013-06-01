@@ -6,70 +6,83 @@
 MODULE SIMPLE
 
 BLOCK _FOLLOW RECURSION
-_IF "$RECURSION" GT 20 
-  _DEBUG Give up more than 20 redirects!
-  _EXPECT headers "!HTTP/.\.. 302"
-_END IF
-_GREP headers "(HTTP/.\.. .*)" STATUS
-_GREP headers "Location: (.*)" LOCATION
-_RECORD RES ALL
-_WAIT
-_IF "${STATUS}" MATCH "302"
-  _IF "YES${LOCATION}" NOT MATCH "^YES$"
-    _SIMPLE:REQUEST GET $LOCATION
-    __
-    _OP $RECURSION ADD 1 RECURSION
-    _SIMPLE:FOLLOW $RECURSION
+  _IF "$RECURSION" GT 20 
+    _DEBUG Give up more than 20 redirects!
+    _EXPECT headers "!HTTP/.\.. 302"
   _END IF
-_END IF
+  _GREP headers "(HTTP/.\.. .*)" STATUS
+  _GREP headers "Location: (.*)" LOCATION
+  _RECORD RES ALL
+  _WAIT
+  _IF "${STATUS}" MATCH "302"
+    _IF "YES${LOCATION}" NOT MATCH "^YES$"
+      _SIMPLE:REQUEST GET $LOCATION
+      __
+      _OP $RECURSION ADD 1 RECURSION
+      _SIMPLE:FOLLOW $RECURSION
+    _END IF
+  _END IF
 END
 
 BLOCK _REQUEST METHOD URL
-_GREP VAR(URL) "(https?:)" SCHEMA
-_IF "$SCHEMA" NOT MATCH "^https?:" 
-  _SET SCHEMA=relative
-_END IF
-_IF "$SCHEMA" NOT MATCH "^relative$"
-  _MATCH VAR(URL) "(https?)://([^/]+)(/.*)" SCHEMA HOST URI
-  _GREP VAR(HOST) "([^:]+):?(.*)?" NAME PORT
-  _SET _HOST=$NAME:$PORT
-  _IF "$SCHEMA" MATCH "^https$"
-    _SET _PORT=SSL:$PORT
-    _IF "YES${PORT}" MATCH "^YES$"
-      _SET PORT=443
-      _SET _PORT=SSL:443
-      _SET _HOST=$NAME
-    _END IF
-  _ELSE
-    _IF "YES$PORT" NOT MATCH "^YES$"
-      _SET _PORT=$PORT
-    _ELSE
-      _SET PORT=80
-      _SET _PORT=80
-      _SET _HOST=$NAME
-    _END IF
+  _GREP VAR(URL) "(https?:)" SCHEMA
+  _IF "$SCHEMA" NOT MATCH "^https?:" 
+    _SET SCHEMA=relative
   _END IF
-  _REQ $NAME $_PORT
-_ELSE
-  _MATCH VAR(URL) "(/.*)" URI
-_END IF
-__$METHOD $URI HTTP/1.1
-__Host: $_HOST
-__User-Agent: Mozilla
-__Cookie: AUTO
+  _IF "$SCHEMA" NOT MATCH "^relative$"
+    _MATCH VAR(URL) "(https?)://([^/]+)(/.*)" SCHEMA HOST URI
+    _GREP VAR(HOST) "([^:]+):?(.*)?" NAME PORT
+    _SET _HOST=$NAME:$PORT
+    _IF "$SCHEMA" MATCH "^https$"
+      _SET _PORT=SSL:$PORT
+      _IF "YES${PORT}" MATCH "^YES$"
+        _SET PORT=443
+        _SET _PORT=SSL:443
+        _SET _HOST=$NAME
+      _END IF
+    _ELSE
+      _IF "YES$PORT" NOT MATCH "^YES$"
+        _SET _PORT=$PORT
+      _ELSE
+        _SET PORT=80
+        _SET _PORT=80
+        _SET _HOST=$NAME
+      _END IF
+    _END IF
+    _REQ $NAME $_PORT
+  _ELSE
+    _MATCH VAR(URL) "(/.*)" URI
+  _END IF
+  __$METHOD $URI HTTP/1.1
+  __Host: $_HOST
+  __User-Agent: Mozilla
+  __Cookie: AUTO
 END
 
 BLOCK _GET URL
-_AUTO_CLOSE on
-_SIMPLE:REQUEST GET $URL
-__
-_SIMPLE:FOLLOW 0
-_PLAY SOCKET
+  _AUTO_CLOSE on
+  _SIMPLE:REQUEST GET $URL
+  __
+  _SIMPLE:FOLLOW 0
+  _PLAY SOCKET
 END
 
 BLOCK _POST URL
-_AUTO_CLOSE on
-_SIMPLE:REQUEST POST $URL
-__Content-Length: AUTO
+  _AUTO_CLOSE on
+  _SIMPLE:REQUEST POST $URL
+  __Content-Length: AUTO
 END
 
+BLOCK _CRAWL URL BLOCK
+  _AUTO_CLOSE on
+  _SIMPLE:GET $URL
+  _WAIT BUF
+
+  _HTML:PARSE VAR(BUF)
+  _HTML:XPATH count(//a) COUNT
+
+  _LOOP $COUNT I=1
+    _HTML:XPATH //a[$I]/@href RESULT
+    $BLOCK VAR(RESULT)
+  _END
+END
