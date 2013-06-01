@@ -1,3 +1,1 @@
-AUTOMAKE_OPTIONS=foreign
 SUBDIRS=pentester
-ACLOCAL_AMFLAGS=-I m4

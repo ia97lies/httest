@@ -167,6 +167,8 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  macros/Makefile
                  examples/Makefile
+                 scripts/Makefile
+                 scripts/pentester/Makefile
                  plugins/Makefile
                  plugins/bbedit/Makefile
                  plugins/crimson/Makefile
