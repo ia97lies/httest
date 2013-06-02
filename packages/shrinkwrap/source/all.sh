@@ -897,11 +897,11 @@ EOF
     >"$WINSLN/src/config.h"
   
   # create version resource
-  if [ "$HTT_VER" == "snapshot" ]; then
-    HTT_VER_COMMAS="0,0,0"
-  else
-    HTT_VER_COMMAS=`echo $HTT_VER | sed 's/\./\,/g'`
-  fi
+  HTT_VER_NUM=`echo $HTT_VER | awk 'BEGIN { FS="-" } { print $1 }'| awk '
+    BEGIN { v="0.0.0" } /^[0-9]+\.[0-9]+\.[0-9]+$/ { v=$1 } END { print v }'`
+  echo "HTT_VER_NUM='$HTT_VER_NUM'"
+  HTT_VER_COMMAS=`echo $HTT_VER_NUM | sed 's/\./\,/g'`
+  echo "HTT_VER_COMMAS='$HTT_VER_COMMAS'"
   WINRC="$WINSLN/src/version.rc"
   echo "1 VERSIONINFO" >"$WINRC"
   echo "FILEVERSION $HTT_VER_COMMAS" >>"$WINRC"
