@@ -435,9 +435,9 @@ command_t local_commands[] = {
   "Spawns a socket reader over the next _WAIT _RECV commands\n"
   "close body with _END",
   COMMAND_FLAGS_BODY|COMMAND_FLAGS_DEPRECIATED},
-  {"_MILESTONE", (command_f )command_MILESTONE, "", 
+  {"_MILESTONE", (command_f )command_MILESTONE, "<name of milestone>", 
   "close body with _END",
-  COMMAND_FLAGS_BODY},
+  COMMAND_FLAGS_BODY|COMMAND_FLAGS_EXPERIMENTAL},
   {"_ERROR", (command_f )command_ERROR, "", 
   "We do expect specific error on body exit\n"
   "close body with _END",
@@ -2336,20 +2336,21 @@ static void print_command_formated(apr_pool_t *p, command_t command) {
   char *last;
   char *val;
 
-  if (command.flags & COMMAND_FLAGS_DEPRECIATED) {
-    fprintf(stdout, "%s %s\n\t*** This command is depreciated ***", 
-	    command.name, command.syntax);
-  }
-  else {
-    fprintf(stdout, "%s %s", command.name, 
-	    command.syntax);
-  }
+  fprintf(stdout, "%s %s", command.name, 
+          command.syntax);
   help = apr_pstrdup(p, command.help);
   val = apr_strtok(help, "\n", &last);
   while (val) {
     fprintf(stdout, "\n\t%s", val);
     val = apr_strtok(NULL, "\n", &last);
   }
+  if (command.flags & COMMAND_FLAGS_DEPRECIATED) {
+    fprintf(stdout, "\n\t*DEPRECIATED*");
+  }
+  else if (command.flags & COMMAND_FLAGS_EXPERIMENTAL) {
+    fprintf(stdout, "\n\t*EXPERIMENTAL*");
+  }
+  fprintf(stdout, "\n");
 }
 
 static int commands_compare(const char * const * right, 
@@ -2371,7 +2372,11 @@ static void show_commands(apr_pool_t *p, global_t *global) {
   sorted = SKM_sk_new(char, commands_compare);
   for (i = 0; global_commands[i].name; i++) {
     if (global_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
-      line = apr_psprintf(p, "%s *** This command is depreciated ***", 
+      line = apr_psprintf(p, "%s *DEPRECIATED*", 
+	                  global_commands[i].name);
+    }
+    if (global_commands[i].flags & COMMAND_FLAGS_EXPERIMENTAL) {
+      line = apr_psprintf(p, "%s *EXPERIMENTAL*", 
 	                  global_commands[i].name);
     }
     else if (global_commands[i].flags & COMMAND_FLAGS_LINK) {
@@ -2397,8 +2402,12 @@ static void show_commands(apr_pool_t *p, global_t *global) {
   sorted = SKM_sk_new(char, commands_compare);
   for (i = 0; local_commands[i].name; i++) {
     if (local_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
-      line = apr_psprintf(p, "%s *** This command is depreciated ***", 
+      line = apr_psprintf(p, "*DEPRECIATED* %s", 
 	                  local_commands[i].name);
+    }
+    else if (local_commands[i].flags & COMMAND_FLAGS_EXPERIMENTAL) {
+      line = apr_psprintf(p, "*EXPERIMENTAL* %s %s", 
+	                  local_commands[i].name, local_commands[i].syntax);
     }
     else if (local_commands[i].flags & COMMAND_FLAGS_LINK) {
       line = apr_psprintf(p, "%s -> %s", local_commands[i].name,
