@@ -1,10 +1,17 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.3
+  *) hturl:  Removed, use _HTML:PARSE/_HTML:XPATH and _XML:PARSE/_XML:XPATH
+             instead.
+
+  *) htx2h:  Removed use _BINARY:SEND/_BINARY:RECV to send hex values
+             directly.
+
   *) httest: A new _MILESTONE command makes it possible to run several sub
              tests in one script. The test will not fail in a milestone
 	     section but will fail at the end with a statistic how many
-	     milestone did run and how many failed.
+	     milestone did run and how many failed. Is currently marked
+	     experimental.
 
   *) httest: Correct color on|off to avoid scrambled colors in some cases.
 
