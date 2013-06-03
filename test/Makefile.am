@@ -65,9 +65,12 @@ EXTRA_DIST= \
 	concurrent.htt \
 	config.htb \
 	connection.htt \
+	crawl.htt \
 	custom_commands.htt \
 	daemon2.htt \
 	daemon.htt \
+	debug.htt \
+	debug.visual \
 	dummy2.htb \
 	dummy3.htb \
 	dummy4.htb \
@@ -178,6 +181,8 @@ EXTRA_DIST= \
 	match.txt \
 	match_var.htt \
 	math.htt \
+	milestone.hte \
+	milestone.txt \
 	mixed_socket.htt \
 	module.htb \
 	module.htt \
@@ -338,6 +343,7 @@ EXTRA_DIST= \
 	var_match.hte \
 	var_match.htt \
 	var_match.txt \
+	var_resolve.htt \
 	wait0.htt \
 	wait.htt \
 	websocket.htt \
