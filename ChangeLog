@@ -1,6 +1,13 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.3
+  *) macros: Did cleanup the macros and document the interfaces. Mostly.
+
+  *) scripts:Add pentester script folder. Read the pentester.htt how to
+             initialize. Is able to handle the xssAttacks.xml, sqlAttacks.xml
+	     and the filesAttacks.xml. Also a greate demonstration for the
+	     _MILESTONE usage and show the capability of httest.
+
   *) hturl:  Removed, use _HTML:PARSE/_HTML:XPATH and _XML:PARSE/_XML:XPATH
              instead.
 
@@ -12,6 +19,8 @@ Changes with httest 2.4.3
 	     section but will fail at the end with a statistic how many
 	     milestone did run and how many failed. Is currently marked
 	     experimental.
+
+  *) httest: Bugfixed command _DEBUG which did not print anything at all.
 
   *) httest: Correct color on|off to avoid scrambled colors in some cases.
 
