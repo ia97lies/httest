@@ -19,21 +19,31 @@
 
 MODULE POP3
 
+##
+# Connect to pop3 server
+# @param IP IN IP address of the server
+# @param PORT IN listening port of the server
 BLOCK _CONNECT IP PORT
 _REQ $IP $PORT
 _READLINE
 END
 
+##
+# Send any pop3 commands
+# @param DATA IN pop3 command
 BLOCK _SEND DATA
 __$DATA
 _FLUSH
 END
 
-# this is for single line answers
+##
+# Wait for a single answer
 BLOCK _WAIT
 _READLINE
 END
 
+##
+# Wait for multiline answer
 # some kind of pop3 commands do expect multi line answers
 BLOCK _WAIT_MULTI
   _LOCAL __DO __STATUS

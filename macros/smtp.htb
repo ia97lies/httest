@@ -19,16 +19,25 @@
 
 MODULE SMTP
 
+##
+# Connect to smtp server
+# @param IP IN IP address of the server
+# @param PORT IN listening port of the server
 BLOCK _CONNECT IP PORT
   _REQ $IP $PORT
   _READLINE
 END
 
+##
+# Send any smtp commands
+# @param DATA IN smtp command
 BLOCK _SEND DATA
   __$DATA
   _FLUSH
 END
 
+##
+# Wait for answer
 BLOCK _WAIT
   _LOCAL __CODE __LAST __TEXT
   _SET __LAST=UNDEF

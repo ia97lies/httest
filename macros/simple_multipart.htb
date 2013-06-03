@@ -3,12 +3,20 @@
 
 MODULE SIMPLE
 
+##
+# Instantiate mulitpart body
+# @return instance
 BLOCK _FORM_MULTIPART : HOOK
 _SET HOOK=---------------------------108697810410710530441715222927
 __Content-Type: multipart/form-data; boundary=$HOOK
 __
 END
 
+##
+# add a name value pair to multipart body
+# @param HOOK IN multipart body instance
+# @param VAR IN parameter name
+# @param VAL IN parameter value
 BLOCK _FORM_MULTIPART_ARG HOOK VAR VAL
 _URLENC "$VAL" VALUE
 __$HOOK
@@ -17,6 +25,11 @@ __
 __$VALUE
 END
 
+##
+# add a name value pair to multipart body
+# @param HOOK IN multipart body instance
+# @param ITME IN file item name
+# @param FILENAME IN filename
 BLOCK _FORM_MULTIPART_FILE HOOK ITEM FILENAME
 __$HOOK
 __Content-Disposition: form-data; name="$ITEM"; filename="$FILENAME"
@@ -27,6 +40,9 @@ _EXEC cat $NAME
 __
 END
 
+##
+# close multipart body
+# @param HOOK IN multipart body instance
 BLOCK _FORM_MULTIPART_END HOOK
 __${HOOK}--
 _SIMPLE:FOLLOW

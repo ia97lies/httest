@@ -5,6 +5,8 @@
 
 MODULE SIMPLE
 
+##
+# Internal command do not use directly
 BLOCK _FOLLOW RECURSION
   _IF "$RECURSION" GT 20 
     _DEBUG Give up more than 20 redirects!
@@ -24,6 +26,10 @@ BLOCK _FOLLOW RECURSION
   _END IF
 END
 
+##
+# Send a request
+# @param METHOD IN defines the method GET, POST, HEAD, ...
+# @param URL IN defines the url to send to
 BLOCK _REQUEST METHOD URL
   _GREP VAR(URL) "(https?:)" SCHEMA
   _IF "$SCHEMA" NOT MATCH "^https?:" 
@@ -59,6 +65,11 @@ BLOCK _REQUEST METHOD URL
   __Cookie: AUTO
 END
 
+##
+# Send a g GET request
+# @param URL IN url to send the GET request to
+# @note: automaticaly follow redirects
+# @example: _SIMPLE:GET https://foo.bar.ch/bla bla HTTP/1.1
 BLOCK _GET URL
   _AUTO_CLOSE on
   _SIMPLE:REQUEST GET $URL
@@ -67,12 +78,23 @@ BLOCK _GET URL
   _PLAY SOCKET
 END
 
+##
+# Send a g GET request
+# @param URL IN url to send the GET request to
+# @example: _SIMPLE:POST https://foo.bar.ch/bla bla HTTP/1.1
+#           __
+#           _-foo=bar&bla=blabla
 BLOCK _POST URL
   _AUTO_CLOSE on
   _SIMPLE:REQUEST POST $URL
   __Content-Length: AUTO
 END
 
+##
+# crawl all <a href=...> 
+# @param URL IN url to crawl
+# @param BLOCK IN block name to execute on every found href
+# @note: BLOCK signature must contain one parameter
 BLOCK _CRAWL URL BLOCK
   _AUTO_CLOSE on
   _SIMPLE:GET $URL
@@ -86,3 +108,4 @@ BLOCK _CRAWL URL BLOCK
     $BLOCK VAR(RESULT)
   _END
 END
+
