@@ -892,7 +892,7 @@ EOF
   mkdir "$WINSLN/src"
   cp "$TOP/src/"*.c "$WINSLN/src"
   cp "$TOP/src/"*.h "$WINSLN/src"
-  cp "$TOP/tools/"*.c "$WINSLN/src"
+  #cp "$TOP/tools/"*.c "$WINSLN/src"
   echo -e "#define PACKAGE_VERSION \"$HTT_VER\"\n#define VERSION \"$HTT_VER\""\
     >"$WINSLN/src/config.h"
   
