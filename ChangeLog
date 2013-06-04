@@ -14,6 +14,10 @@ Changes with httest 2.4.3
   *) htx2h:  Removed use _BINARY:SEND/_BINARY:RECV to send hex values
              directly.
 
+  *) httest: All block calls can handle VAR(<variable>). If you hand over
+             variables with VAR(<variable>) instead of $<variable> the
+	     resolving is done afert calling.
+
   *) httest: A new _MILESTONE command makes it possible to run several sub
              tests in one script. The test will not fail in a milestone
 	     section but will fail at the end with a statistic how many
