@@ -629,7 +629,7 @@ static unsigned char * get_lm_hash(htntlm_t *hook) {
   unsigned char *passwd;
   DES_key_schedule *key_sched;
   unsigned char lmbuffer[21];
-  uint64_t chl = hton64(hook->challenge);
+  uint64_t chl = ntlm_hton64(hook->challenge);
 
   passwd = strn_copy_to_upper(hook->pool, hook->password, 14);
 
@@ -655,7 +655,7 @@ static unsigned char * get_ntlm_hash(htntlm_t *hook) {
   unsigned char ntlmbuffer[21];
   char *passwd; 
   apr_size_t len;
-  uint64_t chl = hton64(hook->challenge);
+  uint64_t chl = ntlm_hton64(hook->challenge);
 
   /* transform to unicode password */
   len = to_unicode(hook->pool, &passwd, hook->password);
@@ -691,7 +691,7 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   unsigned char *buf;
   HMAC_CTX hmac;
   unsigned char challenges[16];
-  uint64_t chl = hton64(hook->challenge);
+  uint64_t chl = ntlm_hton64(hook->challenge);
 
   /* 1. get ntlm hash */
   len = to_unicode(hook->pool, &passwd, hook->password);
@@ -761,7 +761,7 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   apr_size_t ti_len = 0;
   MD4_CTX MD4;
   char *passwd; 
-  uint64_t chl = hton64(hook->challenge);
+  uint64_t chl = ntlm_hton64(hook->challenge);
     
   if (hook->target_info) {
     int b64len = apr_base64_decode_len(hook->target_info);
@@ -791,13 +791,13 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
 
   /* 3. blob */
   blob = apr_pcalloc(hook->pool, 28 + ti_len + 4);
-  *((uint32_t *)&blob[0]) = hton32(0x00000101);
-  *((uint32_t *)&blob[4]) = hton32(0x00000000);
+  *((uint32_t *)&blob[0]) = ntlm_hton32(0x00000101);
+  *((uint32_t *)&blob[4]) = ntlm_hton32(0x00000000);
 #if defined(WIN32)
-  *((uint64_t *)&blob[8]) = hton64((apr_time_sec(apr_time_now()) + 
+  *((uint64_t *)&blob[8]) = ntlm_hton64((apr_time_sec(apr_time_now()) + 
     (unsigned __int64)11644473600) * (unsigned __int64)10000000);
 #else
-  *((uint64_t *)&blob[8]) = hton64((apr_time_sec(apr_time_now()) + 
+  *((uint64_t *)&blob[8]) = ntlm_hton64((apr_time_sec(apr_time_now()) + 
     11644473600LLU) * 10000000LLU);
 #endif
   if (hook->client_challenge) {
@@ -844,7 +844,7 @@ static unsigned char * get_ntlm2_sess(htntlm_t *hook, uint16_t *hash_len) {
   MD5_CTX MD5;
   char *passwd; 
   apr_size_t len;
-  uint64_t chl = hton64(hook->challenge);
+  uint64_t chl = ntlm_hton64(hook->challenge);
 
   /* 3. challenge and client challenge */
   memcpy(challenges, &chl, 8);
@@ -995,17 +995,17 @@ static void write_type1_msg(htntlm_t *hook) {
   /* start string */
   strcpy((char *)msg, "NTLMSSP");
   /* type */
-  *((uint32_t *)&msg[8]) = hton32(hook->type);
+  *((uint32_t *)&msg[8]) = ntlm_hton32(hook->type);
   /* flags */
-  *((uint32_t *)&msg[12]) = hton32(hook->flags);
+  *((uint32_t *)&msg[12]) = ntlm_hton32(hook->flags);
   /* optional domain */
   if (hook->domain) {
     /* never unicode allways oem in a type 1 message */
     tmp = apr_pstrdup(hook->pool, hook->domain);
     len16 = strlen(hook->domain);
-    *((uint16_t *)&msg[16]) = hton16(len16);
-    *((uint16_t *)&msg[18]) = hton16(len16);
-    *((uint32_t *)&msg[20]) = hton32(32 + offset);
+    *((uint16_t *)&msg[16]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[18]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[20]) = ntlm_hton32(32 + offset);
     memcpy(&msg[32 + offset], tmp, len16);
     offset = len16;
   }
@@ -1014,9 +1014,9 @@ static void write_type1_msg(htntlm_t *hook) {
     /* never unicode allways oem in a type 1 message */
     tmp = apr_pstrdup(hook->pool, hook->workstation);
     len16 = strlen(hook->workstation);
-    *((uint16_t *)&msg[24]) = hton16(len16);
-    *((uint16_t *)&msg[26]) = hton16(len16);
-    *((uint32_t *)&msg[28]) = hton32(32 + offset);
+    *((uint16_t *)&msg[24]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[26]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[28]) = ntlm_hton32(32 + offset);
     memcpy(&msg[32 + offset], tmp, len16);
   }
   
@@ -1072,57 +1072,57 @@ static void write_type2_msg(htntlm_t *hook) {
   /* start string */
   strcpy((char *)msg, "NTLMSSP");
   /* type */
-  *((uint32_t *)&msg[8]) = hton32(hook->type);
+  *((uint32_t *)&msg[8]) = ntlm_hton32(hook->type);
   /* target */
   if (hook->target) {
     len16 = handle_unicode(hook, &tmp, hook->target);
-    *((uint16_t *)&msg[12]) = hton16(len16);
-    *((uint16_t *)&msg[14]) = hton16(len16);
-    *((uint32_t *)&msg[16]) = hton32(48 + offset);
+    *((uint16_t *)&msg[12]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[14]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[16]) = ntlm_hton32(48 + offset);
     memcpy(&msg[48 + offset], tmp, len16);
     offset = len16;
   }
   /* flags */
-  *((uint32_t *)&msg[20]) = hton32(hook->flags);
+  *((uint32_t *)&msg[20]) = ntlm_hton32(hook->flags);
   /* challenge */
   if (hook->challenge) {
-    *((uint64_t *)&msg[24]) = hton64(hook->challenge);
+    *((uint64_t *)&msg[24]) = ntlm_hton64(hook->challenge);
   }
   /* context */
   if (hook->context) {
-    *((uint64_t *)&msg[32]) = hton64(hook->context);
+    *((uint64_t *)&msg[32]) = ntlm_hton64(hook->context);
   }
   if (tlen16) {
     /* target info security buffer */
-    *((uint16_t *)&msg[40]) = hton16(tlen16);
-    *((uint16_t *)&msg[42]) = hton16(tlen16);
-    *((uint32_t *)&msg[44]) = hton32(48 + offset);
+    *((uint16_t *)&msg[40]) = ntlm_hton16(tlen16);
+    *((uint16_t *)&msg[42]) = ntlm_hton16(tlen16);
+    *((uint32_t *)&msg[44]) = ntlm_hton32(48 + offset);
     /* target info */
     if (hook->domain) {
       len16 = to_unicode(hook->pool, &tmp, hook->domain);
-      *((uint16_t *)&msg[48 + offset]) = hton16(HTNTLM_SUBBLK_DOMAIN_NAME);
-      *((uint16_t *)&msg[50 + offset]) = hton16(len16);
+      *((uint16_t *)&msg[48 + offset]) = ntlm_hton16(HTNTLM_SUBBLK_DOMAIN_NAME);
+      *((uint16_t *)&msg[50 + offset]) = ntlm_hton16(len16);
       memcpy(&msg[52 + offset], tmp, len16);
       offset += 4  + len16;
     }
     if (hook->server) {
       len16 = to_unicode(hook->pool, &tmp, hook->server);
-      *((uint16_t *)&msg[48 + offset]) = hton16(HTNTLM_SUBBLK_SERVER_NAME);
-      *((uint16_t *)&msg[50 + offset]) = hton16(len16);
+      *((uint16_t *)&msg[48 + offset]) = ntlm_hton16(HTNTLM_SUBBLK_SERVER_NAME);
+      *((uint16_t *)&msg[50 + offset]) = ntlm_hton16(len16);
       memcpy(&msg[52 + offset], tmp, len16);
       offset += 4  + len16;
     }
     if (hook->dns_domain) {
       len16 = to_unicode(hook->pool, &tmp, hook->dns_domain);
-      *((uint16_t *)&msg[48 + offset]) = hton16(HTNTLM_SUBBLK_DNS_DOMAIN);
-      *((uint16_t *)&msg[50 + offset]) = hton16(len16);
+      *((uint16_t *)&msg[48 + offset]) = ntlm_hton16(HTNTLM_SUBBLK_DNS_DOMAIN);
+      *((uint16_t *)&msg[50 + offset]) = ntlm_hton16(len16);
       memcpy(&msg[52 + offset], tmp, len16);
       offset += 4  + len16;
     }
     if (hook->dns_server) {
       len16 = to_unicode(hook->pool, &tmp, hook->dns_server);
-      *((uint16_t *)&msg[48 + offset]) = hton16(HTNTLM_SUBBLK_DNS_SERVER);
-      *((uint16_t *)&msg[50 + offset]) = hton16(len16);
+      *((uint16_t *)&msg[48 + offset]) = ntlm_hton16(HTNTLM_SUBBLK_DNS_SERVER);
+      *((uint16_t *)&msg[50 + offset]) = ntlm_hton16(len16);
       memcpy(&msg[52 + offset], tmp, len16);
       offset += 4  + len16;
     }
@@ -1183,64 +1183,64 @@ static void write_type3_msg(htntlm_t *hook) {
   /* start string */
   strcpy((char *)msg, "NTLMSSP");
   /* type */
-  *((uint32_t *)&msg[8]) = hton32(hook->type);
+  *((uint32_t *)&msg[8]) = ntlm_hton32(hook->type);
 
   /* lm/lmv2 response */
   if (hook->lm.len) {
     len16 = hook->lm.len;
-    *((uint16_t *)&msg[12]) = hton16(len16);
-    *((uint16_t *)&msg[14]) = hton16(len16);
-    *((uint32_t *)&msg[16]) = hton32(64 + offset);
+    *((uint16_t *)&msg[12]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[14]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[16]) = ntlm_hton32(64 + offset);
     memcpy(&msg[64 + offset], hook->lm.hash, len16);
     offset += len16;
   }
   /* ntlm/ntlmv2 response */
   if (hook->ntlm.len) {
     len16 = hook->ntlm.len;
-    *((uint16_t *)&msg[20]) = hton16(len16);
-    *((uint16_t *)&msg[22]) = hton16(len16);
-    *((uint32_t *)&msg[24]) = hton32(64 + offset);
+    *((uint16_t *)&msg[20]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[22]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[24]) = ntlm_hton32(64 + offset);
     memcpy(&msg[64 + offset], hook->ntlm.hash, len16);
     offset += len16;
   }
   /* domain */
   if (hook->domain) {
     len16 = handle_unicode(hook, &tmp, hook->domain);
-    *((uint16_t *)&msg[28]) = hton16(len16);
-    *((uint16_t *)&msg[30]) = hton16(len16);
-    *((uint32_t *)&msg[32]) = hton32(64 + offset);
+    *((uint16_t *)&msg[28]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[30]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[32]) = ntlm_hton32(64 + offset);
     memcpy(&msg[64 + offset], tmp, len16);
     offset += len16;
   }
   /* user */
   if (hook->user) {
     len16 = handle_unicode(hook, &tmp, hook->user);
-    *((uint16_t *)&msg[36]) = hton16(len16);
-    *((uint16_t *)&msg[38]) = hton16(len16);
-    *((uint32_t *)&msg[40]) = hton32(64 + offset);
+    *((uint16_t *)&msg[36]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[38]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[40]) = ntlm_hton32(64 + offset);
     memcpy(&msg[64 + offset], tmp, len16);
     offset += len16;
   }
   /* workstation */
   if (hook->workstation) {
     len16 = handle_unicode(hook, &tmp, hook->workstation);
-    *((uint16_t *)&msg[44]) = hton16(len16);
-    *((uint16_t *)&msg[46]) = hton16(len16);
-    *((uint32_t *)&msg[48]) = hton32(64 + offset);
+    *((uint16_t *)&msg[44]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[46]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[48]) = ntlm_hton32(64 + offset);
     memcpy(&msg[64 + offset], tmp, len16);
     offset += len16;
   }
   /* session key */
   if (hook->session_key) {
     len16 = strlen(hook->session_key);
-    *((uint16_t *)&msg[52]) = hton16(len16);
-    *((uint16_t *)&msg[54]) = hton16(len16);
-    *((uint32_t *)&msg[56]) = hton32(64 + offset);
+    *((uint16_t *)&msg[52]) = ntlm_hton16(len16);
+    *((uint16_t *)&msg[54]) = ntlm_hton16(len16);
+    *((uint32_t *)&msg[56]) = ntlm_hton32(64 + offset);
     memcpy(&msg[64 + offset], hook->session_key, len16);
     offset += len16;
   }
   /* flags */
-  *((uint32_t *)&msg[60]) = hton32(hook->flags);
+  *((uint32_t *)&msg[60]) = ntlm_hton32(hook->flags);
 
   /* base64 */
   b64len = apr_base64_encode_len(len);
@@ -1280,15 +1280,15 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   int len;
   int offset;
 
-  hook->flags = ntoh32(*((uint32_t *)&msg[12]));
+  hook->flags = ntlm_ntoh32(*((uint32_t *)&msg[12]));
   
   /* test if optional domain is there */
   if (msg_len < 24) {
     return;
   }
   /* domain */
-  len = ntoh16(*((uint16_t *)&msg[16]));
-  offset = ntoh32(*((uint32_t *)&msg[20]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[16]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[20]));
   if (len) {
     hook->domain = apr_pstrndup(hook->pool, (char *)&msg[offset], len);
   }
@@ -1297,8 +1297,8 @@ static void read_type1_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
     return;
   }
   /* workstation */
-  len = ntoh16(*((uint16_t *)&msg[24]));
-  offset = ntoh32(*((uint32_t *)&msg[28]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[24]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[28]));
   if (len) {
     hook->workstation = apr_pstrndup(hook->pool, (char *)&msg[offset], len);
   }
@@ -1319,16 +1319,16 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   int b64len;
 
   /* target */
-  len = ntoh16(*((uint16_t *)&msg[12]));
-  offset = ntoh32(*((uint32_t *)&msg[16]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[12]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[16]));
   if (len) {
     hook->target = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* flags */
-  hook->flags = ntoh32(*((uint32_t *)&msg[20]));
+  hook->flags = ntlm_ntoh32(*((uint32_t *)&msg[20]));
   /* challenge */
   if (*((uint64_t *)&msg[24])) {
-    hook->challenge = ntoh64(*((uint64_t *)&msg[24]));
+    hook->challenge = ntlm_ntoh64(*((uint64_t *)&msg[24]));
   }
   /* test if optional context is available */
   if (msg_len < 40) {
@@ -1336,26 +1336,26 @@ static void read_type2_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   }
   /* context */
   if (*((uint64_t *)&msg[32])) {
-    hook->context = ntoh64(*((uint64_t *)&msg[32]));
+    hook->context = ntlm_ntoh64(*((uint64_t *)&msg[32]));
   }
   /* test if optional target info is available */
   if (msg_len < 52) {
     return;
   }
   /* target info */
-  len = ntoh16(*((uint16_t *)&msg[40]));
-  offset = ntoh32(*((uint32_t *)&msg[44]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[40]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[44]));
   if (len) {
     b64len = apr_base64_encode_len(len);
     b64msg = apr_pcalloc(hook->pool, b64len);
     apr_base64_encode_binary(b64msg, &msg[offset], len);
     hook->target_info = b64msg; 
     while (1) {
-      subblk = ntoh16(*((uint16_t *)&msg[offset]));
+      subblk = ntlm_ntoh16(*((uint16_t *)&msg[offset]));
       if (subblk == 0) {
 	break;
       }
-      len = ntoh16(*((uint16_t *)&msg[2 + offset]));
+      len = ntlm_ntoh16(*((uint16_t *)&msg[2 + offset]));
       offset += 4;
       switch (subblk) {
       case HTNTLM_SUBBLK_SERVER_NAME:
@@ -1389,36 +1389,36 @@ static void read_type3_msg(htntlm_t *hook, unsigned char *msg, int msg_len) {
   int offset;
 
   /* lm/lmv2 response */
-  len = ntoh16(*((uint16_t *)&msg[12]));
-  offset = ntoh32(*((uint32_t *)&msg[16]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[12]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[16]));
   if (len) {
     hook->lm.hash = apr_pcalloc(hook->pool, len); 
     memcpy(hook->lm.hash, &msg[offset], len);
     hook->lm.len = len;
   }
   /* ntlm/ntlmv2 response */
-  len = ntoh16(*((uint16_t *)&msg[20]));
-  offset = ntoh32(*((uint32_t *)&msg[24]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[20]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[24]));
   if (len) {
     hook->ntlm.hash = apr_pcalloc(hook->pool, len); 
     memcpy(hook->ntlm.hash, &msg[offset], len);
     hook->ntlm.len = len;
   }
   /* domain */
-  len = ntoh16(*((uint16_t *)&msg[28]));
-  offset = ntoh32(*((uint32_t *)&msg[32]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[28]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[32]));
   if (len) {
     hook->domain = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* user */
-  len = ntoh16(*((uint16_t *)&msg[36]));
-  offset = ntoh32(*((uint32_t *)&msg[40]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[36]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[40]));
   if (len) {
     hook->user = handle_oem(hook, (char *)&msg[offset], len);
   }
   /* workstation */
-  len = ntoh16(*((uint16_t *)&msg[44]));
-  offset = ntoh32(*((uint32_t *)&msg[48]));
+  len = ntlm_ntoh16(*((uint16_t *)&msg[44]));
+  offset = ntlm_ntoh32(*((uint32_t *)&msg[48]));
   if (len) {
     hook->workstation = handle_oem(hook, (char *)&msg[offset], len);
   }
@@ -1446,7 +1446,7 @@ static void read_message(htntlm_t *hook, char *message) {
   }
 
   /* get type */
-  hook->type = ntoh32(*(uint32_t *)&msg[8]);
+  hook->type = ntlm_ntoh32(*(uint32_t *)&msg[8]);
   switch (hook->type) {
   case 1:
     read_type1_msg(hook, msg, b64len);

@@ -48,19 +48,19 @@
    (((x) & 0x00000000000000ffULL) << 56))
 
 #if APR_IS_BIGENDIAN
-# define hton16(x) swap16(x)
-# define hton32(x) swap32(x)
-# define hton64(x) swap64(x)
-# define ntoh16(x) swap16(x)
-# define ntoh32(x) swap32(x)
-# define ntoh64(x) swap64(x)
+# define ntlm_hton16(x) swap16(x)
+# define ntlm_hton32(x) swap32(x)
+# define ntlm_hton64(x) swap64(x)
+# define ntlm_ntoh16(x) swap16(x)
+# define ntlm_ntoh32(x) swap32(x)
+# define ntlm_ntoh64(x) swap64(x)
 #else
-# define hton16(x) (x)
-# define hton32(x) (x)
-# define hton64(x) (x)
-# define ntoh16(x) (x)
-# define ntoh32(x) (x)
-# define ntoh64(x) (x)
+# define ntlm_hton16(x) (x)
+# define ntlm_hton32(x) (x)
+# define ntlm_hton64(x) (x)
+# define ntlm_ntoh16(x) (x)
+# define ntlm_ntoh32(x) (x)
+# define ntlm_ntoh64(x) (x)
 #endif
 
 char *my_unescape(char *string, char **last); 
