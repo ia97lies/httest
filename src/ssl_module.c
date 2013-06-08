@@ -597,7 +597,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 #endif
   }
 
-  entry = apr_psprintf(config->msg_pool, "%s: %s%s%s", str_version, 
+  entry = apr_psprintf(config->msg_pool, "%c%s: %s%s%s", dir, str_version, 
                        str_content_type, str_details1, str_details2);
   apr_table_addn(config->msgs, apr_psprintf(config->msg_pool, "TRUE"), entry);
   worker_log_buf(worker, LOG_INFO, dir, entry, strlen(entry));

@@ -12,6 +12,8 @@ __User-Agent: mozilla
 __
 _EXPECT headers "ClientHello"
 _EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . ">SSL 3.0: Handshake, ClientHello"
+_EXPECT headers "<SSL 3.0: Handshake, ServerHello"
 _WAIT
 #_SSL:TRACE info
 #_EXPECT Var(info) "Handshake, HelloServer"
