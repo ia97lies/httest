@@ -120,6 +120,7 @@ EXTRA_DIST= \
 	finally_on_failed.txt \
 	finally_on_many_bodies.htt \
 	folded.htt \
+	foo.txt \
 	foreach.htt \
 	functionality.ntlm \
 	function.htt \
@@ -347,6 +348,7 @@ EXTRA_DIST= \
 	wait0.htt \
 	wait.htt \
 	websocket.htt \
+	websocket_huge.htt \
 	_wrapper_test.sh \
 	xml.htt 
 

@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.4
+  *) httest: Bugfix overflow problem with websocket commands _WS:SEND and
+             _WS:RECV.
+
+
 Changes with httest 2.4.3
   *) macros: Did cleanup the macros and document the interfaces. Mostly.
 
