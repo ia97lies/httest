@@ -2065,6 +2065,8 @@ static apr_status_t global_JOIN(command_t *self, global_t *global, char *data,
     }
   }
   apr_table_clear(global->threads);
+  global->groups = 0;
+
 
   htt_run_worker_joined(global);
   return APR_SUCCESS;

@@ -120,13 +120,14 @@ EXTRA_DIST= \
 	finally_on_failed.txt \
 	finally_on_many_bodies.htt \
 	folded.htt \
-	foo.txt \
 	foreach.htt \
 	functionality.ntlm \
 	function.htt \
 	generate_makefile_am.sh \
 	global_exec.hte \
 	global_exec.txt \
+	go.htt \
+	go.visual \
 	grep.htt \
 	headers_allow.htt \
 	headers_filter.htt \

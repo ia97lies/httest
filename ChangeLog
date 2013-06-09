@@ -6,6 +6,8 @@ Changes with httest 2.4.4
 
   *) httest: Fixed brocken _SSL:TRACE/_EXPECT, add >,< again for in/out.
 
+  *) httest: Fix broken identing after GO.
+
 
 Changes with httest 2.4.3
   *) macros: Did cleanup the macros and document the interfaces. Mostly.
