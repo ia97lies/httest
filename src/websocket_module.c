@@ -412,7 +412,7 @@ apr_status_t websocket_module_init(global_t *global) {
 				   "          there are combinations which will not work, see also RFC\n"
 				   "          of websockets to get a clue what is possible and what not.\n"
 				   "  <length>: Length of data or AUTO to do this automaticaly\n"
-				   "  <data>: Data to be send if spaces the data must be quoted"
+				   "  <data>: Data to be send if spaces the data must be quoted\n"
 				   "  <mask>: Optional 64 Byte number to mask data",
 	                           block_WS_SEND)) != APR_SUCCESS) {
     return status;

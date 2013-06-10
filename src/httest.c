@@ -2527,25 +2527,23 @@ static void show_command_help(apr_pool_t *p, global_t *global,
       block_name = apr_pstrdup(p, last);
     }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
-      logger_log(global->logger, LOG_ERR, NULL, "command: %s does not exist\n\n", 
-                 command);
+      fprintf(stdout, "command: %s does not exist\n\n", command);
       exit(1);
     }
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      logger_log(global->logger, LOG_ERR, NULL, "command: %s does not exist\n", 
-                 command);
+      fprintf(stdout, "command: %s does not exist\n", command);
       exit(1);
     }
     else {
       char *help;
       char *val;
       char *last;
-      logger_log(global->logger, LOG_INFO, NULL, "%s %s", command, 
-                 worker->short_desc?worker->short_desc:"");
+      fprintf(stdout, "%s %s\n", command, 
+              worker->short_desc?worker->short_desc:"");
       help = apr_pstrdup(p, worker->desc);
       val = apr_strtok(help, "\n", &last);
       while (val) {
-        logger_log(global->logger, LOG_INFO, NULL, "\t%s", val);
+        fprintf(stdout, "\t%s\n", val);
 	val = apr_strtok(NULL, "\n", &last);
       }
       goto exit;
@@ -2553,12 +2551,10 @@ static void show_command_help(apr_pool_t *p, global_t *global,
 
   }
 
-  logger_log(global->logger, LOG_INFO, NULL, "command: %s does not exist\n\n", 
-             command);
+  fprintf(stdout, "command: %s does not exist\n\n", command);
   exit(1);
 
 exit:
-  logger_log(global->logger, LOG_INFO, NULL, "");
   fflush(stdout);
 }
 
