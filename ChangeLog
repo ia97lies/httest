@@ -6,7 +6,8 @@ Changes with httest 2.4.4
   *) httest: Bugfix overflow problem with websocket commands _WS:SEND and
              _WS:RECV.
 
-  *) httest: Fixed brocken _SSL:TRACE/_EXPECT, add >,< again for in/out.
+  *) httest: Fixed broken _SSL:TRACE, add >,< again for in/out to make them
+             expectable like before.
 
   *) httest: Fix broken identing after GO.
 
