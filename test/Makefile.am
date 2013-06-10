@@ -350,6 +350,7 @@ EXTRA_DIST= \
 	wait.htt \
 	websocket.htt \
 	websocket_huge.htt \
+	websocket_mask.htt \
 	_wrapper_test.sh \
 	xml.htt 
 
