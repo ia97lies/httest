@@ -1,3 +1,5 @@
+# This script connect to echo.websocket.org and send a "hallo welt" and receive
+# the echo "hallo welt".
 
 CLIENT
   _REQ echo.websocket.org 80
@@ -9,12 +11,10 @@ CLIENT
   __Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
   __Sec-WebSocket-Version: 13
   __
-  _SOCKET  # spawn a websocket
-    _WAIT
-    _WS:SEND FIN,TEXT AUTO "hallo welt" 0x12345678
-    _WS:RECV OP LEN
-    _DEBUG $OP $LEN
-  _END
+  _WAIT
+  _WS:SEND FIN,TEXT AUTO "hallo welt" 0x12345678
+  _WS:RECV OP LEN
+  _DEBUG $OP $LEN
   _CLOSE
 END
 
