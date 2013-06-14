@@ -1,5 +1,6 @@
+INCLUDE $TOP/test/config.htb
 
-DSO:LOAD_TRANSPORT_DSO /home/cli/projects/htt/src/.libs/libhello.so foo
+DSO:LOAD_TRANSPORT_DSO $TOP/src/.libs/libhello.so foo
 
 CLIENT
 _DSO:GET_TRANSPORT_OBJECT foo foo_front
@@ -9,3 +10,9 @@ _EXPECT . "200 OK"
 _WAIT
 END
 
+SERVER 8080 DOWN
+_DSO:GET_TRANSPORT_OBJECT foo foo_back
+_WAIT
+__HTTP/1.1 200 OK
+__
+END
