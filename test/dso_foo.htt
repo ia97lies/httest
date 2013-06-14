@@ -1,0 +1,11 @@
+
+DSO:LOAD_TRANSPORT_DSO /home/cli/projects/htt/src/.libs/libhello.so foo
+
+CLIENT
+_DSO:GET_TRANSPORT_OBJECT foo foo_front
+__GET / HTTP/1.1
+__
+_EXPECT . "200 OK"
+_WAIT
+END
+
