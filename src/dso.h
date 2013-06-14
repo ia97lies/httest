@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool dso objects.
+ * Interface for HTTP Test Tool dso objects.
  */
 
 #ifndef HTT_DSO_H
