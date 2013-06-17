@@ -147,13 +147,10 @@ static apr_status_t block_LOAD_TRANSPORT_DSO(worker_t *worker, worker_t *parent,
     }
 
     if ((status = apr_dso_load(&dso, path, global->pool)) != APR_SUCCESS) {
-      char buf[2048];
+      char buf[BLOCK_MAX+1];
       worker_log(worker, LOG_ERR, "Can not load \"%s\" library", path);
-      fprintf(stderr, "Can not load \"%s\" library", path);
-
-      apr_dso_error(dso, buf, 2047);
-      fprintf(stderr, "\"%s\"", buf);
-      fflush(stderr);
+      apr_dso_error(dso, buf, BLOCK_MAX);
+      worker_log_buf(worker, LOG_ERR, '+', buf, 0);
       return status;
     }
 

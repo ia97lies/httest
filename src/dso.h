@@ -53,7 +53,7 @@ typedef apr_status_t (*configure_f)(void *custom, const char *config);
  * @param len INOUT len must be set to the buf length, and returns the actual read bytes
  * @return APR_SUCCESS on success else APR_EINVAL
  */
-typedef apr_status_t (*read_f)(void *custom, const char *buf, apr_size_t *len);
+typedef apr_status_t (*read_f)(void *custom, char *buf, apr_size_t *len);
 
 /**
  * Contains the configuration in one 0 terminated string

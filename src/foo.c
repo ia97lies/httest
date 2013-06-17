@@ -1,6 +1,8 @@
 
 #include "dso.h"
+#include "stdlib.h"
 #include "stdio.h"
+#include "string.h"
 
 char *gbuf = NULL;
 
@@ -15,14 +17,14 @@ static apr_status_t foo_configure(void *custom, const char *buf) {
   return APR_SUCCESS;
 }
 
-static apr_status_t foo_read(void *custom, const char *buf, apr_size_t *len) {
+static apr_status_t foo_read(void *custom, char *buf, apr_size_t *len) {
   const char *str = "HTTP/1.1 200 OK\r\n\r\n";
   *len = strlen(str);
   memcpy(buf, str, *len);
   return APR_SUCCESS;
 }
 
-static apr_status_t foo_read2(void *custom, const char *buf, apr_size_t *len) {
+static apr_status_t foo_read2(void *custom, char *buf, apr_size_t *len) {
   const char *str = "GET / HTTP/1.1\r\n\r\n";
   *len = strlen(str);
   memcpy(buf, str, *len);

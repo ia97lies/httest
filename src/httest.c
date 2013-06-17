@@ -1261,6 +1261,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   (*global)->worker->modules = (*global)->modules;
   (*global)->worker->name = apr_pstrdup(p, "__htt_global__");
+  (*global)->worker->logger = (*global)->logger;
 
   return APR_SUCCESS;
 }
@@ -2193,7 +2194,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
         else { /* let's see if we find block for this job */
           int cur_log_mode = logger_get_mode(global->worker->logger);
 
-          logger_set_mode(global->worker->logger, 0);
+          logger_set_mode(global->worker->logger, 1);
           status = command_CALL(NULL, global->worker, line, ptmp);
           logger_set_mode(global->worker->logger, cur_log_mode);
           if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
