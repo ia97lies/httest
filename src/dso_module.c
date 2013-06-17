@@ -147,7 +147,13 @@ static apr_status_t block_LOAD_TRANSPORT_DSO(worker_t *worker, worker_t *parent,
     }
 
     if ((status = apr_dso_load(&dso, path, global->pool)) != APR_SUCCESS) {
+      char buf[2048];
       worker_log(worker, LOG_ERR, "Can not load \"%s\" library", path);
+      fprintf(stderr, "Can not load \"%s\" library", path);
+
+      apr_dso_error(dso, buf, 2047);
+      fprintf(stderr, "\"%s\"", buf);
+      fflush(stderr);
       return status;
     }
 
@@ -167,6 +173,7 @@ static apr_status_t block_GET_TRANSPORT_OBJECT(worker_t *worker, worker_t *paren
   apr_status_t status = APR_SUCCESS;
   const char *name;
   const char *sym;
+  const char *config;
   transport_t *transport;
   apr_dso_handle_t *dso;
   apr_dso_handle_sym_t dso_sym;
@@ -198,8 +205,16 @@ static apr_status_t block_GET_TRANSPORT_OBJECT(worker_t *worker, worker_t *paren
 
   transport_dso = (transport_dso_t *)dso_sym;
 
-  /* build up a httest transport object */
+  config = store_get(worker->params, "3");
+  if (config) {
+    if ((status = transport_dso->configure(transport_dso->custom_handle(), 
+                                           config)) != APR_SUCCESS) {
+      worker_log(worker, LOG_ERR, "Configure failed, see logs of your dso module");
+      return status;
+    }
+  }
 
+  /* build up a httest transport object */
   transport = transport_new(transport_dso, worker->pbody, 
 			    dso_transport_os_desc_get, 
 			    dso_transport_set_timeout,

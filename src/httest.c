@@ -1199,19 +1199,18 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   {
     appender = appender_std_new(p, out, logger_flags);
+    appender_set_mutex(appender, mutex);
     logger_set_appender((*global)->logger, appender, "none", LOG_NONE, LOG_NONE);
+
+    appender = appender_std_new(p, err, logger_flags);
+    appender_set_mutex(appender, mutex);
+    logger_set_appender((*global)->logger, appender, "err", LOG_ERR, LOG_ERR);
   }
 
   if (log_mode >= LOG_INFO) {
     appender = appender_std_new(p, out, logger_flags);
     appender_set_mutex(appender, mutex);
     logger_set_appender((*global)->logger, appender, "std", LOG_INFO, log_mode);
-  }
-
-  if (log_mode >= LOG_ERR) {
-    appender = appender_std_new(p, err, logger_flags);
-    appender_set_mutex(appender, mutex);
-    logger_set_appender((*global)->logger, appender, "err", LOG_ERR, LOG_ERR);
   }
 
   /* set default blocks for blocks with no module name */

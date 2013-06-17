@@ -3,7 +3,8 @@ INCLUDE $TOP/test/config.htb
 DSO:LOAD_TRANSPORT_DSO $TOP/src/.libs/libhello.so foo
 
 CLIENT
-_DSO:GET_TRANSPORT_OBJECT foo foo_front
+_SET config=<foo><bar>bla</bar></foo>
+_DSO:GET_TRANSPORT_OBJECT foo foo_front VAR(config)
 __GET / HTTP/1.1
 __
 _EXPECT . "200 OK"
