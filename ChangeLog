@@ -3,7 +3,7 @@
 Changes with httest 2.4.4
   *) httest: Experimental dynamic shared object support for transport objects.
              This could be very useful to test shared libraries directly with
-			 the wellknown httest commands.
+             the wellknown httest commands.
 
   *) httest: Bugfix missing help text for module commands.
 
