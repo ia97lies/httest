@@ -48,8 +48,8 @@
 struct sockreader_s {
   apr_pool_t *pool;
   transport_t *transport;
-  apr_size_t i;
-  apr_size_t len;
+  uint64_t i;
+  uint64_t len;
   char *buf;
   char *swap;
   apr_bucket_alloc_t *alloc;
@@ -79,7 +79,7 @@ static char *my_strcasestr(const char *s1, const char *s2);
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
-                            char *rest, apr_size_t len) {
+                            char *rest, uint64_t len) {
   apr_status_t status;
   apr_allocator_t *allocator;
   apr_pool_t *pool;
@@ -155,7 +155,7 @@ void sockreader_set_options(sockreader_t *self, int options) {
  * @param len IN len to push back
  */
 apr_status_t sockreader_push_back(sockreader_t * self, const char *buf, 
-                                  apr_size_t len) {
+                                  uint64_t len) {
   if (!self->cache) {
     self->cache = apr_brigade_create(self->pool, self->alloc);
   }
@@ -173,7 +173,7 @@ apr_status_t sockreader_push_back(sockreader_t * self, const char *buf,
  */
 apr_status_t sockreader_push_line(sockreader_t * self, const char *line) {
   apr_status_t status;
-  apr_size_t len = strlen(line);
+  uint64_t len = strlen(line);
 
   status = sockreader_push_back(self, line, len);
   if (status == APR_SUCCESS) {
@@ -192,7 +192,7 @@ apr_status_t sockreader_push_line(sockreader_t * self, const char *line) {
  */
 apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
   char c;
-  apr_size_t i;
+  uint64_t i;
   apr_status_t status = APR_SUCCESS;
 
   *line = NULL;
@@ -240,7 +240,7 @@ apr_status_t sockreader_read_line(sockreader_t * self, char **line) {
  * @return APR_SUCCESS else APR error
  */
 apr_status_t sockreader_read_block(sockreader_t * self, char *block,
-                                   apr_size_t *length) {
+                                   uint64_t *length) {
   apr_status_t status;
   int i;
   int min_len;
@@ -304,10 +304,10 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t content_length_reader(sockreader_t * self,
-                                   char **buf, apr_size_t *ct, 
+                                   char **buf, uint64_t *ct, 
 				   const char *val) {
   apr_status_t status = APR_SUCCESS;
-  apr_size_t len = *ct;
+  uint64_t len = *ct;
   char *read;
 
   if ((apr_ssize_t)len < 0) {
@@ -354,8 +354,8 @@ static apr_status_t transfer_enc_reader_bb(sockreader_t *self,
   char *end;
   char *line;
   char *read = NULL;
-  apr_size_t chunk_cur;
-  apr_size_t chunk_len;
+  uint64_t chunk_cur;
+  uint64_t chunk_len;
   apr_bucket *b;
   apr_status_t status = APR_SUCCESS;
 
@@ -425,7 +425,7 @@ static apr_status_t transfer_enc_reader_bb(sockreader_t *self,
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t transfer_enc_reader(sockreader_t * self,
-                                 char **buf, apr_size_t *len, const char *val) {
+                                 char **buf, uint64_t *len, const char *val) {
   apr_bucket_brigade *bb;
   apr_status_t status = APR_SUCCESS;
 
@@ -466,9 +466,9 @@ apr_status_t transfer_enc_reader(sockreader_t * self,
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t eof_reader(sockreader_t * self, char **buf,
-                        apr_size_t *len, const char *val) {
+                        uint64_t *len, const char *val) {
   char *read;
-  apr_size_t block;
+  uint64_t block;
   apr_bucket *b;
   apr_bucket_brigade *bb;
 
@@ -537,7 +537,7 @@ apr_status_t eof_reader(sockreader_t * self, char **buf,
  * @return APR_SUCCESS else an APR error
  */
 apr_status_t encapsulated_reader(sockreader_t * self, char **buf,
-                                 apr_size_t *len, const char *enc_info,
+                                 uint64_t *len, const char *enc_info,
 				 const char *preview) {
   char *read;
   char *read2;
@@ -547,8 +547,8 @@ apr_status_t encapsulated_reader(sockreader_t * self, char **buf,
   char *val;
   char *tmp;
   apr_status_t status;
-  apr_size_t size;
-  apr_size_t size2;
+  uint64_t size;
+  uint64_t size2;
   
   tmp = apr_pstrdup(self->pool, enc_info);
   cur = apr_strtok(tmp, ",", &last);

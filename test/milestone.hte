@@ -1,6 +1,7 @@
 CLIENT
   _MILESTONE first
-    _REQ foobar 999
+    _SET foo=bar
+    _EXPECT VAR(foo) "bla"
   _END
   _MILESTONE second
   _END

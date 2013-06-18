@@ -25,7 +25,6 @@ CLIENT
   _EXPECT . "BeGiN.*EnD"
   _WS:RECV OP LEN
   _ASSERT "$LEN == 27"
-  _DBG:BP
   _EXPECT . "begin.*end"
   _WS:RECV OP LEN
   _ASSERT "$LEN == 102410"
