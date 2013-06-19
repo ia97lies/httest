@@ -2,6 +2,9 @@ REQUIRE_MODULE LUA
 
 INCLUDE $TOP/test/config.htb
 
+SET 10K=$1K$1K$1K$1K$1K$1K$1K$1K$1K$1K
+SET 100K=$10K$10K$10K$10K$10K$10K$10K$10K$10K$10K
+
 BLOCK:LUA WebsocketAccept websocketKey : result
   return crypto.base64.encode(crypto.evp.digest("sha1", websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11", true))
 END
@@ -19,16 +22,12 @@ CLIENT
   __
   _EXPECT headers "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK\+xOo="
   _WAIT
-  _WS:RECV OP
-  _EXPECT VAR(OP) "PING"
-  _WS:SEND PONG AUTO ""
-  _EXPECT . "blabla"
-  _WS:RECV OP
-  _DEBUG $OP
-  _EXPECT . "blu"
-  _WS:RECV
-  _EXPECT . "bli blo"
+  _EXPECT . "BeGiN.*EnD"
   _WS:RECV OP LEN
+  _ASSERT "$LEN == 27"
+  _EXPECT . "begin.*end"
+  _WS:RECV OP LEN
+  _ASSERT "$LEN == 102410"
   _CLOSE
 END
 
@@ -44,11 +43,7 @@ SERVER $YOUR_PORT
   __Sec-WebSocket-Protocol: chat
   __
   _FLUSH
-  _WS:SEND PING AUTO ""
-  _WS:RECV OP
-  _EXPECT VAR(OP) "PONG"
-  _WS:SEND TEXT AUTO blabla 0x12345678
-  _WS:SEND TEXT AUTO blubla
-  _WS:SEND TEXT AUTO "bli blo"
+  _WS:SEND TEXT AUTO "BeGiN ................. EnD" 0x12345678
+  _WS:SEND TEXT AUTO "begin $100K end" 0x12345678
   _CLOSE
 END

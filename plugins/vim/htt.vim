@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:     Httest	
 " Maintainer:   Christian Liesch <ia97lies@users.sourceforge.net>	
-" Last Change:	2011 Feb 2 
+" Last Change:	2013 June 8 
 
 if version < 600
   syntax clear
@@ -17,6 +17,7 @@ syn keyword httStatement        _-
 syn keyword httStatement        _ADD_HEADER
 syn keyword httStatement        _AUTO_CLOSE
 syn keyword httStatement        _AUTO_COOKIE
+syn keyword httStatement        _ASSERT
 syn keyword httStatement        _BREAK
 syn keyword httStatement        _CALL
 syn keyword httStatement        _CHECK

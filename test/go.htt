@@ -1,0 +1,13 @@
+# This test is for visual output only. 
+# After GO the ident should restart to and print the 3rd CLIENT like the frist 
+# one.
+CLIENT
+END
+
+CLIENT
+END
+
+GO
+
+CLIENT
+END

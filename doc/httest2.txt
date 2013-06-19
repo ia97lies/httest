@@ -67,8 +67,8 @@ status peek(buf, len)
 status write(buf, len)
 
 ++VARIABLES
-Variables should be stored in a variable store. Array and hash variables would also
-be cool.
+Variables should be stored in a variable store. Array, hash and multiline variables
+would also be cool.
 
 If a value is stored on a value, release the old value. We could solve this by construct
 a variable struct and give every variable its own pool. After a couple of value changes
@@ -98,8 +98,15 @@ before httest core do replace stuff. Another way would be naming hash entries
 Also an unset call is needed. Perhaps I should do this in the core and not in a
 module anyway.
 
++++MULTILINE VARIABLES
+_SET A << EOF 
+foo
+bar
+bla
+EOF
+
 ++POOLS
-For the moment we have only one pool which last for a hole body. Better would be to give
-the temporary call_pool to interperter, where a block could use this pool for temporary
-allocations to save memory.
+- global pool
+- worker pool
+- temporary pool for interpreter
 

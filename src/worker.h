@@ -31,6 +31,23 @@
 #include "store.h" 
 #include "socket.h" 
 
+typedef struct command_s command_t;
+typedef apr_status_t(*command_f) (command_t * self, void * type, char *data, 
+                                  apr_pool_t *ptmp);
+
+struct command_s {
+  char *name;
+  command_f func;
+  char *syntax;
+  char *help;
+#define COMMAND_FLAGS_NONE         0x00000000
+#define COMMAND_FLAGS_DEPRECIATED  0x00000001
+#define COMMAND_FLAGS_EXPERIMENTAL 0x00000002
+#define COMMAND_FLAGS_LINK         0x00000004
+#define COMMAND_FLAGS_BODY         0x00000008
+  int flags;
+};
+
 typedef struct socket_s {
   int is_ssl;
   transport_t *transport;
@@ -185,23 +202,6 @@ struct global_s {
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
-};
-
-typedef struct command_s command_t;
-typedef apr_status_t(*command_f) (command_t * self, void * type, char *data, 
-                                  apr_pool_t *ptmp);
-
-struct command_s {
-  char *name;
-  command_f func;
-  char *syntax;
-  char *help;
-#define COMMAND_FLAGS_NONE         0x00000000
-#define COMMAND_FLAGS_DEPRECIATED  0x00000001
-#define COMMAND_FLAGS_EXPERIMENTAL 0x00000002
-#define COMMAND_FLAGS_LINK         0x00000004
-#define COMMAND_FLAGS_BODY         0x00000008
-  int flags;
 };
 
 typedef struct line_s {

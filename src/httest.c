@@ -1199,19 +1199,18 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   {
     appender = appender_std_new(p, out, logger_flags);
+    appender_set_mutex(appender, mutex);
     logger_set_appender((*global)->logger, appender, "none", LOG_NONE, LOG_NONE);
+
+    appender = appender_std_new(p, err, logger_flags);
+    appender_set_mutex(appender, mutex);
+    logger_set_appender((*global)->logger, appender, "err", LOG_ERR, LOG_ERR);
   }
 
   if (log_mode >= LOG_INFO) {
     appender = appender_std_new(p, out, logger_flags);
     appender_set_mutex(appender, mutex);
     logger_set_appender((*global)->logger, appender, "std", LOG_INFO, log_mode);
-  }
-
-  if (log_mode >= LOG_ERR) {
-    appender = appender_std_new(p, err, logger_flags);
-    appender_set_mutex(appender, mutex);
-    logger_set_appender((*global)->logger, appender, "err", LOG_ERR, LOG_ERR);
   }
 
   /* set default blocks for blocks with no module name */
@@ -1262,6 +1261,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   (*global)->worker->modules = (*global)->modules;
   (*global)->worker->name = apr_pstrdup(p, "__htt_global__");
+  (*global)->worker->logger = (*global)->logger;
 
   return APR_SUCCESS;
 }
@@ -2065,6 +2065,8 @@ static apr_status_t global_JOIN(command_t *self, global_t *global, char *data,
     }
   }
   apr_table_clear(global->threads);
+  global->groups = 0;
+
 
   htt_run_worker_joined(global);
   return APR_SUCCESS;
@@ -2192,7 +2194,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
         else { /* let's see if we find block for this job */
           int cur_log_mode = logger_get_mode(global->worker->logger);
 
-          logger_set_mode(global->worker->logger, 0);
+          logger_set_mode(global->worker->logger, 1);
           status = command_CALL(NULL, global->worker, line, ptmp);
           logger_set_mode(global->worker->logger, cur_log_mode);
           if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
@@ -2525,25 +2527,23 @@ static void show_command_help(apr_pool_t *p, global_t *global,
       block_name = apr_pstrdup(p, last);
     }
     if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
-      logger_log(global->logger, LOG_ERR, NULL, "command: %s does not exist\n\n", 
-                 command);
+      fprintf(stdout, "command: %s does not exist\n\n", command);
       exit(1);
     }
     if (!(worker = apr_hash_get(blocks, block_name, APR_HASH_KEY_STRING))) {
-      logger_log(global->logger, LOG_ERR, NULL, "command: %s does not exist\n", 
-                 command);
+      fprintf(stdout, "command: %s does not exist\n", command);
       exit(1);
     }
     else {
       char *help;
       char *val;
       char *last;
-      logger_log(global->logger, LOG_INFO, NULL, "%s %s", command, 
-                 worker->short_desc?worker->short_desc:"");
+      fprintf(stdout, "%s %s\n", command, 
+              worker->short_desc?worker->short_desc:"");
       help = apr_pstrdup(p, worker->desc);
       val = apr_strtok(help, "\n", &last);
       while (val) {
-        logger_log(global->logger, LOG_INFO, NULL, "\t%s", val);
+        fprintf(stdout, "\t%s\n", val);
 	val = apr_strtok(NULL, "\n", &last);
       }
       goto exit;
@@ -2551,12 +2551,10 @@ static void show_command_help(apr_pool_t *p, global_t *global,
 
   }
 
-  logger_log(global->logger, LOG_INFO, NULL, "command: %s does not exist\n\n", 
-             command);
+  fprintf(stdout, "command: %s does not exist\n\n", command);
   exit(1);
 
 exit:
-  logger_log(global->logger, LOG_INFO, NULL, "");
   fflush(stdout);
 }
 

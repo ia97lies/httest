@@ -22,3 +22,5 @@ all values (strings namely) are stored as return values.
 
 + Future enhancements
   - Calling httest functions in lua.
+  - Handle for consequtive calls.
+  - Closure.

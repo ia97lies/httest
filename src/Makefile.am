@@ -3,6 +3,9 @@
 bin_PROGRAMS = httest htproxy htremote htntlm
 dist_man_MANS = httest.1 htproxy.1 htntlm.1 htremote.1
 
+lib_LTLIBRARIES = libhello.la
+libhello_la_SOURCES = foo.c
+
 httest_SOURCES = \
 	httest.c file.c socket.c regex.c util.c replacer.c ssl.c worker.c \
 	module.c transport.c store.c eval.c logger.c appender.c \
@@ -10,7 +13,7 @@ httest_SOURCES = \
 	modules.c ssl_module.c tcp_module.c skeleton_module.c date_module.c \
 	coder_module.c math_module.c sys_module.c binary_module.c \
 	udp_module.c socks_module.c websocket_module.c dbg_module.c \
-	perf_module.c annotation_module.c charset_module.c body.c
+	perf_module.c annotation_module.c charset_module.c body.c dso_module.c 
 
 EXTRA_httest_SOURCES = \
 	lua_crypto.c lua_module.c js_module.c html_module.c xml_module.c
@@ -33,7 +36,7 @@ noinst_HEADERS = \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
 	lua_crypto.h logger.h appender.h appender_simple.h appender_std.h \
-	body.h httest.ext
+	body.h httest.ext dso.h
 
      
 httest.1: httest.c $(top_srcdir)/configure.in

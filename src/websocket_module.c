@@ -94,12 +94,12 @@ static apr_status_t block_WS_VERSION(worker_t *worker, worker_t *parent,
 static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent, 
                                   apr_pool_t *ptmp) {
   apr_status_t status;
-  apr_size_t len;
+  uint64_t len;
   int masked;
   uint8_t op;
   uint8_t pl_len;
   uint32_t mask = 0x0;
-  apr_size_t payload_len;
+  uint64_t payload_len;
   char *type;
   char *payload;
 
@@ -160,8 +160,14 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
   pl_len = pl_len & 0x7f;
 
+#if APR_IS_BIGENDIAN
+  worker_log(worker, LOG_DEBUG, "bigendian", type);
+#else
+  worker_log(worker, LOG_DEBUG, "littlendian", type);
+#endif
   if (pl_len == 126) {
     uint16_t length;
+    worker_log(worker, LOG_DEBUG, "payload uint16 read 2 length bytes", type);
     len = 2;
     if ((status = sockreader_read_block(worker->socket->sockreader, 
                                         (char *)&length, &len)) 
@@ -176,6 +182,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
   else if (pl_len == 127) {
     uint64_t length;
+    worker_log(worker, LOG_DEBUG, "payload uint64 read 4 length bytes", type);
     len = 8;
     if ((status = sockreader_read_block(worker->socket->sockreader, 
                                         (char *)&length, &len)) 
@@ -189,6 +196,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
 #endif
   }
   else {
+    worker_log(worker, LOG_DEBUG, "payload uint8", type);
     payload_len = pl_len;
   }
   
@@ -248,7 +256,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   uint8_t pl_len_8 = 0;
   uint16_t pl_len_16 = 0;
   uint64_t pl_len_64 = 0;
-  apr_size_t len;
+  uint64_t len;
 
   if (!worker->socket || !worker->socket->transport) {
     worker_log(worker, LOG_ERR, "No established socket for websocket protocol");
@@ -312,7 +320,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
 #endif
   }
   else {
-    uint16_t tmp;
+    uint64_t tmp;
     pl_len_8 = 127;
     tmp = len;
 #if APR_IS_BIGENDIAN
@@ -404,7 +412,7 @@ apr_status_t websocket_module_init(global_t *global) {
 				   "          there are combinations which will not work, see also RFC\n"
 				   "          of websockets to get a clue what is possible and what not.\n"
 				   "  <length>: Length of data or AUTO to do this automaticaly\n"
-				   "  <data>: Data to be send if spaces the data must be quoted"
+				   "  <data>: Data to be send if spaces the data must be quoted\n"
 				   "  <mask>: Optional 64 Byte number to mask data",
 	                           block_WS_SEND)) != APR_SUCCESS) {
     return status;

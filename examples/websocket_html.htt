@@ -1,8 +1,16 @@
+# Simple example for websockets, start this script with httest and connect
+# a browser to http://localhost:8888/
+#
+# By Christian Liesch <liesch@gmx.ch>
 
+# To make a client happy we have to encrypt the sec key from client
+# @param websocketKey IN websocket key from client
+# @return result IN sha1 of websocket key
 BLOCK:LUA WebsocketAccept websocketKey : result
   return crypto.base64.encode(crypto.evp.digest("sha1", websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11", true))
 END
 
+# Server delivering the html page for the browser
 SERVER 8888
   _RES
   _WAIT
@@ -55,6 +63,7 @@ SERVER 8888
   __
 END
 
+# Server handling the websocket stuff 
 SERVER 9876
   _RES
   _MATCH headers "Sec-WebSocket-Key: (.*)" WebsocketKey 

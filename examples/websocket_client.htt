@@ -1,6 +1,8 @@
+# This script connect to echo.websocket.org and send a "hallo welt" and receive
+# the echo "hallo welt".
 
 CLIENT
-  _REQ adnwsbe08.be.adnovum.ch 1337
+  _REQ echo.websocket.org 80
   __GET / HTTP/1.1
   __Upgrade: websocket
   __Connection: Upgrade
@@ -10,13 +12,7 @@ CLIENT
   __Sec-WebSocket-Version: 13
   __
   _WAIT
-  _WS:SEND FIN,TEXT AUTO "cli"
-  _WS:RECV OP LEN
-  _DEBUG $OP $LEN
-  _WS:SEND FIN,TEXT AUTO "halllloooooooo"
-  _WS:RECV OP LEN
-  _DEBUG $OP $LEN
-  _WS:SEND FIN,TEXT AUTO "bla bla bla bla"
+  _WS:SEND FIN,TEXT AUTO "hallo welt" 0x12345678
   _WS:RECV OP LEN
   _DEBUG $OP $LEN
   _CLOSE

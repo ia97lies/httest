@@ -1,15 +1,16 @@
 EXTRA_DIST= \
-	100cont_auto.htt \
 	100cont.htt \
+	100cont_auto.htt \
+	_wrapper_test.sh \
 	assert.hte \
 	assert.htt \
 	assert.txt \
-	autoclose2.hte \
-	autoclose2.htt \
-	autoclose2.txt \
 	autoclose.hte \
 	autoclose.htt \
 	autoclose.txt \
+	autoclose2.hte \
+	autoclose2.htt \
+	autoclose2.txt \
 	autocookie.htt \
 	bad_headers.htt \
 	base64.htt \
@@ -18,59 +19,61 @@ EXTRA_DIST= \
 	binary_protocol.hte \
 	binary_protocol.htt \
 	binary_protocol.txt \
-	block_declare_after.htt \
 	block.htb \
 	block.hte \
 	block.htt \
+	block.txt \
+	block_declare_after.htt \
 	block_in_out_params.htt \
+	block_js.hte \
+	block_js.htt \
+	block_js.txt \
 	block_js_args.hte \
 	block_js_args.htt \
 	block_js_args.txt \
-	block_js.hte \
-	block_js.htt \
 	block_js_on_the_fly.htt \
-	block_js.txt \
 	block_local_vars.htt \
+	block_lua.hte \
+	block_lua.htt \
+	block_lua.txt \
 	block_lua_2_funcs.htt \
 	block_lua_buf.htt \
 	block_lua_cert.htt \
 	block_lua_crypto.htt \
 	block_lua_dh.htt \
 	block_lua_file_md5.htt \
-	block_lua.hte \
-	block_lua.htt \
 	block_lua_httest.htt \
 	block_lua_transport.htt \
-	block_lua.txt \
 	block_not_found.hte \
 	block_not_found.txt \
 	block_params.htt \
-	block.txt \
 	block_var_buf.htt \
 	block_var_missmatch.hte \
 	block_var_missmatch.txt \
 	block_var_params.htt \
 	bps.htt \
-	breakfor.htt \
 	break.htt \
-	ca2.cert.pem \
+	breakfor.htt \
 	ca.cert.pem \
+	ca2.cert.pem \
 	charset.htt \
 	chunk.htt \
 	chunk.visual \
-	client2.cert.pem \
-	client2.key.pem \
 	client.cert.pem \
 	client.key.pem \
+	client2.cert.pem \
+	client2.key.pem \
 	concurrent.htt \
 	config.htb \
 	connection.htt \
 	crawl.htt \
 	custom_commands.htt \
-	daemon2.htt \
 	daemon.htt \
+	daemon2.htt \
 	debug.htt \
 	debug.visual \
+	dso_foo.htt \
+	dummy.htb \
 	dummy2.htb \
 	dummy3.htb \
 	dummy4.htb \
@@ -79,7 +82,6 @@ EXTRA_DIST= \
 	dummy7.htb \
 	dummy8.htb \
 	dummy9.htb \
-	dummy.htb \
 	duration.htt \
 	embedded_file.htt \
 	embedded_sh.htt \
@@ -92,14 +94,14 @@ EXTRA_DIST= \
 	error_match.htt \
 	errors.hte \
 	errors.htt \
+	errors.txt \
 	errors_neg.hte \
 	errors_neg.txt \
-	errors.txt \
 	escaping.htt \
+	exec.htt \
 	exec_expect.hte \
 	exec_expect.htt \
 	exec_expect.txt \
-	exec.htt \
 	exec_httest.htt \
 	exec_last_line_not_newline.htt \
 	exec_no_output.htt \
@@ -113,19 +115,21 @@ EXTRA_DIST= \
 	expect_header_not_body.txt \
 	expect_with_trash_behind.hte \
 	expect_with_trash_behind.txt \
-	finally_on_failed2.htt \
-	finally_on_failed3.htt \
 	finally_on_failed.hte \
 	finally_on_failed.htt \
 	finally_on_failed.txt \
+	finally_on_failed2.htt \
+	finally_on_failed3.htt \
 	finally_on_many_bodies.htt \
 	folded.htt \
 	foreach.htt \
-	functionality.ntlm \
 	function.htt \
+	functionality.ntlm \
 	generate_makefile_am.sh \
 	global_exec.hte \
 	global_exec.txt \
+	go.htt \
+	go.visual \
 	grep.htt \
 	headers_allow.htt \
 	headers_filter.htt \
@@ -133,17 +137,17 @@ EXTRA_DIST= \
 	html.htt \
 	html.txt \
 	http_0_9.htt \
-	huge_page_chunked.htt \
 	huge_page.htt \
+	huge_page_chunked.htt \
 	icap_100cont.htt \
 	icap_auto.htt \
 	icap_huge.htt \
 	icap_main.htt \
+	if_local_vars.htt \
 	ifcond.htt \
 	ifelse.htt \
 	ifequal.htt \
 	ifeval.htt \
-	if_local_vars.htt \
 	ifnumber.htt \
 	ifvareq.htt \
 	ignore_body.htt \
@@ -162,23 +166,23 @@ EXTRA_DIST= \
 	leftovertmpf.htt \
 	listen_to_ip_port.htt \
 	lock.htt \
+	loop.htt \
 	loop_auto.htt \
 	loop_cur.htt \
 	loop_duration.htt \
-	loop.htt \
 	macro.htt \
 	macro_too_many_redirects.htt \
 	main_functionality.htt \
+	match.hte \
+	match.htt \
+	match.txt \
 	match_dot.hte \
 	match_dot.txt \
 	match_exec_no_newline.htt \
-	match.hte \
-	match.htt \
 	match_order.hte \
 	match_order.htt \
-	match_order_threaded.htt \
 	match_order.txt \
-	match.txt \
+	match_order_threaded.htt \
 	match_var.htt \
 	math.htt \
 	milestone.hte \
@@ -192,22 +196,22 @@ EXTRA_DIST= \
 	multi_var_match.htt \
 	neg_content_length.htt \
 	newstyle.htt \
-	nocrlf.htt \
-	nosocket.hte \
-	nosocket.txt \
 	no_ssl_port_set.hte \
 	no_ssl_port_set.txt \
 	no_ssl_set_cert.hte \
 	no_ssl_set_cert.txt \
+	nocrlf.htt \
+	nosocket.hte \
+	nosocket.txt \
 	null_content.htt \
 	only_printable.htt \
 	overflow.htt \
 	perf_terminate_check.htt \
 	pipe_exec_out.htt \
-	pipelining_request.htt \
 	pipe_recv_to_file.htt \
 	pipe_simple.htt \
 	pipe_to_file.htt \
+	pipelining_request.htt \
 	plain2ssl.htt \
 	pop3_simple.htt \
 	pop3_tls.htt \
@@ -223,38 +227,38 @@ EXTRA_DIST= \
 	require_module.htt \
 	require_version.htt \
 	rps.htt \
+	run.sh \
 	run_all.sh \
 	run_color.sh \
 	run_errors.sh \
 	run_help.sh \
 	run_lib.sh \
 	run_ntlm.sh \
-	run.sh \
 	run_valgrind.sh \
 	run_visual.sh \
 	run_wild.sh \
-	sendfile_chunked.htt \
 	sendfile.htt \
+	sendfile_chunked.htt \
 	sendfile_multiple.htt \
 	server.cert.pem \
+	server.key.pem \
 	server_connection_close.htt \
 	server_def_before_client.htt \
 	server_distribute.htt \
 	server_ip_port.htt \
-	server.key.pem \
 	server_up_down.htt \
 	shared.htt \
 	shell.htb \
 	simple.htt \
+	simple.visual \
 	simple_perf.htt \
 	simple_rampup.htt \
 	simple_stat.htt \
-	simple.visual \
 	skeleton.htt \
 	smtp_simple.htt \
 	socketbody.htt \
-	socks_domain_name.htt \
 	socks.htt \
+	socks_domain_name.htt \
 	sockstate.htt \
 	ssl_big_content.htt \
 	ssl_debug.htt \
@@ -265,25 +269,25 @@ EXTRA_DIST= \
 	ssl_get_wrong_cert.htt \
 	ssl_get_wrong_cert.txt \
 	ssl_multi_socket.htt \
-	ssl_mutual2.hte \
-	ssl_mutual2.txt \
 	ssl_mutual.hte \
 	ssl_mutual.htt \
 	ssl_mutual.txt \
+	ssl_mutual2.hte \
+	ssl_mutual2.txt \
 	ssl_mutual_verify.htt \
 	ssl_no_default_pem.htt \
 	ssl_plain_first.htt \
-	ssl_server_cert_verify2.htt \
-	ssl_server_cert_verify3.htt \
 	ssl_server_cert_verify.hte \
 	ssl_server_cert_verify.htt \
 	ssl_server_cert_verify.txt \
+	ssl_server_cert_verify2.htt \
+	ssl_server_cert_verify3.htt \
 	ssl_session_reuse.htt \
-	ssl_simple2.htt \
 	ssl_simple.htt \
+	ssl_simple2.htt \
 	ssl_socks.htt \
-	ssl_sockstate2.htt \
 	ssl_sockstate.htt \
+	ssl_sockstate2.htt \
 	ssl_stream_myself.htt \
 	ssl_threaded_server.htt \
 	ssl_timeout.htt \
@@ -309,11 +313,11 @@ EXTRA_DIST= \
 	threaded_server.htt \
 	time.htt \
 	timeout.htt \
-	trace_on_failure_2.htb \
-	trace_on_failure_3.htb \
 	trace_on_failure.htb \
 	trace_on_failure.hte \
 	trace_on_failure.txt \
+	trace_on_failure_2.htb \
+	trace_on_failure_3.htb \
 	tunnel.htt \
 	unicode.ntlm \
 	unset.htt \
@@ -339,15 +343,16 @@ EXTRA_DIST= \
 	var_expect.hte \
 	var_expect.htt \
 	var_expect.txt \
-	variables.htt \
 	var_match.hte \
 	var_match.htt \
 	var_match.txt \
 	var_resolve.htt \
-	wait0.htt \
+	variables.htt \
 	wait.htt \
+	wait0.htt \
 	websocket.htt \
-	_wrapper_test.sh \
+	websocket_huge.htt \
+	websocket_mask.htt \
 	xml.htt 
 
 test_store_SOURCES=test_store.c $(top_srcdir)/src/store.c
