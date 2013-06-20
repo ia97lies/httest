@@ -293,8 +293,9 @@ command_t local_commands[] = {
   {"_TIMEOUT", (command_f )command_TIMEOUT, "<miliseconds>", 
    "Set socket timeout of current socket",
   COMMAND_FLAGS_NONE},
-  {"_SET", (command_f )command_SET, "<variable>=<value>", 
-  "Store a value in a local variable",
+  {"_SET", (command_f )command_SET, "<variable>=<value>|"
+                                    "<variable><<delimiter>\\n(<value-lines>\\n)*<delimiter>", 
+  "Store a value in a local variable. Multiline support.",
   COMMAND_FLAGS_NONE},
   {"_UNSET", (command_f )command_UNSET, "<variable>", 
   "Delete variable",

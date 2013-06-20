@@ -1,0 +1,8 @@
+CLIENT
+_SET A<OF
+  Hallo
+    Welt du schnoede
+  Welt
+EOF
+_EXPECT VAR(A) "schnoede"
+END

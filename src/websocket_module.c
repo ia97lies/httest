@@ -94,7 +94,7 @@ static apr_status_t block_WS_VERSION(worker_t *worker, worker_t *parent,
 static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent, 
                                   apr_pool_t *ptmp) {
   apr_status_t status;
-  uint64_t len;
+  apr_size_t len;
   int masked;
   uint8_t op;
   uint8_t pl_len;
@@ -208,14 +208,14 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     }
   }
 
-  len = payload_len;
   if (len_param) {
-    worker_var_set(worker, len_param, apr_itoa(ptmp, len));
+    worker_var_set(worker, len_param, apr_itoa(ptmp, payload_len));
   }
-  worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", len);
-  payload = apr_pcalloc(worker->pbody, len + 1);
+  worker_log(worker, LOG_DEBUG, "Payload-Length: %ld", payload_len);
+  payload = apr_pcalloc(worker->pbody, payload_len + 1);
+  len = payload_len;
   status = sockreader_read_block(worker->socket->sockreader, payload, &len);
-  worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", len, status);
+  worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", payload_len, status);
   if (status != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not read payload");
     return status;
@@ -224,14 +224,14 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   /* TODO: If masked unmask */
   if (masked) {
     int i, j;
-    for (i = 0; i < len; i++) {
+    for (i = 0; i < payload_len; i++) {
       j = i % 4;
       payload[i] ^= ((uint8_t *)&mask)[j];
     }
   }
 
 
-  status = worker_handle_buf(worker, ptmp, payload, len);
+  status = worker_handle_buf(worker, ptmp, payload, payload_len);
   status = worker_assert(worker, status);
   return status;
 }

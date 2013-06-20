@@ -1,0 +1,4 @@
+
+multi_line_variable.hte:2: error: No ending delimiter "OF" found for multiline variable
+multi_line_variable.hte:2: error: Key not specified
+multi_line_variable.hte:2: error: CLT0-0 Internal error(20014)

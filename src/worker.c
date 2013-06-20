@@ -2315,6 +2315,71 @@ apr_status_t command_ASSERT(command_t * self, worker_t * worker,
 }
 
 /**
+ * Single line variable
+ * @param copy IN copy of variable=value
+ * @param value OUT value
+ * @return variable
+ */
+static const char *single_line_variable(worker_t *worker, char *copy, 
+                                        char **value) {
+  return apr_strtok(copy, "=", value);
+}
+
+/**
+ * Single line variable
+ * @param copy IN copy variable=value
+ * @param value OUT value
+ * @param ptmp IN temp pool
+ * @return variable
+ */
+static const char *multi_line_variable(worker_t *worker, char *copy, 
+                                       char **value, apr_pool_t *ptmp) {
+  char *delimiter;
+  char *var;
+  char *val;
+  apr_table_entry_t *e ;
+  int to;
+  int delim_found = 0;
+
+  var = apr_strtok(copy, "<", &delimiter);
+  apr_collapse_spaces(delimiter, delimiter);
+
+  /* read line until delimiter, delimiter can be indented! */
+  e = (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
+
+  to = worker->cmd_to ? worker->cmd_to : apr_table_elts(worker->lines)->nelts;
+
+  val = NULL;
+  for (worker->cmd = worker->cmd_from + 1; worker->cmd < to; worker->cmd++) {
+    int i;
+    char *line = e[worker->cmd].val;
+    for (i = 0; line[i] == ' '; i++);
+    if (strcmp(delimiter, &line[i]) == 0) {
+      delim_found = 1;
+      break;
+    }
+    else {
+      val = val ? apr_pstrcat(ptmp, val, "\n", line, NULL) : apr_pstrdup(ptmp, line);
+    }
+  }
+
+  if (!delim_found) {
+    worker_log(worker, LOG_ERR, 
+               "No ending delimiter \"%s\" found for multiline variable",
+               delimiter);
+    return NULL;
+  }
+
+  if (val == NULL) {
+    val = apr_pstrdup(ptmp, "");
+  }
+
+  *value = val;
+
+  return var;
+}
+
+/**
  * set command
  *
  * @param self IN command object
@@ -2323,24 +2388,29 @@ apr_status_t command_ASSERT(command_t * self, worker_t * worker,
  *
  * @return an apr status
  */
-apr_status_t command_SET(command_t * self, worker_t * worker,
-                         char *data, apr_pool_t *ptmp) {
-  char *vars_last;
+apr_status_t command_SET(command_t * self, worker_t * worker, char *data, 
+                         apr_pool_t *ptmp) {
   const char *vars_key;
-  const char *vars_val;
+  char *vars_val;
   char *copy;
   int i;
 
   COMMAND_NEED_ARG("Variable and value not specified");
   
-  vars_key = apr_strtok(copy, "=", &vars_last);
-  for (i = 0; vars_key[i] != 0 && strchr(VAR_ALLOWED_CHARS, vars_key[i]); i++); 
-  if (vars_key[i] != 0) {
-    worker_log(worker, LOG_ERR, "Char '%c' is not allowed in \"%s\"", vars_key[i], vars_key);
-    return APR_EINVAL;
-  }
+  for (i = 0; copy[i] != 0 && strchr(VAR_ALLOWED_CHARS, copy[i]); i++); 
 
-  vars_val = apr_strtok(NULL, "", &vars_last);
+  if (copy[i] == '=') {
+    /* single line */
+    vars_key = single_line_variable(worker, copy, &vars_val);
+  }
+  else if (copy[i] == '<') {
+    /* multi line */
+    vars_key = multi_line_variable(worker, copy, &vars_val, ptmp);
+  }
+  else {
+    vars_key = apr_strtok(copy, "=<", &vars_val);
+    worker_log(worker, LOG_ERR, "Char '%c' is not allowed in variable \"%s\"", copy[i], vars_key);
+  }
 
   if (!vars_key) {
     worker_log(worker, LOG_ERR, "Key not specified");
