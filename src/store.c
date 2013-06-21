@@ -112,6 +112,11 @@ void store_set(store_t *store, const char *name, const char *value) {
   apr_pool_t *pool;
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
+    /* check if the new value is same pointer as stored value */
+    if (value == element->value) {
+      /* nothting to do */
+      return;
+    }
     apr_hash_set(store->hash, name, APR_HASH_KEY_STRING, NULL);
     apr_pool_destroy(element->pool);
     apr_pool_create(&element->pool, store->pool);
