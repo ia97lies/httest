@@ -2157,7 +2157,6 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
       return status;
     }
     if (line[i] != '#' && line[i] != 0) {
-      /* lets see if we can start thread */
       if (global->state != GLOBAL_STATE_NONE) {
         if ((strlen(line) >= 3 && strncmp(line, "END", 3) == 0)) { 
 	  i += 3;
