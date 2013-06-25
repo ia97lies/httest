@@ -541,20 +541,6 @@ function do_unix_build_JS {
 function unix_build_XML2 {
   cd "$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER"
   ./configure
-  if [ "$OS" = "mac" -o "$OS" = "solaris" ]; then
-    mv threads.c threads.c.orig
-    cat threads.c.orig | awk '
-      /static pthread_once_t once_control = PTHREAD_ONCE_INIT;/ {
-        print "static pthread_once_t once_control = PTHREAD_ONCE_INIT;"
-        print "static pthread_once_t once_control_init = PTHREAD_ONCE_INIT;"
-        next
-      }
-      /once_control = PTHREAD_ONCE_INIT;/ {
-        print "once_control = once_control_init;"
-        next
-      }
-      { print $0 }' > threads.c
-  fi
   make
   create_custom_config "xml2" $UNIX_XML2_VER \
     "-I\${DIR}/include" "-L\${DIR} -lxml2"
