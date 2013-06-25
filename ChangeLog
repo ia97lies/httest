@@ -1,6 +1,8 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.4
+  *) httest: Bugfix possible coredump in ssl_module.c
+
   *) httest: Bugfix possible coredump in store.c
 
   *) httest: Experimental dynamic shared object support for transport objects.
