@@ -143,7 +143,6 @@ int main(int argc, const char *const argv[]) {
       fprintf(stderr, "\nCould not read until eof: %s(%d)\n", 
               my_status_str(pool, status), status);
     }
-    fprintf(stdout, "\nXXX%d\n", len);
   }
   fprintf(stdout, "OK\n");
 
