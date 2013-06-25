@@ -1696,6 +1696,10 @@ static apr_status_t ssl_worker_clone(worker_t *worker, worker_t *clone) {
     ssl_wconf_t *clone_config = ssl_get_worker_config(clone);
     /* copy workers content to clone */
     memcpy(clone_config, config, sizeof(*clone_config)); 
+    clone_config->cert_pool = NULL;
+    clone_config->certfile = NULL;
+    clone_config->keyfile = NULL;
+    clone_config->cafile = NULL;
     clone_config->ssl_ctx = NULL;
     return worker_ssl_ctx(clone, config->certfile, config->keyfile, config->cafile, 0);
   }

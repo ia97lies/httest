@@ -76,10 +76,13 @@ typedef struct validation_s {
 
 typedef struct worker_s worker_t;
 typedef struct global_s global_t;
-typedef apr_status_t(*interpret_f)(worker_t * self, worker_t *parent, 
+typedef apr_status_t(*interpret_f)(worker_t *worker, worker_t *parent, 
                                    apr_pool_t *ptmp);
+typedef const char *(*readline_f)(worker_t *worker);
 struct worker_s {
   global_t *global;
+  /* readline function */
+  readline_f readline;
   /* interpreter function */
   interpret_f interpret;
   /* worker config */
