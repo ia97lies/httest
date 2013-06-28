@@ -2687,7 +2687,7 @@ int main(int argc, const char *const argv[]) {
         char *entry = apr_pstrdup(pool, optarg);
 
         var = apr_strtok(entry, "=", &val);
-        if (val && val[0]) {
+        if (var && var[0] && val && val[0]) {
           store_set(vars, var, val);
         }
         else {
