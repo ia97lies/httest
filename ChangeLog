@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.5
+  *) httest: Bugfix found segfault thrown on illegal arguments.
+
+
 Changes with httest 2.4.4
   *) httest: Bugfix possible coredump in ssl_module.c
 
