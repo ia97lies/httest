@@ -36,9 +36,8 @@ noinst_HEADERS = \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
 	lua_crypto.h logger.h appender.h appender_simple.h appender_std.h \
-	body.h httest.ext dso.h
+	body.h httest.ext
 
-     
 httest.1: httest.c $(top_srcdir)/configure.in
 	$(MAKE) $(AM_MAKEFLAGS) httest$(EXEEXT)
 	help2man -N -n "test HTTP driven application" -i $(top_srcdir)/src/httest.ext --output=httest.1 ./httest$(EXEEXT)
