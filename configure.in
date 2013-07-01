@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.53)
-AC_INIT(httest, 2.4.4, ia97lies@sourceforge.net)
+cC_PREREQ(2.53)
+AC_INIT(httest, 2.4.5-rc1, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 
