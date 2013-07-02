@@ -1,7 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.5
-  *) httest: Bugfix found segfault thrown on illegal arguments.
+  *) httest: Bugfix found segfault thrown on illegal arguments. Reported by
+             Eva Ramon.
+
+  *) httest: Install include/htt/dso.h for dynamic transport object library.
 
 
 Changes with httest 2.4.4
