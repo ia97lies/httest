@@ -102,6 +102,11 @@ typedef struct recorder_s {
   sockreader_t *sockreader;
 } recorder_t;
 
+typedef struct sh_s {
+  apr_pool_t *pool;
+  apr_file_t *tmpf;
+} sh_t;
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -1377,12 +1382,10 @@ void worker_log_buf(worker_t * worker, int mode, char dir, const char *buf,
  * Read headers from transport
  * @param worker IN thread data object
  * @param sockreader IN reader
- * @param pool IN 
  * @return apr status
  */
 static apr_status_t worker_get_headers(worker_t *worker, 
-                                       sockreader_t *sockreader, 
-                                       apr_pool_t *pool) {
+                                       sockreader_t *sockreader) {
   apr_status_t status;
   char *line;
   char *last;
@@ -1574,7 +1577,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
  
-  status = worker_get_headers(worker, sockreader, pool);
+  status = worker_get_headers(worker, sockreader);
 
 http_0_9:
   if (status == APR_SUCCESS) {
@@ -1637,7 +1640,7 @@ http_0_9:
     }
     if (doreadtrailing) {
       /* read trailing headers */
-      if ((status = worker_get_headers(worker, sockreader, pool)) != APR_SUCCESS) {
+      if ((status = worker_get_headers(worker, sockreader)) != APR_SUCCESS) {
         worker_log(worker, LOG_ERR, "Missing trailing empty header(s) after chunked encoded body");
       }
     }
@@ -3315,15 +3318,15 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   char *exec_prefix = "./";
   int has_apr_file_perms_set = 1;
 #endif
-  apr_file_t *tmpf = module_get_config(worker->config, "SH");
+  sh_t *sh = module_get_config(worker->config, "SH");
 
   apr_status_t status = APR_SUCCESS;
   
   COMMAND_NEED_ARG("Either shell commands or END");
 
   if (strcasecmp(copy, "END")== 0) {
-    if (tmpf) {
-      if ((status = apr_file_name_get((const char **)&name, tmpf)) != APR_SUCCESS) {
+    if (sh) {
+      if ((status = apr_file_name_get((const char **)&name, sh->tmpf)) != APR_SUCCESS) {
         return status;
       }
 
@@ -3332,8 +3335,9 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       }
 
       /* close file */
-      apr_file_close(tmpf);
-      module_set_config(worker->config, apr_pstrdup(ptmp, "SH"), NULL);
+      apr_file_close(sh->tmpf);
+      module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), NULL);
+      apr_pool_destroy(sh->pool);
 
       /* exec file */
       old = self->name;
@@ -3345,8 +3349,12 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
     }
   }
   else {
-    if (!tmpf) {
-      if ((status = apr_file_mktemp(&tmpf, name, 
+    if (!sh) {
+      apr_pool_t *pool;
+      apr_pool_create(&pool, NULL);
+      sh = apr_pcalloc(pool, sizeof(*sh));
+      sh->pool = pool;
+      if ((status = apr_file_mktemp(&sh->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, worker->pbody))
 	  != APR_SUCCESS) {
@@ -3355,15 +3363,15 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 	return status;
       }
     }
-    module_set_config(worker->config, apr_pstrdup(ptmp, "SH"), tmpf);
+    module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), sh);
     
     len = strlen(copy);
-    if ((status = file_write(tmpf, copy, len)) != APR_SUCCESS) {
+    if ((status = file_write(sh->tmpf, copy, len)) != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not write to temp file");
       return status;
     }
     len = 1;
-    if ((status = file_write(tmpf, "\n", len)) != APR_SUCCESS) {
+    if ((status = file_write(sh->tmpf, "\n", len)) != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not write to temp file");
       return status;
     }
