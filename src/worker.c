@@ -3315,14 +3315,15 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   char *exec_prefix = "./";
   int has_apr_file_perms_set = 1;
 #endif
+  apr_file_t *tmpf = module_get_config(worker->config, "SH");
 
   apr_status_t status = APR_SUCCESS;
   
   COMMAND_NEED_ARG("Either shell commands or END");
 
   if (strcasecmp(copy, "END")== 0) {
-    if (worker->tmpf) {
-      if ((status = apr_file_name_get((const char **)&name, worker->tmpf)) != APR_SUCCESS) {
+    if (tmpf) {
+      if ((status = apr_file_name_get((const char **)&name, tmpf)) != APR_SUCCESS) {
         return status;
       }
 
@@ -3331,8 +3332,8 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       }
 
       /* close file */
-      apr_file_close(worker->tmpf);
-      worker->tmpf = NULL;
+      apr_file_close(tmpf);
+      module_set_config(worker->config, apr_pstrdup(ptmp, "SH"), NULL);
 
       /* exec file */
       old = self->name;
@@ -3344,8 +3345,8 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
     }
   }
   else {
-    if (!worker->tmpf) {
-      if ((status = apr_file_mktemp(&worker->tmpf, name, 
+    if (!tmpf) {
+      if ((status = apr_file_mktemp(&tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
 				    APR_EXCL, worker->pbody))
 	  != APR_SUCCESS) {
@@ -3354,14 +3355,15 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 	return status;
       }
     }
+    module_set_config(worker->config, apr_pstrdup(ptmp, "SH"), tmpf);
     
     len = strlen(copy);
-    if ((status = file_write(worker->tmpf, copy, len)) != APR_SUCCESS) {
+    if ((status = file_write(tmpf, copy, len)) != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not write to temp file");
       return status;
     }
     len = 1;
-    if ((status = file_write(worker->tmpf, "\n", len)) != APR_SUCCESS) {
+    if ((status = file_write(tmpf, "\n", len)) != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not write to temp file");
       return status;
     }
