@@ -1,6 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.5
+  *) httest: Rename regexec, else a loaded transport module wich do use the
+             posxi pcre will fail, because it will possible call the httest
+	     regexec.
+
   *) httest: Bugfix found segfault thrown on illegal arguments. Reported by
              Eva Ramon.
 

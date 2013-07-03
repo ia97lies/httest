@@ -1,5 +1,8 @@
 TODO List
 ---------
++ Naming
+  - Tag all public httest functions with a namespace or capsulate them in structures
+
 + Core
   - Develop a virtual maschine for httest to improve script execution
 
@@ -31,7 +34,7 @@ TODO List
 
 + Scanning
   - Parameterized scripts
-  - XSS, Slowloris, SQL injection, ... snipplets
+  - Slowloris
   - Detect http infrastructure like owa, sharepoint, twiki, ...
 
 + htproxy
@@ -48,5 +51,3 @@ TODO List
   - Clean up unused EXPECT/MATCH after a _ERROR ... _END 
   - Firefox plugin
   - To display version do shortcut it to -V (htremote, httest, htnlm, ...)
-  - REQUIRE_VERSION <version> do fail if running httest are older.
-    -> "error: 10: httest minimum version 2.2.6 required, but version 2.1.5 detected!"
