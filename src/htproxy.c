@@ -73,7 +73,7 @@ typedef struct self_s {
   int port;
   worker_t *client;
   char *url_filter;
-  regex_t *url_filter_regex;
+  htt_regex_t *url_filter_regex;
   apr_thread_mutex_t *mutex;
   char *host_var;
   char *port_var;
@@ -712,7 +712,7 @@ static apr_status_t do_status_line(self_t *self, worker_t *worker,
  */
 static int do_check_url(self_t *self, const char *url) {
   if (self->url_filter_regex) {
-    if ((regexec(self->url_filter_regex, url, strlen(url), 0, NULL, 0) == 0)) {
+    if ((htt_regexec(self->url_filter_regex, url, strlen(url), 0, NULL, 0) == 0)) {
       return 0;
     }
   }
@@ -1137,7 +1137,7 @@ int proxy(self_t *self) {
   int i = 0;
   int off;
   const char *err;
-  regex_t *compiled;
+  htt_regex_t *compiled;
   global_t global;
     
   if ((status = apr_threadattr_create(&tattr, self->pool)) != APR_SUCCESS) {
@@ -1203,7 +1203,7 @@ int proxy(self_t *self) {
     this->pool = client->pbody;
     this->client = client;
     if (this->url_filter &&
-	(compiled = pregcomp(self->pool, this->url_filter, &err, &off))) {
+	(compiled = htt_regexcomp(self->pool, this->url_filter, &err, &off))) {
       this->url_filter_regex = compiled;
     }
     /* CS BEGIN */

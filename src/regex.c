@@ -19,7 +19,7 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Implementation of the HTTP Test Tool regex.
+ * Implementation of the HTTP Test Tool htt_regex.
  */
 
 /************************************************************************
@@ -42,7 +42,7 @@
  * Definitions 
  ***********************************************************************/
 
-struct regex_s {
+struct htt_regex_s {
   const char *pattern;
   int match;
   void *re_pcre;
@@ -59,7 +59,7 @@ struct regex_s {
  * Forward declaration 
  ***********************************************************************/
 
-static apr_status_t regex_cleanup(void *preg); 
+static apr_status_t htt_regex_cleanup(void *preg); 
 
 
 /************************************************************************
@@ -76,9 +76,9 @@ static apr_status_t regex_cleanup(void *preg);
  *
  * @return regular express on success else NULL
  */
-regex_t *pregcomp(apr_pool_t * p, const char *pattern,
+htt_regex_t *htt_regexcomp(apr_pool_t * p, const char *pattern,
                   const char **error, int *erroff) {
-  regex_t *preg = apr_palloc(p, sizeof *preg);
+  htt_regex_t *preg = apr_palloc(p, sizeof *preg);
 
   preg->match = 0;
   preg->pattern = apr_pstrdup(p, pattern);
@@ -92,7 +92,7 @@ regex_t *pregcomp(apr_pool_t * p, const char *pattern,
 
   pcre_fullinfo((const pcre *)preg->re_pcre, NULL, PCRE_INFO_CAPTURECOUNT, &(preg->re_nsub));
 
-  apr_pool_cleanup_register(p, (void *) preg, regex_cleanup,
+  apr_pool_cleanup_register(p, (void *) preg, htt_regex_cleanup,
                             apr_pool_cleanup_null);
 
   return preg;
@@ -110,7 +110,7 @@ regex_t *pregcomp(apr_pool_t * p, const char *pattern,
  *
  * @return 0 on success
  */
-int regexec(regex_t * preg, const char *data, apr_size_t len,
+int htt_regexec(htt_regex_t * preg, const char *data, apr_size_t len,
             apr_size_t nmatch, regmatch_t pmatch[], int eflags) {
   int rc;
   int options = 0;
@@ -118,7 +118,7 @@ int regexec(regex_t * preg, const char *data, apr_size_t len,
   int small_ovector[POSIX_MALLOC_THRESHOLD * 3];
   int allocated_ovector = 0;
 
-  ((regex_t *) preg)->re_erroffset = (apr_size_t) (-1); /* Only has meaning after compile */
+  ((htt_regex_t *) preg)->re_erroffset = (apr_size_t) (-1); /* Only has meaning after compile */
 
   if (nmatch > 0) {
     if (nmatch <= POSIX_MALLOC_THRESHOLD) {
@@ -166,16 +166,16 @@ int regexec(regex_t * preg, const char *data, apr_size_t len,
  *
  * @return number of matches
  */
-int regdidmatch(regex_t * preg) {
+int htt_regexhits(htt_regex_t * preg) {
   return preg->match;
 }
 
 /**
- * return pattern of compiled regex
+ * return pattern of compiled htt_regex
  * @param preg IN regular expression
  * @return pattern
  */
-const char *regexpattern(regex_t *reg) {
+const char *htt_regexpattern(htt_regex_t *reg) {
   return reg->pattern;
 }
 
@@ -186,8 +186,8 @@ const char *regexpattern(regex_t *reg) {
  *
  * @return APR_SUCCESS
  */
-static apr_status_t regex_cleanup(void *preg) {
-  pcre_free(((regex_t *) preg)->re_pcre);
+static apr_status_t htt_regex_cleanup(void *preg) {
+  pcre_free(((htt_regex_t *) preg)->re_pcre);
   return APR_SUCCESS;
 }
 

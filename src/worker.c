@@ -598,12 +598,12 @@ go_out:
  * gets values from data and store it in the variable table
  *
  * @param worker IN thread data object
- * @param regexs IN table of regular expressions to get the values from data
+ * @param htt_regexs IN table of regular expressions to get the values from data
  * @param data IN data to match
  *
  * @return APR_SUCCESS
  */
-apr_status_t worker_match(worker_t * worker, apr_table_t * regexs, 
+apr_status_t worker_match(worker_t * worker, apr_table_t * htt_regexs, 
                           const char *data, apr_size_t len) {
   apr_table_entry_t *e;
   apr_table_entry_t *v;
@@ -626,8 +626,8 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
   apr_pool_create(&pool, NULL);
   vtbl = apr_table_make(pool, 2);
   
-  e = (apr_table_entry_t *) apr_table_elts(regexs)->elts;
-  for (i = 0; i < apr_table_elts(regexs)->nelts; ++i) {
+  e = (apr_table_entry_t *) apr_table_elts(htt_regexs)->elts;
+  for (i = 0; i < apr_table_elts(htt_regexs)->nelts; ++i) {
     /* prepare vars if multiple */
     apr_table_clear(vtbl);
     tmp = apr_pstrdup(pool, e[i].key);
@@ -645,7 +645,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * regexs,
     }
     
     if (e[i].val
-        && regexec((regex_t *) e[i].val, data, len, n + 1, regmatch,
+        && htt_regexec((htt_regex_t *) e[i].val, data, len, n + 1, regmatch,
                    PCRE_MULTILINE) == 0) {
       v = (apr_table_entry_t *) apr_table_elts(vtbl)->elts;
       for (j = 0; j < n; j++) {
@@ -677,12 +677,12 @@ error:
  * checks if data contains a given pattern
  *
  * @param self IN thread data object
- * @param regexs IN table of regular expressions
+ * @param htt_regexs IN table of regular expressions
  * @param data IN data to check
  *
  * @return APR_SUCCESS
  */
-apr_status_t worker_expect(worker_t * self, apr_table_t * regexs, 
+apr_status_t worker_expect(worker_t * self, apr_table_t * htt_regexs, 
                            const char *data, apr_size_t len) {
   apr_table_entry_t *e;
   int i;
@@ -691,10 +691,10 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * regexs,
     return APR_SUCCESS;
   }
 
-  e = (apr_table_entry_t *) apr_table_elts(regexs)->elts;
-  for (i = 0; i < apr_table_elts(regexs)->nelts; ++i) {
+  e = (apr_table_entry_t *) apr_table_elts(htt_regexs)->elts;
+  for (i = 0; i < apr_table_elts(htt_regexs)->nelts; ++i) {
     if (e[i].val
-        && regexec((regex_t *) e[i].val, data, len, 0, NULL,
+        && htt_regexec((htt_regex_t *) e[i].val, data, len, 0, NULL,
                    PCRE_MULTILINE) == 0) {
     }
   }
@@ -718,9 +718,9 @@ static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match,
 
   e = (apr_table_entry_t *) apr_table_elts(match)->elts;
   for (i = 0; i < apr_table_elts(match)->nelts; ++i) {
-    regex_t *regex = (regex_t *) e[i].val;
-    if (!regdidmatch(regex)) {
-      worker_log(worker, LOG_ERR, "%s: Did expect %s", namespace, regexpattern(regex));
+    htt_regex_t *htt_regex = (htt_regex_t *) e[i].val;
+    if (!htt_regexhits(htt_regex)) {
+      worker_log(worker, LOG_ERR, "%s: Did expect %s", namespace, htt_regexpattern(htt_regex));
       if (status == APR_SUCCESS) {
         status = APR_EINVAL;
       }
@@ -751,15 +751,15 @@ static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect,
 
   e = (apr_table_entry_t *) apr_table_elts(expect)->elts;
   for (i = 0; i < apr_table_elts(expect)->nelts; ++i) {
-    regex_t *regex = (regex_t *) e[i].val;
-    if (e[i].key[0] != '!' && !regdidmatch(regex)) {
+    htt_regex_t *htt_regex = (htt_regex_t *) e[i].val;
+    if (e[i].key[0] != '!' && !htt_regexhits(htt_regex)) {
       worker_log(worker, LOG_ERR, "%s: Did expect \"%s\"", namespace, 
-	         regexpattern(regex));
+	         htt_regexpattern(htt_regex));
       if (status == APR_SUCCESS) {
         status = APR_EINVAL;
       }
     }
-    if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
+    if (e[i].key[0] == '!' && htt_regexhits((htt_regex_t *) e[i].val)) {
       worker_log(worker, LOG_ERR, "%s: Did not expect \"%s\"", namespace, 
 	         &e[i].key[1]);
       if (status == APR_SUCCESS) {
@@ -878,12 +878,12 @@ apr_status_t worker_check_error(worker_t *worker, apr_status_t status) {
     status = APR_SUCCESS;
     e = (apr_table_entry_t *) apr_table_elts(worker->expect.error)->elts;
     for (i = 0; i < apr_table_elts(worker->expect.error)->nelts; ++i) {
-      if (e[i].key[0] != '!' && !regdidmatch((regex_t *) e[i].val)) {
+      if (e[i].key[0] != '!' && !htt_regexhits((htt_regex_t *) e[i].val)) {
 	worker_log(worker, LOG_ERR, "EXPECT: Did expect error \"%s\"", e[i].key);
 	status = APR_EINVAL;
 	goto error;
       }
-      if (e[i].key[0] == '!' && regdidmatch((regex_t *) e[i].val)) {
+      if (e[i].key[0] == '!' && htt_regexhits((htt_regex_t *) e[i].val)) {
 	worker_log(worker, LOG_ERR, "EXPECT: Did not expect error \"%s\"", &e[i].key[1]);
 	status = APR_EINVAL;
 	goto error;
@@ -896,7 +896,7 @@ apr_status_t worker_check_error(worker_t *worker, apr_status_t status) {
     status = APR_SUCCESS;
     e = (apr_table_entry_t *) apr_table_elts(worker->match.error)->elts;
     for (i = 0; i < apr_table_elts(worker->match.error)->nelts; ++i) {
-      if (!regdidmatch((regex_t *) e[i].val)) {
+      if (!htt_regexhits((htt_regex_t *) e[i].val)) {
 	worker_log(worker, LOG_ERR, "MATCH error: Did expect %s", e[i].key);
 	status = APR_EINVAL;
       }
@@ -1959,14 +1959,14 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   char *last;
   char *type;
   char *match;
-  regex_t *compiled;
+  htt_regex_t *compiled;
   const char *err;
   int off;
   char *copy;
   char *interm;
   apr_pool_t *pool;
 
-  COMMAND_NEED_ARG("Type and regex not specified");
+  COMMAND_NEED_ARG("Type and htt_regex not specified");
 
   type = apr_strtok(copy, " ", &last);
   
@@ -2002,7 +2002,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     ++interm;
   }
   
-  if (!(compiled = pregcomp(pool, interm, &err, &off))) {
+  if (!(compiled = htt_regexcomp(pool, interm, &err, &off))) {
     worker_log(worker, LOG_ERR, "EXPECT regcomp failed: \"%s\"", last);
     return APR_EINVAL;
   }
@@ -2068,13 +2068,13 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   char *type;
   char *match;
   char *vars;
-  regex_t *compiled;
+  htt_regex_t *compiled;
   const char *err;
   int off;
   char *copy;
   apr_pool_t *pool;
 
-  COMMAND_NEED_ARG("Type, regex and variable not specified");
+  COMMAND_NEED_ARG("Type, htt_regex and variable not specified");
 
   type = apr_strtok(copy, " ", &last);
   
@@ -2113,7 +2113,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if (!(compiled = pregcomp(pool, match, &err, &off))) {
+  if (!(compiled = htt_regexcomp(pool, match, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }
@@ -2177,13 +2177,13 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   char *type;
   char *grep;
   char *vars;
-  regex_t *compiled;
+  htt_regex_t *compiled;
   const char *err;
   int off;
   char *copy;
   apr_pool_t *pool;
 
-  COMMAND_NEED_ARG("Type, regex and variable not specified");
+  COMMAND_NEED_ARG("Type, htt_regex and variable not specified");
 
   type = apr_strtok(copy, " ", &last);
   
@@ -2222,7 +2222,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if (!(compiled = pregcomp(pool, grep, &err, &off))) {
+  if (!(compiled = htt_regexcomp(pool, grep, &err, &off))) {
     worker_log(worker, LOG_ERR, "MATCH regcomp failed: %s", last);
     return APR_EINVAL;
   }

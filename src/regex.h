@@ -19,24 +19,24 @@
  *
  * @Author christian liesch <liesch@gmx.ch>
  *
- * Interface of the HTTP Test Tool regex.
+ * Interface of the HTTP Test Tool htt_regex.
  */
 
 #ifndef HTTEST_REGEX_H
 #define HTTEST_REGEX_H
 
-typedef struct regex_s regex_t;
+typedef struct htt_regex_s htt_regex_t;
 typedef struct regmatch_s regmatch_t;
 struct regmatch_s {
   int rm_so;
   int rm_eo;
 };
 
-regex_t *pregcomp(apr_pool_t * p, const char *pattern,
+htt_regex_t *htt_regexcomp(apr_pool_t * p, const char *pattern,
                   const char **error, int *erroff); 
-int regexec(regex_t * preg, const char *data, apr_size_t len,
+int htt_regexec(htt_regex_t * preg, const char *data, apr_size_t len,
             apr_size_t nmatch, regmatch_t pmatch[], int eflags); 
-int regdidmatch(regex_t * preg); 
-const char *regexpattern(regex_t *reg);
+int htt_regexhits(htt_regex_t * preg); 
+const char *htt_regexpattern(htt_regex_t *reg);
 
 #endif

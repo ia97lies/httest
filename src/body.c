@@ -281,7 +281,7 @@ apr_status_t command_IF(command_t * self, worker_t * worker, char *data,
     char *middle;
     const char *err;
     int off;
-    regex_t *compiled;
+    htt_regex_t *compiled;
     apr_size_t len;
     char **argv;
     int i = 0;
@@ -306,13 +306,13 @@ apr_status_t command_IF(command_t * self, worker_t * worker, char *data,
     }
    
     if (strcmp(middle, "MATCH") == 0) {
-      if (!(compiled = pregcomp(ptmp, right, &err, &off))) {
+      if (!(compiled = htt_regexcomp(ptmp, right, &err, &off))) {
 	worker_log(worker, LOG_ERR, "IF MATCH regcomp failed: %s", right);
 	return APR_EINVAL;
       }
       len = strlen(left);
-      if ((regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) == 0 && !not) ||
-	  (regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) != 0 && not)) {
+      if ((htt_regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) == 0 && !not) ||
+	  (htt_regexec(compiled, left, len, 0, NULL, PCRE_MULTILINE) != 0 && not)) {
 	doit = 1;
       }
     }
@@ -716,7 +716,7 @@ apr_status_t command_ERROR(command_t *self, worker_t *worker, char *data,
   char *copy;
   char **argv;
   char *status_str;
-  regex_t *compiled;
+  htt_regex_t *compiled;
   const char *err;
   int off;
 
@@ -724,7 +724,7 @@ apr_status_t command_ERROR(command_t *self, worker_t *worker, char *data,
  
  if ((status = my_tokenize_to_argv(copy, &argv, ptmp, 0)) == APR_SUCCESS) {
     if (!argv[0]) {
-      worker_log(worker, LOG_ERR, "No argument found, need an regex for expected errof.");
+      worker_log(worker, LOG_ERR, "No argument found, need an htt_regex for expected errof.");
       return APR_EINVAL;
     }
   }
@@ -734,7 +734,7 @@ apr_status_t command_ERROR(command_t *self, worker_t *worker, char *data,
   }
 
   /* store value by his index */
-  if (!(compiled = pregcomp(ptmp, argv[0], &err, &off))) {
+  if (!(compiled = htt_regexcomp(ptmp, argv[0], &err, &off))) {
     worker_log(worker, LOG_ERR, "ERROR condition compile failed: \"%s\"", argv[0]);
     return APR_EINVAL;
   }
@@ -748,7 +748,7 @@ apr_status_t command_ERROR(command_t *self, worker_t *worker, char *data,
   status = body->interpret(body, worker, NULL);
   
   status_str = my_status_str(ptmp, status);
-  if (regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
+  if (htt_regexec(compiled, status_str, strlen(status_str), 0, NULL, 0) != 0) {
     worker_log(worker, LOG_ERR, "Did expect error \"%s\" but got \"%s\"", argv[0], 
 	             status_str);
     return APR_EINVAL;
