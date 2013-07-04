@@ -1,6 +1,8 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.5
+  *) httest: Bugfix possible deadlock on read.
+
   *) httest: Rename regexec, else a loaded transport module wich do use the
              posxi pcre will fail, because it will possible call the httest
 	     regexec.

@@ -94,7 +94,6 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
   allocator = apr_pool_allocator_get(pool);
   apr_allocator_max_free_set(allocator, 1024*1024);
   (*sockreader)->pool = pool;
-  apr_pool_create(&(*sockreader)->pool, pool);
 
   if (len > BLOCK_MAX) {
     return APR_ENOMEM;
