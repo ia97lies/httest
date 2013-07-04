@@ -1377,12 +1377,10 @@ void worker_log_buf(worker_t * worker, int mode, char dir, const char *buf,
  * Read headers from transport
  * @param worker IN thread data object
  * @param sockreader IN reader
- * @param pool IN 
  * @return apr status
  */
 static apr_status_t worker_get_headers(worker_t *worker, 
-                                       sockreader_t *sockreader, 
-                                       apr_pool_t *pool) {
+                                       sockreader_t *sockreader) {
   apr_status_t status;
   char *line;
   char *last;
@@ -1447,7 +1445,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   char *buf;
   apr_status_t status;
   sockreader_t *sockreader;
-  apr_pool_t *pool;
   char *var = NULL;
   const char *val = "";
   apr_size_t len;
@@ -1459,8 +1456,6 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
   len = 0;
 
   COMMAND_OPTIONAL_ARG;
-
-  apr_pool_create(&pool, NULL);
 
   if ((status = worker_flush(worker, ptmp)) != APR_SUCCESS) {
     goto out_err;
@@ -1574,7 +1569,7 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
  
-  status = worker_get_headers(worker, sockreader, pool);
+  status = worker_get_headers(worker, sockreader);
 
 http_0_9:
   if (status == APR_SUCCESS) {
@@ -1624,7 +1619,7 @@ http_0_9:
     if ((status = htt_run_read_buf(worker, buf, len)) != APR_SUCCESS) {
       goto out_err;
     }
-    if ((status = worker_handle_buf(worker, pool, buf, len)) != APR_SUCCESS) {
+    if ((status = worker_handle_buf(worker, ptmp, buf, len)) != APR_SUCCESS) {
       goto out_err;
     }
     if (recorder->on == RECORDER_RECORD && 
@@ -1637,7 +1632,7 @@ http_0_9:
     }
     if (doreadtrailing) {
       /* read trailing headers */
-      if ((status = worker_get_headers(worker, sockreader, pool)) != APR_SUCCESS) {
+      if ((status = worker_get_headers(worker, sockreader)) != APR_SUCCESS) {
         worker_log(worker, LOG_ERR, "Missing trailing empty header(s) after chunked encoded body");
       }
     }
@@ -1669,8 +1664,6 @@ out_err:
    * Give modules a chance to cleanup stuff after _WAIT
    */
   htt_run_WAIT_end(worker, status);
-
-  apr_pool_destroy(pool);
   return status;
 }
 
@@ -3066,7 +3059,6 @@ apr_status_t command_LOG_LEVEL_GET(command_t *self, worker_t *worker, char *data
 apr_status_t command_RECV(command_t *self, worker_t *worker, char *data, 
                           apr_pool_t *ptmp) {
   char *copy;
-  apr_pool_t *pool;
   apr_status_t status;
   apr_size_t recv_len;
   apr_size_t peeklen;
@@ -3102,8 +3094,6 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
     recv_len = apr_atoi64(val);
   }
 
-  apr_pool_create(&pool, NULL);
-
   if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
     worker->socket->peeklen = 0;
@@ -3137,7 +3127,7 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
     }
   }
 
-  if ((status = worker_handle_buf(worker, pool, buf, recv_len)) 
+  if ((status = worker_handle_buf(worker, ptmp, buf, recv_len)) 
       != APR_SUCCESS) {
     goto out_err;
   }
@@ -3146,7 +3136,6 @@ out_err:
   if (strcasecmp(last, "DO_NOT_CHECK") != 0) {
     status = worker_assert(worker, status);
   }
-  apr_pool_destroy(pool);
 
   return status;
 }
@@ -3162,7 +3151,6 @@ out_err:
  */
 apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data, 
                               apr_pool_t *ptmp) {
-  apr_pool_t *pool;
   apr_status_t status;
   apr_size_t peeklen;
   apr_size_t len;
@@ -3171,8 +3159,6 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
   char *copy;
 
   COMMAND_OPTIONAL_ARG;
-
-  apr_pool_create(&pool, NULL);
 
   if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;
@@ -3192,7 +3178,7 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
 
   if (buf) {
     len = strlen(buf);
-    if ((status = worker_handle_buf(worker, pool, buf, len)) 
+    if ((status = worker_handle_buf(worker, ptmp, buf, len)) 
 	!= APR_SUCCESS) {
       goto out_err;
     }
@@ -3202,7 +3188,6 @@ out_err:
   if (strcasecmp(copy, "DO_NOT_CHECK") != 0) {
     status = worker_assert(worker, status);
   }
-  apr_pool_destroy(pool);
 
   return status;
 }
