@@ -95,23 +95,21 @@ static void appender_std_prefix(appender_std_t *std, int mode, const char *pos,
     }
   }
 
-  if (mode != LOG_ERR) {
-    if (std->flags & APPENDER_STD_THREAD_NO) {
-      apr_file_printf(std->out, "\n%d:", thread);
+  if (std->flags & APPENDER_STD_THREAD_NO) {
+    apr_file_printf(std->out, "\n%d:", thread);
+  }
+  else {
+    apr_file_printf(std->out, "\n");
+  }
+  if (mode == LOG_ERR) {
+    if (pos) {
+      apr_file_printf(std->out, "%s: error: ", pos);
     }
     else {
-      apr_file_printf(std->out, "\n");
+      apr_file_printf(std->out, "error: ");
     }
   }
   else {
-    if (pos) {
-      apr_file_printf(std->out, "\n%s: error: ", pos);
-    }
-    else {
-      apr_file_printf(std->out, "\nerror: ");
-    }
-  }
-  if (mode != LOG_ERR) {
     int i;
     for (i = 0; i < group; i++) {
       apr_file_printf(std->out, APPENDER_STD_PFX);
