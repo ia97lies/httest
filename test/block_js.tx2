@@ -1,0 +1,3 @@
+
+1:block_js.hte:15: error: block_js.hte:11:ReferenceError: ustForFun is not defined
+1:block_js.hte:15: error: CLT0-0 Invalid argument(22)

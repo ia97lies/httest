@@ -1,0 +1,3 @@
+
+0:var_expect.hte:3: error: EXPECT var: Did expect "^Do not match TMP variable$"
+0:var_expect.hte:3: error: CLT0-0 Invalid argument(22)

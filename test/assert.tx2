@@ -1,0 +1,3 @@
+
+0:assert.hte:2: error: Did expect "100 == 101"
+0:assert.hte:2: error: CLT0-0 Invalid argument(22)

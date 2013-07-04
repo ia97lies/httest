@@ -1,0 +1,4 @@
+
+1:ssl_get_wrong_cert.hte:20: error: Handshake failed: error:140890C7:SSL routines:SSL3_GET_CLIENT_CERTIFICATE:peer did not return a certificate
+2:ssl_get_wrong_cert.hte:12: error: EXPECT .: Did expect "HTTP/1.1 200 OK"
+2:ssl_get_wrong_cert.hte:12: error: CLT0-0 Software caused connection abort(103)

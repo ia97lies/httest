@@ -1,0 +1,3 @@
+
+1:exec_expect.hte:8: error: EXPECT exec: Did not expect "foobar"
+1:exec_expect.hte:8: error: CLT0-0 Invalid argument(22)

@@ -232,6 +232,7 @@ EXTRA_DIST= \
 	run_all.sh \
 	run_color.sh \
 	run_errors.sh \
+	run_errors_thread_no.sh \
 	run_help.sh \
 	run_lib.sh \
 	run_ntlm.sh \
@@ -307,6 +308,7 @@ EXTRA_DIST= \
 	test_check_coredumps.sh \
 	test_run_all.sh \
 	test_run_errors.sh \
+	test_run_errors_thread_no.sh \
 	test_run_help.sh \
 	test_run_ntlm.sh \
 	test_run_shell.sh \

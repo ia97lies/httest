@@ -11,13 +11,14 @@ function run_all {
     printf "$i/$count $(date) $E "
     CORES_PRE=`ls core* 2>/dev/null | wc -l` 
     run_single $E .out.txt
-    if [ $? -eq 1 ]; then
+    ret=$?
+    if [ $ret -eq 1 ]; then
       printf "...\e[1;31mFAILED\e[0m\n\n"
       tail .out.txt
       mv .out.txt $E.error
       let errors++
       echo
-    elif [ $? -eq 2 ]; then
+    elif [ $ret -eq 2 ]; then
       printf "...\e[1;33mSKIP\e[0m\n"
     else
       printf "...\e[1;32mOK\e[0m\n"

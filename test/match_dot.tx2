@@ -1,0 +1,3 @@
+
+2:match_dot.hte:12: error: MATCH .: Did expect AS(.) - (.)==
+2:match_dot.hte:12: error: CLT0-0 Invalid argument(22)

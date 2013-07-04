@@ -1,0 +1,4 @@
+
+0:milestone.hte:4: error: EXPECT var: Did expect "bla"
+0:milestone.hte:2: error: CLT0-0 Invalid argument(22)
+0:milestone.hte:6: error: milestons: 2; success: 1; failed: 1
