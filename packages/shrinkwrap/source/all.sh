@@ -800,10 +800,23 @@ EndGlobal
 EOF
   
   # get header file names
-  cd "$TOP/src/"
-  H_FILES=`ls *.h | awk '
+  cd "$TOP/src"
+  H_FILES_SRC=`ls *.h | awk '
     { printf("%s ", $0); }
   '`
+  cd "$TOP/include"
+  for DIR in */; do
+    DIR=${DIR%*/}
+	INCLUDE_DIRS="$INCLUDE_DIRS $DIR"
+	cd "$TOP/include/$DIR"
+	HEADERS=`ls *.h | awk -v dir="$DIR" '
+      { printf("%s\\\\\\\\%s ", dir, $0); }
+	'`
+	H_FILES_INCLUDE="$HFILES_INCLUDE $HEADERS"
+  done
+  echo "INCLUDE_DIRS: '$INCLUDE_DIRS'"
+  H_FILES="$H_FILES_SRC $H_FILES_INCLUDE"
+  echo "H_FILES: '$H_FILES'"
   
   # create ht* projects
   for PROJECT in $PROJECTS; do
@@ -879,6 +892,10 @@ EOF
   cp "$TOP/src/"*.c "$WINSLN/src"
   cp "$TOP/src/"*.h "$WINSLN/src"
   #cp "$TOP/tools/"*.c "$WINSLN/src"
+  for DIR in $INCLUDE_DIRS; do
+    mkdir "$WINSLN/src/$DIR"
+    cp "$TOP/include/$DIR/"*.h "$WINSLN/src/$DIR"
+  done
   echo -e "#define PACKAGE_VERSION \"$HTT_VER\"\n#define VERSION \"$HTT_VER\""\
     >"$WINSLN/src/config.h"
   
