@@ -4,13 +4,10 @@
 #include "stdio.h"
 #include "string.h"
 
-char *gbuf = NULL;
+int i = 0;
 
 static void* foo_custom_handle() {
-  if (!gbuf) {
-    gbuf = malloc(10000);
-  }
-  return gbuf;
+  return &i;
 }
 
 static apr_status_t foo_configure(void *custom, const char *buf) {
@@ -25,7 +22,12 @@ static apr_status_t foo_read(void *custom, char *buf, apr_size_t *len) {
 }
 
 static apr_status_t foo_read2(void *custom, char *buf, apr_size_t *len) {
+  /*
   const char *str = "GET / HTTP/1.1\r\n\r\n";
+  */
+  char str[1024];
+  ++i;
+  sprintf(str, "GET /%d HTTP/1.1 \r\n\r\n", i);
   *len = strlen(str);
   memcpy(buf, str, *len);
   return APR_SUCCESS;

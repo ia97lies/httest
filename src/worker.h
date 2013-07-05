@@ -109,7 +109,6 @@ struct worker_s {
   apr_file_t *err;
   /* filename of current script part */
   const char *filename;
-  apr_file_t *tmpf;
 #define FLAGS_NONE           0x00000000
 #define FLAGS_PIPE           0x00000001
 #define FLAGS_CHUNKED        0x00000002
