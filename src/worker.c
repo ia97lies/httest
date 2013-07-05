@@ -3323,8 +3323,6 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 
       /* close file */
       apr_file_close(sh->tmpf);
-      module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), NULL);
-      apr_pool_destroy(sh->pool);
 
       /* exec file */
       old = self->name;
@@ -3333,6 +3331,8 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       self->name = old;
       
       apr_file_remove(name, ptmp);
+      module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), NULL);
+      apr_pool_destroy(sh->pool);
     }
   }
   else {
@@ -3343,7 +3343,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       sh->pool = pool;
       if ((status = apr_file_mktemp(&sh->tmpf, name, 
 	                            APR_CREATE | APR_READ | APR_WRITE | 
-				    APR_EXCL, worker->pbody))
+				    APR_EXCL, pool))
 	  != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Could not mk temp file %s(%d)", 
 	           my_status_str(ptmp, status), status);
