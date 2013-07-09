@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.6
+  *) httest: Bugfix racecondition in _SH
+
+
 Changes with httest 2.4.5
   *) httest: Add missing thread numbers on error if thread number log is
              turned on.

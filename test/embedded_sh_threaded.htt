@@ -1,0 +1,14 @@
+INCLUDE $TOP/test/config.htb
+
+
+CLIENT 190
+
+  _MATCH exec "(foobar)" BAR
+  _MATCH exec "(blabla)" BLA
+  _SH #!/bin/bash
+  _SH echo foobar
+  _SH echo blabla 
+  _SH END
+
+END
+
