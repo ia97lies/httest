@@ -3294,7 +3294,6 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
                         apr_pool_t *ptmp) {
   char *copy;
   apr_size_t len;
-  char *old;
 
 #ifdef _WINDOWS
   char *name = apr_pstrdup(worker->pbody, "httXXXXXX.bat");
@@ -3325,12 +3324,9 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       apr_file_close(sh->tmpf);
 
       /* exec file */
-      old = self->name;
-      self->name = apr_pstrdup(ptmp, "_EXEC");
-      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, exec_prefix, name, NULL), ptmp);
-      self->name = old;
+      status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, exec_prefix, name, NULL), sh->pool);
       
-      apr_file_remove(name, ptmp);
+      apr_file_remove(name, sh->pool);
       module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), NULL);
       apr_pool_destroy(sh->pool);
     }
