@@ -125,7 +125,6 @@ struct worker_s {
 #define FLAGS_SKIP_FLUSH     0x00002000
 #define FLAGS_LOADED_BLOCK   0x00004000
   int flags;
-  apr_proc_t proc;
   int cmd;
   int cmd_from;
   int cmd_to;

@@ -107,6 +107,12 @@ typedef struct sh_s {
   apr_file_t *tmpf;
 } sh_t;
 
+typedef struct exec_s {
+  apr_pool_t *pool;
+  apr_proc_t *proc;
+} exec_t;
+
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -463,16 +469,19 @@ static apr_status_t worker_buf_pipe_exec(worker_t *worker, char *buf,
   apr_status_t status = APR_SUCCESS;
   apr_exit_why_e exitwhy;
   int exitcode;
+  exec_t *exec = module_get_config(worker->config, "EXEC");
 
-  if ((status = file_write(worker->proc.in, buf, len))
+  if ((status = file_write(exec->proc->in, buf, len))
       != APR_SUCCESS) {
     return status;
   }
-  apr_file_close(worker->proc.in);
-  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  apr_file_close(exec->proc->in);
+  apr_proc_wait(exec->proc, &exitcode, &exitwhy, APR_WAIT);
   if (exitcode != 0) {
     status = APR_EGENERAL;
   }
+  module_set_config(worker->config, apr_pstrdup(exec->pool, "EXEC"), NULL);
+  apr_pool_destroy(exec->pool);
   return status;
 }
 
@@ -514,12 +523,13 @@ static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp,
   bufreader_t *br;
   apr_exit_why_e exitwhy;
   int exitcode;
+  exec_t *exec = module_get_config(worker->config, "EXEC");
 
   worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
   /* start write thread */
   write_buf_to_file.buf = *buf;
   write_buf_to_file.len = *len;
-  write_buf_to_file.fp = worker->proc.in;
+  write_buf_to_file.fp = exec->proc->in;
   if ((status = apr_threadattr_create(&tattr, ptmp)) != APR_SUCCESS) {
     goto out_err;
   }
@@ -536,19 +546,20 @@ static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp,
     goto out_err;
   }
   /* read from worker->proc.out to buf */
-  if ((status = bufreader_new(&br, worker->proc.out, worker->pbody)) == APR_SUCCESS) {
+  if ((status = bufreader_new(&br, exec->proc->out, worker->pbody)) == APR_SUCCESS) {
     bufreader_read_eof(br, buf, len);
   }
   if (status == APR_EOF) {
     status = APR_SUCCESS;
   }
   apr_thread_join(&tmp_status, thread);
-  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
+  apr_proc_wait(exec->proc, &exitcode, &exitwhy, APR_WAIT);
   if (exitcode != 0) {
     status = APR_EGENERAL;
     goto out_err;
   }
 out_err:
+  apr_pool_destroy(exec->pool);
   return status;
 }
 
@@ -2684,62 +2695,75 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     return status;
   }
 
-  if ((status = apr_proc_create(&worker->proc, progname, args, NULL, attr,
-                                worker->pbody)) != APR_SUCCESS) {
-    return status;
-  }
+  {
+    apr_pool_t *pool;
+    apr_proc_t *proc;
 
-  if (flags & FLAGS_PIPE) {
-    worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
-    if ((status = worker_file_to_http(worker, worker->proc.out, flags, ptmp)) 
-	!= APR_SUCCESS) {
-      return status;
+    apr_pool_create(&pool, NULL);
+    proc = apr_pcalloc(pool, sizeof(*proc));
+    if ((status = apr_proc_create(proc, progname, args, NULL, attr,
+            worker->pbody)) != APR_SUCCESS) {
+      goto exit;
     }
-  }
-  else if (worker->flags & FLAGS_PIPE_IN || worker->flags & FLAGS_FILTER) {
-    /* do not wait for proc termination here */
-    return status;
-  }
-  else {
-    apr_size_t len = 0;
-    char *buf = NULL;
 
-    worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
-    status = bufreader_new(&br, worker->proc.out, worker->pbody);
-    if (status == APR_SUCCESS || APR_STATUS_IS_EOF(status)) {
-      status = APR_SUCCESS;
-      bufreader_read_eof(br, &buf, &len);
+    if (flags & FLAGS_PIPE) {
+      worker_log(worker, LOG_DEBUG, "write stdout to http: %s", progname);
+      if ((status = worker_file_to_http(worker, proc->out, flags, ptmp)) 
+          != APR_SUCCESS) {
+        goto exit;
+      }
+    }
+    else if (worker->flags & FLAGS_PIPE_IN || worker->flags & FLAGS_FILTER) {
+      /* do not wait for proc termination here */
+      exec_t *exec = apr_pcalloc(pool, sizeof(*exec));
+      exec->pool = pool;
+      exec->proc = proc;
+      module_set_config(worker->config, apr_pstrdup(pool, "EXEC"), exec);
+      return status;
     }
     else {
-      return status;
+      apr_size_t len = 0;
+      char *buf = NULL;
+
+      worker_log(worker, LOG_DEBUG, "read stdin: %s", progname);
+      status = bufreader_new(&br, proc->out, worker->pbody);
+      if (status == APR_SUCCESS || APR_STATUS_IS_EOF(status)) {
+        status = APR_SUCCESS;
+        bufreader_read_eof(br, &buf, &len);
+      }
+      else {
+        goto exit;
+      }
+
+      if (buf) {
+        worker_log_buf(worker, LOG_INFO, '<', buf, len);
+        worker_match(worker, worker->match.exec, buf, len);
+        worker_match(worker, worker->grep.exec, buf, len);
+        worker_expect(worker, worker->expect.exec, buf, len);
+      }
+
+      status = worker_assert_match(worker, worker->match.exec, "MATCH exec", 
+          status);
+      status = worker_assert_expect(worker, worker->expect.exec, "EXPECT exec", 
+          status);
+      status = worker_assert_grep(worker, worker->grep.exec, "GREP exec", 
+          status);
     }
 
-    if (buf) {
-      worker_log_buf(worker, LOG_INFO, '<', buf, len);
-      worker_match(worker, worker->match.exec, buf, len);
-      worker_match(worker, worker->grep.exec, buf, len);
-      worker_expect(worker, worker->expect.exec, buf, len);
+    worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
+    apr_proc_wait(proc, &exitcode, &exitwhy, APR_WAIT);
+
+    apr_file_close(proc->in);
+    apr_file_close(proc->out);
+
+    if (exitcode != 0) {
+      status = APR_EGENERAL;
     }
-    
-    status = worker_assert_match(worker, worker->match.exec, "MATCH exec", 
-	                         status);
-    status = worker_assert_expect(worker, worker->expect.exec, "EXPECT exec", 
-	                          status);
-    status = worker_assert_grep(worker, worker->grep.exec, "GREP exec", 
-	                        status);
+
+exit:
+    apr_pool_destroy(pool);
+    return status;
   }
-
-  worker_log(worker, LOG_DEBUG, "wait for: %s", progname);
-  apr_proc_wait(&worker->proc, &exitcode, &exitwhy, APR_WAIT);
-
-  apr_file_close(worker->proc.in);
-  apr_file_close(worker->proc.out);
-
-  if (exitcode != 0) {
-    status = APR_EGENERAL;
-  }
-
-  return status;
 }
 
 /**
