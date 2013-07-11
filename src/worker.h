@@ -153,7 +153,6 @@ struct worker_s {
   apr_table_t *headers_filter;
   apr_table_t *headers_add;
   apr_table_t *headers;
-  apr_table_t *tmp_table;
   apr_hash_t *modules;
   apr_hash_t *blocks;
   apr_hash_t *sockets;

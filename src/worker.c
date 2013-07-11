@@ -2039,13 +2039,11 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
     var = apr_strtok(NULL, ")", &last);
     val = worker_var_get(worker, var);
     if (val) {
-      if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pbody, 1);
-      }
-      apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, match, (char *) compiled);
-      worker_expect(worker, worker->tmp_table, val, strlen(val));
-      return worker_assert_expect(worker, worker->tmp_table, "EXPECT var", 
+      apr_table_t *tmp_table;
+      tmp_table = apr_table_make(ptmp, 1);
+      apr_table_addn(tmp_table, match, (char *) compiled);
+      worker_expect(worker, tmp_table, val, strlen(val));
+      return worker_assert_expect(worker, tmp_table, "EXPECT var", 
 	                          APR_SUCCESS);
     }
     else {
@@ -2149,13 +2147,11 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
     var = apr_strtok(NULL, ")", &last);
     val = worker_var_get(worker, var);
     if (val) {
-      if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pbody, 1);
-      }
-      apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, vars, (char *) compiled);
-      worker_match(worker, worker->tmp_table, val, strlen(val));
-      return worker_assert_match(worker, worker->tmp_table, "MATCH var", 
+      apr_table_t *tmp_table;
+      tmp_table = apr_table_make(ptmp, 1);
+      apr_table_addn(tmp_table, vars, (char *) compiled);
+      worker_match(worker, tmp_table, val, strlen(val));
+      return worker_assert_match(worker, tmp_table, "MATCH var", 
 	                         APR_SUCCESS);
     }
     else {
@@ -2258,12 +2254,10 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
     var = apr_strtok(NULL, ")", &last);
     val = worker_var_get(worker, var);
     if (val) {
-      if (!worker->tmp_table) {
-	worker->tmp_table = apr_table_make(worker->pbody, 1);
-      }
-      apr_table_clear(worker->tmp_table);
-      apr_table_addn(worker->tmp_table, vars, (char *) compiled);
-      worker_match(worker, worker->tmp_table, val, strlen(val));
+      apr_table_t *tmp_table;
+      tmp_table = apr_table_make(ptmp, 1);
+      apr_table_addn(tmp_table, vars, (char *) compiled);
+      worker_match(worker, tmp_table, val, strlen(val));
     }
     else {
       /* this should cause an error? */
