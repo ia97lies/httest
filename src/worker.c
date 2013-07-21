@@ -88,6 +88,7 @@ typedef struct replacer_s {
   worker_t *worker;
 } replacer_t;
 
+#define RECORDER_CONFIG "RECORDER"
 typedef struct recorder_s {
   int on;
 #define RECORDER_OFF 0
@@ -102,11 +103,13 @@ typedef struct recorder_s {
   sockreader_t *sockreader;
 } recorder_t;
 
+#define SH_CONFIG "SH"
 typedef struct sh_s {
   apr_pool_t *pool;
   apr_file_t *tmpf;
 } sh_t;
 
+#define EXEC_CONFIG "EXEC"
 typedef struct exec_s {
   apr_pool_t *pool;
   apr_proc_t *proc;
@@ -162,10 +165,10 @@ void unlock(apr_thread_mutex_t *mutex) {
  * @return recoder
  */
 static recorder_t *worker_get_recorder(worker_t *worker) {
-  recorder_t *recorder = module_get_config(worker->config, "_RECORD");
+  recorder_t *recorder = module_get_config(worker->config, RECORDER_CONFIG);
   if (!recorder) {
     recorder = apr_pcalloc(worker->pbody, sizeof(recorder_t));
-    module_set_config(worker->config, "_RECORD", recorder);
+    module_set_config(worker->config, RECORDER_CONFIG, recorder);
   }
   return recorder;
 }
@@ -469,7 +472,7 @@ static apr_status_t worker_buf_pipe_exec(worker_t *worker, char *buf,
   apr_status_t status = APR_SUCCESS;
   apr_exit_why_e exitwhy;
   int exitcode;
-  exec_t *exec = module_get_config(worker->config, "EXEC");
+  exec_t *exec = module_get_config(worker->config, EXEC_CONFIG);
 
   if ((status = file_write(exec->proc->in, buf, len))
       != APR_SUCCESS) {
@@ -480,7 +483,7 @@ static apr_status_t worker_buf_pipe_exec(worker_t *worker, char *buf,
   if (exitcode != 0) {
     status = APR_EGENERAL;
   }
-  module_set_config(worker->config, apr_pstrdup(exec->pool, "EXEC"), NULL);
+  module_set_config(worker->config, apr_pstrdup(exec->pool, EXEC_CONFIG), NULL);
   apr_pool_destroy(exec->pool);
   return status;
 }
@@ -523,7 +526,7 @@ static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp,
   bufreader_t *br;
   apr_exit_why_e exitwhy;
   int exitcode;
-  exec_t *exec = module_get_config(worker->config, "EXEC");
+  exec_t *exec = module_get_config(worker->config, EXEC_CONFIG);
 
   worker_log(worker, LOG_DEBUG, "write to stdin, read from stdout");
   /* start write thread */
@@ -3322,7 +3325,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   char *exec_prefix = "./";
   int has_apr_file_perms_set = 1;
 #endif
-  sh_t *sh = module_get_config(worker->config, "SH");
+  sh_t *sh = module_get_config(worker->config, SH_CONFIG);
 
   apr_status_t status = APR_SUCCESS;
   
@@ -3345,7 +3348,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
       status = command_EXEC(self, worker, apr_pstrcat(worker->pbody, exec_prefix, name, NULL), sh->pool);
       
       apr_file_remove(name, sh->pool);
-      module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), NULL);
+      module_set_config(worker->config, apr_pstrdup(sh->pool, SH_CONFIG), NULL);
       apr_pool_destroy(sh->pool);
     }
   }
@@ -3364,7 +3367,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
 	return status;
       }
     }
-    module_set_config(worker->config, apr_pstrdup(sh->pool, "SH"), sh);
+    module_set_config(worker->config, apr_pstrdup(sh->pool, SH_CONFIG), sh);
     
     len = strlen(copy);
     if ((status = file_write(sh->tmpf, copy, len)) != APR_SUCCESS) {
@@ -4428,6 +4431,13 @@ apr_status_t transport_unregister(socket_t *socket, transport_t *transport) {
  */
 transport_t *transport_get_current(socket_t *socket) {
   return socket->transport;
+}
+
+/**
+ * Install hooks
+ */
+apr_status_t builtin_module_init(global_t *global) {
+  return APR_SUCCESS;
 }
 
 APR_HOOK_STRUCT(
