@@ -1,3 +1,5 @@
+@:SKIP $OS mac # sometimes no error printed
+
 INCLUDE $TOP/test/config.htb
 
 # runs exactly one time

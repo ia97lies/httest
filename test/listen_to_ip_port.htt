@@ -1,3 +1,5 @@
+@:SKIP $OS mac # cannot bind to 127.0.0.2
+
 INCLUDE $TOP/test/config.htb
 
 CLIENT
