@@ -1,5 +1,22 @@
 #!/bin/bash
 
+OS="unknown"
+if [ `uname -o 2>/dev/null` ]; then
+  if [ `uname -o` == "GNU/Linux" ]; then
+    OS="linux"
+  elif [ `uname -o` == "Cygwin" ]; then
+    OS="cygwin"
+  fi
+elif [ `uname -s` == "Darwin" ]; then
+  OS="mac"
+elif [ `uname -s` == "SunOS" ]; then
+  OS="solaris"
+fi
+if [ "$OS" == "unknown" ]; then
+  OS="linux"
+fi
+export OS
+
 function run_all {
   list=$1
   count=$2
