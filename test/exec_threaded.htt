@@ -1,3 +1,5 @@
+# mac: ulimit -S -n 2048
+
 INCLUDE $TOP/test/config.htb
 
 BLOCK doCallExec

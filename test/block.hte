@@ -1,3 +1,5 @@
+@:SKIP $OS mac # error messages can be different
+
 INCLUDE $TOP/test/config.htb
 
 INCLUDE block.htb

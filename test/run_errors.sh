@@ -13,6 +13,9 @@ function run_single {
   B=`echo $E | sed -e 's/\(.*\)\.hte/\1/'`
   if [ -f $B.txt ]; then
     ./run.sh -n $B.hte 2>/tmp/tmp.txt >/dev/null
+    if [ $? -eq 2 ]; then
+      return 2
+    fi
     cat /tmp/tmp.txt | sort >/tmp/tmpA.txt
     cat $B.txt | sort >/tmp/tmpB.txt
     diff -Bw /tmp/tmpA.txt /tmp/tmpB.txt >>$OUT

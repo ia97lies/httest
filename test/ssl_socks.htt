@@ -1,3 +1,6 @@
+# ssh key login must be configured for current user at localhost
+# mac: Remote Login (=ssh/sftp) must be activated under System Preferences => Sharing
+
 INCLUDE $TOP/test/config.htb
 
 DAEMON
