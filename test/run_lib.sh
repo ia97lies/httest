@@ -1,21 +1,22 @@
 #!/bin/bash
 
-OS="unknown"
+OS=linux
 if [ `uname -o 2>/dev/null` ]; then
   if [ `uname -o` == "GNU/Linux" ]; then
-    OS="linux"
+    OS=linux
   elif [ `uname -o` == "Cygwin" ]; then
-    OS="cygwin"
+    OS=win # (cygwin)
   fi
 elif [ `uname -s` == "Darwin" ]; then
-  OS="mac"
+  OS=mac
 elif [ `uname -s` == "SunOS" ]; then
-  OS="solaris"
-fi
-if [ "$OS" == "unknown" ]; then
-  OS="linux"
+  OS=solaris
 fi
 export OS
+SH=bash
+export SH
+BITS=`getconf LONG_BIT`
+export BITS
 
 function run_all {
   list=$1
