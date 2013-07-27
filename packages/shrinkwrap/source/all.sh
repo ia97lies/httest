@@ -707,6 +707,7 @@ function do_dummy_configure_htt {
 #
 function create_sln {
   SLN="httest-$HTT_VER-win-sln"
+  SLN_NIGHTLY="httest-nightly-win-sln"
   WINSLN="$TARGET/$SLN"
   rm -rf "$WINSLN"
   mkdir "$WINSLN"
@@ -916,6 +917,7 @@ EOF
   zip -r "$SLN.zip" "$SLN"
   echo -n "checking that visual studio solution has been created ... "  
   [ -f "$SLN.zip" ]
+  ln -s "$SLN.zip" "$SLN_NIGHTLY.zip"
   echo "ok"
 }
 
@@ -1037,6 +1039,7 @@ function do_basic_tests_htt {
 #
 function shrinkwrap {
   NAME=$1
+  NAME_NIGHLY=$2
   
   # clean
   DIR="$TARGET/$NAME"
@@ -1168,6 +1171,7 @@ EOF
   rm -f "$NAME.tar"
   echo -n "checking that tar.gz has been created ... "
   [ -f $DIR.tar.gz ]
+  ln -s $DIR.tar.gz $DIR_NIGHTLY.tar.gz
   echo "ok"
   
   # zip
@@ -1175,6 +1179,7 @@ EOF
     zip -r "$NAME.zip" "$NAME"
 	echo -n "checking that zip has been created ... "
     [ -f $DIR.zip ]
+    ln -s $DIR.zip $DIR_NIGHTLY.zip
 	echo "ok"
   fi
   print_ok
@@ -1202,9 +1207,10 @@ function do_shrinkwrap {
     SHORT_NAME="$OS-sparc-$BITS"
   fi
   NAME="httest-$HTT_VER-$SHORT_NAME"
+  NAME_NIGHTLY="httest-nightly-$SHORT_NAME"
   
   echo -n "shrink-wrap $NAME ... "
-  shrinkwrap "$NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  shrinkwrap "$NAME" "$NAME_NIGHLTY" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
   
 }
