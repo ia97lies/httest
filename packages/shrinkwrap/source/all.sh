@@ -1167,14 +1167,14 @@ EOF
   echo "ok"
   
   # tgz
-  cd "$DIR/.."
+  cd "$TARGET"
   tar cvf "$NAME.tar" "$NAME"
   gzip "$NAME.tar"
   rm -f "$NAME.tar"
   echo -n "checking that tar.gz has been created ... "
   [ -f $DIR.tar.gz ]
-  if [ ! -f $DIR_NIGHTLY.tar.gz ]; then
-    ln -s $DIR.tar.gz $DIR_NIGHTLY.tar.gz
+  if [ ! -f $NAME_NIGHTLY.tar.gz ]; then
+    ln -s $NAME.tar.gz $NAME_NIGHTLY.tar.gz
   fi
   echo "ok"
   
@@ -1183,8 +1183,8 @@ EOF
     zip -r "$NAME.zip" "$NAME"
 	echo -n "checking that zip has been created ... "
     [ -f $DIR.zip ]
-    if [ ! -f $DIR_NIGHTLY.zip ]; then
-      ln -s $DIR.zip $DIR_NIGHTLY.zip
+    if [ ! -f $NAME_NIGHTLY.zip ]; then
+      ln -s $NAME.zip $NAME_NIGHTLY.zip
     fi
 	echo "ok"
   fi
