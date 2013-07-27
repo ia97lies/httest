@@ -918,7 +918,7 @@ EOF
   echo -n "checking that visual studio solution has been created ... "  
   [ -f "$SLN.zip" ]
   if [ ! -f "$SLN_NIGHTLY.zip" ]; then
-    ln -s "$SLN.zip" "$SLN_NIGHTLY.zip"
+    cp "$SLN.zip" "$SLN_NIGHTLY.zip"
   fi
   echo "ok"
 }
@@ -1174,7 +1174,7 @@ EOF
   echo -n "checking that tar.gz has been created ... "
   [ -f $DIR.tar.gz ]
   if [ ! -f $NAME_NIGHTLY.tar.gz ]; then
-    ln -s $NAME.tar.gz $NAME_NIGHTLY.tar.gz
+    cp $NAME.tar.gz $NAME_NIGHTLY.tar.gz
   fi
   echo "ok"
   
@@ -1184,7 +1184,7 @@ EOF
 	echo -n "checking that zip has been created ... "
     [ -f $DIR.zip ]
     if [ ! -f $NAME_NIGHTLY.zip ]; then
-      ln -s $NAME.zip $NAME_NIGHTLY.zip
+      cp $NAME.zip $NAME_NIGHTLY.zip
     fi
 	echo "ok"
   fi
