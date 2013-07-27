@@ -917,7 +917,9 @@ EOF
   zip -r "$SLN.zip" "$SLN"
   echo -n "checking that visual studio solution has been created ... "  
   [ -f "$SLN.zip" ]
-  ln -s "$SLN.zip" "$SLN_NIGHTLY.zip"
+  if [ ! -f "$SLN_NIGHTLY.zip" ]; then
+    ln -s "$SLN.zip" "$SLN_NIGHTLY.zip"
+  fi
   echo "ok"
 }
 
@@ -1171,7 +1173,9 @@ EOF
   rm -f "$NAME.tar"
   echo -n "checking that tar.gz has been created ... "
   [ -f $DIR.tar.gz ]
-  ln -s $DIR.tar.gz $DIR_NIGHTLY.tar.gz
+  if [ ! -f $DIR_NIGHTLY.tar.gz ]; then
+    ln -s $DIR.tar.gz $DIR_NIGHTLY.tar.gz
+  fi
   echo "ok"
   
   # zip
@@ -1179,7 +1183,9 @@ EOF
     zip -r "$NAME.zip" "$NAME"
 	echo -n "checking that zip has been created ... "
     [ -f $DIR.zip ]
-    ln -s $DIR.zip $DIR_NIGHTLY.zip
+    if [ ! -f $DIR_NIGHTLY.zip ]; then
+      ln -s $DIR.zip $DIR_NIGHTLY.zip
+    fi
 	echo "ok"
   fi
   print_ok
