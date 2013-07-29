@@ -223,7 +223,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", payload_len, status);
   if (status != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not read payload");
-	goto exit
+	goto exit;
   }
 
   if (masked) {
