@@ -106,9 +106,9 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   const char *type_param = store_get(worker->params, "1");
   const char *len_param = store_get(worker->params, "2");
 
-  if (!worker->socket && !worker->socket->sockreader) {
+  if (!worker->socket->sockreader) {
     worker_log(worker, LOG_ERR, 
-               "Websockets need a open HTTP stream");
+               "Websockets need a open HTTP stream, use _SOCKET");
     return APR_ENOSOCKET;
   }
 
@@ -116,7 +116,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if ((status = sockreader_read_block(worker->socket->sockreader, 
                                       (char *)&op, &len)) != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not read first frame byte");
-    return status;
+	goto exit;
   }
   worker_log(worker, LOG_DEBUG, "Got opcode 0x%X", op);
   type = NULL;
@@ -149,7 +149,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   if ((status = sockreader_read_block(worker->socket->sockreader, 
                                       (char *)&pl_len, &len)) != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not read first frame byte");
-    return status;
+	goto exit;
   }
   worker_log(worker, LOG_DEBUG, "Got first len byte %x", pl_len);
   masked = (pl_len & 0x80);
@@ -175,7 +175,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
                                         (char *)&length, &len)) 
         != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not read 16 bit payload length");
-      return status;
+	  goto exit;
     }
 #if APR_IS_BIGENDIAN
 	payload_len = length;
@@ -191,7 +191,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
                                         (char *)&length, &len)) 
         != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not read 32 bit payload length");
-      return status;
+	  goto exit;
     }
 #if APR_IS_BIGENDIAN
 	payload_len = length;
@@ -209,7 +209,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     if ((status = sockreader_read_block(worker->socket->sockreader, 
                                         (char *)&mask, &len)) != APR_SUCCESS) {
       worker_log(worker, LOG_ERR, "Could not read mask");
-      return status;
+	  goto exit;
     }
   }
 
@@ -223,7 +223,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   worker_log(worker, LOG_DEBUG, "Got: %ld bytes; Status: %d", payload_len, status);
   if (status != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Could not read payload");
-    return status;
+	goto exit
   }
 
   if (masked) {
@@ -234,7 +234,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     }
   }
 
-
+exit:
   status = worker_handle_buf(worker, ptmp, payload, payload_len);
   status = worker_assert(worker, status);
   return status;
