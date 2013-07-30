@@ -4434,10 +4434,22 @@ transport_t *transport_get_current(socket_t *socket) {
 }
 
 /**
- * Install hooks
+ * builtin finally for cleanup stuff
+ * @param worker IN thread object
  */
-apr_status_t builtin_module_init(global_t *global) {
-  return APR_SUCCESS;
+void worker_finally_cleanup(worker_t *worker) {
+  sh_t *sh = module_get_config(worker->config, SH_CONFIG);
+  if (sh && sh->tmpf) {
+    const char *name;
+
+    if (apr_file_name_get(&name, sh->tmpf) == APR_SUCCESS) {
+      apr_file_close(sh->tmpf);
+      apr_file_remove(name, sh->pool);
+      module_set_config(worker->config, apr_pstrdup(sh->pool, SH_CONFIG), NULL);
+      apr_pool_destroy(sh->pool);
+    }
+  }
+
 }
 
 APR_HOOK_STRUCT(

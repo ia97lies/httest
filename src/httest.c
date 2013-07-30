@@ -770,25 +770,13 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
 void worker_finally(worker_t *worker, apr_status_t status) {
   int mode;
   apr_status_t alt_status;
-  apr_file_t *tmpf = module_get_config(worker->config, "SH");
 
   alt_status = htt_run_worker_finally(worker); 
   if (alt_status != APR_SUCCESS) {
     status = alt_status;
   }
-
-  if (tmpf) {
-    const char *name;
-
-    /* get file name */
-    if (apr_file_name_get(&name, tmpf) == APR_SUCCESS) {
-      /* close file */
-      apr_file_close(tmpf);
-      tmpf = NULL;
-
-      apr_file_remove(name, worker->pbody);
-    }
-  }
+ 
+  worker_finally_cleanup(worker);
 
   if (status != APR_SUCCESS) {
     set_threads(worker->global, 0);
