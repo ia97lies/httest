@@ -3,6 +3,8 @@
 Changes with httest 2.4.6
   *) httest: Bugfix racecondition in _SH
 
+  *) httest: Bugfix wrong error handling in websockets
+
 
 Changes with httest 2.4.5
   *) httest: Add missing thread numbers on error if thread number log is
