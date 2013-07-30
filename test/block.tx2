@@ -1,7 +1,7 @@
 
 2:block.htb:12: error: EXPECT .: Did expect "HTTP/1.1 200 OK"
 2:block.htb:12: error: EXPECT .: Did expect "AS1"
-2:block.hte:9: error: CLT0-0 Broken pipe(32)
-2:block.hte:8: error: CLT0-0 Broken pipe(32)
-2:block.hte:8: error: Error in loop with count = 1
-2:block.hte:8: error: CLT0-0 Broken pipe(32)
+2:block.hte:11: error: CLT0-0 Broken pipe(32)
+2:block.hte:10: error: CLT0-0 Broken pipe(32)
+2:block.hte:10: error: Error in loop with count = 1
+2:block.hte:10: error: CLT0-0 Broken pipe(32)
