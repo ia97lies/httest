@@ -85,6 +85,7 @@ EXTRA_DIST= \
 	embedded_file.htt \
 	embedded_sh.htt \
 	embedded_sh_pipe.htt \
+	embedded_sh_threaded.htt \
 	empty.htt \
 	env.htt \
 	error_body.hte \
