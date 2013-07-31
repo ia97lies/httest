@@ -243,7 +243,7 @@ apr_status_t sockreader_read_block(sockreader_t * self, char *block,
   apr_status_t status;
   int i;
   int min_len;
-  int len = *length;
+  apr_size_t len = *length;
 
   status = APR_SUCCESS;
   i = 0;
@@ -309,6 +309,7 @@ apr_status_t content_length_reader(sockreader_t * self,
   apr_size_t len = *ct;
   char *read;
 
+  fprintf(stderr, "\nXXX: read len: %u, expected len: %u\n", len, *ct);
   if ((apr_ssize_t)len < 0) {
     /** shall i read until close or just quit in this case? */
     *ct = 0;
@@ -325,6 +326,7 @@ apr_status_t content_length_reader(sockreader_t * self,
   *buf = read;
   /* if we did not get the request length quit with data incomplete error */
   if (len != *ct) {
+	fprintf(stderr, "\nXXX: read len: %u, expected len: %u\n", len, *ct);
     status = APR_INCOMPLETE;
   }
 

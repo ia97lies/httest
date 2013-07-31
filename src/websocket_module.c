@@ -99,7 +99,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   uint8_t op;
   uint8_t pl_len;
   uint32_t mask = 0x0;
-  uint64_t payload_len;
+  uint64_t payload_len = 0;
   char *type;
   char *payload;
 
@@ -235,9 +235,16 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   }
 
 exit:
-  status = worker_handle_buf(worker, ptmp, payload, payload_len);
-  status = worker_assert(worker, status);
-  return status;
+  {
+	apr_status_t hndl_buf_status;
+	hndl_buf_status = worker_handle_buf(worker, ptmp, payload, payload_len);
+	if (hndl_buf_status != APR_SUCCESS) {
+	  worker_log(worker, LOG_ERR, "inspect payload failed");
+	  return status;
+	}
+	status = worker_assert(worker, status);
+	return status;
+  }
 }
 
 /**
