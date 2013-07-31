@@ -5,6 +5,8 @@ Changes with httest 2.4.6
 
   *) httest: Bugfix wrong error handling in websockets
 
+  *) httest: Bugfix buffer overflow on 64-bit archs
+
 
 Changes with httest 2.4.5
   *) httest: Add missing thread numbers on error if thread number log is
