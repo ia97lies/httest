@@ -1,4 +1,7 @@
 # mac: ulimit -S -n 2048
+# win: test seems then to proceed normally, but then hangs
+# after printing a number of <foo's.
+@:SKIP $OS win # FIXME hangs until timeout
 
 INCLUDE $TOP/test/config.htb
 

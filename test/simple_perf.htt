@@ -1,13 +1,17 @@
+# win: can start htremote's (if cygwin), test seems then
+# to proceed normally, but then hangs, likely at the end
+@:SKIP $OS win # FIXME hangs until timeout
+
 INCLUDE $TOP/test/config.htb
 
 DAEMON
-_EXEC ../src/htremote -p10011 -e"./run.sh -Ss"
+_EXEC ../src/htremote -p10011 -e"/bin/bash ./run.sh -Ss"
 END
 DAEMON
-_EXEC ../src/htremote -p10012 -e"./run.sh -Ss"
+_EXEC ../src/htremote -p10012 -e"/bin/bash ./run.sh -Ss"
 END
 DAEMON
-_EXEC ../src/htremote -p10013 -e"./run.sh -Ss"
+_EXEC ../src/htremote -p10013 -e"/bin/bash ./run.sh -Ss"
 END
 
 CLIENT
