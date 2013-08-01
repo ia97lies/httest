@@ -2,7 +2,7 @@ INCLUDE $TOP/test/config.htb
 
 CLIENT
 _MATCH exec "(.*)" BLA
-_SH #!/bin/bash
+#_SH #!/bin/bash
 _SH echo "foo bar bla fasel bla bla bla" | tr '\n' ' ' 
 _SH END
 END

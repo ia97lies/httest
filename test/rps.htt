@@ -1,3 +1,5 @@
+@:SKIP $OS win # FIXME too fast
+
 INCLUDE $TOP/test/config.htb
 
 # runs exactly one time

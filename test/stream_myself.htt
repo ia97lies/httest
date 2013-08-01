@@ -1,3 +1,5 @@
+@:SKIP $OS win # not supported
+
 #SET MAX_DURATION=20000
 INCLUDE $TOP/test/config.htb
 
