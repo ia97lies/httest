@@ -1,3 +1,5 @@
+@:SKIP $OS win # dos shell
+
 INCLUDE $TOP/test/config.htb
 
 EXEC echo foo bar >myfile

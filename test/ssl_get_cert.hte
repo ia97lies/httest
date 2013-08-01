@@ -1,4 +1,5 @@
 @:SKIP $OS mac # different error number
+@:SKIP $OS win # different error message
 
 INCLUDE $TOP/test/config.htb
 
