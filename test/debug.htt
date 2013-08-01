@@ -1,3 +1,5 @@
+# FIXME visual test fails on windows: truncates last char
+
 CLIENT
 _DEBUG any text which sould appear in any case
 END
