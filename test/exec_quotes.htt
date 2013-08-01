@@ -1,3 +1,5 @@
+@:SKIP $OS win # DOS shell
+
 CLIENT
 _EXEC echo "zzzz foo ('bar') aaaaa" | sort | awk '{ print $1 }'
 END

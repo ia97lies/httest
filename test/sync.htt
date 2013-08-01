@@ -1,3 +1,5 @@
+@:SKIP $OS win # FIXME hangs until timeout
+
 INCLUDE $TOP/test/config.htb
 
 BLOCK ManualSetContentLength
