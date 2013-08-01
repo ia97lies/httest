@@ -17,8 +17,8 @@ function run_single {
       return 2
     fi
     lines=`wc -l $B.visual | awk '{ print $1 }'`
-    tail -n ${lines} /tmp/tmp.txt >/tmp/tmp2.txt
-    diff /tmp/tmp2.txt $B.visual
+    tail -n ${lines} /tmp/tmp.txt | sed 's/\e$//' >/tmp/tmp2.txt
+    diff /tmp/tmp2.txt $B.visual >$OUT
   else
     printf "SKIP"
   fi
