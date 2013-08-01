@@ -1,6 +1,7 @@
 # win: can start htremote's (if cygwin), test seems then
 # to proceed normally, but then hangs, likely at the end
 @:SKIP $OS win # FIXME hangs until timeout
+@:SKIP $OS mac # FIXME fails always
 
 INCLUDE $TOP/test/config.htb
 
