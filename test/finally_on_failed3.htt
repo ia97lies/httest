@@ -14,7 +14,7 @@ _EXPECT Exec "foo bar"
 setShellCommandVars
 _EXEC $CAT myfile
 _SLEEP 1000
-_EXEC fail_please 2>$DEV_NULL >$DEV_NULL
+_EXEC fail_please
 END
 
 BLOCK FINALLY

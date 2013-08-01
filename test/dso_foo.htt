@@ -1,3 +1,5 @@
+@:SKIP $HOSTNAME mini # full static linking or windows
+
 INCLUDE $TOP/test/config.htb
 
 DSO:LOAD_TRANSPORT_DSO $TOP/src/.libs/libhello.so foo

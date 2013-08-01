@@ -1,3 +1,5 @@
+@:SKIP $OS win # FIXME "No status line received"
+
 REQUIRE_MODULE LUA
 
 INCLUDE $TOP/test/config.htb

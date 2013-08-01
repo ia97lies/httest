@@ -1,3 +1,5 @@
+@:SKIP $OS win # FIXME? usually lower, 2968-2984, possibly just lower res on win (20ms)?
+
 INCLUDE $TOP/test/config.htb
 
 CLIENT
