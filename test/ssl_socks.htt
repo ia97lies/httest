@@ -1,6 +1,8 @@
 # ssh key login must be configured for current user at localhost
 # mac: Remote Login (=ssh/sftp) must be activated under System Preferences => Sharing
 
+@:SKIP "$OS" "win" # works with cygwin sshd installed except _EXEC pid/kill stuff
+
 INCLUDE $TOP/test/config.htb
 
 DAEMON
