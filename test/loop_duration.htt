@@ -1,7 +1,9 @@
+@:SKIP $OS win # FIXME? broaded range on win (but is VM and cygwin)
+
 INCLUDE $TOP/test/config.htb
 
 CLIENT 
-_LOOP 4999 [ms] i
+_LOOP 5000 [ms] i
 _SLEEP 1000
 _END
 _EXPECT VAR(i) "^4$"

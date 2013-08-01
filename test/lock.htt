@@ -1,4 +1,4 @@
-@:SKIP $OS win # FIXME? usually lower, 2968-2984, possibly just lower res on win (20ms)?
+@:SKIP $OS win # FIXME? broaded range on win (but is VM and cygwin)
 
 INCLUDE $TOP/test/config.htb
 
