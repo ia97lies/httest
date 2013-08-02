@@ -3,6 +3,8 @@
 # one.
 # FIXME order in which clients are run is not deterministic, run_visual.sh
 # does fail because of that on some systems (observed on debian linux).
+@:SKIP $HOSTNAME.$OS mini.linux # FIXME order of client startup different
+
 CLIENT
 END
 
