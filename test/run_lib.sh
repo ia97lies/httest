@@ -13,14 +13,16 @@ elif [ `uname -s` == "SunOS" ]; then
   OS=solaris
 fi
 export OS
-SH=bash
-export SH
 BITS=`getconf LONG_BIT`
 export BITS
+SH=bash
+export SH
 
 function run_all {
   list=$1
   count=$2
+
+  echo "($OS $BITS $SH)"
 
   errors=0
   i=1
