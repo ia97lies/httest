@@ -15,14 +15,12 @@ fi
 export OS
 BITS=`getconf LONG_BIT`
 export BITS
-SH=bash
-export SH
 
 function run_all {
   list=$1
   count=$2
 
-  echo "($OS $BITS $SH)"
+  echo "($OS $BITS)"
 
   errors=0
   i=1
