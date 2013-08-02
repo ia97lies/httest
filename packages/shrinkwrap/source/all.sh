@@ -1063,6 +1063,11 @@ function make_check {
   echo MAKE_CHECK_STATUS > "$TARGET/report.status"
   
   # create html report
+  if [ $MAKE_CHECK_STATUS -eq 0 ]; then
+    RESULT="<span class=\"ok\">OK</span>"
+  else
+    RESULT="<span class=\"warn\">FAILURES</span>"
+  fi
   cat "$TARGET/report.log" | awk '
     /^Please report/ { next }
     { 
@@ -1076,7 +1081,7 @@ function make_check {
   cat >"$REPORT" <<EOF
 <html>
   <head>
-    <title>Test Report ($OS $BITS)</title>
+    <title>httest report ($OS $BITS)</title>
     <style type="text/css">
       span.ok { font-weight:bold; color:green }
       span.warn { font-weight:bold; color:orange }
@@ -1085,7 +1090,7 @@ function make_check {
   </head>
 
   <body>
-    <h2>Test Report ($OS $BITS)</h2>
+    <h2>httest report ($OS $BITS)</h2>
     
     <p>For the build system on which these binaries were built.</p>
     <p>Failed or skipped tests do not necessarily indicate a significant issue,
@@ -1094,7 +1099,7 @@ function make_check {
     <p>httest is Open Source - feel free to chase bugs and report proposed fixes :)</p>
     <p>This is "provided as is", no warranty of any kind.</p>
     
-    <h3>Report</h3>
+    <h3>$RESULT</h3>
     <pre>
 EOF
   cat "$TARGET/report.body" >>$REPORT
