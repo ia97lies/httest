@@ -1,26 +1,28 @@
 #!/bin/bash
 
+BITS=`getconf LONG_BIT`
 OS=linux
 if [ `uname -o 2>/dev/null` ]; then
   if [ `uname -o` == "GNU/Linux" ]; then
     OS=linux
   elif [ `uname -o` == "Cygwin" ]; then
-    OS=win # (cygwin)
+    OS=win  # cygwin
+    BITS=32 # httest win is 32 bit
   fi
 elif [ `uname -s` == "Darwin" ]; then
   OS=mac
 elif [ `uname -s` == "SunOS" ]; then
   OS=solaris
 fi
-export OS
-BITS=`getconf LONG_BIT`
 export BITS
+export OS
+printf "($OS $BITS) "
 
 function run_all {
   list=$1
   count=$2
 
-  echo "($OS $BITS)"
+  #echo "($OS $BITS)"
 
   errors=0
   i=1
