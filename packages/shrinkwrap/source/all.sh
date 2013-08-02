@@ -55,6 +55,7 @@ function main {
     do_buildconf
     do_unix_build_htt
     do_basic_tests_htt
+    do_make_check
     do_shrinkwrap
   else
     # all win targets on win
@@ -66,6 +67,7 @@ function main {
     do_create_sln
     do_win_build_htt
     do_basic_tests_htt
+    do_make_check
     do_shrinkwrap
   fi
 
@@ -95,6 +97,14 @@ function print_ok_up_to_date {
 function print_failed {
   # bold red
   printf "\e[31;1mFAILED\e[0m\n"
+}
+
+#
+# print "WARN (some checks failed)"
+#
+function print_warn_some_checks_failed {
+  # bold yellow
+  printf "\e[33;1mWARN\e[0m \e[37m(some checks failed)\e[0m\n"
 }
 
 #
@@ -257,7 +267,7 @@ function do_get_lib {
   fi
 
   cd "$TARGET"
-  echo -n "getting$INFO lib $LIB_NAME $LIB_VER ... "
+  echo -n "($(date +%H:%M)) getting$INFO lib $LIB_NAME $LIB_VER ... "
   if [ -d "$LIB_DIRNAME" ]; then
     print_ok_up_to_date
   else
@@ -283,7 +293,7 @@ function unix_build_APR {
 # unix: build apr if no lib, yet
 #
 function do_unix_build_APR {
-  echo -n "building apr ... "  
+  echo -n "($(date +%H:%M)) building apr ... "  
   if [ -f "$TARGET/$UNIX_APR_NAME-$UNIX_APR_VER/.libs/libapr-1.a" ]; then
     print_ok_up_to_date
   else
@@ -309,7 +319,7 @@ function unix_build_APU {
 # unix: build apr-util if no lib, yet
 #
 function do_unix_build_APU {
-  echo -n "building apr-util ... "  
+  echo -n "($(date +%H:%M)) building apr-util ... "  
   if [ -f "$TARGET/$UNIX_APU_NAME-$UNIX_APU_VER/.libs/libaprutil-1.a" ]; then
     print_ok_up_to_date
   else
@@ -374,7 +384,7 @@ function unix_build_PCRE {
 # unix: build pcre if no lib, yet
 #
 function do_unix_build_PCRE {
-  echo -n "building pcre ... "  
+  echo -n "($(date +%H:%M)) building pcre ... "  
   if [ -f "$TARGET/$UNIX_PCRE_NAME-$UNIX_PCRE_VER/.libs/libpcre.a" ]; then
     print_ok_up_to_date
   else
@@ -404,7 +414,7 @@ function unix_build_SSL {
 # unix: build openssl if no lib, yet
 #
 function do_unix_build_SSL {
-  echo -n "building openssl ... "  
+  echo -n "($(date +%H:%M)) building openssl ... "  
   if [ -f "$TARGET/$UNIX_SSL_NAME-$UNIX_SSL_VER/libssl.a" ]; then
     print_ok_up_to_date
   else
@@ -438,7 +448,7 @@ function unix_build_LUA {
 # unix: build lua if no lib, yet
 #
 function do_unix_build_LUA {
-  echo -n "building lua ... "  
+  echo -n "($(date +%H:%M)) building lua ... "  
   if [ -f "$TARGET/$UNIX_LUA_NAME-$UNIX_LUA_VER/src/liblua.a" ]; then
     print_ok_up_to_date
   else
@@ -526,7 +536,7 @@ function unix_build_JS {
 # unix: build js if no lib, yet
 #
 function do_unix_build_JS {
-  echo -n "building js ... "  
+  echo -n "($(date +%H:%M)) building js ... "  
   if [ -f "$TARGET/$UNIX_JS_NAME-$UNIX_JS_VER/js/src/libjs_static.a" ]; then
     print_ok_up_to_date
   else
@@ -554,7 +564,7 @@ function unix_build_XML2 {
 # unix: build libmlx2 if no lib, yet
 #
 function do_unix_build_XML2 {
-  echo -n "building libxml2 ... "  
+  echo -n "($(date +%H:%M)) building libxml2 ... "  
   if [ -f "$TARGET/$UNIX_XML2_NAME-$UNIX_XML2_VER/.libs/libxml2.a" ]; then
     print_ok_up_to_date
   else
@@ -580,7 +590,7 @@ function buildconf {
 # unix/win: run buildconf.sh if no configure script, yet
 #
 function do_buildconf {
-  echo -n "building htt configuration ... "  
+  echo -n "($(date +%H:%M)) building htt configuration ... "  
   if [ -f "$TOP/configure" ]; then
     print_ok_up_to_date
   else
@@ -643,7 +653,7 @@ function unix_build_htt {
 # unix: (re-)build httest binaries (always)
 #
 function do_unix_build_htt {
-  echo -n "building htt ... "
+  echo -n "($(date +%H:%M)) building htt ... "
   unix_build_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
@@ -686,7 +696,7 @@ function dummy_configure_htt {
 # unix/win: dummy configure htt (always)
 #
 function do_dummy_configure_htt {
-  echo -n "dummy configuring htt ... "
+  echo -n "($(date +%H:%M)) dummy configuring htt ... "
   if [ "$OS" == "win" ]; then
     # configure is very slow on cygwin, so only do once automatically
     if [ -f "$TARGET/win.configured" ]; then
@@ -927,7 +937,7 @@ EOF
 # unix/win: create visual studio solution (always)
 #
 function do_create_sln {
-  echo -n "creating visual studio solution ... "
+  echo -n "($(date +%H:%M)) creating visual studio solution ... "
   create_sln >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
@@ -987,7 +997,7 @@ EOF
 # win: build httest binaries (always)
 #
 function do_win_build_htt {
-  echo -n "building htt ... "
+  echo -n "($(date +%H:%M)) building htt ... "
   win_build_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
 }
@@ -1031,9 +1041,85 @@ function basic_tests_htt {
 # unix/win: run some basic tests (always)
 #
 function do_basic_tests_htt {
-  echo -n "running basic tests ... "
+  echo -n "($(date +%H:%M)) running basic tests ... "
   basic_tests_htt >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
+}
+
+#
+# unix/win: run "make check"
+#
+function make_check {    
+  cd "$TOP/test"
+  if [ "$OS" != "win" ]; then
+    set +e
+    make check > "$TARGET/report.log"
+    MAKE_CHECK_STATUS=$?
+    set -e
+  else
+    echo "No report for win (yet)" > "$TARGET/report.log"
+    MAKE_CHECK_STATUS=0
+  fi
+  echo MAKE_CHECK_STATUS > "$TARGET/report.status"
+  
+  # create html report
+  cat "$TARGET/report.log" | awk '
+    /^Please report/ { next }
+    { 
+      gsub(/</, "&lt;");
+      gsub(/.\[1;32mOK.\[0m/, "<span class=\"ok\">OK</span>");
+      gsub(/.\[1;33mSKIP.\[0m/, "<span class=\"warn\">SKIP</span>");
+      gsub(/.\[1;31mFAILED.\[0m/, "<span class=\"error\">FAILED</span>");
+      print
+    }' >"$TARGET/report.body"
+  REPORT="$TARGET/report.html"
+  cat >"$REPORT" <<EOF
+<html>
+  <head>
+    <title>Test Report ($OS $BITS)</title>
+    <style type="text/css">
+      span.ok { font-weight:bold; color:green }
+      span.warn { font-weight:bold; color:orange }
+      span.error { font-weight:bold; color.red }
+    </style>
+  </head>
+
+  <body>
+    <h2>Test Report ($OS $BITS)</h2>
+    
+    <p>For the build system on which these binaries were built.</p>
+    <p>Failed or skipped tests do not necessarily indicate a significant issue,
+    but see comments for @:SKIP's in the respective test scripts,
+    and not all features are supported on all platforms (most are).</p>
+    <p>httest is Open Source - feel free to chase bugs and report proposed fixes :)</p>
+    <p>This is "provided as is", no warranty of any kind.</p>
+    
+    <h3>Report</h3>
+    <pre>
+EOF
+  cat "$TARGET/report.body" >>$REPORT
+  cat >>"$REPORT" <<EOF
+    </pre>
+  </body>
+EOF
+}
+
+#
+# unix/win: run "make check" (if no report exists)
+#
+function do_make_check {
+  echo -n "($(date +%H:%M)) running make check ... "
+  if [ -f "$TARGET/report.html" ]; then
+    print_ok_up_to_date
+  else
+    make_check >>"$BUILDLOG" 2>>"$BUILDLOG"
+    MAKE_CHECK_STATUS=22
+    if [ $MAKE_CHECK_STATUS -eq 0 ]; then
+      print_warn_some_checks_failed
+    else
+      print_ok
+    fi
+  fi
 }
 
 #
@@ -1154,14 +1240,18 @@ EOF
     unix2dos "$README"
   fi
   echo "ok"
+  
+  # copy report (make check)
+  echo "copying report ..."
+  cp "$TARGET/report.html" "$DIR/report.html"
 
   # check that correct number of files in release
-  # (number of binaries plus readme)
+  # (number of binaries plus readme and report)
   NEXPECTED=`echo "$HTBINS" | wc -w`
   if [ "$OS" == "win" ]; then
     NEXPECTED=`expr $NEXPECTED + $HTT_NDLL`
   fi
-  NEXPECTED=`expr $NEXPECTED + 1`
+  NEXPECTED=`expr $NEXPECTED + 2`
   echo -n "checking that $NEXPECTED files are in release ... "
   [ `ls "$DIR" | wc -w` -eq $NEXPECTED ]
   echo "ok"
@@ -1215,7 +1305,7 @@ function do_shrinkwrap {
   NAME="httest-$HTT_VER-$SHORT_NAME"
   NAME_NIGHTLY="httest-nightly-$SHORT_NAME"
   
-  echo -n "shrink-wrap $NAME ... "
+  echo -n "($(date +%H:%M)) shrink-wrap $NAME ... "
   shrinkwrap "$NAME" "$NAME_NIGHLTY" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
   
