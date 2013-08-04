@@ -1054,12 +1054,39 @@ function make_check {
   cd "$TOP/test"
   if [ "$OS" != "win" ]; then
     set +e
-    make check > "$TARGET/report.log"
+    make check >"$TARGET/report.log"
     MAKE_CHECK_STATUS=$?
     set -e
   else
-    echo "No report for win (yet)" > "$TARGET/report.log"
-    MAKE_CHECK_STATUS=0
+    NRUN=0
+	NFAIL=0
+	MAKE_CHECK_STATUS=0
+	echo >"$TARGET/report.log"
+	CHECKS="run_help.sh run_all.sh run_errors.sh run_visual.sh run_ntlm.sh"
+	CHECKS="run_visual.sh"
+	for CHECK in $CHECKS; do
+	  echo -n "running check $CHECK..."
+      set +e
+	  ./$CHECK >>"$TARGET/report.log" 2>&1
+	  STATUS=$?
+	  set -e
+	  echo "$STATUS"
+	  NRUN=`expr $NRUN + 1`
+	  if [ $STATUS -ne 0 ]; then
+	    MAKE_CHECK_STATUS=1
+	    NFAIL=`expr $NFAIL + 1`
+	  fi
+	  echo >>"$TARGET/report.log"
+	done
+	if [ $NFAIL -eq 0 ]; then
+	  echo "==================" >>"$TARGET/report.log"
+      echo "All $NRUN tests passed" >>"$TARGET/report.log"
+      echo "==================" >>"$TARGET/report.log"
+	else
+	  echo "=========================================" >>"$TARGET/report.log"
+	  echo "$NFAIL of $NRUN tests failed" >>"$TARGET/report.log"
+	  echo "=========================================" >>"$TARGET/report.log"
+	fi
   fi
   echo MAKE_CHECK_STATUS > "$TARGET/report.status"
   
@@ -1076,6 +1103,8 @@ function make_check {
       gsub(/.\[1;32mOK.\[0m/, "<span class=\"ok\">OK</span>");
       gsub(/.\[1;33mSKIP.\[0m/, "<span class=\"warn\">SKIP</span>");
       gsub(/.\[1;31mFAILED.\[0m/, "<span class=\"error\">FAILED</span>");
+	  gsub(/.\[1;3[0-9]m/, "");
+	  gsub(/.\[0m/, "");
       print
     }' >"$TARGET/report.body"
   REPORT="$TARGET/report.html"
@@ -1086,7 +1115,7 @@ function make_check {
     <style type="text/css">
       span.ok { font-weight:bold; color:green }
       span.warn { font-weight:bold; color:orange }
-      span.error { font-weight:bold; color.red }
+      span.error { font-weight:bold; color:red }
     </style>
   </head>
 

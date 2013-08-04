@@ -22,8 +22,6 @@ function run_all {
   list=$1
   count=$2
 
-  #echo "($OS $BITS)"
-
   errors=0
   i=1
   for E in $list; do
@@ -52,5 +50,8 @@ function run_all {
 
   if [ $errors -ne 0 ]; then
     printf "\e[1;31m$errors Errors found\e[0m\n"
+	if [ "$OS" == "win" ]; then
+	  exit $errors
+	fi
   fi
 }
