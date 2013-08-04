@@ -924,6 +924,7 @@ EOF
   
   # zip solution
   cd "$TARGET"
+  rm -f $SLN_NIGHTLY.zip
   zip -r "$SLN.zip" "$SLN"
   echo -n "checking that visual studio solution has been created ... "  
   [ -f "$SLN.zip" ]
@@ -1107,6 +1108,7 @@ EOF
     </pre>
   </body>
 EOF
+  rm "$TARGET/report.log"
 }
 
 #
@@ -1131,8 +1133,9 @@ function do_make_check {
 # unix/win: "shrink-wrap"
 #
 function shrinkwrap {
-  NAME=$1
-  NAME_NIGHLY=$2
+  SHORT_NAME=$1
+  NAME="httest-$HTT_VER-$SHORT_NAME"
+  NAME_NIGHTLY="httest-nightly-$SHORT_NAME"
   
   # clean
   DIR="$TARGET/$NAME"
@@ -1263,6 +1266,7 @@ EOF
   
   # tgz
   cd "$TARGET"
+  rm -f $NAME_NIGHTLY.tar.gz
   tar cvf "$NAME.tar" "$NAME"
   gzip "$NAME.tar"
   rm -f "$NAME.tar"
@@ -1275,6 +1279,7 @@ EOF
   
   # zip
   if [ "$OS" == "mac" -o "$OS" == "win" ]; then
+    rm -f $NAME_NIGHTLY.zip
     zip -r "$NAME.zip" "$NAME"
 	echo -n "checking that zip has been created ... "
     [ -f $DIR.zip ]
@@ -1283,6 +1288,7 @@ EOF
     fi
 	echo "ok"
   fi
+
   print_ok
 }
 
@@ -1307,11 +1313,9 @@ function do_shrinkwrap {
   elif [ "$OS" == "solaris" -a "$ARCH" == "sun4u" ]; then
     SHORT_NAME="$OS-sparc-$BITS"
   fi
-  NAME="httest-$HTT_VER-$SHORT_NAME"
-  NAME_NIGHTLY="httest-nightly-$SHORT_NAME"
   
-  echo -n "($(date +%H:%M)) shrink-wrap $NAME ... "
-  shrinkwrap "$NAME" "$NAME_NIGHLTY" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  echo -n "($(date +%H:%M)) shrink-wrap $SHORT_NAME ... "
+  shrinkwrap "$SHORT_NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
   
 }
