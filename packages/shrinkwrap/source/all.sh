@@ -1063,7 +1063,6 @@ function make_check {
 	MAKE_CHECK_STATUS=0
 	echo >"$TARGET/report.log"
 	CHECKS="run_help.sh run_all.sh run_errors.sh run_visual.sh run_ntlm.sh"
-	CHECKS="run_visual.sh"
 	for CHECK in $CHECKS; do
 	  echo -n "running check $CHECK..."
       set +e
