@@ -1087,7 +1087,7 @@ function make_check {
 	  echo "=========================================" >>"$TARGET/report.log"
 	fi
   fi
-  echo MAKE_CHECK_STATUS > "$TARGET/report.status"
+  echo $MAKE_CHECK_STATUS > "$TARGET/report.status"
   
   # create html report
   if [ $MAKE_CHECK_STATUS -eq 0 ]; then
@@ -1148,7 +1148,6 @@ function do_make_check {
     print_ok_up_to_date
   else
     make_check >>"$BUILDLOG" 2>>"$BUILDLOG"
-    MAKE_CHECK_STATUS=22
     if [ $MAKE_CHECK_STATUS -eq 0 ]; then
       print_warn_some_checks_failed
     else
