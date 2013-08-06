@@ -1148,7 +1148,7 @@ function do_make_check {
     print_ok_up_to_date
   else
     make_check >>"$BUILDLOG" 2>>"$BUILDLOG"
-    if [ $MAKE_CHECK_STATUS -eq 0 ]; then
+    if [ $MAKE_CHECK_STATUS -ne 0 ]; then
       print_warn_some_checks_failed
     else
       print_ok
