@@ -125,16 +125,17 @@ function do_determine_os {
   elif [ `uname -s` == "SunOS" ]; then
     OS="solaris"
   fi
-  echo "OS:      $OS"
+  echo "OS:       $OS"
   if [ "$OS" == "unknown" ]; then
     # yellow bold
     printf "\e[33;1mWARNING:\e[0m unknown os, treating like linux\n"
   fi
   
   ARCH=`uname -m`
-  echo "ARCH:    $ARCH"
+  echo "ARCH:     $ARCH"
   BITS=`getconf LONG_BIT`
-  echo "BITS:    $BITS"  
+  echo "BITS:     $BITS"
+  echo "HOSTNAME: $HOSTNAME"
 }
 
 #
@@ -146,10 +147,10 @@ function do_determine_version {
   NAME=`echo $HTBIN | awk ' BEGIN { FS="/" } { print $2 }'`
   if [ "$HTT_VER" == "snapshot" ]; then
     # violet bold
-    printf "VERSION: \e[35;1m$HTT_VER\e[0m\n"
+    printf "VERSION:  \e[35;1m$HTT_VER\e[0m\n"
   else
     # blue bold
-    printf "VERSION: \e[34;1m$HTT_VER\e[0m\n"
+    printf "VERSION:  \e[34;1m$HTT_VER\e[0m\n"
   fi
 }
 
@@ -157,7 +158,7 @@ function do_determine_version {
 # determine name and dir of all htt binaries
 #
 function do_determine_binaries {
-  echo -n "BINS:    "
+  echo -n "BINS:     "
   HTBIN_PATHS="src tools"
   HTBINS=""
   for HTBIN_PATH in $HTBIN_PATHS; do
@@ -186,7 +187,7 @@ function do_determine_binaries {
 # determine libraries
 #
 function do_determine_libs {
-  echo -n "LIBS:    "
+  echo -n "LIBS:     "
   LIBVARS="APR APU SSL PCRE"
   if [ `cat "$TOP/configure.in" | grep with-lua | wc -l` -eq 1 ]; then
     LIBVARS="$LIBVARS LUA"
