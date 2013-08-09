@@ -1091,11 +1091,6 @@ function make_check {
   echo $MAKE_CHECK_STATUS > "$TARGET/report.status"
   
   # create html report
-  if [ $MAKE_CHECK_STATUS -eq 0 ]; then
-    RESULT="<span class=\"ok\">OK</span>"
-  else
-    RESULT="<span class=\"warn\">FAILURES</span>"
-  fi
   cat "$TARGET/report.log" | awk '
     /^Please report/ { next }
     { 
@@ -1122,22 +1117,23 @@ function make_check {
   <body>
     <h2>httest report ($OS $BITS)</h2>
     
-    <p>For the build system on which these binaries were built.</p>
-    <p>Failed or skipped tests do not necessarily indicate a significant issue,
-    but see comments for @:SKIP's in the respective test scripts,
-    and not all features are supported on all platforms (most are).</p>
-    <p>httest is Open Source - feel free to chase bugs and report proposed fixes :)</p>
-    <p>This is "provided as is", no warranty of any kind.</p>
-    
-    <h3>$RESULT</h3>
     <pre>
+For the build system on which these binaries were built. Failed or skipped
+tests do not necessarily indicate a significant issue, but see comments for
+@:SKIP's in the respective test scripts, and not all features are supported
+on all platforms (most are). httest is Open Source - feel free to chase
+bugs and report proposed fixes :)
+
+This is "provided as is", no warranty of any kind.
+
+--
+
 EOF
   cat "$TARGET/report.body" >>$REPORT
   cat >>"$REPORT" <<EOF
     </pre>
   </body>
 EOF
-  rm "$TARGET/report.log"
 }
 
 #
@@ -1170,6 +1166,10 @@ function shrinkwrap {
   rm -rf "$DIR"
   rm -f "$DIR.tar.gz"
   rm -f "$DIR.zip"
+  DIR_NIGHTLY="$TARGET/$NAME_NIGHTLY"
+  rm -rf "$DIR_NIGHTLY"
+  rm -f "$DIR_NIGHTLY.tar.gz"
+  rm -f "$DIR_NIGHTLY.zip"
   
   mkdir "$DIR"
 
@@ -1294,27 +1294,40 @@ EOF
   
   # tgz
   cd "$TARGET"
-  rm -f $NAME_NIGHTLY.tar.gz
   tar cvf "$NAME.tar" "$NAME"
   gzip "$NAME.tar"
   rm -f "$NAME.tar"
   echo -n "checking that tar.gz has been created ... "
-  [ -f $DIR.tar.gz ]
-  if [ ! -f $NAME_NIGHTLY.tar.gz ]; then
-    cp $NAME.tar.gz $NAME_NIGHTLY.tar.gz
-  fi
-  echo "ok"
+  [ -f "$DIR.tar.gz" ]
+  echo "ok"  
   
   # zip
   if [ "$OS" == "mac" -o "$OS" == "win" ]; then
-    rm -f $NAME_NIGHTLY.zip
     zip -r "$NAME.zip" "$NAME"
 	echo -n "checking that zip has been created ... "
-    [ -f $DIR.zip ]
-    if [ ! -f $NAME_NIGHTLY.zip ]; then
-      cp $NAME.zip $NAME_NIGHTLY.zip
-    fi
+    [ -f "$DIR.zip" ]
 	echo "ok"
+  fi
+  
+  # same for nightly if different name
+  if [ "$NAME" != "$NAME_NIGHTLY" ]; then
+    cp -r "$NAME" "$NAME_NIGHTLY"
+    
+    # tgz
+    tar cvf "$NAME_NIGHTLY.tar" "$NAME_NIGHTLY"
+    gzip "$NAME_NIGHTLY.tar"
+    rm -f "$NAME_NIGHTLY.tar"
+    echo -n "checking that nightly tar.gz has been created ... "
+    [ -f "$DIR_NIGHTLY.tar.gz" ]
+    echo "ok"  
+  
+    # zip
+    if [ "$OS" == "mac" -o "$OS" == "win" ]; then
+      zip -r "$NAME_NIGHTLY.zip" "$NAME_NIGHTLY"
+	  echo -n "checking that nightly zip has been created ... "
+      [ -f "$DIR_NIGHTLY.zip" ]
+	  echo "ok"
+    fi
   fi
 
   print_ok
