@@ -1093,13 +1093,19 @@ function make_check {
   # create html report
   cat "$TARGET/report.log" | awk '
     /^Please report/ { next }
+    /^.\[1;31m[0-9]+ Errors found.\[0m$/ {
+      gsub(/.\[1;31m/, "")
+      gsub(/.\[0m/, "")
+      printf("%s%s%s\n", "<span class=\"error\">", $0, "</span>")
+      next
+    }
     { 
-      gsub(/</, "&lt;");
-      gsub(/.\[1;32mOK.\[0m/, "<span class=\"ok\">OK</span>");
-      gsub(/.\[1;33mSKIP.\[0m/, "<span class=\"warn\">SKIP</span>");
-      gsub(/.\[1;31mFAILED.\[0m/, "<span class=\"error\">FAILED</span>");
-	  gsub(/.\[1;3[0-9]m/, "");
-	  gsub(/.\[0m/, "");
+      gsub(/</, "&lt;")
+      gsub(/.\[1;32mOK.\[0m/, "<span class=\"ok\">OK</span>")
+      gsub(/.\[1;33mSKIP.\[0m/, "<span class=\"warn\">SKIP</span>")
+      gsub(/.\[1;31mFAILED.\[0m/, "<span class=\"error\">FAILED</span>")
+      gsub(/.\[1;3[0-9]m/, "")
+      gsub(/.\[0m/, "")
       print
     }' >"$TARGET/report.body"
   REPORT="$TARGET/report.html"
