@@ -123,13 +123,15 @@ apr_status_t bufreader_read_line(bufreader_t * self, char **line) {
     if (self->i < self->len) {
       c = self->buf[self->i];
       if (c == '\r' || c == '\n') {
-	c='\0';
-	leave_loop=1;
+        leave_loop=1;
+        if (c == '\r' && self->i+1 < self->len && self->buf[self->i+1] == '\n') {
+          self->i++;
+        }
+        c='\0';
       }
       apr_brigade_putc(self->line, NULL, NULL, c);
       self->i++;
       i++;
-
     }
   }
 
