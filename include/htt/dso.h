@@ -71,6 +71,8 @@ typedef struct transport_dso_s {
   write_f write; 
 } transport_dso_t;
 
+typedef apr_status_t (*func_dso_f)(const char *string);
+
 #ifdef __cplusplus
 }
 #endif

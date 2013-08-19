@@ -225,6 +225,57 @@ static apr_status_t block_GET_TRANSPORT_OBJECT(worker_t *worker, worker_t *paren
   return status;
 }
 
+/**
+ * call a dso function of type apr_status_t func(const char *string)
+ * @param worker IN callee
+ * @param parent IN caller
+ * @param ptmp IN temporary ptmp
+ * @return status
+ */
+static apr_status_t block_FUNC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  apr_status_t status = APR_SUCCESS;
+  const char *name;
+  const char *sym;
+  const char *string;
+  apr_dso_handle_t *dso;
+  apr_dso_handle_sym_t dso_sym;
+  func_dso_f func;
+  global_t *global = worker->global;
+  dso_gconf_t *gconf = dso_get_global_config(global);
+
+  name = store_get(worker->params, "1");
+  if (!name) {
+    worker_log(worker, LOG_ERR, "Expect name loaded share library");
+    return APR_EINVAL;
+  }
+
+  if ((dso = apr_hash_get(gconf->transport_objs, name, APR_HASH_KEY_STRING)) == NULL) {
+    worker_log(worker, LOG_ERR, "Requested share library not found");
+    return APR_EINVAL;
+  }
+
+  sym = store_get(worker->params, "2");
+  if (!sym) {
+    worker_log(worker, LOG_ERR, "Expect function name");
+    return APR_EINVAL;
+  }
+
+  if ((status = apr_dso_sym(&dso_sym, dso, sym)) != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "Can not load \"%s\" object", sym);
+    return status;
+  }
+
+  func = (func_dso_f )dso_sym;
+
+  string= store_get(worker->params, "3");
+  if (!string) {
+    worker_log(worker, LOG_ERR, "Expect string to handover to function");
+    return APR_EINVAL;
+  }
+  
+  return func(string);
+}
+
 /************************************************************************
  * Module
  ***********************************************************************/
@@ -245,6 +296,12 @@ apr_status_t dso_module_init(global_t *global) {
     return status;
   }
 
+  if ((status = module_command_new(global, "DSO", "_FUNC",
+	                           "<dso-function-to-call> <string>",
+	                           "The dso function is of type \'apr_status_t func(const char *string)\'.",
+	                           block_FUNC)) != APR_SUCCESS) {
+    return status;
+  }
   return APR_SUCCESS;
 }
 
