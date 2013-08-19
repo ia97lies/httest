@@ -1,5 +1,5 @@
-@:SKIP $OS win # FIXME fails "Could not mk temp file Invalid argument(22)"
-# FIXME fails occasionally on linux, e.g. "/bin/sh: ./httxyBbr5: Text file busy"
+@:SKIP $OS win # FIXME fails always, temp files same name httXXXXXX.bat
+@:SKIP $HOSTNAME.$OS mini.linux # FIXME fails sometimes, temp file name gen prob not thread safe
 
 INCLUDE $TOP/test/config.htb
 
