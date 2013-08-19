@@ -1,9 +1,6 @@
 # This test is for visual output only. 
 # After GO the ident should restart to and print the 3rd CLIENT like the frist 
 # one.
-# FIXME order in which clients are run is not deterministic, run_visual.sh
-# does fail because of that on some systems (observed on debian linux, mac).
-@:SKIP $HOSTNAME mini # FIXME order of client startup different
 
 CLIENT
 END
