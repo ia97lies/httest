@@ -1,6 +1,8 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.7
+  *) httest: Bugfix wrong error line number on windows
+
   *) packages: shrinkwrap: make check reports
    
 
