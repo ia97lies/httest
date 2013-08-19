@@ -3,7 +3,9 @@
 Changes with httest 2.4.7
   *) httest: Bugfix wrong error line number on windows
 
-  *) httest: New feature to call a simple function from a dso library
+  *) httest: _DSO:FUNC method to call a load module function with the signature
+             apr_status_t func(const char *string). Usefull to trigger stuff
+	     in the loaded module.
 
   *) packages: shrinkwrap: make check reports
    
