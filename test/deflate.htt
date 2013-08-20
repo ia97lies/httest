@@ -1,0 +1,90 @@
+SET MAX_DURATION=5000
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXEC< gunzip
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "AS1"
+_EXPECT . "AS2"
+_EXPECT . "AS3"
+_EXPECT . "AS4"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXEC< gunzip
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT . "BEGIN"
+_EXPECT . "END"
+_WAIT
+
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /your/path/to/your/resource?your=params HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "HTTP/1.1 200 OK"
+_EXPECT body "AS OK"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+_PIPE
+_EXEC echo == AS1 OK == | gzip
+_PIPE
+_EXEC echo == AS2 OK == | gzip
+_PIPE
+_EXEC echo == AS3 OK == | gzip
+_PIPE
+_EXEC echo == AS4 OK == | gzip
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+_PIPE
+_EXEC echo BEGIN $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K | gzip
+_PIPE
+_EXEC echo $1K$1K$1K$1K$1K$1K$1K$1K END | gzip
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__Content-Length: AUTO
+__
+__==AS OK==
+
+END
+
