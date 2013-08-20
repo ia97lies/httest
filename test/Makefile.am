@@ -71,6 +71,7 @@ EXTRA_DIST= \
 	daemon.htt \
 	debug.htt \
 	debug.visual \
+	deflate.htt \
 	dso_foo_func.htt \
 	dso_foo.htt \
 	dummy2.htb \
