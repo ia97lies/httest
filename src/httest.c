@@ -91,6 +91,7 @@ typedef struct global_replacer_s {
 /************************************************************************
  * Globals 
  ***********************************************************************/
+global_t *global;
 extern module_t modules[];
 
 static void show_commands(apr_pool_t *p, global_t *global); 
@@ -717,12 +718,11 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     char *line;
     apr_pool_t *ptmp;
 
-    apr_pool_create(&ptmp, NULL);
+    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
     worker->file_and_line = e[worker->cmd].key;
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
-      worker->file_and_line = e[worker->cmd].key;
       status = worker_check_error(parent, status);
     }
     else {
@@ -2218,7 +2218,6 @@ static apr_status_t interpret(apr_file_t * fp, store_t * vars, apr_file_t *out,
                               char *additional, int log_thread_no) {
   apr_status_t status;
   int i;
-  global_t *global;
 
   if ((status = global_new(&global, vars, log_mode, p, out, err, log_thread_no)) 
       != APR_SUCCESS) {
