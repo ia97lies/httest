@@ -483,7 +483,7 @@ static apr_status_t worker_buf_pipe_exec(worker_t *worker, char *buf,
   if (exitcode != 0) {
     status = APR_EGENERAL;
   }
-  module_set_config(worker->config, apr_pstrdup(exec->pool, EXEC_CONFIG), NULL);
+  module_set_config(worker->config, EXEC_CONFIG, NULL);
   apr_pool_destroy(exec->pool);
   return status;
 }
@@ -562,6 +562,7 @@ static apr_status_t worker_buf_filter_exec(worker_t *worker, apr_pool_t *ptmp,
     goto out_err;
   }
 out_err:
+  module_set_config(worker->config, EXEC_CONFIG, NULL);
   apr_pool_destroy(exec->pool);
   return status;
 }
