@@ -71,6 +71,7 @@ EXTRA_DIST= \
 	daemon.htt \
 	debug.htt \
 	debug.visual \
+	dso_foo_func.htt \
 	dso_foo.htt \
 	dummy2.htb \
 	dummy3.htb \
@@ -97,6 +98,8 @@ EXTRA_DIST= \
 	errors_neg.hte \
 	errors_neg.txt \
 	errors.txt \
+	errors_win_crlf.hte \
+	errors_win_crlf.txt \
 	escaping.htt \
 	exec_expect.hte \
 	exec_expect.htt \

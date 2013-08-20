@@ -6,6 +6,8 @@
 
 int i = 0;
 
+const char *foo_test_val = NULL;
+
 static void* foo_custom_handle() {
   return &i;
 }
@@ -35,6 +37,20 @@ static apr_status_t foo_read2(void *custom, char *buf, apr_size_t *len) {
 
 static apr_status_t foo_write(void *custom, const char *buf, apr_size_t len) {
   return APR_SUCCESS;
+}
+
+apr_status_t foo_set(const char *string) {
+  foo_test_val = string;
+  return APR_SUCCESS;
+}
+
+apr_status_t foo_test(const char *string) {
+  if (foo_test_val && strcmp(string, foo_test_val) == 0) { 
+    return APR_SUCCESS;
+  }
+  else {
+    return APR_EINVAL;
+  }
 }
 
 transport_dso_t foo_front = {

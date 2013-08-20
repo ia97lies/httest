@@ -7,6 +7,10 @@ Changes with httest 2.4.8
 Changes with httest 2.4.7
   *) httest: Bugfix wrong error line number on windows
 
+  *) httest: _DSO:FUNC method to call a load module function with the signature
+             apr_status_t func(const char *string). Usefull to trigger stuff
+	     in the loaded module.
+
   *) packages: shrinkwrap: make check reports
    
 
