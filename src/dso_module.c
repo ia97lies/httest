@@ -133,10 +133,10 @@ static apr_status_t block_LOAD_TRANSPORT_DSO(worker_t *worker, worker_t *parent,
   dso_gconf_t *gconf = dso_get_global_config(global);
 
   if ((status = module_check_global(worker)) == APR_SUCCESS) {
-    worker_log(parent, LOG_INFO, "LOAD_TRANSPORT_DSO");
+    worker_log(worker, LOG_INFO, "LOAD_TRANSPORT_DSO");
     path = store_get(worker->params, "1");
     if (!path) {
-      worker_log(parent, LOG_ERR, "Expect a path to shared library");
+      worker_log(worker, LOG_ERR, "Expect a path to shared library");
       return APR_EINVAL;
     }
 
@@ -225,6 +225,10 @@ static apr_status_t block_GET_TRANSPORT_OBJECT(worker_t *worker, worker_t *paren
   return status;
 }
 
+apr_status_t my_func(const char *string) {
+  return APR_SUCCESS;
+}
+
 /**
  * call a dso function of type apr_status_t func(const char *string)
  * @param worker IN callee
@@ -234,40 +238,32 @@ static apr_status_t block_GET_TRANSPORT_OBJECT(worker_t *worker, worker_t *paren
  */
 static apr_status_t block_FUNC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status = APR_SUCCESS;
-  const char *name;
   const char *sym;
   const char *string;
   apr_dso_handle_t *dso;
   apr_dso_handle_sym_t dso_sym;
   func_dso_f func;
   global_t *global = worker->global;
-  dso_gconf_t *gconf = dso_get_global_config(global);
 
-  name = store_get(worker->params, "1");
-  if (!name) {
-    worker_log(worker, LOG_ERR, "Expect name loaded share library");
-    return APR_EINVAL;
-  }
-
-  if ((dso = apr_hash_get(gconf->transport_objs, name, APR_HASH_KEY_STRING)) == NULL) {
-    worker_log(worker, LOG_ERR, "Requested share library not found");
-    return APR_EINVAL;
-  }
-
-  sym = store_get(worker->params, "2");
+  sym = store_get(worker->params, "1");
   if (!sym) {
     worker_log(worker, LOG_ERR, "Expect function name");
     return APR_EINVAL;
   }
 
-  if ((status = apr_dso_sym(&dso_sym, dso, sym)) != APR_SUCCESS) {
+  if ((status = apr_dso_load(&dso, NULL, global->pool)) != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Can not load \"%s\" object", sym);
+    return status;
+  }
+
+  if ((status = apr_dso_sym(&dso_sym, dso, sym)) != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "Can not call \"%s\" object", sym);
     return status;
   }
 
   func = (func_dso_f )dso_sym;
 
-  string= store_get(worker->params, "3");
+  string= store_get(worker->params, "2");
   if (!string) {
     worker_log(worker, LOG_ERR, "Expect string to handover to function");
     return APR_EINVAL;

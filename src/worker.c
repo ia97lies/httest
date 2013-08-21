@@ -125,6 +125,17 @@ extern int success;
  * Implementation
  ***********************************************************************/
 
+const char *worker_get_file_and_line(worker_t *worker) {
+  if (worker && worker->lines) {
+    apr_table_entry_t *e =
+      (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
+    if (worker->cmd < apr_table_elts(worker->lines)->nelts) {
+      return e[worker->cmd].key;
+    }
+  }
+  return "";
+}
+
 /**
  * checked lock function, will exit FAILED if status not ok
  *
@@ -1201,7 +1212,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   const char *block_name;
   char *last;
   worker_t *block, *call;
-  apr_table_t *lines;
+  apr_table_t *lines = NULL;
   int cmd;
   apr_pool_t *call_pool;
   char *module;
@@ -1317,7 +1328,12 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
       }
     }
 
-    lines = my_table_deep_copy(call_pool, block->lines);
+    if (block->lines) {
+      lines = my_table_deep_copy(call_pool, block->lines);
+    }
+    else {
+      lines = worker->lines; 
+    }
     apr_thread_mutex_unlock(worker->mutex);
     /* CR END */
 
@@ -1372,7 +1388,7 @@ error:
 void worker_log(worker_t * worker, int mode, char *fmt, ...) {
   va_list va;
   va_start(va, fmt);
-  logger_log_va(worker->logger, mode, worker->file_and_line, fmt, va);
+  logger_log_va(worker->logger, mode, worker_get_file_and_line(worker), fmt, va);
   va_end(va);
 }
 
@@ -3906,7 +3922,7 @@ void worker_destroy(worker_t * worker) {
  */
 apr_status_t worker_add_line(worker_t * worker, const char *file_and_line,
                              char *line) {
-  apr_table_add(worker->lines, file_and_line, line);
+  apr_table_addn(worker->lines, file_and_line, line);
   return APR_SUCCESS;
 }
 

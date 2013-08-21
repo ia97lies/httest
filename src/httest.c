@@ -719,7 +719,6 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
     apr_pool_t *ptmp;
 
     apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
-    worker->file_and_line = e[worker->cmd].key;
     line = e[worker->cmd].val;
     if (worker_is_block(worker, line, ptmp)) {
       status = command_CALL(NULL, worker, line, ptmp);
@@ -836,8 +835,6 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
   worker->mythread = thread;
   worker->flags |= FLAGS_CLIENT;
 
-  worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
-
   worker->which = get_tot_threads(worker->global);
   inc_threads(worker->global);
   inc_tot_threads(worker->global);
@@ -852,6 +849,7 @@ static void * APR_THREAD_FUNC worker_thread_client(apr_thread_t * thread, void *
 
   worker_flush(worker, worker->pbody);
 
+  --worker->cmd;
   if ((status = worker_test_unused(worker)) != APR_SUCCESS) {
     goto error;
   }
@@ -883,8 +881,6 @@ static void * APR_THREAD_FUNC worker_thread_daemon(apr_thread_t * thread, void *
   worker->which = get_tot_threads(worker->global);
   inc_tot_threads(worker->global);
   worker->logger = logger_clone(worker->pbody, worker->logger, worker->which);
-
-  worker->file_and_line = apr_psprintf(worker->pbody, "%s:-1", worker->filename);
 
   worker_log(worker, LOG_INFO, "Daemon start ...");
 
@@ -1161,12 +1157,10 @@ static apr_status_t global_new(global_t **global, store_t *vars,
                                apr_file_t *err, int logger_flags) {
   appender_t *appender;
   apr_status_t status;
-  apr_pool_t *pmutex;
   apr_thread_mutex_t *mutex;
 
   *global = apr_pcalloc(p, sizeof(global_t));
 
-  apr_pool_create(&pmutex, NULL);
   (*global)->pool = p;
   (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
@@ -1230,7 +1224,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
 
   if ((status = apr_thread_mutex_create(&(*global)->sync_mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
-                                        pmutex)) != APR_SUCCESS) {
+                                        p)) != APR_SUCCESS) {
     apr_file_printf(err, "\n"
                "Global creation: could not create sync mutex");
     return status;
@@ -1238,7 +1232,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
  
   if ((status = apr_thread_mutex_create(&(*global)->mutex, 
 	                                APR_THREAD_MUTEX_DEFAULT,
-                                        pmutex)) != APR_SUCCESS) {
+                                        p)) != APR_SUCCESS) {
     apr_file_printf(err, "\n"
                "Global creation: could not create mutex");
     return status;
@@ -2169,7 +2163,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	/* replace all variables for global commands */
 	line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
-        apr_pool_create(&ptmp, NULL);
+        apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
 	/* lookup function index */
 	i = 0;
 	command = lookup_command(global_commands, line);
@@ -2600,7 +2594,7 @@ int main(int argc, const char *const argv[]) {
   srand(apr_time_now()); 
   
   apr_app_initialize(&argc, &argv, NULL);
-  apr_pool_create(&pool, NULL);
+  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
 
   /* block broken pipe signal */
 #if !defined(WIN32)
@@ -2807,7 +2801,8 @@ int main(int argc, const char *const argv[]) {
     }
   }
 
-  apr_pool_destroy(pool);
+  /*apr_pool_destroy(pool);
+   */
 
   return 0;
 }
