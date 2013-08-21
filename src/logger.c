@@ -188,7 +188,7 @@ void logger_log_va(logger_t * logger, int mode, const char *pos, char *fmt,
     char *tmp;
     apr_pool_t *pool;
 
-    apr_pool_create(&pool, NULL);
+    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
     tmp = apr_pvsprintf(pool, fmt, va);
     logger_print(logger, mode, pos, logger->id, logger->group, '=', NULL, tmp, 
                  strlen(tmp));

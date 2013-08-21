@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.8
+  *) httest: Bugfix possible coredump for content pipe from/to _EXEC
+
+
 Changes with httest 2.4.7
   *) httest: Bugfix wrong error line number on windows
 

@@ -7,11 +7,10 @@ __GET /your/path/to/your/resource?your=params HTTP/1.1
 __Host: $YOUR_HOST 
 __User-Agent: mozilla
 __
-_FLUSH
+_EXEC< gunzip
 _EXPECT . "HTTP/1.1 200 OK"
 _EXPECT . "<html>"
 _EXPECT . "</html>"
-_EXEC< gunzip
 _WAIT
 END
 
