@@ -119,13 +119,10 @@ void store_set(store_t *store, const char *name, const char *value) {
     }
     apr_hash_set(store->hash, name, APR_HASH_KEY_STRING, NULL);
     apr_pool_destroy(element->pool);
-    apr_pool_create(&element->pool, store->pool);
   }
-  else {
-    apr_pool_create(&pool, store->pool);
-    element = apr_pcalloc(store->pool, sizeof(*element));
-    element->pool = pool;
-  }
+  apr_pool_create(&pool, store->pool);
+  element = apr_pcalloc(pool, sizeof(*element));
+  element->pool = pool;
   element->value = apr_pstrdup(element->pool, value);
   apr_hash_set(store->hash, apr_pstrdup(element->pool, name), 
 	       APR_HASH_KEY_STRING, element);
@@ -139,9 +136,8 @@ void store_set(store_t *store, const char *name, const char *value) {
 void store_unset(store_t *store, const char *name) {
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
-    apr_pool_destroy(element->pool);
-    apr_pool_create(&element->pool, store->pool);
     apr_hash_set(store->hash, name, APR_HASH_KEY_STRING, NULL);
+    apr_pool_destroy(element->pool);
   }
 }
 
