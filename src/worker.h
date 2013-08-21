@@ -164,6 +164,7 @@ struct worker_s {
 
 struct global_s {
   apr_pool_t *pool;
+  apr_pool_t *cleanup_pool;
   apr_hash_t *config;
   int flags;
   const char *path;

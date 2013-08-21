@@ -1162,6 +1162,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   *global = apr_pcalloc(p, sizeof(global_t));
 
   (*global)->pool = p;
+  apr_pool_create(&(*global)->cleanup_pool, NULL);
   (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
 
@@ -1350,7 +1351,7 @@ static apr_status_t global_END(command_t *self, global_t *global, char *data,
       return status;
     }
 
-    apr_pool_cleanup_register(global->pool, global->cur_worker->name, 
+    apr_pool_cleanup_register(global->cleanup_pool, global->cur_worker->name, 
                               worker_file_cleanup, apr_pool_cleanup_null);
     global->state = GLOBAL_STATE_NONE;
     return APR_SUCCESS;
@@ -2544,6 +2545,7 @@ exit:
  * own exit func
  */
 static void my_exit() {
+  apr_pool_destroy(global->cleanup_pool);
   if (success == 0) {
     fprintf(stderr, " FAILED\n");
     fflush(stderr);
@@ -2800,9 +2802,6 @@ int main(int argc, const char *const argv[]) {
       break;
     }
   }
-
-  /*apr_pool_destroy(pool);
-   */
 
   return 0;
 }
