@@ -2545,7 +2545,9 @@ exit:
  * own exit func
  */
 static void my_exit() {
-  apr_pool_destroy(global->cleanup_pool);
+  if (global && global->cleanup_pool) {
+    apr_pool_destroy(global->cleanup_pool);
+  }
   if (success == 0) {
     fprintf(stderr, " FAILED\n");
     fflush(stderr);
