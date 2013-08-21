@@ -91,7 +91,7 @@ typedef struct global_replacer_s {
 /************************************************************************
  * Globals 
  ***********************************************************************/
-global_t *global;
+global_t *global = NULL;
 extern module_t modules[];
 
 static void show_commands(apr_pool_t *p, global_t *global); 
