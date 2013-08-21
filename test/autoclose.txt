@@ -1,4 +1,4 @@
 
-autoclose.hte:8: error: CLT0-0 Broken pipe(32)
-autoclose.hte:8: error: Error in loop with count = 1
-autoclose.hte:8: error: CLT0-0 Broken pipe(32)
+autoclose.hte:14: error: CLT0-0 Broken pipe(32)
+autoclose.hte:14: error: Error in loop with count = 1
+autoclose.hte:14: error: CLT0-0 Broken pipe(32)
