@@ -133,7 +133,7 @@ const char *worker_get_file_and_line(worker_t *worker) {
       return e[worker->cmd].key;
     }
   }
-  return "";
+  return NULL;
 }
 
 /**
@@ -2363,6 +2363,7 @@ static const char *multi_line_variable(worker_t *worker, char *copy,
   apr_table_entry_t *e ;
   int to;
   int delim_found = 0;
+  int store_cmd = worker->cmd;
 
   var = apr_strtok(copy, "<", &delimiter);
   apr_collapse_spaces(delimiter, delimiter);
@@ -2387,10 +2388,13 @@ static const char *multi_line_variable(worker_t *worker, char *copy,
   }
 
   if (!delim_found) {
+    int old_cmd = worker->cmd;
+    worker->cmd = store_cmd;
     worker_log(worker, LOG_ERR, 
                "No ending delimiter \"%s\" found for multiline variable",
                delimiter);
     return NULL;
+    worker->cmd = old_cmd;
   }
 
   if (val == NULL) {
