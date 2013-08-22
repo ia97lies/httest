@@ -58,7 +58,7 @@ static apr_status_t dbg_interpreter(worker_t *worker, worker_t *parent, apr_pool
     return status;
   }
 
-  apr_file_printf(output, "\nbreak %s", worker->file_and_line);
+  apr_file_printf(output, "\nbreak %s", worker_get_file_and_line(worker));
   apr_file_printf(output, "\n>");
   apr_file_flush(output);
 

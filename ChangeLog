@@ -1,7 +1,14 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.8
-  *) httest: Bugfix possible coredump for content pipe from/to _EXEC
+  *) httest: Bugfix possible coredump for content pipe from/to _EXEC.
+  
+  *) httest: Bugfix wrong error trace and avoid another coredump in this
+             context. Error trace no points to the end of a block instead to
+	     the start of block where an error occured.
+
+  *) httest: Bugfix coredump if daemon is using pools and httest exits on
+             error.
 
 
 Changes with httest 2.4.7

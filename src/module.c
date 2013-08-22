@@ -90,6 +90,7 @@ apr_status_t module_command_new(global_t *global, const char *module,
   /* descriptions */
   worker->short_desc = short_desc;
   worker->desc = desc;
+  worker->lines = NULL;
 
   if (!(blocks = apr_hash_get(global->modules, module, APR_HASH_KEY_STRING))) {
     blocks = apr_hash_make(global->pool);

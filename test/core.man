@@ -1,4 +1,0 @@
-
-INCLUDE $TOP/test/config.htb
-CLIENT
-END

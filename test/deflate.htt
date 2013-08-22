@@ -1,4 +1,4 @@
-@:SKIP $OS win # FIXME seems not to work on windows perhaps _EXEC< is the problem
+@:SKIP $OS win # FIXME? '_EXEC< gunzip' not working seems to be a problem with read pipe to thread
 
 SET MAX_DURATION=5000
 INCLUDE $TOP/test/config.htb

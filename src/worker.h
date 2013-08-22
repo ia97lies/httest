@@ -132,7 +132,6 @@ struct worker_s {
   int group;
   char *name;
   char *additional;
-  char *file_and_line;
   const char *short_desc;
   const char *desc;
   int chunksize;
@@ -165,6 +164,7 @@ struct worker_s {
 
 struct global_s {
   apr_pool_t *pool;
+  apr_pool_t *cleanup_pool;
   apr_hash_t *config;
   int flags;
   const char *path;
@@ -443,5 +443,6 @@ apr_status_t worker_to_file(worker_t * self);
 const char *worker_get_value_from_param(worker_t *worker, const char *param, 
                                         apr_pool_t *ptmp); 
 void worker_finally_cleanup(worker_t *worker);
+const char *worker_get_file_and_line(worker_t *worker); 
 
 #endif

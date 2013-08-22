@@ -3,7 +3,7 @@
 DSO:LOAD_TRANSPORT_DSO $TOP/src/.libs/libhello.so foo
 
 CLIENT
-_DSO:FUNC foo foo_set "hallo welt"
-_DSO:FUNC foo foo_test "hallo welt"
+_DSO:FUNC foo_set "hallo welt\n"
+_DSO:FUNC foo_test "hallo welt\n"
 END
 
