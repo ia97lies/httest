@@ -1,3 +1,5 @@
+@:SKIP $OS win # FIXME seems not to work on windows perhaps _EXEC< is the problem
+
 SET MAX_DURATION=5000
 INCLUDE $TOP/test/config.htb
 
