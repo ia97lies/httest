@@ -19,7 +19,7 @@ what the build script does on mac/unix:
 - libs are built from source
 - htt is built with these libs linked statically
 - some basic tests are run
-- tests are run
+- tests are run (make check in test dir)
 
 what the build script does on win:
 
@@ -28,7 +28,7 @@ what the build script does on win:
 - a visual c++ solution is generated
 - htt is built with visual c++
 - some basic tests are run
-- tests are run
+- tests are run (equiv. make check in test dir)
 
 on mac/unix you need:
 
@@ -50,8 +50,8 @@ how to build:
 - all:   builds binaries on same platform
 - sln:   creates a visual c++ solution (on win and unix)
 - see target/build.log for details if something fails
-- see target/report-<version>-<x>.html for test report
-- binaries go to target/httest-<version>-<x>[.tar.gz|.zip]
+- see target/report-<ver>-<os>.html for test report
+- binaries go to target/httest-<ver>-<os>[.tar.gz|.zip]
 
 built binaries:
 
