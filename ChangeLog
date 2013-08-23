@@ -10,6 +10,8 @@ Changes with httest 2.4.8
   *) httest: Bugfix coredump if daemon is using pools and httest exits on
              error.
 
+  *) htproxy: Bugfix wrong initialized httest commands before calling them.
+
 
 Changes with httest 2.4.7
   *) httest: Bugfix wrong error line number on windows

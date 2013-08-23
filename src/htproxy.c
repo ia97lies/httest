@@ -242,6 +242,7 @@ static void print_file(self_t *self, char *file) {
  */
 static apr_status_t call_command(worker_t *worker, void *func, char *name, char *params) {
   command_t cmd;
+  memset(&cmd, 0, sizeof(cmd));
   cmd.name = name;
   cmd.func = (command_f)func;
   return cmd.func(&cmd, worker, params, worker->pbody);
