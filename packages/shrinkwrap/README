@@ -50,6 +50,7 @@ how to build:
 - all:   builds binaries on same platform
 - sln:   creates a visual c++ solution (on win and unix)
 - see target/build.log for details if something fails
+- see target/report-<version>-<x>.html for test report
 - binaries go to target/httest-<version>-<x>[.tar.gz|.zip]
 
 built binaries:
