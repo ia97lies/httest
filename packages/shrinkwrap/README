@@ -19,6 +19,7 @@ what the build script does on mac/unix:
 - libs are built from source
 - htt is built with these libs linked statically
 - some basic tests are run
+- tests are run
 
 what the build script does on win:
 
@@ -27,6 +28,7 @@ what the build script does on win:
 - a visual c++ solution is generated
 - htt is built with visual c++
 - some basic tests are run
+- tests are run
 
 on mac/unix you need:
 
