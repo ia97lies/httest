@@ -49,8 +49,8 @@ by $(whois jexler.net)
 ### Output
 
 - build: target/build.log
-- test report: target/report-<ver>-<os>.html
-- binaries: target/httest-<ver>-<os>[.tar.gz|.zip]
+- test report: target/report-&lt;ver>-&lt;os>.html
+- binaries: target/httest-&lt;ver>-&lt;os>[.tar.gz|.zip]
 
 ### Download
 
