@@ -22,6 +22,7 @@ Thanks to Alain Stalder for
 - cleaning up the windows build enviroment
 - maintainer of Windows and Mac packages.
 - core developer, main focus on Win/Mac problems.
+- nightly build infrastructure (Mac, Win, Linux 32/64)
 
 Thanks to Marcel Schoen for
 - writing and maintain the user manual
