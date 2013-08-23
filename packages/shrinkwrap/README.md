@@ -2,7 +2,7 @@
 
 by $(whois jexler.net)
 
-[![jexler logo](http://www.gravatar.com/avatar/9022d38f949fccf36a94e0f444327f6b.jpg)](http:www.jexler.net/)
+[![jexler logo](http://www.gravatar.com/avatar/9022d38f949fccf36a94e0f444327f6b.jpg)](http://www.jexler.net/)
 
 ### Resulting Binaries
 
