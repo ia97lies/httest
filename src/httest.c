@@ -49,6 +49,7 @@
 #include <apr_thread_proc.h>
 #include <apr_thread_cond.h>
 #include <apr_thread_mutex.h>
+#include <apr_pools.h>
 #include <apr_support.h>
 #include <apr_hash.h>
 #include <apr_base64.h>
@@ -1158,9 +1159,10 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   appender_t *appender;
   apr_status_t status;
   apr_thread_mutex_t *mutex;
+  apr_allocator_t *allocator;
 
   *global = apr_pcalloc(p, sizeof(global_t));
-
+  allocator = apr_pool_allocator_get(p);
   (*global)->pool = p;
   apr_pool_create(&(*global)->cleanup_pool, NULL);
   (*global)->config = apr_hash_make(p);
@@ -1178,7 +1180,16 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
                                         (*global)->pool)) != APR_SUCCESS) {
     apr_file_printf(err, "\n"
-               "Global creation: could not create sync mutex");
+               "Global creation: could not create mutex for global pool");
+    return status;
+  }
+
+  apr_allocator_mutex_set(allocator, mutex);
+
+  if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                        (*global)->pool)) != APR_SUCCESS) {
+    apr_file_printf(err, "\n"
+               "Global creation: could not create mutex for appender");
     return status;
   }
 
