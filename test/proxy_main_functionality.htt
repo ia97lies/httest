@@ -29,19 +29,17 @@ _EXEC ../src/htremote -p$CMD_PORT -e"../src/htproxy -C htproxy.conf -d /var/tmp/
 END
 
 CLIENT
-_SLEEP 2000
+_SLEEP 1000
 # start proxy
 _REQ localhost $CMD_PORT
 _SLEEP 500
-_SOCKET
 _MATCH Body "Start proxy on port ([0-9]+)" PROXY_PORT
 _READLINE
 _READLINE
-_END SOCKET
 # get help text
 _PIPE
 _EXEC echo H
-_SOCKET
+_FLUSH
 _READLINE
 _EXPECT . "Help text"
 _LOOP 7
@@ -49,14 +47,13 @@ _READLINE
 _END LOOP
 _EXPECT . "q\|quit *: Exit"
 _READLINE
-_END SOCKET
 
 # start with a comment
 _REQ localhost $CMD_PORT
 _PIPE
 _EXEC echo "c my comment"
+_FLUSH
 
-_SLEEP 500
 # do something to record
 _REQ localhost $PROXY_PORT
 __GET http://$YOUR_HOST:$YOUR_PORT/your/path HTTP/1.1
@@ -68,6 +65,7 @@ _WAIT
 _REQ localhost $CMD_PORT
 _PIPE
 _EXEC echo "e ==AS1 OK 1=="
+_FLUSH
 
 # say proxy to add additional request
 _PIPE
@@ -79,8 +77,8 @@ _SH echo "h __"
 _SH echo "h _EXPECT . \"HTTP/1.1 200\""
 _SH echo "h _WAIT"
 _SH END
+_FLUSH
 
-_SLEEP 500
 # test if has wrote an expect
 _EXPECT EXEC "# my comment"
 _EXPECT EXEC "_EXPECT \. \"==AS1 OK 1==\""
@@ -110,8 +108,8 @@ _CLOSE
 _REQ localhost $CMD_PORT
 _PIPE
 _EXEC echo "e ==AS1 OK 2=="
+_FLUSH
 
-_SLEEP 500
 # test if has wrote an expect
 _EXPECT EXEC '_EXPECT \. "==AS1 OK 2=="'
 _EXEC cat /var/tmp/test.htt
@@ -120,9 +118,10 @@ _EXEC cat /var/tmp/test.htt
 _REQ localhost $CMD_PORT
 _PIPE
 _EXEC echo "r /var/tmp/my.htt"
+_FLUSH
 _PIPE
 _EXEC echo "q"
-_SLEEP 500
+_FLUSH
 _CLOSE
 
 # run the recorded test (server is prepared with a _LOOP 2)
