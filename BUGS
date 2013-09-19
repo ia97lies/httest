@@ -1,1 +1,7 @@
 + Multiline variable _SET do not resolve variables in it
+  + Workaround is do a second _SET newVar=<MultilineVar>
+
++ On solars 10 if using SSL connect (syscall error)
+  + do not busy wait but poll
+  + check what is broken since 2.2.9 (diff)
+  + MOAP3-208
