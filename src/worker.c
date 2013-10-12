@@ -2449,6 +2449,7 @@ apr_status_t command_SET(command_t * self, worker_t * worker, char *data,
     return APR_EGENERAL;
   }
   
+  vars_val = worker_replace_vars(worker, vars_val, NULL, ptmp); \
   worker_var_set(worker, vars_key, vars_val);
 
   return APR_SUCCESS;
