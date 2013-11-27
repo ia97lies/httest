@@ -1,8 +1,9 @@
 CLIENT
+_SET WELT=Welt
 _SET A<EOF
   Hallo
-    Welt du schnoede
+    $WELT du schnoede
   Welt
 EOF
-_EXPECT VAR(A) "schnoede"
+_EXPECT VAR(A) "Welt du schnoede"
 END

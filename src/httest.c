@@ -1161,8 +1161,15 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   apr_thread_mutex_t *mutex;
   apr_allocator_t *allocator;
 
-  *global = apr_pcalloc(p, sizeof(global_t));
   allocator = apr_pool_allocator_get(p);
+  if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                        p)) != APR_SUCCESS) {
+    apr_file_printf(err, "\n"
+               "Global creation: could not create mutex for global pool");
+    return status;
+  }
+  apr_allocator_mutex_set(allocator, mutex);
+  *global = apr_pcalloc(p, sizeof(global_t));
   (*global)->pool = p;
   apr_pool_create(&(*global)->cleanup_pool, NULL);
   (*global)->config = apr_hash_make(p);
@@ -1176,15 +1183,6 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   (*global)->blocks = apr_hash_make(p);
   (*global)->files = apr_table_make(p, 5);
   (*global)->logger = logger_new(p, log_mode, 0);
-
-  if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
-                                        (*global)->pool)) != APR_SUCCESS) {
-    apr_file_printf(err, "\n"
-               "Global creation: could not create mutex for global pool");
-    return status;
-  }
-
-  apr_allocator_mutex_set(allocator, mutex);
 
   if ((status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
                                         (*global)->pool)) != APR_SUCCESS) {
