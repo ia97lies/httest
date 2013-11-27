@@ -1,0 +1,50 @@
++ Multiline variable _SET do not resolve variables in it
+  + Workaround is do a second _SET newVar=<MultilineVar>
+  --> *DONE*
+
++ On solars 10 if using SSL connect (syscall error)
+  + do not busy wait but poll
+  + check what is broken since 2.2.9 (diff)
+  + MOAP3-208
+
++ Sporadic coredumps on start
+  + dump on a solaris ix86
+  cli@nbnevis03:~> pstack /share/nightlybuild/ISIWEB4_SOL10_X86_64/isiweb4/spool/ix86-sun-solaris10-64-studio12/test/httest/servlet/connector/http/core
+  core '/share/nightlybuild/ISIWEB4_SOL10_X86_64/isiweb4/spool/ix86-sun-solaris10-64-studio12/test/httest/servlet/connector/http/core' of 3576:   /share/xpository/sourceforge/httest/2.4.8/ix86-sun-solaris10-64-studio
+  -----------------  lwp# 1  --------------------------------
+  00007fffffa9180a _brk_unlocked () + a
+  00007fffffa78320 sbrk () + 20
+  00007fffffa29cdb _morecore () + 12b
+  00007fffffa294dd _malloc_unlocked () + 10d
+  00007fffffa2939d malloc () + 2d
+  00007ffffff20c97 allocator_alloc () + 1d7
+  00007ffffff21338 apr_pool_create_ex () + 58
+  00007ffffff2e647 apr_thread_create () + a7
+  000000000048b7fe global_START () + 24e
+  000000000048ba49 global_GO () + 29
+  000000000048d150 main () + 5e0
+  0000000000488f6c ???????? ()
+  -----------------  lwp# 2  --------------------------------
+  00007fffffa91f3a __pollsys () + a
+  00007fffffa38c14 pselect () + 154
+  00007fffffa38ee2 select () + 72
+  00007ffffff2ee50 apr_sleep () + 60
+  00000000004a2acb block_SYS_SLEEP () + 4b
+  0000000000493969 command_CALL () + 499
+  00000000004897ba worker_interpret () + 1da
+  0000000000489b88 worker_thread_daemon () + 98
+  00007ffffff2e59d dummy_worker () + d
+  00007fffffa8c8cb _thr_setup () + 5b
+  00007fffffa8caf0 _lwp_start ()
+  -----------------  lwp# 3  --------------------------------
+  00007ffffff18738 apr_hash_next () + 18
+  000000000049c18d store_merge () + 6d
+  000000000049c1f1 store_copy () + 21
+  000000000049981c worker_new () + 35c
+  000000000049991b worker_clone () + 2b
+  0000000000489d88 worker_run_server_threads () + b8
+  000000000048a160 worker_thread_listener () + 260
+  00007ffffff2e59d dummy_worker () + d
+  00007fffffa8c8cb _thr_setup () + 5b
+  00007fffffa8caf0 _lwp_start ()
+

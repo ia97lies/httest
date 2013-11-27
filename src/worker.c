@@ -2449,6 +2449,7 @@ apr_status_t command_SET(command_t * self, worker_t * worker, char *data,
     return APR_EGENERAL;
   }
   
+  vars_val = worker_replace_vars(worker, vars_val, NULL, ptmp); \
   worker_var_set(worker, vars_key, vars_val);
 
   return APR_SUCCESS;
@@ -3820,62 +3821,64 @@ apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data,
  */
 void worker_new(worker_t ** self, char *additional, global_t *global, 
                 interpret_f function) {
-  apr_pool_t *p;
-  apr_pool_create_unmanaged_ex(&p, NULL, NULL);
-  (*self) = apr_pcalloc(p, sizeof(worker_t));
-  (*self)->global = global;
-  (*self)->heartbeat = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pbody = p;
-  apr_pool_create(&p, (*self)->heartbeat);
-  (*self)->pcache = p;
-  /* this stuff muss last until END so take pbody pool for this */
-  p = (*self)->pbody;
-  (*self)->interpret = function;
-  (*self)->config = apr_hash_make(p);
-  (*self)->filename = apr_pstrdup(p, "<none>");
-  (*self)->socktmo = global->socktmo;
-  (*self)->additional = apr_pstrdup(p, additional);
-  (*self)->sync_mutex = global->sync_mutex;
-  (*self)->mutex = global->mutex;
-  (*self)->lines = apr_table_make(p, 20);
-  (*self)->cache = apr_table_make((*self)->pcache, 20);
-  (*self)->expect.dot = apr_table_make(p, 2);
-  (*self)->expect.headers = apr_table_make(p, 2);
-  (*self)->expect.body = apr_table_make(p, 2);
-  (*self)->expect.exec= apr_table_make(p, 2);
-  (*self)->expect.error = apr_table_make(p, 2);
-  (*self)->match.dot= apr_table_make(p, 2);
-  (*self)->match.headers = apr_table_make(p, 2);
-  (*self)->match.body = apr_table_make(p, 2);
-  (*self)->match.error = apr_table_make(p, 2);
-  (*self)->match.exec = apr_table_make(p, 2);
-  (*self)->grep.dot= apr_table_make(p, 2);
-  (*self)->grep.headers = apr_table_make(p, 2);
-  (*self)->grep.body = apr_table_make(p, 2);
-  (*self)->grep.error = apr_table_make(p, 2);
-  (*self)->grep.exec = apr_table_make(p, 2);
-  (*self)->sockets = apr_hash_make(p);
-  (*self)->headers_allow = NULL;
-  (*self)->headers_filter = NULL;
-  (*self)->params = store_make(p);
-  (*self)->retvars = store_make(p);
-  (*self)->locals = store_make(p);
   if (global->mutex) apr_thread_mutex_lock(global->mutex);
-  (*self)->vars = store_copy(global->vars, p);
-  (*self)->modules = apr_hash_copy(p, global->modules);
-  if (global->mutex) apr_thread_mutex_unlock(global->mutex);
-  (*self)->blocks = global->blocks;
-  (*self)->logger = global->logger;
-  (*self)->flags = global->flags;
-  (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
-
-  store_set((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
-	    logger_get_mode(global->logger)));
+  {
+    apr_pool_t *p;
+    apr_pool_create_unmanaged_ex(&p, NULL, NULL);
+    (*self) = apr_pcalloc(p, sizeof(worker_t));
+    (*self)->global = global;
+    (*self)->heartbeat = p;
+    apr_pool_create(&p, (*self)->heartbeat);
+    (*self)->pbody = p;
+    apr_pool_create(&p, (*self)->heartbeat);
+    (*self)->pcache = p;
+    /* this stuff muss last until END so take pbody pool for this */
+    p = (*self)->pbody;
+    (*self)->interpret = function;
+    (*self)->config = apr_hash_make(p);
+    (*self)->filename = apr_pstrdup(p, "<none>");
+    (*self)->socktmo = global->socktmo;
+    (*self)->additional = apr_pstrdup(p, additional);
+    (*self)->sync_mutex = global->sync_mutex;
+    (*self)->mutex = global->mutex;
+    (*self)->lines = apr_table_make(p, 20);
+    (*self)->cache = apr_table_make((*self)->pcache, 20);
+    (*self)->expect.dot = apr_table_make(p, 2);
+    (*self)->expect.headers = apr_table_make(p, 2);
+    (*self)->expect.body = apr_table_make(p, 2);
+    (*self)->expect.exec= apr_table_make(p, 2);
+    (*self)->expect.error = apr_table_make(p, 2);
+    (*self)->match.dot= apr_table_make(p, 2);
+    (*self)->match.headers = apr_table_make(p, 2);
+    (*self)->match.body = apr_table_make(p, 2);
+    (*self)->match.error = apr_table_make(p, 2);
+    (*self)->match.exec = apr_table_make(p, 2);
+    (*self)->grep.dot= apr_table_make(p, 2);
+    (*self)->grep.headers = apr_table_make(p, 2);
+    (*self)->grep.body = apr_table_make(p, 2);
+    (*self)->grep.error = apr_table_make(p, 2);
+    (*self)->grep.exec = apr_table_make(p, 2);
+    (*self)->sockets = apr_hash_make(p);
+    (*self)->headers_allow = NULL;
+    (*self)->headers_filter = NULL;
+    (*self)->params = store_make(p);
+    (*self)->retvars = store_make(p);
+    (*self)->locals = store_make(p);
+    (*self)->vars = store_copy(global->vars, p);
+    (*self)->modules = apr_hash_copy(p, global->modules);
+    (*self)->blocks = global->blocks;
+    (*self)->logger = global->logger;
+    (*self)->flags = global->flags;
+    (*self)->listener_addr = apr_pstrdup(p, APR_ANYADDR);
   
-  worker_log((*self), LOG_DEBUG, 
-             "worker_new: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
-             (*self)->pbody, (*self)->pbody);
+    store_set((*self)->vars, "__LOG_LEVEL", apr_itoa((*self)->pbody, 
+  		logger_get_mode(global->logger)));
+    
+    worker_log((*self), LOG_DEBUG, 
+  			 "worker_new: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+  			 (*self)->pbody, (*self)->pbody);
+  }
+  if (global->mutex) apr_thread_mutex_unlock(global->mutex);
 }
 
 /**
@@ -3887,21 +3890,26 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
  * @return an apr status
  */
 void worker_clone(worker_t ** self, worker_t * orig) {
-  apr_pool_t *p;
-
-  worker_new(self, orig->additional, orig->global, orig->interpret);
-
-  p = (*self)->pbody;
-  (*self)->flags = orig->flags;
-  (*self)->lines = my_table_deep_copy(p, orig->lines);
-  (*self)->listener = NULL;
-  (*self)->vars = store_copy(orig->vars, p);
-  (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
-  (*self)->group = orig->group;
-
-  worker_log((*self), LOG_DEBUG, 
-             "worker_clone: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
-             (*self)->pbody, (*self)->pbody);
+  global_t *global = orig->global;
+  
+  worker_new(self, orig->additional, global, orig->interpret);
+  
+  if (global->mutex) apr_thread_mutex_lock(global->mutex);
+  {
+    apr_pool_t *p;
+    p = (*self)->pbody;
+    (*self)->flags = orig->flags;
+    (*self)->lines = my_table_deep_copy(p, orig->lines);
+    (*self)->listener = NULL;
+    (*self)->vars = store_copy(orig->vars, p);
+    (*self)->listener_addr = apr_pstrdup(p, orig->listener_addr);
+    (*self)->group = orig->group;
+  
+    worker_log((*self), LOG_DEBUG, 
+               "worker_clone: pool: %"APR_UINT64_T_HEX_FMT", pbody: %"APR_UINT64_T_HEX_FMT, 
+               (*self)->pbody, (*self)->pbody);
+  }
+  if (global->mutex) apr_thread_mutex_unlock(global->mutex);
 }
 
 /**
