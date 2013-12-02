@@ -3,6 +3,8 @@
 Changes with httest 2.4.9
   *) httest: Set mutex for global pool to make thread handling safe.
 
+  *) httest: Mutex for worker clone
+
 
 Changes with httest 2.4.8
   *) httest: Bugfix possible coredump for content pipe from/to _EXEC.
