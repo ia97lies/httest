@@ -1,5 +1,9 @@
 TODO List
 ---------
++ PROLOG body for inital stuff
+
++ EPILOG body final stuff
+
 + Fix multiline variable, no resolving is done here
 
 + Naming
