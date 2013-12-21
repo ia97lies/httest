@@ -154,8 +154,8 @@ function do_determine_os {
 
   echo "ARCH:     $ARCH"
   echo "BITS:     $BITS"
-  echo "HOSTNAME: $HOSTNAME"
   echo "TARGETID: $TARGETID"
+  echo "HOSTNAME: $HOSTNAME"
 
 }
 
