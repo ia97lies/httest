@@ -131,11 +131,31 @@ function do_determine_os {
     printf "\e[33;1mWARNING:\e[0m unknown os, treating like linux\n"
   fi
   
+  # assemble a string that identifes the target, used e.g. as part of file name
+  TARGETID="$OS-$ARCH-$BITS"
+  if [ "$OS" == "mac" -a "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
+    # intel 64 bit like almost every mac today
+    TARGETID="$OS"
+  elif [ "$OS" == "linux" ]; then
+    # omit architeture if intel
+    if [ "$ARCH" == "i686" -a "$BITS" == "32" ]; then
+      TARGETID="$OS-$BITS"
+    elif [ "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
+      TARGETID="$OS-$BITS"
+    fi
+  elif [ "$OS" == "win" -a "$ARCH" == "i686" -a "$BITS" == "32" ]; then
+    TARGETID="$OS"
+  elif [ "$OS" == "solaris" -a "$ARCH" == "sun4u" ]; then
+    TARGETID="$OS-sparc-$BITS"
+  fi
+
   ARCH=`uname -m`
   echo "ARCH:     $ARCH"
   BITS=`getconf LONG_BIT`
   echo "BITS:     $BITS"
   echo "HOSTNAME: $HOSTNAME"
+  echo "TARGETID: $TARGETID"
+
 }
 
 #
@@ -481,6 +501,24 @@ function unix_build_JS {
       }
       /CXXFLAGS...CXXFLAGS .fpascal-strings .fno-common/ {
         print "    CXXFLAGS=\"$CXXFLAGS -fno-common\""
+        next
+      }
+      { print $0 }' > configure
+    chmod +x configure
+  elif [ "$OS" = "linux" -a "$ARCH" = "armv7l" ]; then
+    # only js sets mfloat-abi explicitly, all other libs and httest don't, so remove it
+    mv configure configure.orig
+    cat configure.orig | awk '
+      /CFLAGS=.*march=armv7-a.*mfloat-abi=softfp/ {
+        print "        CFLAGS=\"$CFLAGS -march=armv7-a -mthumb $MOZ_ARM_VFP_FLAGS\""
+        next
+      }
+      /CXXFLAGS=.*march=armv7-a.*mfloat-abi=softfp/ {
+        print "        CXXFLAGS=\"$CXXFLAGS -march=armv7-a -mthumb $MOZ_ARM_VFP_FLAGS\""
+        next
+      }
+      /ASFLAGS=.*march=armv7-a.*mfloat-abi=softfp/ {
+        print "        ASFLAGS=\"$ASFLAGS -march=armv7-a -mthumb $MOZ_ARM_VFP_FLAGS\""
         next
       }
       { print $0 }' > configure
@@ -1112,7 +1150,7 @@ function make_check {
   cat >"$REPORT" <<EOF
 <html>
   <head>
-    <title>httest report ($OS $BITS)</title>
+    <title>httest report ($TARGETID)</title>
     <style type="text/css">
       span.ok { font-weight:bold; color:green }
       span.warn { font-weight:bold; color:orange }
@@ -1342,27 +1380,9 @@ EOF
 #
 # unix/win: "shrink-wrap", i.e. get binaries, create README and zip/tgz it (always)
 #
-function do_shrinkwrap {
-  # determine name to use for file name
-  SHORT_NAME="$OS-$ARCH-$BITS"
-  if [ "$OS" == "mac" -a "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
-    # intel 64 bit like almost every mac today
-    SHORT_NAME="$OS"
-  elif [ "$OS" == "linux" ]; then
-    # omit architeture if intel
-    if [ "$ARCH" == "i686" -a "$BITS" == "32" ]; then
-      SHORT_NAME="$OS-$BITS"
-    elif [ "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
-      SHORT_NAME="$OS-$BITS"
-    fi
-  elif [ "$OS" == "win" -a "$ARCH" == "i686" -a "$BITS" == "32" ]; then
-    SHORT_NAME="$OS"
-  elif [ "$OS" == "solaris" -a "$ARCH" == "sun4u" ]; then
-    SHORT_NAME="$OS-sparc-$BITS"
-  fi
-  
+function do_shrinkwrap {  
   echo -n "($(date +%H:%M)) shrink-wrap $SHORT_NAME ... "
-  shrinkwrap "$SHORT_NAME" >>"$BUILDLOG" 2>>"$BUILDLOG"
+  shrinkwrap "$TARGETID" >>"$BUILDLOG" 2>>"$BUILDLOG"
   print_ok
   
 }
