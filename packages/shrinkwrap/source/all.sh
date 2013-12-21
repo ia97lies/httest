@@ -131,6 +131,9 @@ function do_determine_os {
     printf "\e[33;1mWARNING:\e[0m unknown os, treating like linux\n"
   fi
   
+  ARCH=`uname -m`
+  BITS=`getconf LONG_BIT`
+
   # assemble a string that identifes the target, used e.g. as part of file name
   TARGETID="$OS-$ARCH-$BITS"
   if [ "$OS" == "mac" -a "$ARCH" == "x86_64" -a "$BITS" == "64" ]; then
@@ -149,9 +152,7 @@ function do_determine_os {
     TARGETID="$OS-sparc-$BITS"
   fi
 
-  ARCH=`uname -m`
   echo "ARCH:     $ARCH"
-  BITS=`getconf LONG_BIT`
   echo "BITS:     $BITS"
   echo "HOSTNAME: $HOSTNAME"
   echo "TARGETID: $TARGETID"
