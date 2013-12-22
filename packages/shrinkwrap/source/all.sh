@@ -506,8 +506,9 @@ function unix_build_JS {
       }
       { print $0 }' > configure
     chmod +x configure
-  elif [ "$OS" = "linux" -a "$ARCH" = "armv7l" ]; then
-    # only js sets mfloat-abi explicitly, all other libs and httest don't, so remove it
+  elif [ "$OS" = "linux" ]; then
+    # js sets -mfloat-abi compiler flag explicitly if arm arch,
+    # but all other libs and httest don't, so remove it...
     mv configure configure.orig
     cat configure.orig | awk '
       /CFLAGS=.*march=armv7-a.*mfloat-abi=softfp/ {
@@ -1160,7 +1161,7 @@ function make_check {
   </head>
 
   <body>
-    <h2>httest report ($OS $BITS)</h2>
+    <h2>httest report ($TARGETID)</h2>
     
     <pre>
 For the build system on which these binaries were built. Failed or skipped
