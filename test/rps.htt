@@ -1,4 +1,5 @@
 @:SKIP $OS win # FIXME too fast
+@:SKIP $HOSTNAME mini # fails sometimes in nightly tests, maybe because are VMs
 
 INCLUDE $TOP/test/config.htb
 
