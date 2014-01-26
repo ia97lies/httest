@@ -58,6 +58,8 @@ Changes with httest 2.4.4
 
   *) httest: Bugfix possible coredump in store.c
 
+  *) httest: Add multiline variable support for _SET command
+
   *) httest: Experimental dynamic shared object support for transport objects.
              This could be very useful to test shared libraries directly with
              the wellknown httest commands.
