@@ -2184,12 +2184,8 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	    return status;
 	  }
 	}
-        else { /* let's see if we find block for this job */
-          int cur_log_mode = logger_get_mode(global->worker->logger);
-
-          logger_set_mode(global->worker->logger, 1);
+        else { 
           status = command_CALL(NULL, global->worker, line, ptmp);
-          logger_set_mode(global->worker->logger, cur_log_mode);
           if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
             return status;
           }
