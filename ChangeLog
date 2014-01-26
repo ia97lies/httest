@@ -1,6 +1,8 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.9
+  *) httest: Fix multiline variable resolve problem.
+
   *) httest: Set mutex for global pool to make thread handling safe.
 
   *) httest: Mutex for worker clone
