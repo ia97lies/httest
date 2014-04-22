@@ -3,14 +3,14 @@
 # unix sources (mac, linux, ...)
 
 UNIX_APR_NAME="apr"
-UNIX_APR_VER="1.4.8"
+UNIX_APR_VER="1.5.0"
 UNIX_APR_PROT="http"
 UNIX_APR_HOST="mirror.switch.ch"
 UNIX_APR_PATH="/mirror/apache/dist/apr"
 UNIX_APR_FILE="$UNIX_APR_NAME-$UNIX_APR_VER.tar.gz"
 
 UNIX_APU_NAME="apr-util"
-UNIX_APU_VER="1.5.2"
+UNIX_APU_VER="1.5.3"
 UNIX_APU_PROT="http"
 UNIX_APU_HOST="mirror.switch.ch"
 UNIX_APU_PATH="/mirror/apache/dist/apr"

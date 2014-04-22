@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.10
+
+  *) shrinkwrap: Linux cubieboard build (ARM Cortex-A7)
+
 Changes with httest 2.4.9
   *) httest: Fix multiline variable resolve problem.
 
