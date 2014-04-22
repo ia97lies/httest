@@ -247,6 +247,7 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
   ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   switch(type) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10001000L)
     case TLSEXT_TYPE_server_name:
       extname = "server name";
       break;
@@ -291,6 +292,7 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
     case TLSEXT_TYPE_opaque_prf_input:
       extname = "opaque PRF input";
       break;
+#endif
 #endif
 
     default:
@@ -347,9 +349,11 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
     case DTLS1_VERSION:
       str_version = "DTLS 1.0";
       break;
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
     case DTLS1_BAD_VER:
       str_version = "DTLS 1.0 (bad)";
       break;
+#endif
     default:
       str_version = "???";
   }
@@ -416,8 +420,11 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
       version == TLS1_2_VERSION ||
       version == TLS1_1_VERSION ||
 #endif
-      version == DTLS1_VERSION ||
-      version == DTLS1_BAD_VER) {
+      version == DTLS1_VERSION
+#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
+      || version == DTLS1_BAD_VER
+#endif
+	  ) {
     switch (content_type) {
       case 20:
         str_content_type = "ChangeCipherSpec";
@@ -827,7 +834,7 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
   }
   SSL_set_ssl_method(sconfig->ssl, config->meth);
   if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
-#ifndef OPENSSL_NO_TLSEXT
+#if (!OPENSSL_NO_TLSEXT && OPENSSL_VERSION_NUMBER >= 0x1000100fL) 
     SSL_set_tlsext_debug_callback(sconfig->ssl, ssl_tlsext_trace);
     SSL_set_tlsext_debug_arg(sconfig->ssl, config->msg_worker);
 #endif
