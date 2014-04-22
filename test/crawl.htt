@@ -1,3 +1,5 @@
+REQUIRE_MODULE HTML 
+
 INCLUDE $TOP/test/config.htb
 INCLUDE $TOP/macros/simple_request.htb
 
