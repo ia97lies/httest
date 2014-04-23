@@ -348,6 +348,9 @@ EXTRA_DIST= \
 	unused_match_headers.txt \
 	urldecode.htt \
 	urlencode.htt \
+	use_local_commands_in_global_env.hte \
+	use_local_commands_in_global_env.htt \
+	use_local_commands_in_global_env.txt \
 	var_double_ref.htt \
 	var_expect.hte \
 	var_expect.htt \
