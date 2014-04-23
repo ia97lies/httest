@@ -3,7 +3,6 @@
 @:SKIP $OS win # FIXME hangs until timeout
 @:SKIP $OS mac # FIXME fails always
 
-SET MAX_DURATION=600000
 INCLUDE $TOP/test/config.htb
 
 DAEMON
