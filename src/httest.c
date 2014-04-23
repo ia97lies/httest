@@ -696,6 +696,51 @@ static void worker_set_global_error(worker_t *worker) {
   unlock(worker->mutex);
 }
 
+static apr_status_t worker_local_call(worker_t *worker, worker_t *parent, 
+                                      char *line) {
+    apr_pool_t *ptmp;
+    apr_status_t status = APR_SUCCESS;
+
+    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    {
+      if (worker_is_block(worker, line, ptmp)) {
+        status = command_CALL(NULL, worker, line, ptmp);
+        status = worker_check_error(parent, status);
+      }
+      else {
+        int j = 0;
+        command_t *command = lookup_command(local_commands, line);
+        if (command->flags & COMMAND_FLAGS_LINK) {
+          j += strlen(command->name);
+          status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
+                                command->syntax,
+                                " ", &line[j], NULL), 
+                                ptmp);
+          status = worker_check_error(parent, status);
+        }
+        else if (command->func) {
+          j += strlen(command->name);
+          status = command->func(command, worker, &line[j], ptmp);
+          status = worker_check_error(parent, status);
+        }
+        else {
+          status = command_CALL(NULL, worker, line, ptmp);
+          if (!APR_STATUS_IS_ENOENT(status)) {
+            status = worker_check_error(parent, status);
+          }
+          else {
+            worker_log(worker, LOG_ERR, "%s syntax error", worker->name);
+            worker_set_global_error(worker);
+            status = APR_EINVAL;
+          }
+        }
+      }
+    }
+    apr_pool_destroy(ptmp);
+
+    return status;
+}
+
 /**
  * Interpreter
  *
@@ -717,43 +762,9 @@ static apr_status_t worker_interpret(worker_t * worker, worker_t *parent,
 
   for (worker->cmd = worker->cmd_from; worker->cmd < to; worker->cmd++) {
     char *line;
-    apr_pool_t *ptmp;
 
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
     line = e[worker->cmd].val;
-    if (worker_is_block(worker, line, ptmp)) {
-      status = command_CALL(NULL, worker, line, ptmp);
-      status = worker_check_error(parent, status);
-    }
-    else {
-      int j = 0;
-      command_t *command = lookup_command(local_commands, line);
-      if (command->flags & COMMAND_FLAGS_LINK) {
-        j += strlen(command->name);
-        status = command_CALL(NULL, worker, apr_pstrcat(worker->pbody, 
-                              command->syntax,
-                              " ", &line[j], NULL), 
-                              ptmp);
-        status = worker_check_error(parent, status);
-      }
-      else if (command->func) {
-        j += strlen(command->name);
-        status = command->func(command, worker, &line[j], ptmp);
-        status = worker_check_error(parent, status);
-      }
-      else {
-        status = command_CALL(NULL, worker, line, ptmp);
-        if (!APR_STATUS_IS_ENOENT(status)) {
-          status = worker_check_error(parent, status);
-        }
-        else {
-          worker_log(worker, LOG_ERR, "%s syntax error", worker->name);
-          worker_set_global_error(worker);
-          status = APR_EINVAL;
-        }
-      }
-    }
-    apr_pool_destroy(ptmp);
+    status = worker_local_call(worker, parent, line);
 
     if (status != APR_SUCCESS) {
       return status;
@@ -2185,7 +2196,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	  }
 	}
         else { 
-          status = command_CALL(NULL, global->worker, line, ptmp);
+          status = worker_local_call(global->worker, global->worker, line);
           if (status != APR_SUCCESS && !APR_STATUS_IS_ENOENT(status)) {
             return status;
           }
