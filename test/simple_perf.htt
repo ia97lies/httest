@@ -16,7 +16,7 @@ _EXEC ../src/htremote -p10013 -e"/bin/bash ./run.sh -Ss"
 END
 
 CLIENT
-_SLEEP 2000
+_SLEEP 4000
 END
 
 GO
