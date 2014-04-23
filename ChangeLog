@@ -5,6 +5,8 @@ Changes with httest 2.4.10
 
   *) httest: Bugfix problems with older openssl version 0.9.8
 
+  *) httest: New local commands are available in global sections as well.
+
 
 Changes with httest 2.4.9
   *) httest: Fix multiline variable resolve problem.
