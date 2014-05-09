@@ -29,3 +29,4 @@ httest-*/
 .DS_Store
 .sonar
 nginx.pid
+test/*.trs
