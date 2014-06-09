@@ -3,7 +3,7 @@
 # unix sources (mac, linux, ...)
 
 UNIX_APR_NAME="apr"
-UNIX_APR_VER="1.5.0"
+UNIX_APR_VER="1.5.1"
 UNIX_APR_PROT="http"
 UNIX_APR_HOST="mirror.switch.ch"
 UNIX_APR_PATH="/mirror/apache/dist/apr"
@@ -17,21 +17,21 @@ UNIX_APU_PATH="/mirror/apache/dist/apr"
 UNIX_APU_FILE="$UNIX_APU_NAME-$UNIX_APU_VER.tar.gz"
 
 UNIX_SSL_NAME="openssl"
-UNIX_SSL_VER="1.0.1e"
+UNIX_SSL_VER="1.0.1h"
 UNIX_SSL_PROT="http"
 UNIX_SSL_HOST="www.openssl.org"
 UNIX_SSL_PATH="/source"
 UNIX_SSL_FILE="$UNIX_SSL_NAME-$UNIX_SSL_VER.tar.gz"
 
 UNIX_PCRE_NAME="pcre"
-UNIX_PCRE_VER="8.33"
+UNIX_PCRE_VER="8.35"
 UNIX_PCRE_PROT="http"
 UNIX_PCRE_HOST="switch.dl.sourceforge.net"
 UNIX_PCRE_PATH="/project/pcre/pcre/$UNIX_PCRE_VER"
 UNIX_PCRE_FILE="$UNIX_PCRE_NAME-$UNIX_PCRE_VER.tar.gz"
 
 UNIX_LUA_NAME="lua"
-UNIX_LUA_VER="5.2.2"
+UNIX_LUA_VER="5.2.3"
 UNIX_LUA_PROT="http"
 UNIX_LUA_HOST="www.lua.org"
 UNIX_LUA_PATH="/ftp"
