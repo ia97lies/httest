@@ -67,6 +67,47 @@ static ws_socket_config_t *ws_get_socket_config(worker_t *worker) {
   return config;
 }
 
+/**
+ * Do hex to bin transformation with this hook, this is called
+ * after late variable replacement.
+ *
+ * @param worker IN worker context
+ * @param payload IN payload as a string of space separated hex digits
+ * @param binary OUT binary data buffer
+ * @param binary_len OUT binary data buffer length
+ */
+static apr_status_t ws_hex_to_binary(worker_t *worker, char *payload, char **binary, size_t *binary_len) {
+  apr_status_t status;
+  char *buf;
+  apr_size_t i;
+  apr_size_t len;
+
+  apr_collapse_spaces(payload, payload);
+  /* callculate buf len */
+  len = strlen(payload);
+  if (len && len%2 != 1) {
+    len /= 2;
+  }
+  else {
+    worker_log(worker, LOG_ERR, "Binary data must have an equal number of digits");
+    return APR_EINVAL;
+  }
+
+  buf = apr_pcalloc(worker->pbody, len);
+
+  for (i = 0; i < len; i++) {
+    char hex[3];
+    hex[0] = payload[i * 2];
+    hex[1] = payload[i * 2 + 1];
+    hex[2] = 0;
+    buf[i] = (char )apr_strtoi64(hex, NULL, 16);
+  }
+  *binary = buf;
+  *binary_len = len;
+
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * Commands 
  ***********************************************************************/
@@ -268,6 +309,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   uint16_t pl_len_16 = 0;
   uint64_t pl_len_64 = 0;
   uint64_t len;
+  int is_binary = 0;
 
   if (!worker->socket || !worker->socket->transport) {
     worker_log(worker, LOG_ERR, "No established socket for websocket protocol");
@@ -289,6 +331,7 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
     }
     else if (strcmp(e, "BINARY") == 0) {
       op |= WS_8_TYPE_BINARY;
+      is_binary = 1;
     }
     else if (strcmp(e, "CLOSE") == 0) {
       op |= WS_8_TYPE_CLOSE;
@@ -305,7 +348,16 @@ static apr_status_t block_WS_SEND(worker_t *worker, worker_t *parent,
   
   if (strcmp(payload_len, "AUTO") == 0) {
     if (payload) {
-      len = strlen(payload);
+      if (is_binary) {
+        char *result;
+        if ((status = ws_hex_to_binary(worker, payload, &result, &len)) != APR_SUCCESS) {
+            return status;
+        }
+        payload = result;
+      }
+      else {
+        len = strlen(payload);
+      }
     }
     else {
       len = 0;

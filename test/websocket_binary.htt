@@ -20,7 +20,7 @@ CLIENT
   _DEBUG $OP
   _EXPECT . "blu"
   _WS:RECV
-  _EXPECT . "bli blo"
+  _EXPECT . "abcdef"
   _WS:RECV OP LEN
   _CLOSE
 END
@@ -41,6 +41,6 @@ SERVER $YOUR_PORT
   _EXPECT VAR(OP) "PONG"
   _WS:SEND TEXT AUTO blabla 0x12345678
   _WS:SEND TEXT AUTO blubla
-  _WS:SEND TEXT AUTO "bli blo"
+  _WS:SEND BINARY AUTO "61 62 63 64 65 66"
   _CLOSE
 END
