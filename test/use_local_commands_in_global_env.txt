@@ -1,0 +1,3 @@
+
+error: EXPECT var: Did expect "blafasel"
+error: __htt_global__ Invalid argument(22)

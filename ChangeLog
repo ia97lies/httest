@@ -5,8 +5,12 @@ Changes with httest 2.4.10
 
   *) httest: Bugfix problems with older openssl version 0.9.8
 
+  *) httest: New local commands are available in global sections as well.
+
 
 Changes with httest 2.4.9
+  *) httest: Fix multiline variable resolve problem.
+
   *) httest: Set mutex for global pool to make thread handling safe.
 
   *) httest: Mutex for worker clone
@@ -63,6 +67,8 @@ Changes with httest 2.4.4
   *) httest: Bugfix possible coredump in ssl_module.c
 
   *) httest: Bugfix possible coredump in store.c
+
+  *) httest: Add multiline variable support for _SET command
 
   *) httest: Experimental dynamic shared object support for transport objects.
              This could be very useful to test shared libraries directly with

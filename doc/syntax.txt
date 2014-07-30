@@ -5,12 +5,31 @@
 command = capital-letters
 args = chars
 global-call = command args* newline
-local-call = "_"command args* newline
-global-body = global-call local-call* END newline
-local-body = local-call local-call* _END local-call newline
+local-call = "_"command { args } newline
+global-body = global-call newline { local-call } END newline
+local-body = local-call newline { local-call } _END newline
 
+BLOCK[:extention] name { parameter } : { return-values }
+extention: LUA, BODY
+name = chars
+paramtert = chars
+return-values = chars
 
 === Example ===
+# ----------------
+BLOCK:BODY _myIf body regex value
+  _IF "value" MATCH "regex"
+    _CALL body
+  _END
+END
+
+CLIENT
+  _myIf ".*" "foo"
+    _DEBUG hallo
+  _END
+END
+
+# ----------------
 GLOBAL_CALLS
 
 GLOBAL_BODY <args>
