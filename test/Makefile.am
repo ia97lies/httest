@@ -362,6 +362,7 @@ EXTRA_DIST= \
 	var_resolve.htt \
 	wait0.htt \
 	wait.htt \
+	websocket_binary.htt \
 	websocket.htt \
 	websocket_huge.htt \
 	websocket_mask.htt \

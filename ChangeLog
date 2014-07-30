@@ -1,5 +1,11 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.11
+  *) httest: _WS:SEND BINARY do now expect a string with hex digits example my
+             look like _WS:SEND FIN,BINARY AUTO "00 01 02 03 04 05" this sends
+	     6 bytes 0x00, 0x01, 0x02, 0x03, 0x04, 0x05
+	     This change is not backward compatible.
+
 Changes with httest 2.4.10
   *) shrinkwrap: Linux cubieboard build (ARM Cortex-A7)
 

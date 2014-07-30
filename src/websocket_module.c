@@ -76,8 +76,7 @@ static ws_socket_config_t *ws_get_socket_config(worker_t *worker) {
  * @param binary OUT binary data buffer
  * @param binary_len OUT binary data buffer length
  */
-static apr_status_t ws_hex_to_binary(worker_t *worker, char *payload, char **binary, size_t *binary_len) {
-  apr_status_t status;
+static apr_status_t ws_hex_to_binary(worker_t *worker, char *payload, char **binary, uint64_t *binary_len) {
   char *buf;
   apr_size_t i;
   apr_size_t len;
