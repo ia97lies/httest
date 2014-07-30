@@ -1,4 +1,10 @@
+REQUIRE_MODULE LUA
+
 INCLUDE $TOP/test/config.htb
+
+BLOCK:LUA WebsocketAccept websocketKey : result
+  return crypto.base64.encode(crypto.evp.digest("sha1", websocketKey.."258EAFA5-E914-47DA-95CA-C5AB0DC85B11", true))
+END
 
 CLIENT
   _REQ $YOUR_HOST $YOUR_PORT
@@ -11,6 +17,7 @@ CLIENT
   __Sec-WebSocket-Protocol: chat, superchat
   __Sec-WebSocket-Version: 13
   __
+  _EXPECT headers "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK\+xOo="
   _WAIT
   _WS:RECV OP
   _EXPECT VAR(OP) "PING"
@@ -32,7 +39,8 @@ SERVER $YOUR_PORT
   __HTTP/1.1 101 Switching Protocols
   __Upgrade: websocket
   __Connection: Upgrade
-  __Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+  #__Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+  __Sec-WebSocket-Accept: $WebsocketAccept($WebsocketKey) 
   __Sec-WebSocket-Protocol: chat
   __
   _FLUSH
