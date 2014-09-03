@@ -1,0 +1,38 @@
+#
+# tests _CODER:REGEXENC which is used to escape
+# special chars within a variable before it can
+# be used by an _EXPECT command
+#
+
+INCLUDE $TOP/test/config.htb
+
+CLIENT
+_SET SHA=6nZ9jJdQK5k/bswHCmnLiTRi2bw5Tf+Cgt6xUs0KU78=
+_CODER:REGEXENC $SHA SHAENC
+_REQ $YOUR_HOST $YOUR_PORT
+__GET /request HTTP/1.1
+__Host: $YOUR_HOST 
+__User-Agent: mozilla
+__
+_EXPECT . "$SHAENC"
+_EXPECT . "x14"
+_WAIT
+
+END
+
+SERVER $YOUR_PORT
+_SET SPECIAL=dGVzdCB3aXRoIG5ldyBub24tcHJpbnRhYmxlICcUJyBhbmQgb3RoZXIgc3BlY2lhbCBjaGFycyAoW11dXSgtXC4uLi4kXg==
+_CODER:B64DEC "$SPECIAL" SPECIALDEC
+_CODER:REGEXENC "$SPECIALDEC" CHARS
+
+_RES
+_WAIT
+__HTTP/1.1 200 OK
+__Content-Type: text/plain
+__X-Pkey: sha256="6nZ9jJdQK5k/bswHCmnLiTRi2bw5Tf+Cgt6xUs0KU78="
+__X-Special: ${CHARS}
+__Content-Length: AUTO
+__
+__OK
+
+END

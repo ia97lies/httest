@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 
+  *) httest: Adds command _CODER:REGEXENC.
+
+
 Changes with httest 2.4.10
   *) shrinkwrap: Linux cubieboard build (ARM Cortex-A7)
 
