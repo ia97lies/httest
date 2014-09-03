@@ -16,6 +16,8 @@ __User-Agent: mozilla
 __
 _EXPECT . "$SHAENC"
 _EXPECT . "x14"
+_EXPECT . "test with new non\\\-printable"
+_EXPECT . "and other special chars"
 _WAIT
 
 END
