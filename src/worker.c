@@ -2324,9 +2324,25 @@ apr_status_t command_ASSERT(command_t * self, worker_t * worker,
     return APR_EINVAL;
   }
 
-  if ((status = math_evaluate(math, argv[0], &val)) != APR_SUCCESS) {
-    worker_log(worker, LOG_ERR, "Invalid expression");
-    return status;
+  if (strcmp(argv[0], "_STRING_EQUAL") == 0) {
+    if (argv[1] == 0) {
+      worker_log(worker, LOG_ERR, "Need two strings, got none");
+      return APR_EINVAL;
+    }
+    else if (argv[2] == 0) {
+      worker_log(worker, LOG_ERR, "Need two strings, got one");
+      return APR_EINVAL;
+    }
+    else if (strcmp(argv[1], argv[2]) != 0) {
+      worker_log(worker, LOG_ERR, "Strings not equal");
+      return APR_EINVAL;
+    }
+  }
+  else {
+    if ((status = math_evaluate(math, argv[0], &val)) != APR_SUCCESS) {
+      worker_log(worker, LOG_ERR, "Invalid expression");
+      return status;
+    }
   }
 
   if (!val) {
