@@ -6,8 +6,6 @@ TODO List
 
 + EPILOG body final stuff
 
-+ Fix multiline variable, no resolving is done here
-
 + Naming
   - Tag all public httest functions with a namespace or capsulate them in structures
 

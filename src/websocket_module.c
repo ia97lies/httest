@@ -111,7 +111,7 @@ static apr_status_t ws_hex_to_binary(worker_t *worker, char *payload, char **bin
  * Commands 
  ***********************************************************************/
 /**
- * Recevie websocket frames
+ * Set version
  * @param worker IN callee
  * @param parent IN caller
  * @param ptmp IN temp pool
@@ -125,7 +125,7 @@ static apr_status_t block_WS_VERSION(worker_t *worker, worker_t *parent,
 }
 
 /**
- * Recevie websocket frames
+ * Receive websocket frames
  * @param worker IN callee
  * @param parent IN caller
  * @param ptmp IN temp pool
@@ -141,7 +141,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   uint32_t mask = 0x0;
   uint64_t payload_len = 0;
   char *type;
-  char *payload;
+  char *payload = NULL;
 
   const char *type_param = store_get(worker->params, "1");
   const char *len_param = store_get(worker->params, "2");
@@ -188,10 +188,10 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
   len = 1;
   if ((status = sockreader_read_block(worker->socket->sockreader, 
                                       (char *)&pl_len, &len)) != APR_SUCCESS) {
-    worker_log(worker, LOG_ERR, "Could not read first frame byte");
+    worker_log(worker, LOG_ERR, "Could not read first lenght byte");
 	goto exit;
   }
-  worker_log(worker, LOG_DEBUG, "Got first len byte %x", pl_len);
+  worker_log(worker, LOG_DEBUG, "Got first length byte %x", pl_len);
   masked = (pl_len & 0x80);
   if (masked) {
     type = apr_pstrcat(ptmp, "MASKED", type?",":NULL, type, NULL);
@@ -230,7 +230,7 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
     if ((status = sockreader_read_block(worker->socket->sockreader, 
                                         (char *)&length, &len)) 
         != APR_SUCCESS) {
-      worker_log(worker, LOG_ERR, "Could not read 32 bit payload length");
+      worker_log(worker, LOG_ERR, "Could not read 64 bit payload length");
 	  goto exit;
     }
 #if APR_IS_BIGENDIAN
@@ -276,14 +276,14 @@ static apr_status_t block_WS_RECV(worker_t *worker, worker_t *parent,
 
 exit:
   {
-	apr_status_t hndl_buf_status;
-	hndl_buf_status = worker_handle_buf(worker, ptmp, payload, payload_len);
-	if (hndl_buf_status != APR_SUCCESS) {
-	  worker_log(worker, LOG_ERR, "inspect payload failed");
-	  return status;
-	}
-	status = worker_assert(worker, status);
-	return status;
+      apr_status_t hndl_buf_status;
+      hndl_buf_status = worker_handle_buf(worker, ptmp, payload, payload_len);
+      if (hndl_buf_status != APR_SUCCESS) {
+        worker_log(worker, LOG_ERR, "inspect payload failed");
+        return status;
+      }
+      status = worker_assert(worker, status);
+      return status;
   }
 }
 
