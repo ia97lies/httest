@@ -31,6 +31,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <apr_version.h>
 #include "defines.h"
 
 /* Use STACK from openssl to sort commands */
@@ -701,7 +702,7 @@ static apr_status_t worker_local_call(worker_t *worker, worker_t *parent,
     apr_pool_t *ptmp;
     apr_status_t status = APR_SUCCESS;
 
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    HT_POOL_CREATE(&ptmp);
     {
       if (worker_is_block(worker, line, ptmp)) {
         status = command_CALL(NULL, worker, line, ptmp);
@@ -2184,7 +2185,7 @@ static apr_status_t interpret_recursiv(apr_file_t *fp, global_t *global) {
 	/* replace all variables for global commands */
 	line = replacer(global->pool, &line[i], replacer_hook, global_replacer);
 
-        apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+        HT_POOL_CREATE(&ptmp);
 	/* lookup function index */
 	i = 0;
 	command = lookup_command(global_commands, line);
@@ -2614,7 +2615,7 @@ int main(int argc, const char *const argv[]) {
   srand(apr_time_now()); 
   
   apr_app_initialize(&argc, &argv, NULL);
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
 
   /* block broken pipe signal */
 #if !defined(WIN32)
@@ -2628,8 +2629,8 @@ int main(int argc, const char *const argv[]) {
   /* create a global vars table */
   vars = store_make(pool);
 
-  apr_file_open_flags_stderr(&err, APR_BUFFERED|APR_XTHREAD, pool);
-  apr_file_open_flags_stdout(&out, APR_BUFFERED|APR_XTHREAD, pool);
+  HT_OPEN_STDERR(&err, APR_BUFFERED|APR_XTHREAD, pool);
+  HT_OPEN_STDOUT(&out, APR_BUFFERED|APR_XTHREAD, pool);
 
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);

@@ -25,6 +25,9 @@
 /************************************************************************
  * Includes
  ***********************************************************************/
+#include <apr_version.h>
+#include "defines.h"
+
 #include "module.h"
 #include "tcp_module.h"
 
@@ -298,7 +301,7 @@ static apr_status_t perf_WAIT_end(worker_t *worker, apr_status_t status) {
     apr_pool_t *pool;
     char *date_str;
 
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     date_str = apr_palloc(pool, APR_RFC822_DATE_LEN);
     apr_rfc822_date(date_str, apr_time_now());
     apr_file_printf(gconf->log_file, "[%s] \"%s\" %d %s %"APR_TIME_T_FMT" %"APR_TIME_T_FMT"\n", 
@@ -506,7 +509,7 @@ static apr_status_t perf_serialize(perf_host_t *host, char *fmt, ...) {
   va_list va;
   apr_pool_t *pool;
 
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   va_start(va, fmt);
   tmp = apr_pvsprintf(pool, fmt, va);
   transport_write(host->socket->transport, tmp, strlen(tmp));
@@ -530,7 +533,7 @@ static apr_status_t perf_serialize_globals(global_t *global, perf_host_t *host) 
   apr_pool_t *ptmp;
 
   if (!host->flags & PERF_HOST_FLAGS_GLOBALS_DIST) {
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    HT_POOL_CREATE(&ptmp);
     vars = store_get_table(global->vars, ptmp);
     e = (apr_table_entry_t *) apr_table_elts(vars)->elts;
     for (i = 0; i < apr_table_elts(vars)->nelts; ++i) {
@@ -561,7 +564,7 @@ static apr_status_t perf_serialize_clients(global_t *global, perf_host_t *host) 
   apr_table_entry_t *e;
 
   if (host->clients > 0) {
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    HT_POOL_CREATE(&ptmp);
     perf_serialize(host, "CLIENT %d\n", host->clients);
     e = (apr_table_entry_t *) apr_table_elts(host->worker->lines)->elts;
     for (i = 0; i < apr_table_elts(host->worker->lines)->nelts; ++i) {
@@ -587,7 +590,7 @@ static apr_status_t perf_serialize_servers(global_t *global, perf_host_t *host,
   apr_table_entry_t *e;
 
   if (host->clients > 0) {
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    HT_POOL_CREATE(&ptmp);
     perf_serialize(host, "SERVER %s\n", port_info);
     e = (apr_table_entry_t *) apr_table_elts(host->worker->lines)->elts;
     for (i = 0; i < apr_table_elts(host->worker->lines)->nelts; ++i) {
@@ -662,7 +665,7 @@ static apr_status_t perf_distribute_host(worker_t *worker,
   apr_pool_t *ptmp;
 
   *thread = NULL;
-  apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+  HT_POOL_CREATE(&ptmp);
   if ((host->state != PERF_HOST_CONNECTED) &&
       (host->state != PERF_HOST_ERROR)) {
     char *portname;
