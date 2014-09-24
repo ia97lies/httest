@@ -4,6 +4,7 @@ Christian Liesch <ia97lies@sourceforge.net>:
 Pascal Buchbinder:
   entier files -> tools/htntlm.c
   add command _RENEG for ssl renegotiation
+  add command _CODER:REGEXENC
 
 Thomas Frauenknech:
   changes for win32 -> httest

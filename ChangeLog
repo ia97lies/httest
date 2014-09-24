@@ -1,7 +1,15 @@
                                                          -*- coding: utf-8 -*-
    
 Changes with httest 2.4.12
-  *) httest: Correct error messages for websocket failures.
+  *) httest: Bugfix error messages for websocket failures.
+
+  *) httest: Bugfix possible core dump on log uninitialized data buffer.
+
+  *) httest: Bugfix dso load error suppress error message.
+
+  *) httest: New coder to escape regex special characters within strings to
+             use them as literal strings within _EXPECT commands [Pascal
+	     Buchbinder].
 
 
 Changes with httest 2.4.11
@@ -9,6 +17,7 @@ Changes with httest 2.4.11
              look like _WS:SEND FIN,BINARY AUTO "00 01 02 03 04 05" this sends
 	     6 bytes 0x00, 0x01, 0x02, 0x03, 0x04, 0x05
 	     This change is not backward compatible.
+
 
 Changes with httest 2.4.10
   *) shrinkwrap: Linux cubieboard build (ARM Cortex-A7)

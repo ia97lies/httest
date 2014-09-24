@@ -150,7 +150,7 @@ static apr_status_t block_LOAD_TRANSPORT_DSO(worker_t *worker, worker_t *parent,
       char buf[BLOCK_MAX+1];
       worker_log(worker, LOG_ERR, "Can not load \"%s\" library", path);
       apr_dso_error(dso, buf, BLOCK_MAX);
-      worker_log_buf(worker, LOG_ERR, '+', buf, 0);
+      worker_log_buf(worker, LOG_ERR, '+', buf, strlen(buf));
       return status;
     }
 
