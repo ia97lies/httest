@@ -3,6 +3,9 @@ EXTRA_DIST= \
 	100cont.htt \
 	assert.hte \
 	assert.htt \
+	assert_string_equal.hte \
+	assert_string_equal.htt \
+	assert_string_equal.txt \
 	assert.txt \
 	autoclose2.hte \
 	autoclose2.htt \
@@ -363,9 +366,22 @@ EXTRA_DIST= \
 	wait0.htt \
 	wait.htt \
 	websocket_binary.htt \
+	websocket_can_not_recv_16_bit_length.hte \
+	websocket_can_not_recv_16_bit_length.txt \
+	websocket_can_not_recv_64_bit_length.hte \
+	websocket_can_not_recv_64_bit_length.txt \
+	websocket_can_not_recv_first_frame_byte.hte \
+	websocket_can_not_recv_first_frame_byte.txt \
+	websocket_can_not_recv_first_len_byte.hte \
+	websocket_can_not_recv_first_len_byte.txt \
+	websocket_can_not_recv_mask.hte \
+	websocket_can_not_recv_mask.txt \
+	websocket_can_not_recv_payload.hte \
+	websocket_can_not_recv_payload.txt \
 	websocket.htt \
 	websocket_huge.htt \
 	websocket_mask.htt \
+	websocket_null_body.htt \
 	_wrapper_test.sh \
 	xml.htt 
 
