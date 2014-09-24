@@ -494,7 +494,7 @@ static void lua_set_variable_names(worker_t *worker, char *line) {
  ***********************************************************************/
 
 /**
- * Do load a lua block
+ * Start load a lua block
  * @param global IN
  * @param line INOUT line 
  * @return APR_SUCCESS
@@ -515,7 +515,7 @@ static apr_status_t lua_block_start(global_t *global, char **line) {
 }
 
 /**
- * Read line of block 
+ * Read line of lua block 
  * @param global IN
  * @param line INOUT line 
  * @return APR_SUCCESS
@@ -531,9 +531,8 @@ static apr_status_t lua_read_line(global_t *global, char **line) {
 }
 
 /**
- * Do load a lua block
+ * End load a lua block
  * @param global IN
- * @param line INOUT line 
  * @return APR_SUCCESS
  */
 static apr_status_t lua_block_end(global_t *global) {

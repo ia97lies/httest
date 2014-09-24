@@ -1405,6 +1405,9 @@ void worker_log(worker_t * worker, int mode, char *fmt, ...) {
  */
 void worker_log_buf(worker_t * worker, int mode, char dir, const char *buf,
                     apr_size_t len) {
+  if (buf == NULL) {
+    len = 0;
+  }
   logger_log_buf(worker->logger, mode, dir, buf, len);
 }
 
@@ -1592,17 +1595,10 @@ apr_status_t command_WAIT(command_t * self, worker_t * worker,
     }
   }
   else {
-    if (line[0] == 0) {
-      worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
-      worker_log(worker, LOG_ERR, "No status line received");
-      status = APR_EINVAL;
-      goto out_err;
-    }
-    else {
-      worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
-      worker_log(worker, LOG_ERR, "Network error");
-      goto out_err;
-    }
+    worker_log_buf(worker, LOG_INFO, '<', line, strlen(line));
+    worker_log(worker, LOG_ERR, "No status line received");
+    status = APR_EINVAL;
+    goto out_err;
   }
  
   status = worker_get_headers(worker, sockreader);
@@ -3127,10 +3123,10 @@ apr_status_t command_RECV(command_t *self, worker_t *worker, char *data,
   apr_size_t recv_len;
   apr_size_t peeklen;
   sockreader_t *sockreader;
-  char *buf;
   char *last;
   char *val;
 
+  char *buf = NULL;
   int poll = 0;
 
   COMMAND_NEED_ARG("Need a number or POLL");
@@ -3219,8 +3215,8 @@ apr_status_t command_READLINE(command_t *self, worker_t *worker, char *data,
   apr_size_t peeklen;
   apr_size_t len;
   sockreader_t *sockreader;
-  char *buf;
   char *copy;
+  char *buf = NULL;
 
   COMMAND_OPTIONAL_ARG;
 
