@@ -62,6 +62,8 @@
 #include <unistd.h> /* for getpid() */
 #endif
 
+#include <setjmp.h>
+
 #include "file.h"
 #include "appender_simple.h"
 #include "appender_std.h"
@@ -672,13 +674,13 @@ static apr_status_t command_EXIT(command_t * self, worker_t * worker,
 
   if (strcmp(copy, "OK") == 0) {
     worker_destroy(worker);
-    exit(0);
+    longjmp(global->setjmpEnv, 1);
   }
   else {
     worker_log(worker, LOG_ERR, "EXIT");
     worker_set_global_error(worker);
     worker_destroy(worker);
-    exit(1);
+    longjmp(global->setjmpEnv, 2);
   }
 
   /* just make the compiler happy, never reach this point */
@@ -825,7 +827,7 @@ void worker_finally(worker_t *worker, apr_status_t status) {
 
     worker_set_global_error(worker);
     worker_conn_close_all(worker);
-    exit(1);
+    longjmp(global->setjmpEnv, 2);
   }
 exodus:
   worker_conn_close_all(worker);
@@ -1182,7 +1184,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   apr_allocator_mutex_set(allocator, mutex);
   *global = apr_pcalloc(p, sizeof(global_t));
   (*global)->pool = p;
-  apr_pool_create(&(*global)->cleanup_pool, NULL);
+  apr_pool_create_unmanaged_ex(&(*global)->cleanup_pool, NULL, NULL);
   (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
 
@@ -1281,7 +1283,7 @@ static apr_status_t worker_file_cleanup(void *data) {
   const char *name = data;
   apr_pool_t *pool;
 
-  apr_pool_create(&pool, NULL);
+  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
   apr_file_remove(name, pool);
   apr_pool_destroy(pool);
   return APR_SUCCESS;
@@ -2020,7 +2022,7 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
     }
   }
   apr_table_clear(global->clients);
-   
+ 
   /* notify start threads */
   e = (apr_table_entry_t *) apr_table_elts(global->threads)->elts;
   for (i = 0; i < apr_table_elts(global->threads)->nelts; ++i) {
@@ -2031,6 +2033,14 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
       return status;
     }
   }
+ 
+  {
+    int ret;
+    if ((ret = setjmp(global->setjmpEnv))) {
+      exit(ret - 1);
+    }
+  }
+
   return APR_SUCCESS;
 }
 

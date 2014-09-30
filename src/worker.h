@@ -25,6 +25,7 @@
 #ifndef HTTEST_WORKER_H
 #define HTTEST_WORKER_H
 
+#include <setjmp.h>
 #include <apr_hooks.h>
 #include "logger.h" 
 #include "transport.h" 
@@ -202,6 +203,7 @@ struct global_s {
   worker_t *cur_worker;
   apr_threadattr_t *tattr;
   int recursiv;
+  jmp_buf setjmpEnv;
 };
 
 typedef struct line_s {

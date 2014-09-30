@@ -1,5 +1,14 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.13
+  *) httest: Bugfix SSL issue on SSL close notify [thanks to Armin Abfalterer
+             reporting this].
+  
+  *) httest: All pools are now unmanaged to avoid problems on exit.
+
+  *) httest: Implement a "exception" like jump back on exit to a defined
+             point.
+
 Changes with httest 2.4.12
   *) httest: Bugfix error messages for websocket failures.
 

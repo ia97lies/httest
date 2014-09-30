@@ -653,7 +653,7 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
   if (wconf->cert_pool) {
     apr_pool_destroy(wconf->cert_pool);
   }
-  apr_pool_create(&wconf->cert_pool, NULL);
+  apr_pool_create_unmanaged_ex(&wconf->cert_pool, NULL, NULL);
   wconf->certfile = certfile ? apr_pstrdup(wconf->cert_pool, certfile) : NULL;
   wconf->keyfile = keyfile ? apr_pstrdup(wconf->cert_pool, keyfile) : NULL;
   wconf->cafile = ca ? apr_pstrdup(wconf->cert_pool, ca) : NULL;
@@ -962,6 +962,15 @@ tryagain:
     if (scode == SSL_ERROR_ZERO_RETURN) {
       *size = 0;
       return APR_EOF;
+    }
+    else if (scode == SSL_ERROR_SYSCALL) {
+      int ecode = ERR_get_error();
+      if (ecode) {
+        return APR_ECONNABORTED;
+      }
+      else {
+        return APR_EOF;
+      }
     }
     else if (scode != SSL_ERROR_WANT_WRITE && scode != SSL_ERROR_WANT_READ) {
       *size = 0;
@@ -1680,7 +1689,7 @@ static apr_status_t block_SSL_TRACE(worker_t * worker, worker_t *parent,
   apr_pool_t *pool;
   ssl_wconf_t *config = ssl_get_worker_config(worker);
   config->flags |= SSL_CONFIG_FLAGS_TRACE;
-  apr_pool_create(&pool, NULL);
+  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
   config->msg_pool = pool;
   config->msgs = apr_table_make(pool, 5);
   return APR_SUCCESS;
@@ -1974,7 +1983,7 @@ static apr_status_t ssl_hook_read_pre_headers(worker_t *worker) {
     }
     apr_table_clear(config->msgs);
     apr_pool_destroy(config->msg_pool);
-    apr_pool_create(&config->msg_pool, NULL);
+    apr_pool_create_unmanaged_ex(&config->msg_pool, NULL, NULL);
     config->msgs = apr_table_make(config->msg_pool, 5);
   }
   return APR_SUCCESS;

@@ -84,7 +84,7 @@ apr_status_t sockreader_new(sockreader_t ** sockreader, transport_t *transport,
   apr_allocator_t *allocator;
   apr_pool_t *pool;
 
-  apr_pool_create(&pool, NULL);
+  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
   *sockreader = apr_pcalloc(pool, sizeof(sockreader_t));
   (*sockreader)->buf = apr_pcalloc(pool, BLOCK_MAX + 1);
   (*sockreader)->alloc = apr_bucket_alloc_create(pool);
