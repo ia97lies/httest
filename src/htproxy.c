@@ -31,6 +31,8 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <apr_version.h>
+#include "defines.h"
 
 #include <openssl/ssl.h>
 
@@ -1275,8 +1277,9 @@ int main(int argc, const char *const argv[]) {
   apr_signal_block(SIGPIPE);
 #endif
   
-  apr_file_open_flags_stderr(&err, APR_BUFFERED|APR_XTHREAD, pool);
-  apr_file_open_flags_stdout(&out, APR_BUFFERED|APR_XTHREAD, pool);
+
+  HT_OPEN_STDERR(&err, APR_BUFFERED|APR_XTHREAD, pool);
+  HT_OPEN_STDOUT(&out, APR_BUFFERED|APR_XTHREAD, pool);
 
   /* get options */
   apr_getopt_init(&opt, pool, argc, argv);

@@ -26,6 +26,10 @@
  * Includes
  ***********************************************************************/
 #include <config.h>
+
+#include <apr_version.h>
+#include "defines.h"
+
 #include <apr.h>
 #include <apr_strings.h>
 #include <apr_file_io.h>
@@ -188,7 +192,7 @@ void logger_log_va(logger_t * logger, int mode, const char *pos, char *fmt,
     char *tmp;
     apr_pool_t *pool;
 
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     tmp = apr_pvsprintf(pool, fmt, va);
     logger_print(logger, mode, pos, logger->id, logger->group, '=', NULL, tmp, 
                  strlen(tmp));

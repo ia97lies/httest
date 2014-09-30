@@ -36,6 +36,8 @@ typedef struct url_escape_seq {
   apr_size_t len;
 } url_escape_seq_t;
 
+#define HTTEST_PCRE_RESERVED      "{}[]()^$.|*+?\\-"
+
 /************************************************************************
  * Globals 
  ***********************************************************************/
@@ -250,6 +252,74 @@ apr_status_t block_CODER_B64ENC(worker_t *worker, worker_t *parent, apr_pool_t *
 }
 
 /**
+ * REGEXENC command
+ *
+ * @param worker IN command
+ * @param worker IN thread data object
+ * @param data IN string and variable name
+ *
+ * @return APR_SUCCESS or APR_EGENERAL on wrong parameters
+ */
+apr_status_t block_CODER_REGEXENC(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  const char *string;
+  const char *var;
+  apr_size_t len;
+  int i = 0;              // position in source
+  int d = 0;              // position in destination
+  char *inplace;          // escaped string
+  unsigned char prev = 0; // previous character
+
+  string = store_get(worker->params, "1");
+  var = store_get(worker->params, "2");
+
+  if (!string) {
+    worker_log(worker, LOG_ERR, "Nothing to escape");
+    return APR_EGENERAL;
+  }
+  if (!var) {
+    worker_log(worker, LOG_ERR, "Variable not specified");
+    return APR_EGENERAL;
+  }
+
+  len = strlen(string);
+  inplace = apr_pcalloc(ptmp, len * 4);
+  
+  while(string[i]) {
+    if(strchr(HTTEST_PCRE_RESERVED, string[i]) != NULL) {
+      if(prev && (prev == '\\')) {
+        /* already escaped */
+        inplace[d] = string[i];
+        d++;
+      } else if(prev && 
+		(string[i] == '\\') && 
+		(strchr(HTTEST_PCRE_RESERVED, string[i+1]) != NULL)) {
+        /* escape char */
+        inplace[d] = string[i];
+        d++;
+      } else {
+        inplace[d] = '\\';
+        d++;
+        inplace[d] = string[i];
+        d++;
+      }
+    } else if((string[i] < ' ') || (string[i]  > '~')) {
+      /* hex representation for non-printable chars */
+      sprintf(&inplace[d], "\\x%02x", string[i]);
+      d = d + 4;
+    } else {
+      /* regular char - nothing to do */
+      inplace[d] = string[i];
+      d++;
+    }
+    prev = string[i];
+    i++;
+  }
+  worker_var_set(parent, var, inplace);
+
+  return APR_SUCCESS;
+}
+
+/**
  * BASE64DEC command
  *
  * @param worker IN command
@@ -306,6 +376,14 @@ apr_status_t coder_module_init(global_t *global) {
 	                           "<string> <var>",
 	                           "Html decode <string> and store it into a <var>",
 	                           block_CODER_HTMLDEC)) != APR_SUCCESS) {
+    return status;
+  }
+  if ((status = module_command_new(global, "CODER", "_REGEXENC",
+	                           "<string> <var>",
+	                           "Escapes the <string> and stores into <var> "
+				   "to be used within "
+				   "regular expression like a literal string",
+	                           block_CODER_REGEXENC)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "CODER", "_B64ENC",

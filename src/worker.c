@@ -28,6 +28,8 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <apr_version.h>
+#include "defines.h"
 
 #include <apr.h>
 #include <apr_lib.h>
@@ -145,7 +147,7 @@ void lock(apr_thread_mutex_t *mutex) {
   apr_status_t status;
   if ((status = apr_thread_mutex_lock(mutex)) != APR_SUCCESS) {
     apr_pool_t *ptmp;
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    HT_POOL_CREATE(&ptmp);
     success = 0;
     fprintf(stderr, "could not lock: %s(%d)\n", 
 	    my_status_str(ptmp, status), status);
@@ -162,7 +164,7 @@ void unlock(apr_thread_mutex_t *mutex) {
   apr_status_t status;
   if ((status = apr_thread_mutex_unlock(mutex)) != APR_SUCCESS) {
     apr_pool_t *ptmp;
-    apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+    HT_POOL_CREATE(&ptmp);
     success = 0;
     fprintf(stderr, "could not unlock: %s(%d)\n", 
 	    my_status_str(ptmp, status), status);
@@ -455,7 +457,7 @@ static void worker_buf_convert(worker_t *self, char **buf, apr_size_t *len) {
   }
   
   if (self->flags & FLAGS_PRINT_HEX) {
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     hexbuf = NULL;
     for (j = 0; j < *len; j++) {
       if (hexbuf == NULL) {
@@ -654,7 +656,7 @@ apr_status_t worker_match(worker_t * worker, apr_table_t * htt_regexs,
     return APR_SUCCESS;
   }
 
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   vtbl = apr_table_make(pool, 2);
   
   e = (apr_table_entry_t *) apr_table_elts(htt_regexs)->elts;
@@ -1222,7 +1224,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
   store_t *locals;
 
   /** a pool for this call */
-  apr_pool_create_unmanaged_ex(&call_pool, NULL, NULL);
+  HT_POOL_CREATE(&call_pool);
 
   /** temporary tables for param, local vars and return vars */
   params = store_make(call_pool);
@@ -1744,7 +1746,7 @@ void worker_get_socket(worker_t *self, const char *hostname,
   char *tag;
   apr_pool_t *pool;
 
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   socket = 
     apr_hash_get(self->sockets, apr_pstrcat(self->pbody, hostname, portname, 
 	                                    NULL),
@@ -2013,7 +2015,7 @@ apr_status_t command_EXPECT(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "EXPECT ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     module_set_config(worker->config, apr_pstrcat(pool, "EXPECT ", type, NULL), pool);
   }
   match = apr_pstrdup(pool, interm);
@@ -2113,7 +2115,7 @@ apr_status_t command_MATCH(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "MATCH ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     module_set_config(worker->config, apr_pstrcat(pool, "MATCH ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
@@ -2220,7 +2222,7 @@ apr_status_t command_GREP(command_t * self, worker_t * worker,
   pool = module_get_config(worker->config, apr_pstrcat(ptmp, "GREP ", type, NULL));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     module_set_config(worker->config, apr_pstrcat(pool, "GREP ", type, NULL), pool);
   }
   vars = apr_pstrdup(pool, tmp);
@@ -2730,7 +2732,7 @@ apr_status_t command_EXEC(command_t * self, worker_t * worker,
     apr_pool_t *pool;
     apr_proc_t *proc;
 
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     proc = apr_pcalloc(pool, sizeof(*proc));
     if ((status = apr_proc_create(proc, progname, args, NULL, attr,
             worker->pbody)) != APR_SUCCESS) {
@@ -3389,7 +3391,7 @@ apr_status_t command_SH(command_t *self, worker_t *worker, char *data,
   else {
     if (!sh) {
       apr_pool_t *pool;
-      apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+      HT_POOL_CREATE(&pool);
       sh = apr_pcalloc(pool, sizeof(*sh));
       sh->pool = pool;
       if ((status = apr_file_mktemp(&sh->tmpf, name, 
@@ -3636,7 +3638,7 @@ apr_status_t command_MATCH_SEQ(command_t *self, worker_t *worker, char *data,
   pool = module_get_config(worker->config, apr_pstrdup(ptmp, "MATCH_SEQ"));
   if (!pool) {
     /* create a pool for match */
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     module_set_config(worker->config, apr_pstrdup(pool, "MATCH_SEQ"), pool);
   }
 
@@ -3836,7 +3838,7 @@ void worker_new(worker_t ** self, char *additional, global_t *global,
   if (global->mutex) apr_thread_mutex_lock(global->mutex);
   {
     apr_pool_t *p;
-    apr_pool_create_unmanaged_ex(&p, NULL, NULL);
+    HT_POOL_CREATE(&p);
     (*self) = apr_pcalloc(p, sizeof(worker_t));
     (*self)->global = global;
     (*self)->heartbeat = p;

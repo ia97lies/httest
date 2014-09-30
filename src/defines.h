@@ -30,6 +30,25 @@
 
 #define USE_SSL
 
+/* even httest requires APR >= 1.3, these HT_* macros
+ * provides the compatibility to APR 1.2 allowing the
+ * latest version of httest to be on older Linux
+ * distributions, e.g. CentOS 5) */
+#if (APR_MAJOR_VERSION <= 1)
+#if (APR_MINOR_VERSION <= 2)
+#define HT_POOL_CREATE(p) apr_pool_create(p, NULL)
+#define HT_OPEN_STDERR(f, o, p) { int _lfd = STDERR_FILENO; \
+    apr_os_file_put(f, &_lfd, o | APR_FOPEN_WRITE, p); }
+#define HT_OPEN_STDOUT(f, o, p) { int _lfd = STDOUT_FILENO; \
+    apr_os_file_put(f, &_lfd, o | APR_FOPEN_WRITE, p); }
+#endif
+#endif
+#ifndef HT_POOL_CREATE
+#define HT_POOL_CREATE(p) apr_pool_create_unmanaged_ex(p, NULL, NULL)
+#define HT_OPEN_STDERR(f, o, p) apr_file_open_flags_stderr(f, o, p)
+#define HT_OPEN_STDOUT(f, o, p) apr_file_open_flags_stdout(f, o, p)
+#endif
+
 #if defined(WIN32)
 typedef unsigned long uint32_t; 
 typedef long long uint64_t;
