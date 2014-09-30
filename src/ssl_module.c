@@ -954,6 +954,15 @@ tryagain:
       *size = 0;
       return APR_EOF;
     }
+    else if (scode == SSL_ERROR_SYSCALL) {
+      int ecode = ERR_get_error();
+      if (ecode) {
+        return APR_ECONNABORTED;
+      }
+      else {
+        return APR_EOF;
+      }
+    }
     else if (scode != SSL_ERROR_WANT_WRITE && scode != SSL_ERROR_WANT_READ) {
       *size = 0;
       return APR_ECONNABORTED;

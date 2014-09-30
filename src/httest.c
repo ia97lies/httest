@@ -2406,9 +2406,9 @@ static apr_status_t global_MODULE(command_t * self, global_t * global,
  */
 static apr_status_t global_REQUIRE_VERSION(command_t * self, global_t * global,
                                            char *data, apr_pool_t *ptmp) {
-  char *major;
-  char *minor;
-  char *maint;
+  char *major = 0;
+  char *minor = 0;
+  char *maint = 0;
   char *version;
   char *v_major;
   char *v_minor;
@@ -3350,7 +3350,7 @@ int main(int argc, const char *const argv[]) {
 #define MAIN_FLAGS_NO_OUTPUT 4
 #define MAIN_FLAGS_PRINT_DURATION 8
   int flags;
-  apr_time_t time;
+  apr_time_t time = 0;
   char time_str[256];
 
   srand(apr_time_now()); 
