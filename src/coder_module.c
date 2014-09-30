@@ -264,10 +264,10 @@ apr_status_t block_CODER_REGEXENC(worker_t *worker, worker_t *parent, apr_pool_t
   const char *string;
   const char *var;
   apr_size_t len;
-  int i = 0;              // position in source
-  int d = 0;              // position in destination
-  char *inplace;          // escaped string
-  unsigned char prev = 0; // previous character
+  int i = 0;              /* position in source */
+  int d = 0;              /* position in destination */
+  char *inplace;          /* escaped string */
+  unsigned char prev = 0; /* previous character */
 
   string = store_get(worker->params, "1");
   var = store_get(worker->params, "2");
