@@ -233,6 +233,7 @@ EXTRA_DIST= \
 	recv_eof.htt \
 	recv_length.htt \
 	recv_polling.htt \
+	regexcode.htt \
 	request_ended_server.htt \
 	require_module.htt \
 	require_version.htt \
