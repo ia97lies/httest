@@ -5,6 +5,7 @@ cC_PREREQ(2.53)
 AC_INIT(httest, 2.4.13, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
+AM_INIT_AUTOMAKE([subdir-objects])
 
 dnl This is a Hack to deal with a Macro name descrpency between Autoconf
 dnl Versions. 
