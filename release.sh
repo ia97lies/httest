@@ -25,7 +25,7 @@ fi
 echo
 echo "Release httest-$VERSION"
 if [ ! $OPTION = "try" ]; then
-  git commit -m"new release $VERSION" configure.in
+  git commit -m"new release $VERSION" configure.ac
 fi
 
 if [ ! $OPTION = "try" ]; then
@@ -51,22 +51,22 @@ fi
 
 echo
 echo "  Check Version"
-echo "    configure.in"
-grep "AC_INIT(httest, $VERSION, ia97lies@sourceforge.net)" configure.in >/dev/null 2>/dev/null
+echo "    configure.ac"
+grep "AC_INIT(httest, $VERSION, ia97lies@sourceforge.net)" configure.ac >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
-  echo Version specified in configure.in is not $VERSION
+  echo Version specified in configure.ac is not $VERSION
   error 1
 fi
 
 echo "    ChangeLog"
-grep `grep "\<AC_INIT\>" configure.in | awk 'BEGIN { FS=","} { print $2 }'` ChangeLog >/dev/null 2>/dev/null
+grep `grep "\<AC_INIT\>" configure.ac | awk 'BEGIN { FS=","} { print $2 }'` ChangeLog >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
   echo No ChangeLog Entry for version $VERSION 
   error 1
 fi
 
 echo "    NEWS"
-MAINT=`grep "\<AC_INIT\>" configure.in | awk 'BEGIN { FS=","} { print $2 }' | awk 'BEGIN { FS="."} { print $1"."$2.".0" }'`
+MAINT=`grep "\<AC_INIT\>" configure.ac | awk 'BEGIN { FS=","} { print $2 }' | awk 'BEGIN { FS="."} { print $1"."$2.".0" }'`
 grep `echo $MAINT` NEWS >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
   echo No NEWS Entry for version $MAINT
