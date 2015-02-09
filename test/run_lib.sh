@@ -54,4 +54,5 @@ function run_all {
 	  exit $errors
 	fi
   fi
+  errors=0
 }

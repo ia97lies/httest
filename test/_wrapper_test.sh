@@ -45,11 +45,7 @@ if [ $COPY -ne 0 ]; then
   rm -f ../macros/*.htb
 fi
 
-cores=`ls core* 2>/dev/null | wc -l` 
-if [ $errors -ne 0 -o $cores -ne 0 ]; then
-  if [ $cores -gt 0 ]; then
-    echo $cores coredumps
-  fi
+if [ $errors -gt 0 ]; then
   echo "Failed"
   exit 1
 else

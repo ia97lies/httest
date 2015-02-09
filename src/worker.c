@@ -2335,6 +2335,7 @@ apr_status_t command_ASSERT(command_t * self, worker_t * worker,
       worker_log(worker, LOG_ERR, "Strings not equal");
       return APR_EINVAL;
     }
+    val = 1;
   }
   else {
     if ((status = math_evaluate(math, argv[0], &val)) != APR_SUCCESS) {

@@ -40,16 +40,16 @@ noinst_HEADERS = \
 	lua_crypto.h logger.h appender.h appender_simple.h appender_std.h \
 	body.h httest.ext
 
-httest.1: httest.c $(top_srcdir)/configure.in
+httest.1: httest.c $(top_srcdir)/configure.ac
 	$(MAKE) $(AM_MAKEFLAGS) httest$(EXEEXT)
 	help2man -N -n "test HTTP driven application" -i $(top_srcdir)/src/httest.ext --output=httest.1 ./httest$(EXEEXT)
-htproxy.1: htproxy.c $(top_srcdir)/configure.in
+htproxy.1: htproxy.c $(top_srcdir)/configure.ac
 	$(MAKE) $(AM_MAKEFLAGS) htproxy$(EXEEXT)
 	help2man -N -n "record a HTTP session" --output=htproxy.1 ./htproxy$(EXEEXT)
-htntlm.1: htntlm.c $(top_srcdir)/configure.in
+htntlm.1: htntlm.c $(top_srcdir)/configure.ac
 	$(MAKE) $(AM_MAKEFLAGS) htntlm$(EXEEXT)
 	help2man -N -n "read/write NTLM message" --output=htntlm.1 ./htntlm$(EXEEXT)
-htremote.1: htremote.c $(top_srcdir)/configure.in
+htremote.1: htremote.c $(top_srcdir)/configure.ac
 	$(MAKE) $(AM_MAKEFLAGS) htremote$(EXEEXT)
 	help2man -N -n "record a HTTP session" --output=htremote.1 ./htremote$(EXEEXT)
 
