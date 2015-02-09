@@ -1,4 +1,3 @@
-#AUTOMAKE_OPTIONS=serial-tests
 EXTRA_DIST= \
 	100cont_auto.htt \
 	100cont.htt \
