@@ -1185,7 +1185,7 @@ static apr_status_t global_new(global_t **global, store_t *vars,
   apr_allocator_mutex_set(allocator, mutex);
   *global = apr_pcalloc(p, sizeof(global_t));
   (*global)->pool = p;
-  apr_pool_create_unmanaged_ex(&(*global)->cleanup_pool, NULL, NULL);
+  HT_POOL_CREATE(&(*global)->cleanup_pool);
   (*global)->config = apr_hash_make(p);
   (*global)->vars = vars;
 
@@ -1284,7 +1284,7 @@ static apr_status_t worker_file_cleanup(void *data) {
   const char *name = data;
   apr_pool_t *pool;
 
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   apr_file_remove(name, pool);
   apr_pool_destroy(pool);
   return APR_SUCCESS;

@@ -483,7 +483,7 @@ static int b64_encode(lua_State *L) {
 
     const char *buffer = lua_tolstring(L, -1, &len);
 
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     b64len = apr_base64_encode_len(len);
     base64 = apr_pcalloc(pool, b64len + 1);
     apr_base64_encode(base64, buffer, len);
@@ -506,7 +506,7 @@ static int b64_decode(lua_State *L) {
 
     const char *buffer = lua_tolstring(L, -1, &len);
 
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
 
     len = apr_base64_decode_len(buffer);
     plain = apr_pcalloc(pool, len);
@@ -627,7 +627,7 @@ static int x509_tostring(lua_State *L) {
   apr_pool_t *pool;
   X509 *cert = x509_pget(L, 1);
   char *s;
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   s = apr_psprintf(pool, "X509 cert %p", cert);
   lua_pushstring(L, s);
   apr_pool_destroy(pool);
@@ -811,7 +811,7 @@ static int dh_tostring(lua_State *L) {
   char *s;
   apr_pool_t *pool;
   DH *dh = dh_pget(L, 1);
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   s = apr_psprintf(pool, "DH %p", dh);
   lua_pushstring(L, s);
   apr_pool_destroy(pool);
@@ -823,7 +823,7 @@ static int dh_get_prime(lua_State *L) {
   unsigned char *s;
   apr_pool_t *pool;
   DH *dh = dh_pget(L, 1);
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   s = apr_pcalloc(pool, BN_num_bytes(dh->p)); 
   len = BN_bn2bin(dh->p, s);
   lua_pushlstring(L, (char *)s, len);
@@ -836,7 +836,7 @@ static int dh_get_priv_key(lua_State *L) {
   unsigned char *s;
   apr_pool_t *pool;
   DH *dh = dh_pget(L, 1);
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   s = apr_pcalloc(pool, BN_num_bytes(dh->priv_key)); 
   len = BN_bn2bin(dh->priv_key, s);
   lua_pushlstring(L, (char *)s, len);
@@ -849,7 +849,7 @@ static int dh_get_pub_key(lua_State *L) {
   unsigned char *s;
   apr_pool_t *pool;
   DH *dh = dh_pget(L, 1);
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
   s = apr_pcalloc(pool, BN_num_bytes(dh->pub_key)); 
   len = BN_bn2bin(dh->pub_key, s);
   lua_pushlstring(L, (char *)s, len);
