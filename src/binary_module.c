@@ -93,7 +93,7 @@ static apr_status_t block_BINARY_RECV(worker_t * worker, worker_t *parent, apr_p
   /* must be a number */
   recv_len = apr_atoi64(val);
 
-  apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+  HT_POOL_CREATE(&pool);
 
   if (worker->socket->sockreader == NULL) {
     peeklen = worker->socket->peeklen;

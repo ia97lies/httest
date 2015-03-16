@@ -190,7 +190,7 @@ static int luam_interpret(lua_State *L) {
   parent = lua_touserdata(L, 1);
   lua_pop(L, 1);
 
-  apr_pool_create_unmanaged_ex(&ptmp, NULL, NULL);
+  HT_POOL_CREATE(&ptmp);
 
   lines = apr_table_make(ptmp, 5);
 
@@ -295,7 +295,7 @@ static int luam_transport_read(lua_State *L) {
 
     bytes = lua_tointeger(L, -1);
     transport = lua_checktransport(L);
-    apr_pool_create_unmanaged_ex(&pool, NULL, NULL);
+    HT_POOL_CREATE(&pool);
     buffer = apr_pcalloc(pool, bytes);
     if ((status = transport_read(transport, buffer, &bytes)) != APR_SUCCESS) {
       lua_pushnil(L);

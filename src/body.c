@@ -124,7 +124,7 @@ apr_status_t worker_body(worker_t **body, worker_t *worker) {
   int ends;
   int end_len;
 
-  apr_pool_create_unmanaged_ex(&p, NULL, NULL);
+  HT_POOL_CREATE(&p);
   end = apr_pstrdup(p, "_END");
   end_len = strlen(end);
   ends = 1;
