@@ -675,13 +675,13 @@ static apr_status_t command_EXIT(command_t * self, worker_t * worker,
 
   if (strcmp(copy, "OK") == 0) {
     worker_destroy(worker);
-    longjmp(global->setjmpEnv, 1);
+    exit(0);
   }
   else {
     worker_log(worker, LOG_ERR, "EXIT");
     worker_set_global_error(worker);
     worker_destroy(worker);
-    longjmp(global->setjmpEnv, 2);
+    exit(1);
   }
 
   /* just make the compiler happy, never reach this point */
@@ -828,7 +828,7 @@ void worker_finally(worker_t *worker, apr_status_t status) {
 
     worker_set_global_error(worker);
     worker_conn_close_all(worker);
-    longjmp(global->setjmpEnv, 2);
+    exit(1);
   }
 exodus:
   worker_conn_close_all(worker);
@@ -2035,13 +2035,6 @@ static apr_status_t global_START(command_t *self, global_t *global, char *data,
     }
   }
  
-  {
-    int ret;
-    if ((ret = setjmp(global->setjmpEnv))) {
-      exit(ret - 1);
-    }
-  }
-
   return APR_SUCCESS;
 }
 
