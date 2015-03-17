@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
    
+Changes with httest 2.4.14
+  *) httest: Fix redhat 5 problems with old apr [thanks to Pascal Buchbinder 
+             for the fix].
+
+
 Changes with httest 2.4.13
   *) httest: Bugfix SSL issue on SSL close notify [thanks to Armin Abfalterer
              reporting this].
