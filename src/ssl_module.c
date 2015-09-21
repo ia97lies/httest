@@ -34,6 +34,7 @@
 #endif
 
 #include "ssl.h"
+#include "ssl_module.h"
 
 /************************************************************************
  * Definitions 
@@ -1987,6 +1988,14 @@ static apr_status_t ssl_hook_read_pre_headers(worker_t *worker) {
     config->msgs = apr_table_make(config->msg_pool, 5);
   }
   return APR_SUCCESS;
+}
+
+/************************************************************************
+ * External
+ ***********************************************************************/
+SSL *ssl_get_session(worker_t *worker) {
+  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
+  return sconfig->ssl;
 }
 
 /************************************************************************

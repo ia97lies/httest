@@ -1,0 +1,3 @@
+
+http2.hte:6: error: Only version 2.0 is supported
+http2.hte:6: error: CLT0-0 This function has not been implemented on this platform (70023)

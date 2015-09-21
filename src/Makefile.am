@@ -18,7 +18,7 @@ httest_SOURCES = \
 	perf_module.c annotation_module.c charset_module.c body.c dso_module.c 
 
 EXTRA_httest_SOURCES = \
-	lua_crypto.c lua_module.c js_module.c html_module.c xml_module.c
+	lua_crypto.c lua_module.c js_module.c html_module.c xml_module.c h2_module.c
 
 httest_LDADD = $(HTTEST_MODULES)
 httest_DEPENDENCIES = $(HTTEST_MODULES)

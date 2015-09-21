@@ -15,6 +15,7 @@ m4_ifdef([AM_INIT_AUTOMAKE], [AM_INIT_AUTOMAKE]) dnl 2.57
 # Setting up C compiler stuff 
 AC_PROG_CC
 AC_PROG_CPP
+AM_PROG_CC_C_O
 AC_AIX
 AC_ISC_POSIX
 AC_HEADER_STDC
@@ -42,6 +43,7 @@ AC_ARG_ENABLE([lua-module], AS_HELP_STRING(--enable-lua-module,Add Lua support))
 AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript support))
 AC_ARG_ENABLE([html-module], AS_HELP_STRING(--enable-html-module,Add html support))
 AC_ARG_ENABLE([xml-module], AS_HELP_STRING(--enable-xml-module,Add xml support))
+AC_ARG_ENABLE([h2-module], AS_HELP_STRING(--enable-h2-module,Add http/2 support))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -69,6 +71,9 @@ AC_ARG_WITH(spidermonkey,AS_HELP_STRING(--with-spidermonkey=PATH,path to js-conf
 AC_ARG_WITH(libxml2,AS_HELP_STRING(--with-libxml2=PATH,path to xml2-config script),
 	[if test ! -x $withval/xml2-config; then AC_MSG_ERROR($withval/xml2-config do not exist or is not executable); else XML2_CONFIG="$withval/xml2-config"; fi],
 	[XML2_CONFIG="xml2-config"])
+AC_ARG_WITH(nghttp2,AS_HELP_STRING(--with-nghttp2=PATH,path to nghttp2 source),
+	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else NGHTTP2_LIB_PATH="-L${withval}/lib"; NGHTTP2_INCLUDES="-I${withval}/include"; fi],
+	[NGHTTP2_LIB_PATH=""; NGHTTP2_INCLUDES=""])
 AC_ARG_WITH(ssl,AS_HELP_STRING(--with-ssl=PATH,path to openssl source),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
 	[OPENSSL_LIB_PATH=""; OPENSSL_INCLUDES=""])
@@ -90,10 +95,10 @@ if test ! "$?" = "0"; then
 fi
 
 # Store settings for includes, libs and flags
-INCLUDES="`$APR_CONFIG --includes` `$APU_CONFIG --includes` $OPENSSL_INCLUDES $APR_ICONV_CONFIG"
+INCLUDES="`$APR_CONFIG --includes` `$APU_CONFIG --includes` $OPENSSL_INCLUDES $NGHTTP2_INCLUDES $APR_ICONV_CONFIG"
 CFLAGS="`$APR_CONFIG --cflags` `$PCRE_CONFIG --cflags` $CFLAGS $INCLUDES"
 CPPFLAGS="`$APR_CONFIG --cppflags` $CPPFLAGS"
-LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz -lm"
+LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto $NGHTTP2_LIB_PATH -lnghttp2 `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz -lm"
 
 if test "$enable_ssl_legacy_reneg" = "yes"; then
   CFLAGS="$CFLAGS -DSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION"
@@ -155,6 +160,11 @@ if test "$enable_xml_module" = "yes"; then
   LIBS="$LIBS `$XML2_CONFIG --libs`"
   HTTEST_MODULES="$HTTEST_MODULES xml_module.${OBJEXT}"
   MODULES=" xml $MODULES"
+fi
+
+if test "$enable_h2_module" = "yes"; then
+  HTTEST_MODULES="$HTTEST_MODULES h2_module.${OBJEXT}"
+  MODULES=" $MODULES h2"
 fi
 
 if test -f ./generate_modules_c.sh; then
