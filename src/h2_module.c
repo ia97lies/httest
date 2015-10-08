@@ -308,7 +308,10 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
 			worker_log(worker, LOG_INFO, "< RST_STREAM");
 			break;
 		case NGHTTP2_GOAWAY:
-			worker_log(worker, LOG_INFO, "< GOAWAY: %ld", frame->goaway.error_code);
+			{
+				const char *debug = apr_pmemdup(p, frame->goaway.opaque_data, frame->goaway.opaque_data_len);
+				worker_log(worker, LOG_INFO, "< GOAWAY: %s (%ld)", debug, frame->goaway.error_code);
+			}
 			break;
 		case NGHTTP2_SETTINGS:
 			if (frame->hd.flags == NGHTTP2_FLAG_ACK) {
