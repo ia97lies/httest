@@ -1039,7 +1039,11 @@ apr_status_t worker_conn_close(worker_t * self, char *info) {
   if (self->socket->socket_state == SOCKET_CLOSED) {
     return APR_SUCCESS;
   }
-  
+   
+  if ((status = htt_run_pre_close(self)) != APR_SUCCESS) {
+    return status;
+  }
+
   if ((status = htt_run_close(self, info, &info)) != APR_SUCCESS) {
     if (APR_STATUS_IS_EINTR(status)) {
       return APR_SUCCESS;
@@ -4504,6 +4508,7 @@ APR_HOOK_STRUCT(
   APR_HOOK_LINK(connect)
   APR_HOOK_LINK(post_connect)
   APR_HOOK_LINK(accept)
+  APR_HOOK_LINK(pre_close)
   APR_HOOK_LINK(close)
   APR_HOOK_LINK(WAIT_begin)
   APR_HOOK_LINK(read_pre_headers)
@@ -4546,6 +4551,10 @@ APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, post_connect,
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept, 
                                       (worker_t *worker, char *rest_of_line), 
 				      (worker, rest_of_line), APR_SUCCESS);
+
+APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, pre_close, 
+                                      (worker_t *worker), 
+				      (worker), APR_SUCCESS);
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
                                       (worker_t *worker, char *info, char **new_info), 

@@ -302,6 +302,8 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, post_connect,
                           (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
                           (worker_t *worker, char *rest_of_line));
+APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, pre_close,
+                          (worker_t *worker));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
                           (worker_t *worker, char *info, char **new_info));
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, WAIT_begin,
@@ -339,6 +341,7 @@ APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_joined,
 
 apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
+transport_t *transport_get_current(socket_t *socket); 
 
 /** commands */
 apr_status_t command_CALL(command_t *self, worker_t *worker, char *data, apr_pool_t *ptmp); 

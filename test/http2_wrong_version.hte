@@ -3,7 +3,7 @@ INCLUDE $TOP/test/config.htb
 # runs exactly one time
 CLIENT
 
-_H2:V 2.1 version
+_H2:SESSION 2.1 version
 
 END
 

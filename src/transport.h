@@ -95,6 +95,13 @@ transport_t *transport_new(void *data,
 apr_status_t transport_set_data(transport_t *hook, void *data);
 
 /**
+ * get user data
+ * @param hook IN transport hook
+ * @return user data
+ */
+void *transport_get_data(transport_t *hook);
+
+/**
  * Get socket descriptor of the transport protocol
  * @param hook IN transport hook
  * @param desc OUT os descriptor of this transport

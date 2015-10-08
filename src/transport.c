@@ -105,7 +105,15 @@ apr_status_t transport_set_data(transport_t *hook, void *data) {
   else {
     return APR_EGENERAL;
   }
+}
 
+/**
+ * get user data
+ * @param hook IN transport hook
+ * @return user data
+ */
+void *transport_get_data(transport_t *hook) {
+  return hook->data;
 }
 
 /**
