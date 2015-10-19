@@ -1,4 +1,0 @@
-
-http2_wrong_version.hte:6: error: CLT0-0 This function has not been implemented on this platform(70023)
-http2_wrong_version.hte:6: error: Only version 2.0 is supported
-

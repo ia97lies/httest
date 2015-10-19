@@ -1,0 +1,3 @@
+
+http2_h2_not_initialized_ping.hte:6: error: CLT0-0 Internal error(20014)
+http2_h2_not_initialized_ping.hte:6: error: h2 is not yet initialized, call _H2:NEW before any other call once.

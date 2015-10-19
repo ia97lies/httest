@@ -1,3 +1,0 @@
-
-http2_missing_version.hte:6: error: Version is missing
-http2_missing_version.hte:6: error: CLT0-0 Internal error(20014)

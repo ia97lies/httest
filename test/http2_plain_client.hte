@@ -2,8 +2,7 @@ INCLUDE $TOP/test/config.htb
 
 # runs exactly one time
 CLIENT
-
-_H2:SESSION 2.1 version
-
+_REQ $YOUR_HOST $YOUR_PORT
+_H2:SESSION 2.0
 END
 

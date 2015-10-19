@@ -1,0 +1,23 @@
+INCLUDE $TOP/test/config.htb
+
+# runs exactly one time
+CLIENT
+
+	_REQ $YOUR_HOST SSL:$YOUR_PORT
+    #_EXPECT . "NONE"
+	_H2:NEW
+	_H2:SETTINGS
+	_CLOSE
+
+END
+
+SERVER SSL:$YOUR_PORT
+_CERT server.cert.pem server.key.pem
+
+	_RES
+  #_EXPECT . "NONE"
+	_H2:NEW
+	_H2:SETTINGS
+	_CLOSE
+END
+

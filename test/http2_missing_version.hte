@@ -1,9 +1,0 @@
-INCLUDE $TOP/test/config.htb
-
-# runs exactly one time
-CLIENT
-
-_H2:SESSION
-
-END
-

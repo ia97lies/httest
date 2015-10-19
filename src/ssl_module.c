@@ -176,7 +176,7 @@ static apr_status_t worker_ssl_handshake(worker_t * worker) {
 #if (OPENSSL_VERSION_NUMBER >= 0x009080cf)
 #ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
     sconfig->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION; 
-#else 	 
+#else    
     SSL_set_options(sconfig->ssl, SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
 #endif
 #endif
@@ -219,13 +219,13 @@ static apr_status_t worker_ssl_ctx_p12(worker_t * worker, const char *infile,
 
   if (pkey && SSL_CTX_use_PrivateKey(config->ssl_ctx, pkey) <= 0 && check) {
     worker_log(worker, LOG_ERR, "Could not load private key of \"%s\"",
-	       infile);
+         infile);
     return APR_EINVAL;
   }
 
   if (cert && SSL_CTX_use_certificate(config->ssl_ctx, cert) <= 0 && check) {
     worker_log(worker, LOG_ERR, "Could not load certificate of \"%s\"",
-	       infile);
+         infile);
     return APR_EINVAL;
   }
 
@@ -425,7 +425,7 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
       || version == DTLS1_BAD_VER
 #endif
-	  ) {
+    ) {
     switch (content_type) {
       case 20:
         str_content_type = "ChangeCipherSpec";
@@ -681,34 +681,34 @@ static apr_status_t worker_ssl_ctx(worker_t * worker, const char *certfile,
     apr_status_t status;
     worker_log(worker, LOG_DEBUG, "pkcs12 certifcate");
     if ((status = worker_ssl_ctx_p12(worker, certfile, keyfile, check))
-	!= APR_SUCCESS) {
+  != APR_SUCCESS) {
       return status;
     }
   }
   else {
     worker_log(worker, LOG_DEBUG, "pem formated cert and key");
     if (certfile && SSL_CTX_use_certificate_file(wconf->ssl_ctx, certfile, 
-						 SSL_FILETYPE_PEM) <= 0 && 
-	check) { 
+             SSL_FILETYPE_PEM) <= 0 && 
+  check) { 
       worker_log(worker, LOG_ERR, "Could not load certifacte \"%s\"",
-		 certfile);
+     certfile);
       return APR_EINVAL;
     }
     if (keyfile && SSL_CTX_use_PrivateKey_file(wconf->ssl_ctx, keyfile, 
-					       SSL_FILETYPE_PEM) <= 0 && 
-	check) {
+                 SSL_FILETYPE_PEM) <= 0 && 
+  check) {
       worker_log(worker, LOG_ERR, "Could not load private key \"%s\"",
-		 keyfile);
+     keyfile);
       return APR_EINVAL;
     }
     if (ca && !SSL_CTX_load_verify_locations(wconf->ssl_ctx, ca,
-					     NULL) && check) {
+               NULL) && check) {
       worker_log(worker, LOG_ERR, "Could not load CA file \"%s\"", ca);
       return APR_EINVAL;
     }
 
     if (certfile && keyfile&& check && 
-	!SSL_CTX_check_private_key(wconf->ssl_ctx)) {
+  !SSL_CTX_check_private_key(wconf->ssl_ctx)) {
       worker_log(worker, LOG_ERR, "Private key does not match the certificate public key");
       return APR_EINVAL;
     }
@@ -1084,7 +1084,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       key = store_get(worker->params, "3");
       ca = store_get(worker->params, "4");
       if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
-	return status;
+  return status;
       }
 
       if ((status = ssl_new_instance(worker)) != APR_SUCCESS) {
@@ -1096,23 +1096,23 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(sconfig->ssl, bio, bio);
       if (sconfig->sess) {
-	SSL_set_session(sconfig->ssl, sconfig->sess);
-	SSL_SESSION_free(sconfig->sess);
-	sconfig->sess = NULL;
+  SSL_set_session(sconfig->ssl, sconfig->sess);
+  SSL_SESSION_free(sconfig->sess);
+  sconfig->sess = NULL;
       }
       SSL_set_connect_state(sconfig->ssl);
 
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
-				return status;
+        return status;
       }
 
       ssl_transport = ssl_get_transport(worker, sconfig);
       transport = transport_new(ssl_transport, worker->pbody, 
-				ssl_transport_os_desc_get, 
-				ssl_transport_set_timeout, 
-				ssl_transport_get_timeout, 
-				ssl_transport_read, 
-				ssl_transport_write);
+        ssl_transport_os_desc_get, 
+        ssl_transport_set_timeout, 
+        ssl_transport_get_timeout, 
+        ssl_transport_read, 
+        ssl_transport_write);
       transport_register(worker->socket, transport);
       if (worker->socket->sockreader) {
         sockreader_set_transport(worker->socket->sockreader, transport);
@@ -1166,25 +1166,25 @@ static apr_status_t block_SSL_ACCEPT(worker_t * worker, worker_t *parent, apr_po
       key = store_get(worker->params, "3");
       ca = store_get(worker->params, "4");
       if (!cert) {
-	cert = gconf->certfile;
+  cert = gconf->certfile;
       }
       if (!key) {
-	key = gconf->keyfile;
+  key = gconf->keyfile;
       }
       if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) != APR_SUCCESS) {
-	return status;
+  return status;
       }
 
       if ((status = worker_ssl_accept(worker)) != APR_SUCCESS) {
-	return status;
+  return status;
       }
       ssl_transport = ssl_get_transport(worker, sconfig);
       transport = transport_new(ssl_transport, worker->pbody, 
-				ssl_transport_os_desc_get, 
-				ssl_transport_set_timeout, 
-				ssl_transport_get_timeout, 
-				ssl_transport_read, 
-				ssl_transport_write);
+        ssl_transport_os_desc_get, 
+        ssl_transport_set_timeout, 
+        ssl_transport_get_timeout, 
+        ssl_transport_read, 
+        ssl_transport_write);
       transport_register(worker->socket, transport);
       if (worker->socket->sockreader) {
         sockreader_set_transport(worker->socket->sockreader, transport);
@@ -1361,7 +1361,7 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
 
   if (!worker->socket->is_ssl || !sconfig->ssl) {
     worker_log(worker, LOG_ERR, 
-	       "No ssl connection established can not verify peer");
+         "No ssl connection established can not verify peer");
     return APR_ENOSOCKET;
   }
 
@@ -1407,8 +1407,8 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
     config->cert = SSL_get_peer_certificate(sconfig->ssl);
     if (copy && strcasecmp(copy, "verify") == 0) {
       if (!config->cert) {
-	worker_log(worker, LOG_ERR, "No peer certificate");
-	return APR_EACCES;
+  worker_log(worker, LOG_ERR, "No peer certificate");
+  return APR_EACCES;
       }
     }
   }
@@ -1421,9 +1421,9 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
 
     if (copy && strcasecmp(copy, "verify") == 0) {
       if((rc = SSL_get_verify_result(sconfig->ssl)) != X509_V_OK) {
-	worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
-	X509_verify_cert_error_string(rc), rc);
-	return APR_EACCES;
+  worker_log(worker, LOG_ERR, "SSL peer verify failed: %s(%d)",
+  X509_verify_cert_error_string(rc), rc);
+  return APR_EACCES;
       }
     }
   }
@@ -1604,7 +1604,7 @@ static apr_status_t block_SSL_SET_CERT(worker_t * worker, worker_t *parent, apr_
 
   if (!config->ssl_ctx) {
     worker_log(worker, LOG_ERR, "Can not set cert, ssl not enabled in %s",
-	             (worker->flags & FLAGS_SERVER) ? "SERVER" : "CLIENT");
+               (worker->flags & FLAGS_SERVER) ? "SERVER" : "CLIENT");
     return APR_EINVAL;
   }
 
@@ -1769,7 +1769,7 @@ static apr_status_t ssl_client_port_args(worker_t *worker, char *portinfo,
       ca = apr_strtok(NULL, " ", &last);
     }
     if ((status = worker_ssl_ctx(worker, cert, key, ca, 1)) 
-	!= APR_SUCCESS) {
+  != APR_SUCCESS) {
       return status;
     }
     SSL_CTX_set_options(config->ssl_ctx, SSL_OP_ALL);
@@ -1851,11 +1851,11 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     }
     ssl_transport = ssl_get_transport(worker, sconfig);
     transport = transport_new(ssl_transport, worker->pbody, 
-			      ssl_transport_os_desc_get, 
-			      ssl_transport_set_timeout, 
-			      ssl_transport_get_timeout, 
-			      ssl_transport_read, 
-			      ssl_transport_write);
+            ssl_transport_os_desc_get, 
+            ssl_transport_set_timeout, 
+            ssl_transport_get_timeout, 
+            ssl_transport_read, 
+            ssl_transport_write);
     transport_register(worker->socket, transport);
     if (worker->socket->sockreader) {
       sockreader_set_transport(worker->socket->sockreader, transport);
@@ -1888,10 +1888,10 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
     if (data && data[0]) {
       cert = apr_strtok(data, " ", &last);
       if (cert) {
-	key = apr_strtok(NULL, " ", &last);
+  key = apr_strtok(NULL, " ", &last);
       }
       if (key) {
-	ca = apr_strtok(NULL, " ", &last);
+  ca = apr_strtok(NULL, " ", &last);
       }
     }
     if (!cert) {
@@ -1912,11 +1912,11 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
     }
     ssl_transport = ssl_get_transport(worker, sconfig);
     transport = transport_new(ssl_transport, worker->pbody, 
-			      ssl_transport_os_desc_get, 
-			      ssl_transport_set_timeout, 
-			      ssl_transport_get_timeout, 
-			      ssl_transport_read, 
-			      ssl_transport_write);
+            ssl_transport_os_desc_get, 
+            ssl_transport_set_timeout, 
+            ssl_transport_get_timeout, 
+            ssl_transport_read, 
+            ssl_transport_write);
     transport_register(worker->socket, transport);
     if (worker->socket->sockreader) {
       sockreader_set_transport(worker->socket->sockreader, transport);
@@ -1927,14 +1927,14 @@ static apr_status_t ssl_hook_accept(worker_t *worker, char *data) {
 }
 
 /**
- * do ssl accept handshake
+ * do ssl close
  *
  * @param worker IN
  *
  * @return APR_SUCCESS or apr error
  */
 static apr_status_t ssl_hook_close(worker_t *worker, char *info, 
-                                   char **new_info) {
+    char **new_info) {
   int i;
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
 
@@ -1942,9 +1942,9 @@ static apr_status_t ssl_hook_close(worker_t *worker, char *info,
   if (!info || !info[0]) {
     if (sconfig->ssl) {
       for (i = 0; i < 4; i++) {
-	if (SSL_shutdown(sconfig->ssl) != 0) {
-	  break;
-	}
+        if (SSL_shutdown(sconfig->ssl) != 0) {
+          break;
+        }
       }
       SSL_free(sconfig->ssl);
       sconfig->ssl = NULL;
@@ -2020,129 +2020,129 @@ apr_status_t ssl_module_init(global_t *global) {
   ssl_get_global_config(global);
 
   if ((status = module_command_new(global, "SSL", "SET_DEFAULT_CERT", "[<cert>] [<key>] [<ca>]",
-	                           "set default cert files <cert> <key> <ca> ",
-	                           block_SSL_SET_DEFAULT_CERT)) != APR_SUCCESS) {
+                             "set default cert files <cert> <key> <ca> ",
+                             block_SSL_SET_DEFAULT_CERT)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "SSL", "_CONNECT",
-	                           "SSL|SSL2|SSL3|DTLS1|TLS1"
+                             "SSL|SSL2|SSL3|DTLS1|TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
                                    "|TLS1.1|TLS1.2"
 #endif
                                    " [<cert-file> <key-file>]",
-	                           "Needs a connected socket to establish a ssl "
-				   "connection on it.",
-	                           block_SSL_CONNECT)) != APR_SUCCESS) {
+                             "Needs a connected socket to establish a ssl "
+           "connection on it.",
+                             block_SSL_CONNECT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_ACCEPT",
-	                           "SSL|SSL2|SSL3|DTLS|TLS1"
+                             "SSL|SSL2|SSL3|DTLS|TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
                                    "|TLS1.1|TLS1.2"
 #endif
                                    " [<cert-file> <key-file>]",
-	                           "Needs a connected socket to accept a ssl "
-				   "connection on it.",
-	                           block_SSL_ACCEPT)) != APR_SUCCESS) {
+                             "Needs a connected socket to accept a ssl "
+           "connection on it.",
+                             block_SSL_ACCEPT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_CLOSE", "",
-	                           "Close the ssl connect, but not the "
-				   "underlying socket.",
-	                           block_SSL_CLOSE)) != APR_SUCCESS) {
+                             "Close the ssl connect, but not the "
+           "underlying socket.",
+                             block_SSL_CLOSE)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_GET_SESSION", "<var>",
-	                           "Stores the SSL session in <var>.",
-	                           block_SSL_GET_SESSION)) != APR_SUCCESS) {
+                             "Stores the SSL session in <var>.",
+                             block_SSL_GET_SESSION)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SET_SESSION", "<session>",
-	                           "Set a base64 encoded <session> in "
-				   "the current SSL.",
-	                           block_SSL_SET_SESSION)) != APR_SUCCESS) {
+                             "Set a base64 encoded <session> in "
+           "the current SSL.",
+                             block_SSL_SET_SESSION)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_GET_SESSION_ID", "<var>",
-	                           "Get a SSL session id and store it in <var>",
-	                           block_SSL_GET_SESSION_ID)) != APR_SUCCESS) {
+                             "Get a SSL session id and store it in <var>",
+                             block_SSL_GET_SESSION_ID)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_RENEG_CERT", "[verify]",
-	                           "Performs an SSL renegotiation and optional a verification. "
-				   "Stores the cert for later use with commands like"
-				   "_SSL_GET_CERT_VALUE or _SSL:SET_CERT",
-	                           block_SSL_RENEG_CERT)) != APR_SUCCESS) {
+                             "Performs an SSL renegotiation and optional a verification. "
+           "Stores the cert for later use with commands like"
+           "_SSL_GET_CERT_VALUE or _SSL:SET_CERT",
+                             block_SSL_RENEG_CERT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_LOAD_CERT", "<pem-cert>",
-				   "Read the given pem formated <pem-cert>. Stores it for later use "
-				   "with commands like _SSL:GET_CERT_VALUE or _SSL:SET_CERT",
-	                           block_SSL_LOAD_CERT)) != APR_SUCCESS) {
+           "Read the given pem formated <pem-cert>. Stores it for later use "
+           "with commands like _SSL:GET_CERT_VALUE or _SSL:SET_CERT",
+                             block_SSL_LOAD_CERT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SET_CERT", "[<cert> <key> [<ca>]]",
-	                           "set cert either from file <cert> <key> <ca> "
-				   "or got with _SSL:RENEG_CERT or _SSL:LOAD_CERT/_SSL:LOAD_KEY",
-	                           block_SSL_SET_CERT)) != APR_SUCCESS) {
+                             "set cert either from file <cert> <key> <ca> "
+           "or got with _SSL:RENEG_CERT or _SSL:LOAD_CERT/_SSL:LOAD_KEY",
+                             block_SSL_SET_CERT)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SET_CA", "<ca>",
-	                           "set <ca> cert",
-	                           block_SSL_SET_CA)) != APR_SUCCESS) {
+                             "set <ca> cert",
+                             block_SSL_SET_CA)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_LOAD_KEY", "<pem-key>",
-				   "Read the given pem formated <pem-key>. Stores it for later use "
-				   "with commands like _SSL:SET_KEY",
-	                           block_SSL_LOAD_KEY)) != APR_SUCCESS) {
+           "Read the given pem formated <pem-key>. Stores it for later use "
+           "with commands like _SSL:SET_KEY",
+                             block_SSL_LOAD_KEY)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "SSL", "_GET_CERT_VALUE", "<cert entry> <variable>",
-	                           "Get <cert entry> and store it into <variable>\n"
-  				   "Get cert with _SSL:RENEG_CERT or _SSL:LOAD_CERT\n"
-				   "<cert entry> are\n" 
-				   "  M_VERSION\n" 
-				   "  M_SERIAL\n" 
-				   "  V_START\n" 
-				   "  V_END\n" 
-				   "  V_REMAIN\n" 
-				   "  S_DN\n" 
-				   "  S_DN_<var>\n" 
-				   "  I_DN\n" 
-				   "  I_DN_<var>\n" 
-				   "  A_SIG\n" 
-				   "  A_KEY\n" 
-				   "  CERT",
-	                           block_SSL_GET_CERT_VALUE)) != APR_SUCCESS) {
+                             "Get <cert entry> and store it into <variable>\n"
+             "Get cert with _SSL:RENEG_CERT or _SSL:LOAD_CERT\n"
+           "<cert entry> are\n" 
+           "  M_VERSION\n" 
+           "  M_SERIAL\n" 
+           "  V_START\n" 
+           "  V_END\n" 
+           "  V_REMAIN\n" 
+           "  S_DN\n" 
+           "  S_DN_<var>\n" 
+           "  I_DN\n" 
+           "  I_DN_<var>\n" 
+           "  A_SIG\n" 
+           "  A_KEY\n" 
+           "  CERT",
+                             block_SSL_GET_CERT_VALUE)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SET_ENGINE", "<engine>",
-				   "Set an openssl crypto <engine> to run tests with crypto devices",
-	                           block_SSL_SET_ENGINE)) != APR_SUCCESS) {
+           "Set an openssl crypto <engine> to run tests with crypto devices",
+                             block_SSL_SET_ENGINE)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SET_LEGACY", "on | off",
-				   "Turn on|off SSL legacy behavour for renegotiation for openssl libraries 0.9.8l and above",
-	                           block_SSL_SET_LEGACY)) != APR_SUCCESS) {
+           "Turn on|off SSL legacy behavour for renegotiation for openssl libraries 0.9.8l and above",
+                             block_SSL_SET_LEGACY)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_SECURE_RENEG_SUPPORTED", "",
-				   "Test if remote peer do support secure renegotiation",
-	                           block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
+           "Test if remote peer do support secure renegotiation",
+                             block_SSL_SECURE_RENEG_SUPPORTED)) != APR_SUCCESS) {
     return status;
   }
   if ((status = module_command_new(global, "SSL", "_TRACE", "",
-				   "Start SSL debug session",
-	                           block_SSL_TRACE)) != APR_SUCCESS) {
+           "Start SSL debug session",
+                             block_SSL_TRACE)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "SSL", "_SET_CIPHER_SUITE", "<ciphers>",
-				   "Set an opnessl cipher suite to be used",
-	                           block_SSL_CIPHER_SUITE)) != APR_SUCCESS) {
+           "Set an opnessl cipher suite to be used",
+                             block_SSL_CIPHER_SUITE)) != APR_SUCCESS) {
     return status;
   }
 

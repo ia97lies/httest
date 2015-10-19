@@ -4460,7 +4460,6 @@ apr_status_t transport_register(socket_t *socket, transport_t *transport) {
  * Unregister transport from socket
  *
  * @param socket IN htt socket
- * @param transport IN transport object for read/write
  * @return APR_SUCCESS
  */
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport) {
