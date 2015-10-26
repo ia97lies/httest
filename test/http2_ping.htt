@@ -8,7 +8,7 @@ CLIENT
 	_H2:NEW
 	_H2:SETTINGS
 	_LOOP 100 i
-		_H2:PING
+		_H2:PING Foobarblablablabla
 	_END
 	_CLOSE
 
