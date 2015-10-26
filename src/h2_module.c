@@ -70,8 +70,9 @@ typedef struct h2_wconf_s {
 #define H2_STATE_NONE           0
 #define H2_STATE_SETTINGS       1
 #define H2_STATE_PING           2
-#define H2_STATE_HEADERS        3
-#define H2_STATE_BODY           4
+#define H2_STATE_GOAWAY         3
+#define H2_STATE_HEADERS        4
+#define H2_STATE_BODY           5
   int state;
 } h2_wconf_t;
 
@@ -79,12 +80,7 @@ typedef struct h2_wconf_s {
  * Local 
  ***********************************************************************/
 
-/**
- * Get h2 socket config from socket
- *
- * @param worker IN worker
- * @return socket config
- */
+/*****************************************************************************/
 static h2_sconf_t *h2_get_socket_config(worker_t *worker) {
   h2_sconf_t *config;
 
@@ -101,12 +97,7 @@ static h2_sconf_t *h2_get_socket_config(worker_t *worker) {
   return config;
 }
 
-/**
- * GET worker config
- *
- * @param worker IN worker
- * @return worker config
- */
+/*****************************************************************************/
 static h2_wconf_t *h2_get_worker_config(worker_t *worker) {
   h2_wconf_t *config;
 
@@ -123,11 +114,7 @@ static h2_wconf_t *h2_get_worker_config(worker_t *worker) {
   return config;
 }
 
-/**
- * run match, grep and expect on given input
- * @param worker IN worker
- * @param data IN data to inspect, null terminated
- */
+/*****************************************************************************/
 static void executeMatchGrepExpectOnInput(worker_t *worker, const char *data) {
   worker_match(worker, worker->match.dot, data, strlen(data));
   worker_match(worker, worker->match.headers, data, strlen(data));
@@ -151,37 +138,55 @@ const char *h2_settings_array[] = {
   NULL
 };
 
-static int32_t h2_get_id_of_settings_name(const char *key) {
+const char *h2_error_code_array[] = {
+  "NGHTTP2_NO_ERROR",
+  "NGHTTP2_PROTOCOL_ERROR",
+  "NGHTTP2_INTERNAL_ERROR",
+  "NGHTTP2_FLOW_CONTROL_ERROR",
+  "NGHTTP2_SETTINGS_TIMEOUT",
+  "NGHTTP2_STREAM_CLOSED",
+  "NGHTTP2_FRAME_SIZE_ERROR",
+  "NGHTTP2_REFUSED_STREAM",
+  "NGHTTP2_CANCEL",
+  "NGHTTP2_COMPRESSION_ERROR",
+  "NGHTTP2_CONNECT_ERROR",
+  "NGHTTP2_ENHANCE_YOUR_CALM",
+  "NGHTTP2_INADEQUATE_SECURITY",
+  "NGHTTP2_HTTP_1_1_REQUIRED"
+};
+
+/*****************************************************************************/
+static int32_t h2_get_id_of(const char *array[], const char *key) {
   int i; 
-  for (i = 0; i < 7; i++) {
-    if (strcmp(key, h2_settings_array[i]) == 0) {
-      return i;
+  if (key != NULL) {
+    for (i = 0; i < 7; i++) {
+      if (strcmp(key, array[i]) == 0) {
+        return i;
+      }
     }
   }
   return 0;
 }
 
-static const char *h2_get_setting_name_of_id(int32_t id) {
+/*****************************************************************************/
+static const char *h2_get_name_of(const char *array[], int32_t id) {
   if (id > 0 && id < 7) {
-    return h2_settings_array[id];
+    return array[id];
   }
   return "NOT_FOUND";
 }
 
+/*****************************************************************************/
 static const char *h2_get_settings_as_text(apr_pool_t *pool, nghttp2_settings_entry *settings, int size) {
   int i;
   char *result = "SETTINGS: ";
   for (i = 0; i < size; i++) {
-    result = apr_psprintf(pool, "%s%s=%d", result, h2_get_setting_name_of_id(settings[i].settings_id), settings[i].value);
+    result = apr_psprintf(pool, "%s%s=%d, ", result, h2_get_name_of(h2_settings_array, settings[i].settings_id), settings[i].value);
   }
   return result;
 }
 
-/*
- * Check for the next poll
- * @param pollfd INOUT which is to prepare
- * @param sconf INOUT which state is to prepare
- */
+/*****************************************************************************/
 static void ctl_poll(apr_pollfd_t *pollfd, h2_sconf_t *sconf) {
   pollfd->reqevents = 0;
   if (nghttp2_session_want_read(sconf->session) || sconf->want_io == WANT_READ) {
@@ -192,11 +197,7 @@ static void ctl_poll(apr_pollfd_t *pollfd, h2_sconf_t *sconf) {
   }
 }
 
-/*
- * Poll for data recv/send
- * @param worker IN worker instance
- * @param state IN the state we should poll
- */
+/*****************************************************************************/
 static apr_status_t pollForData(worker_t *worker, int state)  {
   apr_pool_t *p;
   apr_pollset_t *pollset;
@@ -261,12 +262,7 @@ static apr_status_t pollForData(worker_t *worker, int state)  {
   return APR_SUCCESS;
 }
 
-/*
- * The implementation of nghttp2_send_callback type. Here we write
- * |data| with size |length| to the network and return the number of
- * bytes actually written. See the documentation of
- * nghttp2_send_callback for the details.
- */
+/*****************************************************************************/
 static ssize_t h2_send_callback(nghttp2_session *session, const uint8_t *data,
                                 size_t length, int flags, void *user_data) {
   int rv;
@@ -291,12 +287,7 @@ static ssize_t h2_send_callback(nghttp2_session *session, const uint8_t *data,
   return rv;
 }
 
-/*
- * The implementation of nghttp2_recv_callback type. Here we read data
- * from the network and write them in |buf|. The capacity of |buf| is
- * |length| bytes. Returns the number of bytes stored in |buf|. See
- * the documentation of nghttp2_recv_callback for the details.
- */
+/*****************************************************************************/
 static ssize_t h2_recv_callback(nghttp2_session *session, uint8_t *buf,
                                 size_t length, int flags, void *user_data) {
   int rv;
@@ -323,6 +314,7 @@ static ssize_t h2_recv_callback(nghttp2_session *session, uint8_t *buf,
   return rv;
 }
 
+/*****************************************************************************/
 static int h2_on_frame_send_callback(nghttp2_session *session,
                                      const nghttp2_frame *frame,
                                      void *user_data) {
@@ -352,7 +344,7 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
   case NGHTTP2_GOAWAY:
     {
       const char *debug = apr_pmemdup(p, frame->goaway.opaque_data, frame->goaway.opaque_data_len);
-      worker_log(worker, LOG_INFO, "> GOAWAY: %s (%ld)", debug, frame->goaway.error_code);
+      worker_log(worker, LOG_INFO, "> GOAWAY: %s %s", h2_get_name_of(h2_error_code_array, frame->goaway.error_code), debug);
     }
     break;
   case NGHTTP2_SETTINGS:
@@ -381,6 +373,7 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
   return 0;
 }
 
+/*****************************************************************************/
 static int h2_on_frame_recv_callback(nghttp2_session *session,
     const nghttp2_frame *frame,
     void *user_data) {
@@ -410,8 +403,11 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       break;
     case NGHTTP2_GOAWAY:
       {
-        const char *text = apr_pmemdup(p, frame->goaway.opaque_data, frame->goaway.opaque_data_len);
-        worker_log(worker, LOG_INFO, "< GOAWAY: %s (%ld)", text, frame->goaway.error_code);
+        const char *debug = apr_pmemdup(p, frame->goaway.opaque_data, frame->goaway.opaque_data_len);
+        const char *goawayText = apr_pstrdup(worker->pbody, "GOAWAY: %s \"%s\"", h2_get_name_of(h2_error_code_array, frame->goaway.error_code), text);
+        executeMatchGrepExpectOnInput(worker, goawayText);
+		worker_log(worker, LOG_INFO, "< %s", goawayText);
+        wconf->state = H2_STATE_NONE;
       }
       break;
     case NGHTTP2_SETTINGS:
@@ -451,6 +447,7 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
   return 0;
 }
 
+/*****************************************************************************/
 static int h2_on_begin_headers_callback(nghttp2_session *session,
       const nghttp2_frame *frame,
       void *user_data) {
@@ -459,6 +456,7 @@ static int h2_on_begin_headers_callback(nghttp2_session *session,
   return 0;
 }
 
+/*****************************************************************************/
 static int h2_on_stream_close_callback(nghttp2_session *session, int32_t stream_id,
                                    uint32_t error_code,
                                    void *user_data) {
@@ -473,12 +471,7 @@ static int h2_on_stream_close_callback(nghttp2_session *session, int32_t stream_
   return 0;
 }
 
-#define MAX_OUTLEN 4096
-
-/*
- * The implementation of nghttp2_on_data_chunk_recv_callback type. We
- * use this function to print the received response body.
- */
+/*****************************************************************************/
 static int h2_on_data_chunk_recv_callback(nghttp2_session *session,
                                           uint8_t flags, int32_t stream_id,
                                           const uint8_t *data, size_t len,
@@ -491,12 +484,7 @@ static int h2_on_data_chunk_recv_callback(nghttp2_session *session,
   return 0;
 }
 
-/*
- * Setup callback functions. nghttp2 API offers many callback
- * functions, but most of them are optional. The h2_send_callback is
- * always required. Since we use nghttp2_session_recv(), the
- * h2_recv_callback is also required.
- */
+/*****************************************************************************/
 static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
   nghttp2_session_callbacks_set_send_callback(callbacks, h2_send_callback);
 
@@ -529,9 +517,6 @@ static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
 /************************************************************************
  * Commands
  ***********************************************************************/
-/**
- * H2 NEW command
- */
 apr_status_t block_H2_NEW(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   int rv; 
   nghttp2_session_callbacks *callbacks;
@@ -573,9 +558,7 @@ apr_status_t block_H2_NEW(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) 
 }
 
 
-/**
- * H2 SETTINGS command
- */
+/*****************************************************************************/
 apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   h2_sconf_t *sconf = h2_get_socket_config(parent); 
@@ -585,18 +568,17 @@ apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent, apr_pool_t *p
     return APR_EGENERAL;
   }
   else {
-    int rv = 0;
-    int i = 0;
     nghttp2_settings_entry settings[6];
+    int i = 0;
     size_t cur = 0;
     h2_wconf_t *wconf = h2_get_worker_config(parent);
     const char *param = store_get(worker->params, apr_itoa(ptmp, ++i));
     memset(&settings, 0, sizeof(settings));
-    while (param && cur < 2) {
+    while (param && cur < 6) {
       char *setting = apr_pstrdup(parent->pbody, param);
       char *value;
       char *key = apr_strtok(setting, "=", &value); 
-      int32_t settings_id = h2_get_id_of_settings_name(key);
+      int32_t settings_id = h2_get_id_of(h2_settings_array, key);
       if (settings_id > 0) {
         settings[cur].settings_id = settings_id;
         settings[cur].value = apr_atoi64(value);
@@ -621,9 +603,7 @@ apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent, apr_pool_t *p
   }
 }
 
-/**
- * H2 PING command
- */
+/*****************************************************************************/
 apr_status_t block_H2_PING(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   h2_sconf_t *sconf = h2_get_socket_config(parent); 
@@ -643,9 +623,29 @@ apr_status_t block_H2_PING(worker_t *worker, worker_t *parent, apr_pool_t *ptmp)
   }
 }
 
-/**
- * H2 WAIT command
- */
+/*****************************************************************************/
+apr_status_t block_H2_GOAWAY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
+  apr_status_t status;
+  h2_sconf_t *sconf = h2_get_socket_config(parent); 
+
+  if (sconf->h2_init == 0) {
+    worker_log(parent, LOG_ERR, "h2 is not yet initialized, call _H2:NEW before any other call once.");
+    return APR_EGENERAL;
+  }
+  else {
+    h2_wconf_t *wconf = h2_get_worker_config(parent);
+    const char *error = store_get(worker->params, "1");
+    const char *data = store_get(worker->params, "2");
+
+  nghttp2_submit_goaway(sconf->session, NGHTTP2_FLAG_NONE, nghttp2_session_get_last_proc_stream_id(sconf->session),
+      h2_get_id_of(h2_error_code_array, error), (void *)data, data ? strlen(data) : 0);
+    wconf->state = H2_STATE_GOAWAY;
+    status = pollForData(parent, H2_STATE_GOAWAY); 
+    return worker_assert(parent, status);
+  }
+}
+
+/*****************************************************************************/
 apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   apr_status_t status;
   h2_sconf_t *sconf = h2_get_socket_config(parent); 
@@ -663,9 +663,7 @@ apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent, apr_pool_t *ptmp)
   }
 }
 
-/*
- * Do a graceful close
- */
+/*****************************************************************************/
 apr_status_t h2_hook_pre_close(worker_t *worker) {
   int rv;
   apr_status_t status;
@@ -677,7 +675,7 @@ apr_status_t h2_hook_pre_close(worker_t *worker) {
     /* due the description of the nghttp2 interface I should wait for 1 RTT and send goaway again */
     for (i = 0; i < 2; i++) {
       rv = nghttp2_submit_goaway(sconf->session, NGHTTP2_FLAG_NONE, nghttp2_session_get_last_proc_stream_id(sconf->session),
-          NGHTTP2_NO_ERROR, (void *)"_CLOSE", strlen("_CLOSE"));
+        NGHTTP2_NO_ERROR, (void *)"_CLOSE", strlen("_CLOSE"));
       if (rv != 0) {
         worker_log(worker, LOG_ERR, "Could not send goaway frame: %d", rv);
       }
@@ -691,9 +689,7 @@ apr_status_t h2_hook_pre_close(worker_t *worker) {
   return APR_SUCCESS;
 }
 
-/*
- * Cleanup h2
- */
+/*****************************************************************************/
 static apr_status_t h2_hook_close(worker_t *worker, char *info, char **new_info) {
   h2_sconf_t *sconf = h2_get_socket_config(worker); 
   worker_log(worker, LOG_DEBUG, "h2_hook_close worker: %"APR_UINT64_T_HEX_FMT", info: %s, sconf: %"APR_UINT64_T_HEX_FMT, worker, info, sconf);
@@ -704,13 +700,7 @@ static apr_status_t h2_hook_close(worker_t *worker, char *info, char **new_info)
   return APR_SUCCESS;
 }
 
-/**
- * do h2 server session
- *
- * @param worker IN
- *
- * @return APR_SUCCESS or apr error
- */
+/*****************************************************************************/
 static apr_status_t h2_hook_accept(worker_t *worker, char *data) {
   h2_sconf_t *sconfig = h2_get_socket_config(worker);
   sconfig->is_server = 1;
@@ -739,6 +729,12 @@ apr_status_t h2_module_init(global_t *global) {
   if ((status = module_command_new(global, "H2", "_PING", "<8 byte>",
           "Send http2 ping.",
           block_H2_PING)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "H2", "_GOAWAY", "<string>",
+          "Send a http2 goaway to peer.",
+          block_H2_GOAWAY)) != APR_SUCCESS) {
     return status;
   }
 
