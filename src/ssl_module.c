@@ -51,6 +51,7 @@ typedef struct ssl_wconf_s {
   X509 *cert;
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
+  SSL_SESSION *sess;
   const SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
@@ -72,7 +73,6 @@ typedef struct ssl_wconf_s {
 typedef struct ssl_sconf_s {
   int is_ssl;
   SSL *ssl;
-  SSL_SESSION *sess;
 } ssl_sconf_t;
 
 typedef struct ssl_transport_s {
@@ -1057,6 +1057,7 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
   BIO *bio;
   apr_os_sock_t fd;
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   sslstr = store_get(worker->params, "1");
   if (!sslstr) {
@@ -1095,10 +1096,10 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       apr_os_sock_get(&fd, worker->socket->socket);
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(sconfig->ssl, bio, bio);
-      if (sconfig->sess) {
-  SSL_set_session(sconfig->ssl, sconfig->sess);
-  SSL_SESSION_free(sconfig->sess);
-  sconfig->sess = NULL;
+      if (config->sess) {
+  SSL_set_session(sconfig->ssl, config->sess);
+  SSL_SESSION_free(config->sess);
+  config->sess = NULL;
       }
       SSL_set_connect_state(sconfig->ssl);
 
@@ -1266,7 +1267,7 @@ static apr_status_t block_SSL_GET_SESSION(worker_t * worker, worker_t *parent, a
  */
 static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, apr_pool_t *ptmp) {
   const char *copy = store_get(worker->params, "1");
-  ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (!copy) {
     worker_log(worker, LOG_ERR, "Missing session to set on SSL");
@@ -1288,7 +1289,7 @@ static apr_status_t block_SSL_SET_SESSION(worker_t * worker, worker_t *parent, a
       enc = apr_pcalloc(ptmp, enc_len);
       apr_base64_decode_binary(enc, b64_str);
       tmp = enc;
-      sconfig->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
+      config->sess = d2i_SSL_SESSION(NULL, &tmp, enc_len);
     }
     else {
       worker_log(worker, LOG_ERR, "Variable \"%s\" does not exist", copy);
@@ -1825,6 +1826,7 @@ static apr_status_t ssl_server_port_args(worker_t *worker, char *portinfo,
 static apr_status_t ssl_hook_connect(worker_t *worker) {
   apr_status_t status;
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
 
   if (worker->socket->is_ssl) {
     transport_t *transport;
@@ -1840,11 +1842,14 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     apr_os_sock_get(&fd, worker->socket->socket);
     bio = BIO_new_socket(fd, BIO_NOCLOSE);
     SSL_set_bio(sconfig->ssl, bio, bio);
-    if (sconfig->sess) {
-      SSL_set_session(sconfig->ssl, sconfig->sess);
-      SSL_SESSION_free(sconfig->sess);
-      sconfig->sess = NULL;
+    if (config->sess) {
+      fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX %d\n", SSL_set_session(sconfig->ssl, config->sess));
+      SSL_SESSION_free(config->sess);
+      config->sess = NULL;
     }
+	else {
+		fprintf(stderr, "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
+	}
     SSL_set_connect_state(sconfig->ssl);
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
       return status;
