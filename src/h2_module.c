@@ -404,7 +404,7 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
     case NGHTTP2_GOAWAY:
       {
         const char *debug = apr_pmemdup(p, frame->goaway.opaque_data, frame->goaway.opaque_data_len);
-        const char *goawayText = apr_pstrdup(worker->pbody, "GOAWAY: %s \"%s\"", h2_get_name_of(h2_error_code_array, frame->goaway.error_code), text);
+        const char *goawayText = apr_psprintf(worker->pbody, "GOAWAY: %s \"%s\"", h2_get_name_of(h2_error_code_array, frame->goaway.error_code));
         executeMatchGrepExpectOnInput(worker, goawayText);
 		worker_log(worker, LOG_INFO, "< %s", goawayText);
         wconf->state = H2_STATE_NONE;
@@ -732,7 +732,7 @@ apr_status_t h2_module_init(global_t *global) {
     return status;
   }
 
-  if ((status = module_command_new(global, "H2", "_GOAWAY", "<string>",
+  if ((status = module_command_new(global, "H2", "_GOAWAY", "<error-code> <string>",
           "Send a http2 goaway to peer.",
           block_H2_GOAWAY)) != APR_SUCCESS) {
     return status;
