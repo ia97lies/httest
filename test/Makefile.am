@@ -144,20 +144,16 @@ EXTRA_DIST= \
 	html.htt \
 	html.txt \
 	http_0_9.htt \
-	http2_goaway.htt \
 	http2_h2_not_initialized_ping.hte \
 	http2_h2_not_initialized_ping.txt \
 	http2_h2_not_initialized_settings.hte \
 	http2_h2_not_initialized_settings.txt \
 	http2_h2_not_initialized_wait.hte \
 	http2_h2_not_initialized_wait.txt \
-	http2_multi_settings_expect.htt \
 	http2_ping_close_ping_again.htt \
-	http2_ping_expect.htt \
 	http2_ping.htt \
 	http2_plain_client.hte \
 	http2_plain_client.txt \
-	http2_settings_expect.htt \
 	http2_settings_none.htt \
 	huge_page_chunked.htt \
 	huge_page.htt \
