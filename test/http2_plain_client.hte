@@ -1,3 +1,4 @@
+REQUIRE_MODULE H2
 INCLUDE $TOP/test/config.htb
 
 # runs exactly one time

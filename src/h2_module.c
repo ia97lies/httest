@@ -404,7 +404,7 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
     case NGHTTP2_GOAWAY:
       {
         const char *debug = apr_pmemdup(p, frame->goaway.opaque_data, frame->goaway.opaque_data_len);
-        const char *goawayText = apr_psprintf(worker->pbody, "GOAWAY: %s \"%s\"", h2_get_name_of(h2_error_code_array, frame->goaway.error_code));
+        const char *goawayText = apr_psprintf(worker->pbody, "GOAWAY: %s \"%s\"", h2_get_name_of(h2_error_code_array, frame->goaway.error_code), debug);
         executeMatchGrepExpectOnInput(worker, goawayText);
 		worker_log(worker, LOG_INFO, "< %s", goawayText);
         wconf->state = H2_STATE_NONE;
