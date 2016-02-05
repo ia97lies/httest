@@ -1,5 +1,12 @@
                                                          -*- coding: utf-8 -*-
-   
+    
+Changes with httest 2.4.15
+  *) httest: Add some commands for http2 which relay on nghttp2 library from
+             google. Those commands are in alpha state
+
+  *) httest: Bugfix _SSL:SET_SESSION command, as it only works for the same 
+             socket.
+
 Changes with httest 2.4.14
   *) httest: Fix redhat 5 problems with old apr [thanks to Pascal Buchbinder 
              for the fix].

@@ -1097,10 +1097,14 @@ static apr_status_t block_SSL_CONNECT(worker_t * worker, worker_t *parent, apr_p
       bio = BIO_new_socket(fd, BIO_NOCLOSE);
       SSL_set_bio(sconfig->ssl, bio, bio);
       if (config->sess) {
-  SSL_set_session(sconfig->ssl, config->sess);
-  SSL_SESSION_free(config->sess);
-  config->sess = NULL;
+        worker_log(worker, LOG_DEBUG, "Set session");
+        SSL_set_session(sconfig->ssl, config->sess);
+        SSL_SESSION_free(config->sess);
+        config->sess = NULL;
       }
+	  else {
+        worker_log(worker, LOG_DEBUG, "No session to set");
+	  }
       SSL_set_connect_state(sconfig->ssl);
 
       if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
@@ -1843,12 +1847,13 @@ static apr_status_t ssl_hook_connect(worker_t *worker) {
     bio = BIO_new_socket(fd, BIO_NOCLOSE);
     SSL_set_bio(sconfig->ssl, bio, bio);
     if (config->sess) {
-      fprintf(stderr, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX %d\n", SSL_set_session(sconfig->ssl, config->sess));
+      worker_log(worker, LOG_DEBUG, "Set session");
+      SSL_set_session(sconfig->ssl, config->sess);
       SSL_SESSION_free(config->sess);
       config->sess = NULL;
     }
 	else {
-		fprintf(stderr, "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
+      worker_log(worker, LOG_DEBUG, "No session to set");
 	}
     SSL_set_connect_state(sconfig->ssl);
     if ((status = worker_ssl_handshake(worker)) != APR_SUCCESS) {
