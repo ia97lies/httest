@@ -38,7 +38,7 @@ noinst_HEADERS = \
 	defines.h file.h socket.h regex.h util.h ssl.h worker.h conf.h \
 	module.h transport.h store.h eval.h replacer.h tcp_module.h \
 	lua_crypto.h logger.h appender.h appender_simple.h appender_std.h \
-	body.h httest.ext
+	body.h httest.ext ssl_module.h
 
 httest.1: httest.c $(top_srcdir)/configure.ac
 	$(MAKE) $(AM_MAKEFLAGS) httest$(EXEEXT)
