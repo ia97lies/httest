@@ -1,5 +1,8 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.16
+  *) httest: Bugfix hard reference to nghttp2 lib
+
 Changes with httest 2.4.15
   *) httest: Add some commands for http2 which relay on nghttp2 library from
              google. Those commands are in alpha state

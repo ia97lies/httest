@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 cC_PREREQ(2.53)
-AC_INIT(httest, 2.4.15, ia97lies@sourceforge.net)
+AC_INIT(httest, 2.4.16, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -95,10 +95,10 @@ if test ! "$?" = "0"; then
 fi
 
 # Store settings for includes, libs and flags
-INCLUDES="`$APR_CONFIG --includes` `$APU_CONFIG --includes` $OPENSSL_INCLUDES $NGHTTP2_INCLUDES $APR_ICONV_CONFIG"
+INCLUDES="`$APR_CONFIG --includes` `$APU_CONFIG --includes` $OPENSSL_INCLUDES $APR_ICONV_CONFIG"
 CFLAGS="`$APR_CONFIG --cflags` `$PCRE_CONFIG --cflags` $CFLAGS $INCLUDES"
 CPPFLAGS="`$APR_CONFIG --cppflags` $CPPFLAGS"
-LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto $NGHTTP2_LIB_PATH -lnghttp2 `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz -lm"
+LIBS="$OPENSSL_LIB_PATH -lssl -lcrypto `$APR_CONFIG --link-ld`  `$APU_CONFIG --link-ld` `$APR_CONFIG --libs` `$APU_CONFIG --libs` `$PCRE_CONFIG --libs` -lz -lm"
 
 if test "$enable_ssl_legacy_reneg" = "yes"; then
   CFLAGS="$CFLAGS -DSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION"
@@ -165,6 +165,8 @@ fi
 if test "$enable_h2_module" = "yes"; then
   HTTEST_MODULES="$HTTEST_MODULES h2_module.${OBJEXT}"
   MODULES=" $MODULES h2"
+  CFLAGS="$CFLAGS $NGHTTP2_INCLUDES"
+  LIBS="$LIBS $NGHTTP2_LIB_PATH -lnghttp2"
 fi
 
 if test -f ./generate_modules_c.sh; then
