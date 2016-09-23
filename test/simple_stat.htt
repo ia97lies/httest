@@ -1,3 +1,4 @@
+REQUIRE_MODULE PERF
 INCLUDE $TOP/test/config.htb
 
 PERF:STAT ON

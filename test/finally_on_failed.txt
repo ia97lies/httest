@@ -1,2 +1,2 @@
 
-finally_on_failed.hte:12: error: CLT0-0 Internal error(20014)
+finally_on_failed.hte:12: error: CLT0-0 Internal error (specific information not available)(20014)

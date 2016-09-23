@@ -1,3 +1,4 @@
+REQUIRE_MODULE PERF
 @:SKIP $OS win # FIXME? supported?
 
 INCLUDE $TOP/test/config.htb

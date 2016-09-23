@@ -129,7 +129,7 @@ apr_time_t start_time;
 static perf_gconf_t *perf_get_global_config(global_t *global) {
   perf_gconf_t *config = module_get_config(global->config, perf_module);
   if (config == NULL) {
-    config = apr_pcalloc(global->pool, sizeof(*config));
+    config = apr_pcalloc(global->pool, sizeof(perf_gconf_t));
     config->clients.host_and_ports = apr_hash_make(global->pool);
     config->clients.my_threads = apr_hash_make(global->pool);
     module_set_config(global->config, apr_pstrdup(global->pool, perf_module), config);

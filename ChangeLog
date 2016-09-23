@@ -1,5 +1,10 @@
                                                          -*- coding: utf-8 -*-
-   asdfasdfsaf 
+    
+Changes with httest 2.4.17
+  *) httest: Bugfix perf_module can lead to segfaults, it is now optional in 
+             the configure script. If you relay on a stable httest just do not
+			 enable this module on compile time.
+
 Changes with httest 2.4.16
   *) httest: Bugfix hard reference to nghttp2 lib
 

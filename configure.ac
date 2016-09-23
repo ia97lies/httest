@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 cC_PREREQ(2.53)
-AC_INIT(httest, 2.4.16, ia97lies@sourceforge.net)
+AC_INIT(httest, 2.4.17, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -44,6 +44,7 @@ AC_ARG_ENABLE([js-module], AS_HELP_STRING(--enable-js-module,Add JavaScript supp
 AC_ARG_ENABLE([html-module], AS_HELP_STRING(--enable-html-module,Add html support))
 AC_ARG_ENABLE([xml-module], AS_HELP_STRING(--enable-xml-module,Add xml support))
 AC_ARG_ENABLE([h2-module], AS_HELP_STRING(--enable-h2-module,Add http/2 support))
+AC_ARG_ENABLE([perf-module], AS_HELP_STRING(--enable-perf-module,Add performance measuring support including distributed perfromance measuring))
 AC_ARG_WITH(apr,AS_HELP_STRING(--with-apr=PATH,path to apr-1-config script),
 	[if test ! -x $withval/apr-1-config; then AC_MSG_ERROR($withval/apr-1-config do not exist or is not executable); else APR_CONFIG="$withval/apr-1-config"; fi],
 	[APR_CONFIG="apr-1-config"])
@@ -119,7 +120,7 @@ if test "$enable_iconv_support" = "yes"; then
   LIBS="$LIBS $APR_ICONV_LIBS -lapriconv-1"
 fi
 
-MODULES="dso annotation charset perf dbg sys math coder date binary websocket socks udp tcp ssl" 
+MODULES="dso annotation charset dbg sys math coder date binary websocket socks udp tcp ssl" 
 
 HTTEST_MODULES='' 
 if test "$enable_lua_module" = "yes"; then
@@ -167,6 +168,11 @@ if test "$enable_h2_module" = "yes"; then
   MODULES=" $MODULES h2"
   CFLAGS="$CFLAGS $NGHTTP2_INCLUDES"
   LIBS="$LIBS $NGHTTP2_LIB_PATH -lnghttp2"
+fi
+
+if test "$enable_perf_module" = "yes"; then
+  HTTEST_MODULES="$HTTEST_MODULES perf_module.${OBJEXT}"
+  MODULES=" $MODULES perf"
 fi
 
 if test -f ./generate_modules_c.sh; then
