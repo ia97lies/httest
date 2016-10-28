@@ -47,13 +47,14 @@ _H2:WAIT
 _DEBUG status=$STATUS
 _DEBUG body=$BODY
 
-# stream 3/5: submit two GET request
+# stream 3/5: submit two GET requests
 _H2:REQ GET /echo
 _EXPECT HEADERS ":status: 200"
 _END
 
-_H2:REQ GET /echo
-_EXPECT HEADERS ":status: 200"
+_H2:REQ GET /does-not-exist
+_EXPECT HEADERS ":status: 404"
+_EXPECT BODY "404 Not Found"
 _END
 
 _H2:WAIT
