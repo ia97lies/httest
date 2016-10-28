@@ -608,9 +608,11 @@ static int h2_on_data_chunk_recv_callback(nghttp2_session *session,
     return NGHTTP2_ERR_CALLBACK_FAILURE; 
   }
 
-  worker_log(worker, LOG_INFO, "<%d %s", stream_id, data);
   memcpy(&stream->data_in[stream->data_in_read], data, len);
   stream->data_in_read += len;
+  stream->data_in[stream->data_in_read] = 0;
+
+  worker_log(worker, LOG_INFO, "<%d %s", stream_id, stream->data_in);
 
   return 0;
 }
