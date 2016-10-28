@@ -56,8 +56,8 @@ enum { IO_NONE, WANT_READ, WANT_WRITE };
         NGHTTP2_NV_FLAG_NONE                                                   \
   }
 
-#define MAKE_NV4F(NAME, NAMELEN, VALUE, VALUELEN, FLAGS)                       \
-  { (uint8_t *)NAME, (uint8_t *)VALUE, NAMELEN, VALUELEN, FLAGS }
+#define MAKE_NV4(NAME, NAMELEN, VALUE, VALUELEN)                               \
+  { (uint8_t *)NAME, (uint8_t *)VALUE, NAMELEN, VALUELEN, NGHTTP2_NV_FLAG_NONE }
 
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
 
@@ -873,8 +873,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   e = (apr_table_entry_t *) apr_table_elts(stream->headers_out)->elts;
   for (i = 0; i < apr_table_elts(stream->headers_out)->nelts; i++) {
     nghttp2_nv hdr_nv =
-        MAKE_NV4F(e[i].key, strlen(e[i].key), e[i].val, strlen(e[i].val),
-                  NGHTTP2_NV_FLAG_NO_COPY_NAME);
+        MAKE_NV4(e[i].key, strlen(e[i].key), e[i].val, strlen(e[i].val));
     hdrs[hdrn++] = hdr_nv;
   }
 
