@@ -750,12 +750,13 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
 
   if (stream->data_len - stream->data_sent <= length) {
     len = stream->data_len - stream->data_sent;
-    buf = apr_pmemdup(worker->pbody, &stream->data[stream->data_sent], len);
+    memcpy(buf, &stream->data[stream->data_sent], len);
   } else {
     len = length;
-    buf = apr_pmemdup(worker->pbody, &stream->data[stream->data_sent], length);
+    memcpy(buf, &stream->data[stream->data_sent], length);
   }
 
+  buf[len] = 0;
   stream->data_sent += len;
   worker_log(worker, LOG_INFO, ">%d %s", stream_id, buf);
   worker_log(worker, LOG_DEBUG, "send %d bytes", len);
