@@ -2018,6 +2018,11 @@ static apr_status_t ssl_hook_read_pre_headers(worker_t *worker) {
 /************************************************************************
  * External
  ***********************************************************************/
+SSL_CTX *ssl_get_ctx(worker_t *worker) {
+  ssl_wconf_t *config = ssl_get_worker_config(worker);
+  return config->ssl_ctx;
+}
+
 SSL *ssl_get_session(worker_t *worker) {
   ssl_sconf_t *sconfig = ssl_get_socket_config(worker);
   return sconfig->ssl;

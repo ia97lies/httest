@@ -760,8 +760,8 @@ apr_status_t worker_expect(worker_t * self, apr_table_t * htt_regexs,
  * @param status IN current status of earlier calls
  * @return new status
  */
-static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match, 
-                                        char *namespace, apr_status_t status) {
+apr_status_t worker_assert_match(worker_t *worker, apr_table_t *match,
+                                 char *namespace, apr_status_t status) {
   apr_table_entry_t *e;
   int i;
   apr_pool_t *pool;
@@ -793,8 +793,8 @@ static apr_status_t worker_assert_match(worker_t * worker, apr_table_t *match,
  * @param status IN current status of earlier calls
  * @return new status
  */
-static apr_status_t worker_assert_expect(worker_t * worker, apr_table_t *expect, 
-                                         char *namespace, apr_status_t status) {
+apr_status_t worker_assert_expect(worker_t *worker, apr_table_t *expect,
+                                  char *namespace, apr_status_t status) {
   apr_table_entry_t *e;
   int i;
   apr_pool_t *pool;
@@ -1298,6 +1298,7 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
     char *index;
     const char *arg;
     const char *val;
+    char *all = "";
 
     /** prepare call */
     /* iterate over indexed params and resolve VAR(foo) stuff*/
@@ -1308,6 +1309,14 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
         store_set(params, index, val);
       }
     }
+
+    for (i = 1; i < store_get_size(params); i++) {
+      index = apr_itoa(ptmp, i);
+      if ((val = store_get(params, index))) {
+        all = apr_pstrcat(ptmp, all, val, " ", NULL);
+      }
+    }
+    store_set(params, "ALL", all);
 
     /* handle parameters first */
     for (i = 1; i < store_get_size(block->params); i++) {
@@ -4020,9 +4029,9 @@ static int worker_hop_over_headers(worker_t *worker, int start) {
  *
  * @return length of this table entry
  */
-static apr_status_t worker_get_line_length(worker_t *worker, 
-                                           apr_table_entry_t cached_line,
-					   apr_size_t *len) {
+apr_status_t worker_get_line_length(worker_t *worker,
+                                    apr_table_entry_t cached_line,
+                                    apr_size_t *len) {
   line_t line; 
 
   apr_status_t status = APR_SUCCESS;
