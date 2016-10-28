@@ -1,0 +1,64 @@
+#
+# Test h2 module against nghttpd server implementation
+# 
+# start nghttpd with following arguments
+#
+# /path/to/nghttpd 8881 \
+#    /path/to/server.key.pem \
+#    /path/to/server.cert.pem \
+#    -v --trailer 'mytrailer:mytrailerval' \
+#    -d /path/to/htdocs
+#
+# the document root should contain a text file with name "echo"
+#
+
+SET HOST=127.0.0.1
+SET PORT=8881
+TIMEOUT 2000
+
+CLIENT
+_H2:SESSION $HOST SSL:$PORT
+
+# send/recevie settings
+_H2:SETTINGS
+_H2:WAIT
+
+# send/receive ping
+_H2:PING ping
+_H2:WAIT
+
+# stream 1: submit single POST request
+_H2:REQ POST /echo
+__myheader1: myheaderval1
+__myheader2: myheaderval2
+__myheader3: myheaderval3
+__
+_PIPE
+_EXEC echo hello world
+
+_EXPECT HEADERS "mytrailer: mytrailerval"
+_EXPECT HEADERS ":status: 200"
+_MATCH HEADERS ":status: (.*)" STATUS
+_MATCH BODY "(.*)" BODY
+_END
+
+_H2:WAIT
+
+_DEBUG status=$STATUS
+_DEBUG body=$BODY
+
+# stream 3/5: submit two GET request
+_H2:REQ GET /echo
+_EXPECT HEADERS ":status: 200"
+_END
+
+_H2:REQ GET /echo
+_EXPECT HEADERS ":status: 200"
+_END
+
+_H2:WAIT
+
+_H2:GOAWAY
+_H2:WAIT
+_CLOSE
+END
