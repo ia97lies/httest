@@ -47,7 +47,7 @@ const char * h2_module = "h2_module";
 
 enum { IO_NONE, WANT_READ, WANT_WRITE };
 
-// as defined in nghttp2_session.h
+/* as defined in nghttp2_session.h */
 #define NGHTTP2_INBOUND_BUFFER_LENGTH 16384
 
 #define MAKE_NV3(NAME, VALUE, VALUELEN)                                        \
@@ -774,7 +774,7 @@ h2_stream_t* h2_get_new_stream(worker_t *worker, int stream_id) {
   stream->id = stream_id;
   apr_pool_create(&stream->p, worker->pbody);
 
-  // TODO  allow to set buffer size
+  /* TODO  allow to set buffer size */
   stream->data_in_len = NGHTTP2_INBOUND_BUFFER_LENGTH * 10;
   stream->headers_in = apr_table_make(stream->p, 20);
   stream->headers_out = apr_table_make(stream->p, 20);
@@ -812,7 +812,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   status = body->interpret(body, parent, NULL);
   worker_body_end(body, parent);
 
-  // copy expectations
+  /* copy expectations */
   stream->expect.headers = apr_table_make(parent->pbody, 10);
   stream->match.headers = apr_table_make(parent->pbody, 10);
   stream->match.body = apr_table_make(parent->pbody, 10);
@@ -830,7 +830,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   apr_table_clear(parent->match.body);
   apr_table_clear(parent->expect.body);
   
-  // copy headers
+  /* copy headers */
   e = (apr_table_entry_t *)apr_table_elts(parent->cache)->elts;
   while (i < apr_table_elts(parent->cache)->nelts && *e[i].val) {
     char *name, *val;
@@ -845,7 +845,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   i++;
 
   j = i;
-  // copy data
+  /* copy data */
   for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
     apr_size_t len;
     worker_get_line_length(worker, e[i], &len);
@@ -1068,12 +1068,12 @@ static apr_status_t h2_hook_pre_connect(worker_t *worker) {
 
   if (wconf->state & H2_STATE_INIT) {
     worker_log(worker, LOG_DEBUG, "setting ALPN");
-    // TODO set h2 protocol in the alpn_select_cb callback
-    // see SSL_CTX_set_alpn_select_cb
+    /* TODO set h2 protocol in the alpn_select_cb callback */
+    /* see SSL_CTX_set_alpn_select_cb */
     SSL_CTX_set_alpn_protos(ssl_ctx, (const unsigned char *)"\x02h2", 3);
     wconf->state |= H2_STATE_NEGOTIATE;
   } else {
-    // reset in case of mixed protocol usage
+    /* reset in case of mixed protocol usage */
     SSL_CTX_set_alpn_protos(ssl_ctx, 0, 0);
   }
 
