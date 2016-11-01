@@ -790,9 +790,10 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   const char *path = store_get(worker->params, "2");
   apr_table_entry_t *e; 
   apr_status_t status;
+  h2_stream_t *stream;
   int32_t stream_id;
   worker_t *body;
-  int i, j, hdrn=0;
+  int i=0, j, hdrn=0;
   apr_size_t data_len = 0;
 
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
@@ -806,11 +807,10 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   stream_id = nghttp2_session_get_next_stream_id(sconf->session);
   worker_log(parent, LOG_DEBUG, "new stream %d", stream_id);
 
-  h2_stream_t *stream = h2_get_new_stream(parent, stream_id);
+  stream = h2_get_new_stream(parent, stream_id);
   apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream_id),
                APR_HASH_KEY_STRING, stream);
   status = body->interpret(body, parent, NULL);
-  worker_body_end(body, parent);
 
   /* copy expectations */
   stream->expect.headers = apr_table_make(parent->pbody, 10);
@@ -832,6 +832,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   
   /* copy headers */
   e = (apr_table_entry_t *)apr_table_elts(parent->cache)->elts;
+
   while (i < apr_table_elts(parent->cache)->nelts && *e[i].val) {
     char *name, *val;
 
@@ -842,24 +843,53 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     apr_table_add(stream->headers_out, name, val);
     i++;
   }
+  /* jump over empty line that separates headers from data */
   i++;
 
-  j = i;
-  /* copy data */
-  for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
-    apr_size_t len;
-    worker_get_line_length(worker, e[i], &len);
-    data_len += len;
-  }
-  stream->data_len = data_len;
-  stream->data = apr_pcalloc(parent->pbody, data_len);
-  i = j;
-  data_len = 0;
-  for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
-    apr_size_t len;
-    worker_get_line_length(worker, e[i], &len);
-    memcpy(&stream->data[data_len], e[i].val, len);
-    data_len += len;
+  if (i <= apr_table_elts(parent->cache)->nelts) {
+    j = i;
+    
+    // T O D O
+    /* calculate buffer size */
+    for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
+      apr_size_t len;
+
+      worker_get_line_length(worker, e[i], &len);
+      data_len += len;
+    }
+    stream->data_len = data_len;
+    stream->data = apr_pcalloc(parent->pbody, data_len);
+
+    /* copy data */
+    i = j;
+    data_len = 0;
+    for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
+      line_t line;
+      line.info = e[i].key;
+      line.buf = e[i].val;
+
+      if (strstr(line.info, "resolve")) {
+        int unresolved;
+        line.buf = worker_replace_vars(worker, line.buf, &unresolved, parent->pbody);
+      }
+      if ((status = htt_run_line_flush(worker, &line)) != APR_SUCCESS) {
+        return status;
+      }
+      if (strncasecmp(line.info, "NOCRLF:", 7) == 0) {
+        line.len = apr_atoi64(&line.info[7]);
+      } else if (strcasecmp(line.info, "NOCRLF") == 0) {
+        line.len = strlen(line.buf);
+      } else if (strcasecmp(line.info, "PLAIN") == 0) {
+        /* add CRLF */
+        line.buf = apr_pstrcat(parent->pbody, line.buf, "\r\n", NULL);
+        line.len = strlen(line.buf);
+      } else {
+        line.len = strlen(line.buf);
+      }
+
+      memcpy(&stream->data[data_len], line.buf, line.len);
+      data_len += line.len;
+    }
   }
   apr_table_clear(parent->cache);
 
@@ -892,6 +922,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   }
   wconf->open_streams++;
 
+  worker_body_end(body, parent);
   return status;
 }
 
