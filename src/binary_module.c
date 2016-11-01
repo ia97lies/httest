@@ -55,6 +55,9 @@ static apr_status_t block_BINARY_SEND(worker_t * worker, worker_t *parent, apr_p
     int unresolved; 
 
     copy = store_get_copy(worker->params, worker->pcache, apr_itoa(ptmp, i));
+    if (!copy) {
+      continue;
+    }
     copy = worker_replace_vars(worker, copy, &unresolved, ptmp);
 
     if (unresolved) {
