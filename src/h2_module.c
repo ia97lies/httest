@@ -1037,26 +1037,27 @@ apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent,
  * Hooks
  ************************************************************************/
 apr_status_t h2_hook_pre_close(worker_t *worker) {
-  int rv;
-  apr_status_t status;
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_sconf_t *sconf = h2_get_socket_config(worker); 
-  
-  wconf->state = H2_STATE_CLOSED;
-  /* if (sconf->h2_init) { */
-  /*   int i; */
-  /*   #<{(| due the description of the nghttp2 interface I should wait for 1 RTT and send goaway again |)}># */
-  /*   for (i = 0; i < 2; i++) { */
-  /*     rv = nghttp2_submit_goaway(sconf->session, NGHTTP2_FLAG_NONE, nghttp2_session_get_last_proc_stream_id(sconf->session), */
-  /*       NGHTTP2_NO_ERROR, (void *)"_CLOSE", strlen("_CLOSE")); */
-  /*     if (rv != 0) { */
-  /*       worker_log(worker, LOG_ERR, "Could not send goaway frame: %d", rv); */
-  /*     } */
-  /*  */
-  /*     status = poll(worker);  */
-  /*     apr_sleep(100000); */
-  /*   } */
+  apr_status_t status;
+  int rv;
+
+  /* if (!sconf || !sconf->session) { */
+  /*   return APR_SUCCESS; */
   /* } */
+  /*  */
+  /* wconf->state = H2_STATE_CLOSED; */
+  /* rv = nghttp2_submit_goaway( */
+  /*     sconf->session, NGHTTP2_FLAG_NONE, */
+  /*     nghttp2_session_get_last_proc_stream_id(sconf->session), NGHTTP2_NO_ERROR, */
+  /*     (void *)"_CLOSE", strlen("_CLOSE")); */
+  /*  */
+  /* if (rv != 0) { */
+  /*   worker_log(worker, LOG_ERR, "Could not send goaway frame: %d", rv); */
+  /* } */
+  /*  */
+  /* wconf->goaways++; */
+  /* return poll(worker); */
 
   return APR_SUCCESS;
 }
