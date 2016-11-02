@@ -166,20 +166,20 @@ const char *h2_settings_array[] = {
 };
 
 const char *h2_error_code_array[] = {
-  "NGHTTP2_NO_ERROR",
-  "NGHTTP2_PROTOCOL_ERROR",
-  "NGHTTP2_INTERNAL_ERROR",
-  "NGHTTP2_FLOW_CONTROL_ERROR",
-  "NGHTTP2_SETTINGS_TIMEOUT",
-  "NGHTTP2_STREAM_CLOSED",
-  "NGHTTP2_FRAME_SIZE_ERROR",
-  "NGHTTP2_REFUSED_STREAM",
-  "NGHTTP2_CANCEL",
-  "NGHTTP2_COMPRESSION_ERROR",
-  "NGHTTP2_CONNECT_ERROR",
-  "NGHTTP2_ENHANCE_YOUR_CALM",
-  "NGHTTP2_INADEQUATE_SECURITY",
-  "NGHTTP2_HTTP_1_1_REQUIRED"
+  "NO_ERROR",
+  "PROTOCOL_ERROR",
+  "INTERNAL_ERROR",
+  "FLOW_CONTROL_ERROR",
+  "SETTINGS_TIMEOUT",
+  "STREAM_CLOSED",
+  "FRAME_SIZE_ERROR",
+  "REFUSED_STREAM",
+  "CANCEL",
+  "COMPRESSION_ERROR",
+  "CONNECT_ERROR",
+  "ENHANCE_YOUR_CALM",
+  "INADEQUATE_SECURITY",
+  "HTTP_1_1_REQUIRED"
 };
 
 static int32_t h2_get_id_of(const char *array[], const char *key) {
@@ -191,14 +191,15 @@ static int32_t h2_get_id_of(const char *array[], const char *key) {
       }
     }
   }
-  return 0;
+  return -1;
 }
 
 static const char *h2_get_name_of(const char *array[], int32_t id) {
-  if (id > 0 && id < 7) {
+  if (array[id]) {
     return array[id];
+  } else {
+    return "NOT_FOUND";
   }
-  return "NOT_FOUND";
 }
 
 static const char *h2_get_settings_as_text(apr_pool_t *pool,
@@ -431,11 +432,17 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       worker_log(worker, LOG_DEBUG, "> RST_STREAM");
       break;
     case NGHTTP2_GOAWAY: {
-      const char *debug = apr_pmemdup(p, frame->goaway.opaque_data,
-                                      frame->goaway.opaque_data_len);
-      worker_log(worker, LOG_INFO, "> GOAWAY: %s %s",
+      char *reason = NULL;
+
+      if (frame->goaway.opaque_data_len) {
+        char *opaque = apr_pmemdup(p, frame->goaway.opaque_data,
+                                   frame->goaway.opaque_data_len);
+        opaque[frame->goaway.opaque_data_len] = 0;
+        reason = apr_psprintf(p, " reason=%s", opaque);
+      }
+      worker_log(worker, LOG_INFO, "> GOAWAY [error=%s%s%s",
                  h2_get_name_of(h2_error_code_array, frame->goaway.error_code),
-                 debug);
+                 reason ? reason : "", "]");
       wconf->goaways++;
     } break;
     case NGHTTP2_SETTINGS:
@@ -460,7 +467,9 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       worker_log(worker, LOG_INFO, "> UNKNOWN");
       break;
   }
+
   apr_pool_destroy(p);
+
   return 0;
 }
 
@@ -500,7 +509,7 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       const char *debug = apr_pmemdup(p, frame->goaway.opaque_data,
                                       frame->goaway.opaque_data_len);
       const char *goawayText = apr_psprintf(
-          worker->pbody, "GOAWAY: %s \"%s\"",
+          worker->pbody, "GOAWAY [error=%s reason=%s]",
           h2_get_name_of(h2_error_code_array, frame->goaway.error_code), debug);
       worker_log(worker, LOG_INFO, "< %s", goawayText);
     } break;
@@ -1005,16 +1014,24 @@ apr_status_t block_H2_GOAWAY(worker_t *worker, worker_t *parent, apr_pool_t *ptm
   h2_wconf_t *wconf = h2_get_worker_config(parent);
   const char *error = store_get(worker->params, "1");
   const char *data = store_get(worker->params, "2");
+  int32_t err_code;
   apr_status_t status;
 
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
     return status;
   }
 
+  if (!error) {
+    error = h2_error_code_array[0];
+  }
+  if ((err_code = h2_get_id_of(h2_error_code_array, error)) == -1) {
+    worker_log(worker, LOG_ERR, "Invalid error code");
+    return APR_EINVAL;
+  }
   if (nghttp2_submit_goaway(
           sconf->session, NGHTTP2_FLAG_NONE,
           nghttp2_session_get_last_proc_stream_id(sconf->session),
-          h2_get_id_of(h2_error_code_array, error), (void *)data,
+          err_code , (void *)data,
           data ? strlen(data) : 0) != 0) {
 
     worker_log(worker, LOG_ERR, "Could not submit GOAWAY");
