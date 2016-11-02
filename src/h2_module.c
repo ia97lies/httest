@@ -205,12 +205,12 @@ static const char *h2_get_settings_as_text(apr_pool_t *pool,
                                            nghttp2_settings_entry *settings,
                                            int size) {
   int i;
-  char *result = "SETTINGS: ";
+  char *result = "";
   for (i = 0; i < size; i++) {
     result =
-        apr_psprintf(pool, "%s%s=%d, ", result,
+        apr_psprintf(pool, "%s%s=%d%s", result,
                      h2_get_name_of(h2_settings_array, settings[i].settings_id),
-                     settings[i].value);
+                     settings[i].value, i + 1 < size ? ", " : "");
   }
   return result;
 }
@@ -442,7 +442,9 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       if (frame->hd.flags == NGHTTP2_FLAG_ACK) {
         worker_log(worker, LOG_INFO, "> SETTINGS ACK");
       } else {
-        worker_log(worker, LOG_INFO, "> SETTINGS: niv: %lu", frame->settings.niv);
+        const char *settings = h2_get_settings_as_text(
+            worker->pbody, frame->settings.iv, frame->settings.niv);
+        worker_log(worker, LOG_INFO, "> SETTINGS [%s]", settings);
       }
       break;
     case NGHTTP2_PING:
@@ -504,13 +506,13 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
     } break;
     case NGHTTP2_SETTINGS:
       if (frame->hd.flags == NGHTTP2_FLAG_ACK) {
-        const char *settingsText = apr_pstrdup(worker->pbody, "SETTINGS ACK");
-        worker_log(worker, LOG_INFO, "< %s", settingsText);
+        const char *settings = apr_pstrdup(worker->pbody, "SETTINGS ACK");
+        worker_log(worker, LOG_INFO, "< %s", settings);
         wconf->settings--;
       } else {
-        const char *settingsText = h2_get_settings_as_text(
+        const char *settings = h2_get_settings_as_text(
             worker->pbody, frame->settings.iv, frame->settings.niv);
-        worker_log(worker, LOG_INFO, "< %s", settingsText);
+        worker_log(worker, LOG_INFO, "< SETTINGS [%s]", settings);
       }
       break;
     case NGHTTP2_PING: {
@@ -730,7 +732,7 @@ apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent,
   apr_status_t status;
   size_t cur = 0;
   const char *param;
-  int i = 0;
+  int i = 0, rv;
 
   param  = store_get(worker->params, apr_itoa(ptmp, ++i));
   memset(&settings, 0, sizeof(settings));
@@ -752,9 +754,9 @@ apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent,
     param = store_get(worker->params, apr_itoa(ptmp, ++i));
   }
 
-  if (nghttp2_submit_settings(sconf->session, NGHTTP2_FLAG_NONE, settings,
-                              cur) != 0) {
-    worker_log(worker, LOG_ERR, "Invalid setting");
+  if ((rv = nghttp2_submit_settings(sconf->session, NGHTTP2_FLAG_NONE, settings,
+                                    cur)) != 0) {
+    worker_log(worker, LOG_ERR, "%s", nghttp2_strerror(rv));
     return APR_EINVAL;
   }
   wconf->settings++;
