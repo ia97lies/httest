@@ -647,7 +647,6 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
         opaque[frame->goaway.opaque_data_len] = 0;
         reason = apr_psprintf(p, " reason=%s", opaque);
       }
-
       wconf->goaway = 1;
       worker_log(worker, LOG_INFO, "< GOAWAY [error=%s%s%s",
                  h2_get_name_of(h2_error_code_array, frame->goaway.error_code),
