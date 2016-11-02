@@ -563,6 +563,23 @@ static void h2_check_content_length(h2_stream_t *stream, const char *name,
   }
 }
 
+static int h2_check_response_header(worker_t *worker, const char *name) {
+#define H2_RES_HEADER_DENY     0x1
+#define H2_RES_HEADER_FILTER   0x2
+  if (worker->headers_filter) {
+    if (apr_table_get(worker->headers_filter, name)) {
+      return H2_RES_HEADER_FILTER;
+    }
+  }
+  if (worker->headers_allow) {
+    if (!apr_table_get(worker->headers_allow, name)) {
+      worker_log(worker, LOG_ERR, "%s header not allowed", name);
+      return H2_RES_HEADER_DENY;
+    }
+  }
+  return 0;
+}
+
 static int h2_on_header_callback(nghttp2_session *session,
                                  const nghttp2_frame *frame,
                                  const uint8_t *name, size_t namelen,
@@ -575,11 +592,19 @@ static int h2_on_header_callback(nghttp2_session *session,
                    APR_HASH_KEY_STRING);
 
   switch (frame->hd.type) {
-    case NGHTTP2_HEADERS:
+    case NGHTTP2_HEADERS: {
+      int action = h2_check_response_header(worker, name);
+      if (action & H2_RES_HEADER_DENY) {
+        return NGHTTP2_ERR_CALLBACK_FAILURE; 
+      }
       h2_check_content_length(stream, name, value);
-      apr_table_set(stream->headers_in, name, value);
-      worker_log(worker, LOG_INFO, "<%d %s: %s", stream->id, name, value);
-    break;
+
+      if (!(action & H2_RES_HEADER_FILTER)) {
+        apr_table_set(stream->headers_in, name, value);
+        worker_log(worker, LOG_INFO, "<%d %s: %s", stream->id, name, value);
+      }
+
+    } break;
   }
 
   return 0;
