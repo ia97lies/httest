@@ -823,6 +823,65 @@ h2_stream_t* h2_get_new_stream(worker_t *worker, int stream_id) {
   return stream;
 }
 
+static apr_status_t copy_data(worker_t *worker, h2_stream_t *stream, int pos) {
+  enum { CALC, COPY };
+  apr_status_t status = APR_SUCCESS;
+  apr_size_t data_len;
+  apr_table_entry_t *e;
+  int i, action = 0;
+
+  /* first calculate size, then copy data */
+  for (action = CALC; action <= COPY; action++) {
+    i = pos;
+    data_len = 0;
+
+    e = (apr_table_entry_t *)apr_table_elts(worker->cache)->elts;
+    for (i; i < apr_table_elts(worker->cache)->nelts; i++) {
+      line_t line;
+      line.info = e[i].key;
+      line.buf = e[i].val;
+      line.len = 0;
+
+      if (action == CALC && strstr(line.info, "resolve")) {
+        int unresolved;
+        e[i].val = line.buf =
+            worker_replace_vars(worker, line.buf, &unresolved, worker->pbody);
+      }
+
+      if ((status = htt_run_line_flush(worker, &line)) != APR_SUCCESS) {
+        return status;
+      }
+
+      if (strncasecmp(line.info, "NOCRLF:", 7) == 0) {
+        line.len = apr_atoi64(&line.info[7]);
+      } else if (strcasecmp(line.info, "NOCRLF") == 0) {
+        line.len = strlen(line.buf);
+      } else if (strcasecmp(line.info, "PLAIN") == 0) {
+        /* add CRLF */
+        if (action == CALC) {
+          e[i].val = line.buf =
+              apr_pstrcat(worker->pbody, line.buf, "\r\n", NULL);
+        }
+        line.len = strlen(line.buf);
+      } else {
+        line.len = strlen(line.buf);
+      }
+
+      if (action == COPY) {
+        memcpy(&stream->data[data_len], line.buf, line.len);
+      }
+      data_len += line.len;
+    }
+
+    if (action == CALC) {
+      stream->data_len = data_len;
+      stream->data = apr_palloc(worker->pbody, data_len);
+    }
+  }
+
+  return status;
+}
+
 apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
                           apr_pool_t *ptmp) {
   h2_wconf_t *wconf = h2_get_worker_config(parent);
@@ -834,8 +893,8 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   h2_stream_t *stream;
   int32_t stream_id;
   worker_t *body;
+  nghttp2_nv *hdrs;
   int i=0, j, hdrn=0;
-  apr_size_t data_len = 0;
 
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
     return status;
@@ -888,53 +947,14 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   i++;
 
   if (i <= apr_table_elts(parent->cache)->nelts) {
-    j = i;
-    
-    // T O D O
-    /* calculate buffer size */
-    for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
-      apr_size_t len;
-
-      worker_get_line_length(worker, e[i], &len);
-      data_len += len;
-    }
-    stream->data_len = data_len;
-    stream->data = apr_pcalloc(parent->pbody, data_len);
-
-    /* copy data */
-    i = j;
-    data_len = 0;
-    for (i; i < apr_table_elts(parent->cache)->nelts; i++) {
-      line_t line;
-      line.info = e[i].key;
-      line.buf = e[i].val;
-
-      if (strstr(line.info, "resolve")) {
-        int unresolved;
-        line.buf = worker_replace_vars(worker, line.buf, &unresolved, parent->pbody);
-      }
-      if ((status = htt_run_line_flush(worker, &line)) != APR_SUCCESS) {
-        return status;
-      }
-      if (strncasecmp(line.info, "NOCRLF:", 7) == 0) {
-        line.len = apr_atoi64(&line.info[7]);
-      } else if (strcasecmp(line.info, "NOCRLF") == 0) {
-        line.len = strlen(line.buf);
-      } else if (strcasecmp(line.info, "PLAIN") == 0) {
-        /* add CRLF */
-        line.buf = apr_pstrcat(parent->pbody, line.buf, "\r\n", NULL);
-        line.len = strlen(line.buf);
-      } else {
-        line.len = strlen(line.buf);
-      }
-
-      memcpy(&stream->data[data_len], line.buf, line.len);
-      data_len += line.len;
+    if ((status = copy_data(parent, stream, i)) != APR_SUCCESS) {
+      goto on_error;
     }
   }
+
   apr_table_clear(parent->cache);
 
-  nghttp2_nv hdrs[4 + apr_table_elts(stream->headers_out)->nelts];
+  hdrs = apr_pcalloc(parent->pbody, sizeof(*hdrs) * (4 + apr_table_elts(stream->headers_out)->nelts));
   nghttp2_nv meth_nv = MAKE_NV3(":method", method, strlen(method)); 
   nghttp2_nv path_nv = MAKE_NV3(":path", path, strlen(path));
   nghttp2_nv scheme_nv = MAKE_NV3(":scheme", "https", 5);
@@ -955,13 +975,15 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   data_prd.read_callback = h2_data_read_callback;
 
   stream_id = nghttp2_submit_request(sconf->session, NULL, hdrs, hdrn,
-                                     data_len ? &data_prd : NULL, parent);
+                                     stream->data_len ? &data_prd : NULL, parent);
   if (stream_id < 0) {
     worker_log(parent, LOG_ERR, "Could not submit request: %s",
                nghttp2_strerror(stream_id));
     return APR_EGENERAL;
   }
   wconf->open_streams++;
+
+on_error:
 
   worker_body_end(body, parent);
   return status;
