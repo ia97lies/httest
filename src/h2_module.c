@@ -282,8 +282,10 @@ static apr_status_t poll(worker_t *worker) {
     apr_int32_t num;
 
     char *mode = apr_pstrcat(
-        p, nghttp2_session_want_read(sconf->session) ? "r" : "-", "/",
-        nghttp2_session_want_read(sconf->session) ? "w" : "", NULL);
+        p, nghttp2_session_want_read(sconf->session) ? "lib_read" : "-", "/",
+        nghttp2_session_want_read(sconf->session) ? "lib_write" : "", " ",
+        sconf->want_io == WANT_READ ? "ssl_read" : "-",
+        "/", sconf->want_io == WANT_WRITE ? "ssl_write" : "-", NULL);
     worker_log(worker, LOG_DEBUG, "next poll cycle: %s", mode);
 
     if ((status = apr_pollset_poll(pollset, worker->socktmo, &num, &result)) !=
@@ -345,9 +347,7 @@ static ssize_t h2_send_callback(nghttp2_session *session, const uint8_t *data,
   h2_sconf_t *sconf = h2_get_socket_config(worker);
 
   worker_log(worker, LOG_DEBUG,
-             "h2_send_callback session: %" APR_UINT64_T_HEX_FMT
-             ", length: %ld, flags: %d, user_data: %" APR_UINT64_T_HEX_FMT,
-             session, length, flags, user_data);
+             "h2_send_callback length: %d, flags: %d", length, flags);
   sconf->want_io = IO_NONE;
 
   rv = SSL_write(sconf->ssl, data, (int)length);
@@ -375,10 +375,9 @@ static ssize_t h2_recv_callback(nghttp2_session *session, uint8_t *buf,
   int rv;
 
   worker_log(worker, LOG_DEBUG,
-             "h2_recv_callback session: %" APR_UINT64_T_HEX_FMT
-             ", length: %ld, flags: %d, user_data:%" APR_UINT64_T_HEX_FMT,
-             session, length, flags, user_data);
+             "h2_recv_callback length: %d, flags: %d", length, flags);
   sconf->want_io = IO_NONE;
+
   rv = SSL_read(sconf->ssl, buf, (int)length);
   if (rv < 0) {
     int err = SSL_get_error(sconf->ssl, rv);
@@ -426,7 +425,8 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       }
 
     case NGHTTP2_DATA:
-      worker_log(worker, LOG_DEBUG, "> DATA");
+      worker_log(worker, LOG_DEBUG, "> DATA %s",
+                 frame->hd.flags & NGHTTP2_DATA_FLAG_EOF ? "[EOF]" : "");
       break;
     case NGHTTP2_RST_STREAM:
       worker_log(worker, LOG_DEBUG, "> RST_STREAM");
