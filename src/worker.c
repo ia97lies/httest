@@ -1316,7 +1316,6 @@ apr_status_t command_CALL(command_t *self, worker_t *worker, char *data,
         all = apr_pstrcat(ptmp, all, val, " ", NULL);
       }
     }
-    store_set(params, "ALL", all);
 
     /* handle parameters first */
     for (i = 1; i < store_get_size(block->params); i++) {

@@ -693,10 +693,23 @@ apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
                               apr_pool_t *ptmp) {
   h2_wconf_t *wconf = h2_get_worker_config(parent);
   nghttp2_session_callbacks *callbacks;
-  const char *data = store_get(worker->params, "ALL");
   const char *host = store_get(worker->params, "1");
+  const char *port = store_get(worker->params, "2");
+  const char *cert = store_get(worker->params, "3");
+  const char *key = store_get(worker->params, "4");
+  const char *cacert = store_get(worker->params, "5");
+  const char *data;
   h2_sconf_t *sconf;
   int rv;
+
+  data = apr_psprintf(ptmp, "%s %s%s", host,
+                      strstr(port, "SSL") ? "" : "SSL:", port);
+  if (cert && key) {
+    data = apr_pstrcat(ptmp, data, " ", cert, " ", key, NULL);
+  }
+  if (cacert) {
+    data = apr_pstrcat(ptmp, data, " ", cacert, NULL);
+  }
 
   wconf->state |= H2_STATE_INIT;
   rv = command_REQ(NULL, parent, (char *)data, parent->pbody);
