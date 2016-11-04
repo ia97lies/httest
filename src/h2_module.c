@@ -1220,21 +1220,22 @@ static apr_status_t h2_hook_accept(worker_t *worker, char *data) {
  ***********************************************************************/
 apr_status_t h2_module_init(global_t *global) {
   apr_status_t status;
-  if ((status = module_command_new(global, "H2", "_SESSION", "",
-          "Build up a http2 session.",
+  if ((status = module_command_new(global, "H2", "_SESSION", "<port> [<cert-file> <key-file> [<ca-cert-file>]]",
+          "Connect to the remote peer and setup h2 session.\n"
+          "<host>: host name or IPv4/IPv6 address (IPv6 address must be surrounded in square brackets)\n"
+          "<cert-file>, <key-file> and <ca-cert-file> are optional for client/server authentication",
           block_H2_SESSION)) != APR_SUCCESS) {
     return status;
   }
 
-  if ((status = module_command_new(global, "H2", "_SETTINGS", "<http/2 settings>",
-          "Switch to http2 and exchange intial setting "
-          "parameters for this connection.",
+  if ((status = module_command_new(global, "H2", "_SETTINGS", "<settings>",
+          "Submit session settings.",
           block_H2_SETTINGS)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "H2", "_REQ", "<method> <url>",
-          "Send a http2 request to peer.",
+          "Submit request.",
           block_H2_REQ)) != APR_SUCCESS) {
     return status;
   }
@@ -1246,19 +1247,19 @@ apr_status_t h2_module_init(global_t *global) {
   }
 
   if ((status = module_command_new(global, "H2", "_PING", "<8 byte>",
-          "Send http2 ping.",
+          "Send ping to the remote peer.",
           block_H2_PING)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "H2", "_GOAWAY", "<error-code> <string>",
-          "Send a http2 goaway to peer.",
+          "Send goaway to the remote peer.",
           block_H2_GOAWAY)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "H2", "_WAIT", "",
-          "Just receive and answer on HTTP/protocol.",
+          "Send and receive pending frames to/from the remote peer.",
           block_H2_WAIT)) != APR_SUCCESS) {
     return status;
   }
