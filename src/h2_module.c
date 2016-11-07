@@ -45,6 +45,10 @@
  ***********************************************************************/
 const char * h2_module = "h2_module";
 
+const unsigned char *h2 = (const unsigned char *)"\x2h2";
+const unsigned char *h214 = (const unsigned char *)"\x5h2-14";
+const unsigned char *h216 = (const unsigned char *)"\x5h2-16";
+
 enum { IO_NONE, WANT_READ, WANT_WRITE };
 
 /* as defined in nghttp2_session.h */
@@ -713,11 +717,11 @@ apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
 
   wconf->state |= H2_STATE_INIT;
   rv = command_REQ(NULL, parent, (char *)data, parent->pbody);
-  wconf->state |= H2_STATE_ESTABLISHED;
 
   if (rv != 0) {
     return APR_EGENERAL;
   }
+  wconf->state |= H2_STATE_ESTABLISHED;
 
   sconf = h2_get_socket_config(parent);
   sconf->ssl = ssl_get_session(parent);
@@ -1177,19 +1181,51 @@ apr_status_t h2_hook_pre_close(worker_t *worker) {
   return APR_SUCCESS;
 }
 
+int select_proto(const unsigned char **out, unsigned char *outlen,
+                 const unsigned char *in, unsigned int inlen,
+                 const unsigned char *key) {
+  const unsigned char *p = in;
+  const unsigned char *end = in + inlen;
+
+  for (*p; p + strlen(key) <= end; p += *p + 1) {
+    if (strncmp(p, key, strlen(key)) == 0) {
+      *out = p + 1;
+      *outlen = *p;
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int select_next_proto_cb(SSL *ssl, const unsigned char **out,
+                         unsigned char *outlen, const unsigned char *in,
+                         unsigned int inlen, void *arg) {
+  worker_t *worker = (worker_t *)arg;
+  h2_wconf_t *wconf = h2_get_worker_config(worker);
+  const unsigned char *protos[] = {h2, h216, h214, NULL};
+  int i;
+
+  for (i = 0; protos[i]; i++) {
+    if (select_proto(out, outlen, in, inlen, protos[i])) {
+      worker_log(worker, LOG_DEBUG, "select %s", protos[i] + 1);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 static apr_status_t h2_hook_pre_connect(worker_t *worker) {
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   SSL_CTX *ssl_ctx = ssl_get_ctx(worker);
 
-  if (wconf->state & H2_STATE_INIT) {
-    worker_log(worker, LOG_DEBUG, "setting ALPN");
-    /* TODO set h2 protocol in the alpn_select_cb callback */
-    /* see SSL_CTX_set_alpn_select_cb */
-    SSL_CTX_set_alpn_protos(ssl_ctx, (const unsigned char *)"\x02h2", 3);
+  if (ssl_ctx && wconf->state & H2_STATE_INIT) {
+    SSL_CTX_set_next_proto_select_cb(ssl_ctx, select_next_proto_cb, worker);
     wconf->state |= H2_STATE_NEGOTIATE;
   } else {
     /* reset in case of mixed protocol usage */
-    SSL_CTX_set_alpn_protos(ssl_ctx, 0, 0);
+    /* SSL_CTX_set_alpn_protos(ssl_ctx, 0, 0); */
   }
 
   return APR_SUCCESS;
