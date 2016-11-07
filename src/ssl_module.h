@@ -26,5 +26,6 @@
 #define HTTEST_SSL_MODULE_H
 
 SSL *ssl_get_session(worker_t *worker);
+SSL_CTX *ssl_get_ctx(worker_t *worker);
 
 #endif
