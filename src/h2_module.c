@@ -928,21 +928,41 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
 
   /* copy expectations */
   stream->expect.headers = apr_table_make(parent->pbody, 10);
+  stream->expect.body = apr_table_make(parent->pbody, 10);
+  stream->expect.dot = apr_table_make(parent->pbody, 10);
   stream->match.headers = apr_table_make(parent->pbody, 10);
   stream->match.body = apr_table_make(parent->pbody, 10);
-  stream->expect.body = apr_table_make(parent->pbody, 10);
+  stream->match.dot = apr_table_make(parent->pbody, 10);
+  stream->grep.headers = apr_table_make(parent->pbody, 10);
+  stream->grep.body = apr_table_make(parent->pbody, 10);
+  stream->grep.dot = apr_table_make(parent->pbody, 10);
   apr_table_do(copy_table_entry, stream->expect.headers,
                parent->expect.headers, NULL);
+  apr_table_do(copy_table_entry, stream->expect.body,
+               parent->expect.body, NULL);
+  apr_table_do(copy_table_entry, stream->expect.dot,
+               parent->expect.dot, NULL);
   apr_table_do(copy_table_entry, stream->match.headers,
                parent->match.headers, NULL);
   apr_table_do(copy_table_entry, stream->match.body,
                parent->match.body, NULL);
-  apr_table_do(copy_table_entry, stream->expect.body,
-               parent->expect.body, NULL);
+  apr_table_do(copy_table_entry, stream->match.dot,
+               parent->match.dot, NULL);
+  apr_table_do(copy_table_entry, stream->grep.headers,
+               parent->grep.headers, NULL);
+  apr_table_do(copy_table_entry, stream->grep.body,
+               parent->grep.body, NULL);
+  apr_table_do(copy_table_entry, stream->grep.dot,
+               parent->grep.dot, NULL);
   apr_table_clear(parent->expect.headers);
+  apr_table_clear(parent->expect.body);
+  apr_table_clear(parent->expect.dot);
   apr_table_clear(parent->match.headers);
   apr_table_clear(parent->match.body);
-  apr_table_clear(parent->expect.body);
+  apr_table_clear(parent->match.dot);
+  apr_table_clear(parent->grep.headers);
+  apr_table_clear(parent->grep.body);
+  apr_table_clear(parent->grep.dot);
   
   /* copy headers */
   e = (apr_table_entry_t *)apr_table_elts(parent->cache)->elts;
@@ -1123,19 +1143,33 @@ apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent,
     for (i = 0; i < apr_table_elts(stream->headers_in)->nelts; i++) {
       char *header = apr_pstrcat(worker->pbody, e[i].key, ": ", e[i].val, NULL);
 
-      errmsg = apr_psprintf(worker->pbody, "EXPECT headers for stream %d", stream->id);
       worker_expect(parent, stream->expect.headers, header, strlen(header));
-      errmsg = apr_psprintf(worker->pbody, "MATCH headers for stream %d", stream->id);
+      worker_expect(parent, stream->expect.dot, header, strlen(header));
+
       worker_match(parent, stream->match.headers, header, strlen(header));
-      /* worker_match(parent, stream->match.dot, data, strlen(data)); */
-      /* worker_match(parent, stream->match.headers, data, strlen(data)); */
-      /* worker_match(parent, stream->grep.dot, data, strlen(data)); */
-      /* worker_match(parent, stream->grep.headers, data, strlen(data)); */
-      /* worker_expect(parent, stream->expect.dot, data, strlen(data)); */
+      worker_match(parent, stream->match.dot, header, strlen(header));
+
+      worker_match(parent, stream->grep.headers, header, strlen(header));
+      worker_match(parent, stream->grep.dot, header, strlen(header));
     }
 
+    errmsg = apr_psprintf(worker->pbody, "EXPECT headers for stream %d", stream->id);
     status = worker_assert_expect(worker, stream->expect.headers, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
+    errmsg = apr_psprintf(worker->pbody, "MATCH headers for stream %d", stream->id);
     status = worker_assert_match(worker, stream->match.headers, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
+    errmsg = apr_psprintf(worker->pbody, "GREP headers for stream %d", stream->id);
+    status = worker_assert_match(worker, stream->grep.headers, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
 
     if (stream->data_in_expect && stream->data_in_read != stream->data_in_expect) {
       worker_log(worker, LOG_ERR,
@@ -1144,15 +1178,60 @@ apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent,
       return APR_EINVAL;
     }
 
-    worker_match(parent, stream->match.body, stream->data_in,
-                 stream->data_in_len);
     worker_expect(parent, stream->expect.body, stream->data_in,
                   stream->data_in_len);
+    worker_expect(parent, stream->expect.dot, stream->data_in,
+                  stream->data_in_len);
+    worker_match(parent, stream->match.body, stream->data_in,
+                 stream->data_in_len);
+    worker_match(parent, stream->match.dot, stream->data_in,
+                 stream->data_in_len);
+    worker_match(parent, stream->grep.body, stream->data_in,
+                 stream->data_in_len);
+    worker_match(parent, stream->grep.dot, stream->data_in,
+                 stream->data_in_len);
 
     errmsg = apr_psprintf(worker->pbody, "EXPECT body for stream %d", stream->id);
     status = worker_assert_expect(worker, stream->expect.body, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
+    errmsg = apr_psprintf(worker->pbody, "EXPECT . for stream %d", stream->id);
+    status = worker_assert_expect(worker, stream->expect.dot, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
     errmsg = apr_psprintf(worker->pbody, "MATCH body for stream %d", stream->id);
     status = worker_assert_match(worker, stream->match.body, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
+    errmsg = apr_psprintf(worker->pbody, "MATCH . for stream %d", stream->id);
+    status = worker_assert_match(worker, stream->match.dot, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
+    errmsg = apr_psprintf(worker->pbody, "GREP body for stream %d", stream->id);
+    status = worker_assert_match(worker, stream->grep.body, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+
+    errmsg = apr_psprintf(worker->pbody, "GREP . for stream %d", stream->id);
+    status = worker_assert_match(worker, stream->grep.dot, errmsg, status);
+    if (status != APR_SUCCESS) {
+      goto cleanup;
+    }
+  }
+
+cleanup:
+  for (hi = apr_hash_first(worker->pbody, wconf->streams); hi; hi = apr_hash_next(hi)) {
+    h2_stream_t *stream;
+    apr_hash_this(hi, NULL, NULL, (void **)&stream);
 
     apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream->id),
                  APR_HASH_KEY_STRING, NULL);
