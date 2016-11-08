@@ -102,7 +102,6 @@ typedef struct h2_wconf_t {
   int state;
   int settings;
   int pings;
-  int goaways;
   int open_streams;
 } h2_wconf_t;
 
@@ -329,8 +328,7 @@ static apr_status_t poll(worker_t *worker) {
     }
 
     ctl_poll(&pollfd, sconf); 
-    loop = (wconf->settings || wconf->open_streams || wconf->pings ||
-            wconf->goaways);
+    loop = (wconf->settings || wconf->open_streams || wconf->pings);
 
     worker_log(worker, LOG_DEBUG, "end poll cycle");
   }
@@ -444,7 +442,6 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       worker_log(worker, LOG_INFO, "> GOAWAY [error=%s%s%s",
                  h2_get_name_of(h2_error_code_array, frame->goaway.error_code),
                  reason ? reason : "", "]");
-      wconf->goaways++;
     } break;
     case NGHTTP2_SETTINGS:
       if (frame->hd.flags == NGHTTP2_FLAG_ACK) {
@@ -1111,7 +1108,6 @@ apr_status_t block_H2_GOAWAY(worker_t *worker, worker_t *parent, apr_pool_t *ptm
     worker_log(worker, LOG_ERR, "Could not submit GOAWAY");
     return APR_EINVAL;
   }
-  wconf->goaways++;
 
   return APR_SUCCESS;
 }
@@ -1264,7 +1260,6 @@ apr_status_t h2_hook_pre_close(worker_t *worker) {
   /*   worker_log(worker, LOG_ERR, "Could not send goaway frame: %d", rv); */
   /* } */
   /*  */
-  /* wconf->goaways++; */
   /* return poll(worker); */
 
   return APR_SUCCESS;
