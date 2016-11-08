@@ -1213,6 +1213,7 @@ int select_next_proto_cb(SSL *ssl, const unsigned char **out,
     }
   }
 
+  worker_log(worker, LOG_INFO, "remote does not offer h2 protocol");
   return 1;
 }
 
@@ -1221,6 +1222,7 @@ static apr_status_t h2_hook_pre_connect(worker_t *worker) {
   SSL_CTX *ssl_ctx = ssl_get_ctx(worker);
 
   if (ssl_ctx && wconf->state & H2_STATE_INIT) {
+    SSL_CTX_set_alpn_protos(ssl_ctx, h2, 3);
     SSL_CTX_set_next_proto_select_cb(ssl_ctx, select_next_proto_cb, worker);
     wconf->state |= H2_STATE_NEGOTIATE;
   } else {
