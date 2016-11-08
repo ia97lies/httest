@@ -60,9 +60,6 @@ enum { IO_NONE, WANT_READ, WANT_WRITE };
         NGHTTP2_NV_FLAG_NONE                                                   \
   }
 
-#define MAKE_NV4(NAME, NAMELEN, VALUE, VALUELEN)                               \
-  { (uint8_t *)NAME, (uint8_t *)VALUE, NAMELEN, VALUELEN, NGHTTP2_NV_FLAG_NONE }
-
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
 
 typedef struct h2_stream_s {
@@ -911,7 +908,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   int32_t stream_id;
   worker_t *body;
   nghttp2_nv *hdrs;
-  int i=0, j, hdrn=0;
+  int i=0, j, hdrn=0, with_body=0;
 
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
     return status;
@@ -963,7 +960,9 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   /* jump over empty line that separates headers from data */
   i++;
 
-  if (i <= apr_table_elts(parent->cache)->nelts) {
+  with_body = i <= apr_table_elts(parent->cache)->nelts;
+  if (with_body) {
+    /* copy data */
     if ((status = copy_data(parent, stream, i)) != APR_SUCCESS) {
       goto on_error;
     }
@@ -983,8 +982,19 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
 
   e = (apr_table_entry_t *) apr_table_elts(stream->headers_out)->elts;
   for (i = 0; i < apr_table_elts(stream->headers_out)->nelts; i++) {
-    nghttp2_nv hdr_nv =
-        MAKE_NV4(e[i].key, strlen(e[i].key), e[i].val, strlen(e[i].val));
+    char *name = e[i].key;
+    char *val = e[i].val;
+    nghttp2_nv hdr_nv;
+
+    /* calculate content length (AUTO) */
+    if (with_body && strcasecmp(name, "Content-Length") == 0) {
+      val = apr_psprintf(parent->pbody, "%d", stream->data_len);
+    }
+    hdr_nv.name = name;
+    hdr_nv.namelen = strlen(name);
+    hdr_nv.value = val;
+    hdr_nv.valuelen = strlen(val);
+
     hdrs[hdrn++] = hdr_nv;
   }
 
@@ -992,7 +1002,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   data_prd.read_callback = h2_data_read_callback;
 
   stream_id = nghttp2_submit_request(sconf->session, NULL, hdrs, hdrn,
-                                     stream->data_len ? &data_prd : NULL, parent);
+                                     with_body ? &data_prd : NULL, parent);
   if (stream_id < 0) {
     worker_log(parent, LOG_ERR, "Could not submit request: %s",
                nghttp2_strerror(stream_id));
