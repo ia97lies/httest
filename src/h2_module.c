@@ -151,6 +151,46 @@ static int copy_table_entry(void *rec, const char *key, const char *val) {
  apr_table_addn(rec, key, val);
 }
 
+static apr_status_t h2_worker_body(worker_t **body, worker_t *worker, char *end) {
+  char *file_and_line;
+  char *line = "", *copy;
+  apr_table_entry_t *e;
+  apr_pool_t *p;
+  int end_len;
+  int ends = 0;
+
+  HT_POOL_CREATE(&p);
+  end_len = strlen(end);
+  (*body) = apr_pcalloc(p, sizeof(worker_t));
+  memcpy(*body, worker, sizeof(worker_t));
+  (*body)->heartbeat = p;
+
+  /* fill lines */
+  (*body)->lines = apr_table_make(p, 20);
+  e = (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
+  for (worker->cmd += 1; worker->cmd < apr_table_elts(worker->lines)->nelts; worker->cmd++) {
+    command_t *command;
+    file_and_line = e[worker->cmd].key;
+
+    line = e[worker->cmd].val;
+    copy = apr_pstrdup(p, line);
+    copy = worker_replace_vars(worker, copy, NULL, p);
+
+    if (strncmp(copy, end, end_len) == 0) {
+      ends = 1;
+      break;
+    }
+
+    apr_table_addn((*body)->lines, file_and_line, line);
+  }
+  if (!ends) {
+    worker_log(worker, LOG_ERR, "Interpreter failed: no %s found", end);
+    return APR_EGENERAL;
+  }
+
+  return APR_SUCCESS;
+}
+
 /************************************************************************
  * nghttp2 stuff 
  ***********************************************************************/
@@ -911,7 +951,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     return status;
   }
 
-  if ((status = worker_body(&body, parent)) != APR_SUCCESS) {
+  if ((status = h2_worker_body(&body, parent, "H2:END")) != APR_SUCCESS) {
     return status;
   }
 
@@ -1357,7 +1397,7 @@ apr_status_t h2_module_init(global_t *global) {
   }
 
   if ((status = module_command_new(global, "H2", "_REQ", "<method> <url>",
-          "Submit request.",
+          "Submit request. Close the request body with _H2:END.",
           block_H2_REQ)) != APR_SUCCESS) {
     return status;
   }
