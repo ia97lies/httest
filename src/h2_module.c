@@ -951,7 +951,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     return status;
   }
 
-  if ((status = h2_worker_body(&body, parent, "H2:END")) != APR_SUCCESS) {
+  if ((status = h2_worker_body(&body, parent, "_H2:END")) != APR_SUCCESS) {
     return status;
   }
 
