@@ -31,6 +31,7 @@
 #include <apr_poll.h>
 #include <apr_rmm.h>
 #include <apr_strings.h>
+#include <apr_ring.h>
 #include <openssl/ssl.h>
 
 #include "nghttp2/nghttp2.h"
@@ -39,6 +40,11 @@
 #include "ssl_module.h"
 #include "body.h"
 #include "h2_module.h"
+
+/************************************************************************
+ * Globals 
+ ***********************************************************************/
+extern command_t local_commands[]; 
 
 /************************************************************************
  * Definitions 
@@ -62,6 +68,16 @@ enum { IO_NONE, WANT_READ, WANT_WRITE };
 
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
 
+typedef struct _delay_t {
+  APR_RING_ENTRY(_delay_t) link;
+
+  
+  apr_size_t at;
+  apr_size_t sleep;
+} delay_t;
+typedef struct _delay_ring_t delay_ring_t;
+APR_RING_HEAD(_delay_ring_t, _delay_t);
+
 typedef struct h2_stream_s {
   int id;
   int closed;
@@ -70,7 +86,7 @@ typedef struct h2_stream_s {
 
   char *data;
   apr_size_t data_len;
-  apr_ssize_t data_sent;
+  apr_size_t data_sent;
 
   char *data_in;
   apr_size_t data_in_len;
@@ -83,6 +99,8 @@ typedef struct h2_stream_s {
   validation_t match;
   validation_t grep;
   validation_t expect;
+
+  delay_ring_t *delays;
 } h2_stream_t;
 
 typedef struct h2_sconf_s {
@@ -723,6 +741,36 @@ static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
 /************************************************************************
  * Optional Functions 
 ************************************************************************/
+apr_status_t h2_command_SLEEP(command_t *self, worker_t *worker, char *data,
+                              apr_pool_t *ptmp) {
+  apr_table_add(worker->cache, "SLEEP_AT", data);
+
+  return APR_SUCCESS;
+}
+
+apr_status_t h2_command_NOTALLOWED(command_t *self, worker_t *worker,
+                                   char *data, apr_pool_t *ptmp) {
+  worker_log(worker, LOG_ERR, "command can not be used in the context of h2");
+  return APR_EINVAL;
+}
+
+/* overwrite functions */
+/* TODO undo for mixed h1/h2 tests */
+void h2_overwrite_functions() {
+  int k = 0;
+
+  while (local_commands[k].name) {
+    if (strcmp("_SLEEP", local_commands[k].name) == 0) {
+      local_commands[k].func = h2_command_SLEEP;
+      local_commands[k].flags = COMMAND_FLAGS_NONE;
+    }
+    else if (strcmp("_WAIT", local_commands[k].name) == 0) {
+      local_commands[k].func = block_H2_WAIT;
+      local_commands[k].flags = COMMAND_FLAGS_NONE;
+    }
+    k++;
+  }
+}
 
 /************************************************************************
  * Commands
@@ -739,6 +787,9 @@ apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
   const char *data;
   h2_sconf_t *sconf;
   int rv;
+
+
+  h2_overwrite_functions();
 
   data = apr_psprintf(ptmp, "%s %s%s", host,
                       strstr(port, "SSL") ? "" : "SSL:", port);
@@ -838,7 +889,25 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_stream_t *stream = apr_hash_get(
       wconf->streams, apr_itoa(worker->pbody, stream_id), APR_HASH_KEY_STRING);
-  apr_size_t len=0, i;
+  delay_t *delay = APR_RING_FIRST(stream->delays);
+  apr_size_t len = 0, i;
+
+  if (delay) {
+    apr_size_t diff = -1;
+
+    if (delay->at >= stream->data_sent) {
+      diff = delay->at - stream->data_sent;
+    }
+
+    if (diff == 0) {
+        apr_sleep(delay->sleep * 1000);
+        APR_RING_UNSPLICE(delay, delay, link);
+        return h2_data_read_callback(session, stream_id, buf, length,
+                                     data_flags, source, user_data);
+    } else if (diff <= length) {
+      length = diff;
+    }
+  }
 
   if (stream->data_len - stream->data_sent <= length) {
     len = stream->data_len - stream->data_sent;
@@ -851,9 +920,11 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
   buf[len] = 0;
   stream->data_sent += len;
   worker_log(worker, LOG_INFO, ">%d %s", stream_id, buf);
-  worker_log(worker, LOG_DEBUG, "send %d bytes", len);
+  worker_log(worker, LOG_DEBUG, "send %u bytes (%u/%u)", len, stream->data_sent,
+             stream->data_len);
 
-  if (stream->data_len == stream->data_sent) {
+  if (APR_RING_EMPTY(stream->delays, _delay_t, link) &&
+      stream->data_len == stream->data_sent) {
     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
   }
 
@@ -870,6 +941,8 @@ h2_stream_t* h2_get_new_stream(worker_t *worker, int stream_id) {
   stream->data_in_len = NGHTTP2_INBOUND_BUFFER_LENGTH * 10;
   stream->headers_in = apr_table_make(stream->p, 20);
   stream->headers_out = apr_table_make(stream->p, 20);
+  stream->delays = apr_palloc(stream->p, sizeof(delay_ring_t));
+  APR_RING_INIT(stream->delays, _delay_t, link);
 
   return stream;
 }
@@ -892,6 +965,18 @@ static apr_status_t copy_data(worker_t *worker, h2_stream_t *stream, int pos) {
       line.info = e[i].key;
       line.buf = e[i].val;
       line.len = 0;
+
+      if (strcmp("SLEEP_AT", line.info) == 0) {
+        delay_t *delay;
+       
+        if (action == CALC) {
+          delay = apr_palloc(stream->p, sizeof(delay_t));
+          delay->at = data_len;
+          delay->sleep = apr_atoi64(line.buf);
+          APR_RING_INSERT_TAIL(stream->delays, delay, _delay_t, link);
+        }
+        continue;
+      }
 
       if (action == CALC && strstr(line.info, "resolve")) {
         int unresolved;

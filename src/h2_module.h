@@ -18,6 +18,7 @@
  * @file
  *
  * @Author christian liesch <liesch@gmx.ch>
+ * @Author armin abfalterer <armin.abfalterer@united-security-providers.ch>
  *
  * Interface of the HTTP Test Tool h2 module.
  */
@@ -25,6 +26,6 @@
 #ifndef HTTEST_H2_MODULE_H
 #define HTTEST_H2_MODULE_H
 
-apr_status_t h2_connect(worker_t *worker, char *hostname, char *portname); 
+apr_status_t block_H2_WAIT(worker_t *, worker_t *, apr_pool_t *);
 
 #endif
