@@ -45,6 +45,7 @@
  * Globals 
  ***********************************************************************/
 extern command_t local_commands[]; 
+extern int success;
 
 /************************************************************************
  * Definitions 
@@ -743,7 +744,18 @@ static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
 ************************************************************************/
 apr_status_t h2_command_SLEEP(command_t *self, worker_t *worker, char *data,
                               apr_pool_t *ptmp) {
-  apr_table_add(worker->cache, "SLEEP_AT", data);
+  apr_table_add(worker->cache, "FLUSH", data);
+
+  return APR_SUCCESS;
+}
+
+apr_status_t h2_command_FLUSH(command_t *self, worker_t *worker, char *data,
+                              apr_pool_t *ptmp) {
+  if (*data) {
+    /* TODO exit */
+    return APR_EINVAL; 
+  }
+  apr_table_add(worker->cache, "FLUSH", "0");
 
   return APR_SUCCESS;
 }
@@ -764,8 +776,12 @@ void h2_overwrite_functions() {
       local_commands[k].func = h2_command_SLEEP;
       local_commands[k].flags = COMMAND_FLAGS_NONE;
     }
+    else if (strcmp("_FLUSH", local_commands[k].name) == 0) {
+      local_commands[k].func = h2_command_FLUSH;
+      local_commands[k].flags = COMMAND_FLAGS_NONE;
+    }
     else if (strcmp("_WAIT", local_commands[k].name) == 0) {
-      local_commands[k].func = block_H2_WAIT;
+      local_commands[k].func = h2_command_NOTALLOWED;
       local_commands[k].flags = COMMAND_FLAGS_NONE;
     }
     k++;
@@ -966,7 +982,7 @@ static apr_status_t copy_data(worker_t *worker, h2_stream_t *stream, int pos) {
       line.buf = e[i].val;
       line.len = 0;
 
-      if (strcmp("SLEEP_AT", line.info) == 0) {
+      if (strcmp("FLUSH", line.info) == 0) {
         delay_t *delay;
        
         if (action == CALC) {
