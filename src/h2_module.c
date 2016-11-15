@@ -780,10 +780,6 @@ void h2_overwrite_functions() {
       local_commands[k].func = h2_command_FLUSH;
       local_commands[k].flags = COMMAND_FLAGS_NONE;
     }
-    else if (strcmp("_WAIT", local_commands[k].name) == 0) {
-      local_commands[k].func = h2_command_NOTALLOWED;
-      local_commands[k].flags = COMMAND_FLAGS_NONE;
-    }
     k++;
   }
 }
