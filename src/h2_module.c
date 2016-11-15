@@ -198,10 +198,18 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker, char *end)
     if (strncmp(copy, end, end_len) == 0) {
       ends = 1;
       break;
+    } else if (strncmp("_SLEEP", copy, 6) == 0) {
+      copy = apr_psprintf(p, "_H2:SLEEP %s", &copy[6]);
+      apr_table_add((*body)->lines, file_and_line, copy);
+    } else if (strncmp("_FLUSH", copy, 6) == 0) {
+      copy = apr_psprintf(p, "_H2:FLUSH %s", &copy[6]);
+      apr_table_add((*body)->lines, file_and_line, copy);
+    } else {
+      apr_table_addn((*body)->lines, file_and_line, line);
     }
-
-    apr_table_addn((*body)->lines, file_and_line, line);
+    worker_log(worker, LOG_INFO, "%s", line);
   }
+
   if (!ends) {
     worker_log(worker, LOG_ERR, "Interpreter failed: no %s found", end);
     return APR_EGENERAL;
@@ -742,47 +750,6 @@ static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
 /************************************************************************
  * Optional Functions 
 ************************************************************************/
-apr_status_t h2_command_SLEEP(command_t *self, worker_t *worker, char *data,
-                              apr_pool_t *ptmp) {
-  apr_table_add(worker->cache, "FLUSH", data);
-
-  return APR_SUCCESS;
-}
-
-apr_status_t h2_command_FLUSH(command_t *self, worker_t *worker, char *data,
-                              apr_pool_t *ptmp) {
-  if (*data) {
-    /* TODO exit */
-    return APR_EINVAL; 
-  }
-  apr_table_add(worker->cache, "FLUSH", "0");
-
-  return APR_SUCCESS;
-}
-
-apr_status_t h2_command_NOTALLOWED(command_t *self, worker_t *worker,
-                                   char *data, apr_pool_t *ptmp) {
-  worker_log(worker, LOG_ERR, "command can not be used in the context of h2");
-  return APR_EINVAL;
-}
-
-/* overwrite functions */
-/* TODO undo for mixed h1/h2 tests */
-void h2_overwrite_functions() {
-  int k = 0;
-
-  while (local_commands[k].name) {
-    if (strcmp("_SLEEP", local_commands[k].name) == 0) {
-      local_commands[k].func = h2_command_SLEEP;
-      local_commands[k].flags = COMMAND_FLAGS_NONE;
-    }
-    else if (strcmp("_FLUSH", local_commands[k].name) == 0) {
-      local_commands[k].func = h2_command_FLUSH;
-      local_commands[k].flags = COMMAND_FLAGS_NONE;
-    }
-    k++;
-  }
-}
 
 /************************************************************************
  * Commands
@@ -799,9 +766,6 @@ apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
   const char *data;
   h2_sconf_t *sconf;
   int rv;
-
-
-  h2_overwrite_functions();
 
   data = apr_psprintf(ptmp, "%s %s%s", host,
                       strstr(port, "SSL") ? "" : "SSL:", port);
@@ -1028,6 +992,22 @@ static apr_status_t copy_data(worker_t *worker, h2_stream_t *stream, int pos) {
   }
 
   return status;
+}
+
+apr_status_t block_H2_SLEEP(worker_t *worker, worker_t *parent,
+                            apr_pool_t *ptmp) {
+  const char *ms = store_get(worker->params, "1");
+
+  apr_table_add(worker->cache, "FLUSH", ms);
+
+  return APR_SUCCESS;
+}
+
+apr_status_t block_H2_FLUSH(worker_t *worker, worker_t *parent,
+                            apr_pool_t *ptmp) {
+  apr_table_add(worker->cache, "FLUSH", "0");
+
+  return APR_SUCCESS;
 }
 
 apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
@@ -1490,6 +1470,18 @@ apr_status_t h2_module_init(global_t *global) {
   if ((status = module_command_new(global, "H2", "_SETTINGS", "<settings>",
           "Submit session settings.",
           block_H2_SETTINGS)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "H2", "_FLUSH", "",
+          "TODO",
+          block_H2_FLUSH)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "H2", "_SLEEP", "<ms>",
+          "TODO",
+          block_H2_SLEEP)) != APR_SUCCESS) {
     return status;
   }
 
