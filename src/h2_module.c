@@ -1088,6 +1088,9 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     if (*val && apr_isspace(*val)) {
       val++; 
     }
+    if (strcasecmp("host", name) == 0)  {
+      sconf->authority = val;
+    }
     apr_table_add(stream->headers_out, name, val);
     i++;
   }
