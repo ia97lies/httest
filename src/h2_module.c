@@ -1097,7 +1097,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   /* jump over empty line that separates headers from data */
   i++;
 
-  with_body = i <= apr_table_elts(parent->cache)->nelts;
+  with_body = (i < apr_table_elts(parent->cache)->nelts);
   if (with_body) {
     /* copy data */
     if ((status = copy_data(parent, stream, i)) != APR_SUCCESS) {
