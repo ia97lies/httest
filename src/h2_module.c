@@ -1064,6 +1064,9 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     if (*val && apr_isspace(*val)) {
       val++; 
     }
+    if (*val == '\0') {
+      val = NULL;
+    }
     if (strcasecmp("host", name) == 0)  {
       sconf->authority = val;
     }
@@ -1100,7 +1103,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     nghttp2_nv hdr_nv;
 
     /* calculate content length (AUTO) */
-    if (with_body && strcasecmp(name, "Content-Length") == 0) {
+    if (with_body && strcasecmp(name, "Content-Length") == 0 && !val) {
       val = apr_psprintf(parent->pbody, "%d", stream->data_len);
     }
     hdr_nv.name = name;
