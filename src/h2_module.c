@@ -108,7 +108,6 @@ typedef struct h2_sconf_s {
   SSL *ssl;
   int is_server;
   nghttp2_session *session;
-  int want_io;
   char *authority;
 } h2_sconf_t;
 
@@ -294,20 +293,6 @@ static apr_status_t h2_open_session(worker_t *worker) {
   return APR_SUCCESS;
 }
 
-static void ctl_poll(apr_pollfd_t *pollfd, h2_sconf_t *sconf) {
-  pollfd->reqevents = 0;
-
-  if (nghttp2_session_want_read(sconf->session) ||
-      sconf->want_io == WANT_READ) {
-    pollfd->reqevents |= APR_POLLIN;
-  }
-
-  if (nghttp2_session_want_write(sconf->session) ||
-      sconf->want_io == WANT_WRITE) {
-    pollfd->reqevents |= APR_POLLOUT;
-  }
-}
-
 static apr_status_t poll(worker_t *worker) {
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_sconf_t *sconf = h2_get_socket_config(worker);
@@ -328,15 +313,9 @@ static apr_status_t poll(worker_t *worker) {
 
   pollfd.p = p;
   pollfd.desc_type = APR_POLL_SOCKET;
-  pollfd.reqevents = APR_POLLIN | APR_POLLOUT | APR_POLLHUP;
+  pollfd.reqevents = APR_POLLIN | APR_POLLERR | APR_POLLHUP;
   pollfd.desc.s = worker->socket->socket;
-  worker_log(worker, LOG_DEBUG,
-             "poll worker: %" APR_UINT64_T_HEX_FMT
-             " worker->socket: %" APR_UINT64_T_HEX_FMT
-             " worker->socket->socket: %" APR_UINT64_T_HEX_FMT,
-             worker, worker->socket, worker->socket->socket);
 
-  ctl_poll(&pollfd, sconf);
   if ((status = apr_pollset_add(pollset, &pollfd)) != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Can not add pollfd to pollset: %s(%d)",
                my_status_str(p, status), status);
@@ -348,32 +327,22 @@ static apr_status_t poll(worker_t *worker) {
     const apr_pollfd_t *result;
     apr_int32_t num;
 
-    char *mode = apr_pstrcat(
-        p, nghttp2_session_want_read(sconf->session) ? "lib_read" : "-", "/",
-        nghttp2_session_want_read(sconf->session) ? "lib_write" : "", " ",
-        sconf->want_io == WANT_READ ? "ssl_read" : "-",
-        "/", sconf->want_io == WANT_WRITE ? "ssl_write" : "-", NULL);
-    worker_log(worker, LOG_DEBUG, "next poll cycle: %s", mode);
+    worker_log(worker, LOG_DEBUG, "start poll cycle");
+
+    if ((rv = nghttp2_session_send(sconf->session)) != 0) {
+      worker_log(worker, LOG_DEBUG, "error on sending session data frame %d",
+                 rv);
+      return APR_EGENERAL;
+    }
 
     if ((status = apr_pollset_poll(pollset, worker->socktmo, &num, &result)) !=
         APR_SUCCESS) {
       if (APR_STATUS_IS_EINTR(status)) {
         continue;
       }
-      worker_log(worker, LOG_ERR, "Can not poll on pollset: %s(%d)",
+      worker_log(worker, LOG_ERR, "can not poll on pollset: %s (%d)",
                  my_status_str(p, status), status);
       return status;
-    }
-
-    worker_log(worker, LOG_DEBUG, "poll tmo: %d, num: %d, events: %x",
-               worker->socktmo, num, result[0].rtnevents);
-
-    if (result[0].rtnevents & APR_POLLOUT) {
-      worker_log(worker, LOG_DEBUG, "ready to send session data frames");
-      if ((rv = nghttp2_session_send(sconf->session)) != 0) {
-        worker_log(worker, LOG_DEBUG, "error on sending session data frame %d", rv);
-        return APR_EGENERAL;
-      }
     }
 
     if (result[0].rtnevents & APR_POLLIN) {
@@ -394,8 +363,11 @@ static apr_status_t poll(worker_t *worker) {
       return APR_EGENERAL;
     }
 
-    ctl_poll(&pollfd, sconf); 
     loop = (wconf->settings || wconf->open_streams || wconf->pings);
+
+    worker_log(worker, LOG_DEBUG,
+               "next poll cycle: settings=%d open_streams=%d pings=%d",
+               wconf->settings, wconf->open_streams, wconf->pings);
 
     worker_log(worker, LOG_DEBUG, "end poll cycle");
   }
@@ -414,15 +386,11 @@ static ssize_t h2_send_callback(nghttp2_session *session, const uint8_t *data,
 
   worker_log(worker, LOG_DEBUG,
              "h2_send_callback length: %d, flags: %d", length, flags);
-  sconf->want_io = IO_NONE;
 
   rv = SSL_write(sconf->ssl, data, (int)length);
   if (rv <= 0) {
     int err = SSL_get_error(sconf->ssl, rv);
     if (err == SSL_ERROR_WANT_WRITE || err == SSL_ERROR_WANT_READ) {
-      sconf->want_io = (err == SSL_ERROR_WANT_READ ? WANT_READ : WANT_WRITE);
-      worker_log(worker, LOG_DEBUG, "want_io: %s",
-                 err == SSL_ERROR_WANT_READ ? "read" : "write");
       rv = NGHTTP2_ERR_WOULDBLOCK;
     } else {
       worker_log(worker, LOG_ERR, "Could not send %d", rv);
@@ -442,15 +410,11 @@ static ssize_t h2_recv_callback(nghttp2_session *session, uint8_t *buf,
 
   worker_log(worker, LOG_DEBUG,
              "h2_recv_callback length: %d, flags: %d", length, flags);
-  sconf->want_io = IO_NONE;
 
   rv = SSL_read(sconf->ssl, buf, (int)length);
   if (rv < 0) {
     int err = SSL_get_error(sconf->ssl, rv);
     if (err == SSL_ERROR_WANT_WRITE || err == SSL_ERROR_WANT_READ) {
-      sconf->want_io = (err == SSL_ERROR_WANT_READ ? WANT_READ : WANT_WRITE);
-      worker_log(worker, LOG_DEBUG, "want_io: %s",
-                 err == SSL_ERROR_WANT_READ ? "read" : "write");
       rv = NGHTTP2_ERR_WOULDBLOCK;
     } else {
       worker_log(worker, LOG_ERR, "Could not recv %d", rv);
@@ -536,6 +500,15 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
   apr_pool_destroy(p);
 
   return 0;
+}
+
+static int h2_on_frame_not_send_callback(nghttp2_session *session,
+                                         const nghttp2_frame *frame,
+                                         void *user_data) {
+  worker_t *worker = user_data;
+
+  worker_log(worker, LOG_ERR, "could not sent frame for stream %d",
+             frame->hd.stream_id);
 }
 
 static int h2_on_frame_recv_callback(nghttp2_session *session,
@@ -730,6 +703,9 @@ static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
 
   nghttp2_session_callbacks_set_on_frame_send_callback(callbacks,
                                                        h2_on_frame_send_callback);
+
+  nghttp2_session_callbacks_set_on_frame_not_send_callback(callbacks,
+                                                           h2_on_frame_not_send_callback);
 
   nghttp2_session_callbacks_set_on_frame_recv_callback(callbacks,
                                                        h2_on_frame_recv_callback);
