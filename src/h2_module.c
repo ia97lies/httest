@@ -68,16 +68,21 @@ enum { IO_NONE, WANT_READ, WANT_WRITE };
   }
 
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
+#define DEFER_MARKER         "CTL_DEFER_MARKER"
+#define DEFER_MARKER_CHECKED "CTL_DEFER_CHECKED"
 
-typedef struct _delay_t {
-  APR_RING_ENTRY(_delay_t) link;
+typedef struct _event_t {
+#define EVENT_FLUSH 1
+#define EVENT_DEFER 2
+  APR_RING_ENTRY(_event_t) link;
 
-  
   apr_size_t at;
+  int type;
   apr_size_t sleep;
-} delay_t;
-typedef struct _delay_ring_t delay_ring_t;
-APR_RING_HEAD(_delay_ring_t, _delay_t);
+  int defer;
+} event_t;
+typedef struct _event_ring_t event_ring_t;
+APR_RING_HEAD(_event_ring_t, _event_t);
 
 typedef struct h2_stream_s {
   int id;
@@ -98,10 +103,9 @@ typedef struct h2_stream_s {
   apr_table_t *headers_out;
 
   validation_t match;
-  validation_t grep;
   validation_t expect;
 
-  delay_ring_t *delays;
+  event_ring_t *events;
 } h2_stream_t;
 
 typedef struct h2_sconf_s {
@@ -122,6 +126,12 @@ typedef struct h2_wconf_t {
   int pings;
   int open_streams;
 } h2_wconf_t;
+
+static ssize_t h2_data_read_callback(nghttp2_session *session,
+                                     int32_t stream_id, uint8_t *buf,
+                                     size_t length, uint32_t *data_flags,
+                                     nghttp2_data_source *source,
+                                     void *user_data);
 
 /************************************************************************
  * Local 
@@ -169,7 +179,8 @@ static int copy_table_entry(void *rec, const char *key, const char *val) {
  apr_table_addn(rec, key, val);
 }
 
-static apr_status_t h2_worker_body(worker_t **body, worker_t *worker, char *end) {
+static apr_status_t h2_worker_body(worker_t **body, worker_t *worker,
+                                   char *end) {
   char *file_and_line;
   char *line = "", *copy;
   apr_table_entry_t *e;
@@ -186,7 +197,8 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker, char *end)
   /* fill lines */
   (*body)->lines = apr_table_make(p, 20);
   e = (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
-  for (worker->cmd += 1; worker->cmd < apr_table_elts(worker->lines)->nelts; worker->cmd++) {
+  for (worker->cmd += 1; worker->cmd < apr_table_elts(worker->lines)->nelts;
+       worker->cmd++) {
     command_t *command;
     file_and_line = e[worker->cmd].key;
 
@@ -195,14 +207,19 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker, char *end)
     copy = worker_replace_vars(worker, copy, NULL, p);
 
     if (strncmp(copy, end, end_len) == 0) {
+      worker_log(worker, LOG_INFO, end);
       ends = 1;
       break;
+    } else if (strncmp("_GREP", copy, 5) == 0) {
+      worker_log(worker, LOG_ERR, "not implemented for h2", line);
+      return APR_EINVAL;
     } else if (strncmp("_SLEEP", copy, 6) == 0) {
       copy = apr_psprintf(p, "_H2:SLEEP %s", &copy[6]);
       apr_table_add((*body)->lines, file_and_line, copy);
     } else if (strncmp("_FLUSH", copy, 6) == 0) {
-      copy = apr_psprintf(p, "_H2:FLUSH %s", &copy[6]);
-      apr_table_add((*body)->lines, file_and_line, copy);
+      apr_table_add((*body)->lines, file_and_line, "_H2:FLUSH");
+    } else if (strncmp("_H2:WAIT", copy, 8) == 0) {
+      apr_table_add((*body)->lines, file_and_line, "_H2:DEFER");
     } else {
       apr_table_addn((*body)->lines, file_and_line, line);
     }
@@ -215,6 +232,132 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker, char *end)
   }
 
   return APR_SUCCESS;
+}
+
+typedef apr_status_t (*validate_func)(worker_t *, apr_table_t *, const char *,
+                                  apr_size_t);
+
+static apr_table_t *check(worker_t *worker, h2_stream_t *stream,
+                          apr_table_t *orig, char *type, validate_func func) {
+  apr_table_t *copy =
+      apr_table_make(worker->pbody, apr_table_elts(orig)->nelts);
+  apr_table_entry_t *e;
+  int i;
+
+  e = (apr_table_entry_t *)apr_table_elts(orig)->elts;
+  for (i = 0; i < apr_table_elts(orig)->nelts; i++) {
+    if (strcmp(e[i].key, DEFER_MARKER_CHECKED) == 0) {
+      continue;
+    } else if (strcmp(e[i].key, DEFER_MARKER) == 0) {
+      /* mark as checked */
+      e[i].key = DEFER_MARKER_CHECKED;
+      break;
+    }
+
+    apr_table_addn(copy, e[i].key, e[i].val);
+    e[i].key = DEFER_MARKER_CHECKED;
+  }
+
+  if (strcmp(type, "HEADERS") == 0) {
+    e = (apr_table_entry_t *)apr_table_elts(stream->headers_in)->elts;
+    for (i = 0; i < apr_table_elts(stream->headers_in)->nelts; i++) {
+      char *header = apr_pstrcat(worker->pbody, e[i].key, ": ", e[i].val, NULL);
+
+      func(worker, copy, header, strlen(header));
+    }
+  } else { /* data */
+    func(worker, copy, stream->data_in, stream->data_in_len);
+  }
+
+  return copy;
+}
+
+static int check_headers(worker_t *worker, h2_stream_t *stream) {
+  apr_status_t status = APR_SUCCESS;
+  apr_table_t *checked;
+  char *errmsg;
+
+  checked =
+      check(worker, stream, stream->expect.headers, "HEADERS", worker_expect);
+  errmsg =
+      apr_psprintf(worker->pbody, "EXPECT headers for stream %d", stream->id);
+  status = worker_assert_expect(worker, checked, errmsg, status);
+  if (status != APR_SUCCESS) {
+    goto exit;
+  }
+
+  checked =
+      check(worker, stream, stream->match.headers, "HEADERS", worker_match);
+  errmsg =
+      apr_psprintf(worker->pbody, "MATCH headers for stream %d", stream->id);
+  status = worker_assert_match(worker, checked, errmsg, status);
+  if (status != APR_SUCCESS) {
+    goto exit;
+  }
+
+  /* do assertion after receiving of body */
+  check(worker, stream, stream->expect.dot, "HEADERS", worker_expect);
+  check(worker, stream, stream->match.dot, "HEADERS", worker_match);
+
+exit:
+  apr_table_clear(stream->headers_in);
+
+  if (status != APR_SUCCESS) {
+    return NGHTTP2_ERR_CALLBACK_FAILURE;
+  } else {
+    return 0;
+  }
+}
+
+static int check_data(worker_t *worker, h2_stream_t *stream) {
+  h2_wconf_t *wconf = h2_get_worker_config(worker);
+  apr_status_t status = APR_SUCCESS;
+  apr_table_t *checked;
+  char *errmsg;
+
+  if (stream->data_in_expect &&
+      stream->data_in_read != stream->data_in_expect) {
+    worker_log(worker, LOG_ERR, "EXPECT bodysize for stream %d: read %d bytes",
+               stream->id, stream->data_in_read);
+    return APR_EINVAL;
+  }
+
+  checked = check(worker, stream, stream->expect.body, "DATA", worker_expect);
+  errmsg = apr_psprintf(worker->pbody, "EXPECT body for stream %d", stream->id);
+  status = worker_assert_expect(worker, checked, errmsg, status);
+  if (status != APR_SUCCESS) {
+    goto exit;
+  }
+
+  checked = check(worker, stream, stream->expect.dot, "DATA", worker_expect);
+  errmsg = apr_psprintf(worker->pbody, "EXPECT . for stream %d", stream->id);
+  status = worker_assert_expect(worker, checked, errmsg, status);
+  if (status != APR_SUCCESS) {
+    goto exit;
+  }
+
+  checked = check(worker, stream, stream->match.body, "DATA", worker_match);
+  errmsg = apr_psprintf(worker->pbody, "MATCH body for stream %d", stream->id);
+  status = worker_assert_match(worker, checked, errmsg, status);
+  if (status != APR_SUCCESS) {
+    goto exit;
+  }
+
+  checked = check(worker, stream, stream->match.dot, "DATA", worker_match);
+  errmsg = apr_psprintf(worker->pbody, "MATCH . for stream %d", stream->id);
+  status = worker_assert_match(worker, checked, errmsg, status);
+  if (status != APR_SUCCESS) {
+    goto exit;
+  }
+
+exit:
+  stream->data_in = NULL;
+
+  if (status != APR_SUCCESS) {
+    return NGHTTP2_ERR_CALLBACK_FAILURE;
+  } else {
+    return 0;
+  }
 }
 
 /************************************************************************
@@ -446,6 +589,19 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       break;
     case NGHTTP2_HEADERS:
       worker_log(worker, LOG_DEBUG, "> HEADERS");
+      h2_wconf_t *wconf = h2_get_worker_config(worker);
+      h2_stream_t *stream =
+          apr_hash_get(wconf->streams, apr_itoa(worker->pbody, frame->hd.stream_id),
+                       APR_HASH_KEY_STRING);
+      nghttp2_data_provider data_prd;
+
+      /* submit data */
+      data_prd.read_callback = h2_data_read_callback;
+      if (stream->data_len > 0 ) {
+        nghttp2_submit_data(session, NGHTTP2_FLAG_END_STREAM, stream->id,
+                            &data_prd);
+      }
+
       if (nghttp2_session_get_stream_user_data(session, frame->hd.stream_id)) {
         const nghttp2_nv *nva = frame->headers.nva;
         for (i = 0; i < frame->headers.nvlen; ++i) {
@@ -453,7 +609,6 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
                      nva[i].name, nva[i].value);
         }
       }
-
     case NGHTTP2_DATA:
       worker_log(worker, LOG_DEBUG, "> DATA %s",
                  frame->hd.flags & NGHTTP2_DATA_FLAG_EOF ? "[EOF]" : "");
@@ -504,7 +659,7 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
 
 static int h2_on_frame_not_send_callback(nghttp2_session *session,
                                          const nghttp2_frame *frame,
-                                         void *user_data) {
+                                         int lib_error_code, void *user_data) {
   worker_t *worker = user_data;
 
   worker_log(worker, LOG_ERR, "could not sent frame for stream %d",
@@ -514,10 +669,14 @@ static int h2_on_frame_not_send_callback(nghttp2_session *session,
 static int h2_on_frame_recv_callback(nghttp2_session *session,
                                      const nghttp2_frame *frame,
                                      void *user_data) {
-  size_t i;
-  apr_pool_t *p;
   worker_t *worker = user_data;
   h2_wconf_t *wconf = h2_get_worker_config(worker);
+  h2_stream_t *stream = apr_hash_get(
+      wconf->streams, apr_itoa(worker->pbody, frame->hd.stream_id), APR_HASH_KEY_STRING);
+  apr_pool_t *p;
+  apr_status_t status;
+  size_t i, rv = 0;
+
   apr_pool_create(&p, NULL);
 
   worker_log(worker, LOG_DEBUG, "< frame header type: %d, flag: %d",
@@ -527,11 +686,14 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
     case NGHTTP2_HEADERS:
       if (frame->hd.flags == NGHTTP2_FLAG_END_HEADERS) {
         worker_log(worker, LOG_DEBUG, "< END_HEADERS");
+        nghttp2_session_resume_data(session, frame->hd.stream_id);
+        rv = check_headers(worker, stream);
       }
       break;
     case NGHTTP2_DATA:
       if (frame->hd.flags == NGHTTP2_FLAG_END_STREAM) {
         worker_log(worker, LOG_DEBUG, "< END_STREAM");
+        rv = check_data(worker, stream);
       }
       else {
         worker_log(worker, LOG_DEBUG, "< DATA");
@@ -583,7 +745,8 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       worker_log(worker, LOG_INFO, "< UNKNOWN");
   }
   apr_pool_destroy(p);
-  return 0;
+
+  return rv;
 }
 
 static int h2_on_begin_headers_callback(nghttp2_session *session,
@@ -591,6 +754,7 @@ static int h2_on_begin_headers_callback(nghttp2_session *session,
                                         void *user_data) {
   worker_t *worker = user_data;
   worker_log(worker, LOG_DEBUG, "< HEADERS");
+
   return 0;
 }
 
@@ -644,6 +808,7 @@ static int h2_on_header_callback(nghttp2_session *session,
   h2_stream_t *stream =
       apr_hash_get(wconf->streams, apr_itoa(worker->pbody, frame->hd.stream_id),
                    APR_HASH_KEY_STRING);
+  int rv;
 
   switch (frame->hd.type) {
     case NGHTTP2_HEADERS: {
@@ -841,21 +1006,27 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_stream_t *stream = apr_hash_get(
       wconf->streams, apr_itoa(worker->pbody, stream_id), APR_HASH_KEY_STRING);
-  delay_t *delay = APR_RING_FIRST(stream->delays);
+  event_t *event = APR_RING_FIRST(stream->events);
   apr_size_t len = 0, i;
 
-  if (delay) {
+  if (event) {
     apr_size_t diff = -1;
 
-    if (delay->at >= stream->data_sent) {
-      diff = delay->at - stream->data_sent;
+    if (event->at >= stream->data_sent) {
+      diff = event->at - stream->data_sent;
     }
 
     if (diff == 0) {
-        apr_sleep(delay->sleep * 1000);
-        APR_RING_UNSPLICE(delay, delay, link);
-        return h2_data_read_callback(session, stream_id, buf, length,
-                                     data_flags, source, user_data);
+      APR_RING_UNSPLICE(event, event, link);
+
+      if (event->type == EVENT_FLUSH) {
+        apr_sleep(event->sleep * 1000);
+      } else if (event->type == EVENT_DEFER) {
+        return NGHTTP2_ERR_DEFERRED;
+      }
+
+      return h2_data_read_callback(session, stream_id, buf, length, data_flags,
+                                   source, user_data);
     } else if (diff <= length) {
       length = diff;
     }
@@ -875,7 +1046,7 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
   worker_log(worker, LOG_DEBUG, "send %u bytes (%u/%u)", len, stream->data_sent,
              stream->data_len);
 
-  if (APR_RING_EMPTY(stream->delays, _delay_t, link) &&
+  if (APR_RING_EMPTY(stream->events, _event_t, link) &&
       stream->data_len == stream->data_sent) {
     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
   }
@@ -893,8 +1064,8 @@ h2_stream_t* h2_get_new_stream(worker_t *worker, int stream_id) {
   stream->data_in_len = NGHTTP2_INBOUND_BUFFER_LENGTH * 10;
   stream->headers_in = apr_table_make(stream->p, 20);
   stream->headers_out = apr_table_make(stream->p, 20);
-  stream->delays = apr_palloc(stream->p, sizeof(delay_ring_t));
-  APR_RING_INIT(stream->delays, _delay_t, link);
+  stream->events = apr_palloc(stream->p, sizeof(event_ring_t));
+  APR_RING_INIT(stream->events, _event_t, link);
 
   return stream;
 }
@@ -918,14 +1089,22 @@ static apr_status_t copy_data(worker_t *worker, h2_stream_t *stream, int pos) {
       line.buf = e[i].val;
       line.len = 0;
 
-      if (strcmp("FLUSH", line.info) == 0) {
-        delay_t *delay;
-       
+      if (strcmp("DEFER", line.info) == 0) {
         if (action == CALC) {
-          delay = apr_palloc(stream->p, sizeof(delay_t));
-          delay->at = data_len;
-          delay->sleep = apr_atoi64(line.buf);
-          APR_RING_INSERT_TAIL(stream->delays, delay, _delay_t, link);
+          event_t *event = apr_palloc(stream->p, sizeof(event_t));
+          event->type = EVENT_DEFER;
+          event->at = data_len;
+          event->defer = 1;
+          APR_RING_INSERT_TAIL(stream->events, event, _event_t, link);
+        }
+      }
+      else if (strcmp("FLUSH", line.info) == 0) {
+        if (action == CALC) {
+          event_t *event = apr_palloc(stream->p, sizeof(event_t));
+          event->type = EVENT_FLUSH;
+          event->at = data_len;
+          event->sleep = apr_atoi64(line.buf);
+          APR_RING_INSERT_TAIL(stream->events, event, _event_t, link);
         }
         continue;
       }
@@ -986,19 +1165,32 @@ apr_status_t block_H2_FLUSH(worker_t *worker, worker_t *parent,
   return APR_SUCCESS;
 }
 
+apr_status_t block_H2_DEFER(worker_t *worker, worker_t *parent,
+                            apr_pool_t *ptmp) {
+  apr_table_add(worker->cache, "DEFER", "");
+
+  /* add marker */
+  apr_table_add(worker->expect.headers, DEFER_MARKER, "");
+  apr_table_add(worker->expect.dot, DEFER_MARKER, "");
+  apr_table_add(worker->match.headers, DEFER_MARKER, "");
+  apr_table_add(worker->match.dot, DEFER_MARKER, "");
+
+  return APR_SUCCESS;
+}
+
 apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
                           apr_pool_t *ptmp) {
   h2_wconf_t *wconf = h2_get_worker_config(parent);
   h2_sconf_t *sconf = h2_get_socket_config(parent);
   const char *method = store_get(worker->params, "1");
   const char *path = store_get(worker->params, "2");
+  int i = 0, j, hdrn = 0, with_data = 0;
   apr_table_entry_t *e; 
   apr_status_t status;
   h2_stream_t *stream;
   int32_t stream_id;
   worker_t *body;
   nghttp2_nv *hdrs;
-  int i=0, j, hdrn=0, with_body=0;
 
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
     return status;
@@ -1012,8 +1204,6 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   worker_log(parent, LOG_DEBUG, "new stream %d", stream_id);
 
   stream = h2_get_new_stream(parent, stream_id);
-  apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream_id),
-               APR_HASH_KEY_STRING, stream);
   status = body->interpret(body, parent, NULL);
 
   /* copy expectations */
@@ -1023,9 +1213,6 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   stream->match.headers = apr_table_make(parent->pbody, 10);
   stream->match.body = apr_table_make(parent->pbody, 10);
   stream->match.dot = apr_table_make(parent->pbody, 10);
-  stream->grep.headers = apr_table_make(parent->pbody, 10);
-  stream->grep.body = apr_table_make(parent->pbody, 10);
-  stream->grep.dot = apr_table_make(parent->pbody, 10);
   apr_table_do(copy_table_entry, stream->expect.headers,
                parent->expect.headers, NULL);
   apr_table_do(copy_table_entry, stream->expect.body,
@@ -1038,21 +1225,12 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
                parent->match.body, NULL);
   apr_table_do(copy_table_entry, stream->match.dot,
                parent->match.dot, NULL);
-  apr_table_do(copy_table_entry, stream->grep.headers,
-               parent->grep.headers, NULL);
-  apr_table_do(copy_table_entry, stream->grep.body,
-               parent->grep.body, NULL);
-  apr_table_do(copy_table_entry, stream->grep.dot,
-               parent->grep.dot, NULL);
   apr_table_clear(parent->expect.headers);
   apr_table_clear(parent->expect.body);
   apr_table_clear(parent->expect.dot);
   apr_table_clear(parent->match.headers);
   apr_table_clear(parent->match.body);
   apr_table_clear(parent->match.dot);
-  apr_table_clear(parent->grep.headers);
-  apr_table_clear(parent->grep.body);
-  apr_table_clear(parent->grep.dot);
   
   /* copy headers */
   e = (apr_table_entry_t *)apr_table_elts(parent->cache)->elts;
@@ -1074,16 +1252,20 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     i++;
   }
   /* jump over empty line that separates headers from data */
-  i++;
+  if (i++ >= apr_table_elts(parent->cache)->nelts) {
+    /* no data */
+    goto submit;
+  }
 
-  with_body = (i < apr_table_elts(parent->cache)->nelts);
-  if (with_body) {
+  with_data = (i < apr_table_elts(parent->cache)->nelts);
+  if (with_data) {
     /* copy data */
     if ((status = copy_data(parent, stream, i)) != APR_SUCCESS) {
       goto on_error;
     }
   }
 
+submit:
   apr_table_clear(parent->cache);
 
   hdrs = apr_pcalloc(parent->pbody, sizeof(*hdrs) * (4 + apr_table_elts(stream->headers_out)->nelts));
@@ -1103,7 +1285,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     nghttp2_nv hdr_nv;
 
     /* calculate content length (AUTO) */
-    if (with_body && strcasecmp(name, "Content-Length") == 0 && !val) {
+    if (with_data && strcasecmp(name, "Content-Length") == 0 && !val) {
       val = apr_psprintf(parent->pbody, "%d", stream->data_len);
     }
     hdr_nv.name = name;
@@ -1117,13 +1299,22 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   nghttp2_data_provider data_prd;
   data_prd.read_callback = h2_data_read_callback;
 
-  stream_id = nghttp2_submit_request(sconf->session, NULL, hdrs, hdrn,
-                                     with_body ? &data_prd : NULL, parent);
+  if (stream->data_len > 0) {
+    /* data is submitted later in order to support deferring */
+    stream_id =
+        nghttp2_submit_headers(sconf->session, 0, -1, NULL, hdrs, hdrn, parent);
+  } else {
+    stream_id =
+        nghttp2_submit_request(sconf->session, NULL, hdrs, hdrn, NULL, parent);
+  }
+
   if (stream_id < 0) {
     worker_log(parent, LOG_ERR, "Could not submit request: %s",
                nghttp2_strerror(stream_id));
     return APR_EGENERAL;
   }
+  apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream_id),
+               APR_HASH_KEY_STRING, stream);
   wconf->open_streams++;
 
 on_error:
@@ -1211,6 +1402,8 @@ apr_status_t block_H2_GOAWAY(worker_t *worker, worker_t *parent, apr_pool_t *ptm
   return APR_SUCCESS;
 }
 
+
+
 apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent,
                            apr_pool_t *ptmp) {
   apr_status_t status;
@@ -1226,111 +1419,16 @@ apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent,
     return status;
   }
 
-  for (hi = apr_hash_first(worker->pbody, wconf->streams); hi; hi = apr_hash_next(hi)) {
-    h2_stream_t *stream;
-    apr_hash_this(hi, NULL, NULL, (void **)&stream);
-    apr_table_entry_t *e;
-    char *errmsg;
-    apr_size_t data_len;
-    int i;
-
-    e = (apr_table_entry_t *)apr_table_elts(stream->headers_in)->elts;
-    for (i = 0; i < apr_table_elts(stream->headers_in)->nelts; i++) {
-      char *header = apr_pstrcat(worker->pbody, e[i].key, ": ", e[i].val, NULL);
-
-      worker_expect(parent, stream->expect.headers, header, strlen(header));
-      worker_expect(parent, stream->expect.dot, header, strlen(header));
-
-      worker_match(parent, stream->match.headers, header, strlen(header));
-      worker_match(parent, stream->match.dot, header, strlen(header));
-
-      worker_match(parent, stream->grep.headers, header, strlen(header));
-      worker_match(parent, stream->grep.dot, header, strlen(header));
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "EXPECT headers for stream %d", stream->id);
-    status = worker_assert_expect(worker, stream->expect.headers, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "MATCH headers for stream %d", stream->id);
-    status = worker_assert_match(worker, stream->match.headers, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "GREP headers for stream %d", stream->id);
-    status = worker_assert_match(worker, stream->grep.headers, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    if (stream->data_in_expect && stream->data_in_read != stream->data_in_expect) {
-      worker_log(worker, LOG_ERR,
-                 "EXPECT bodysize for stream %d: read %d bytes", stream->id,
-                 stream->data_in_read);
-      return APR_EINVAL;
-    }
-
-    worker_expect(parent, stream->expect.body, stream->data_in,
-                  stream->data_in_len);
-    worker_expect(parent, stream->expect.dot, stream->data_in,
-                  stream->data_in_len);
-    worker_match(parent, stream->match.body, stream->data_in,
-                 stream->data_in_len);
-    worker_match(parent, stream->match.dot, stream->data_in,
-                 stream->data_in_len);
-    worker_match(parent, stream->grep.body, stream->data_in,
-                 stream->data_in_len);
-    worker_match(parent, stream->grep.dot, stream->data_in,
-                 stream->data_in_len);
-
-    errmsg = apr_psprintf(worker->pbody, "EXPECT body for stream %d", stream->id);
-    status = worker_assert_expect(worker, stream->expect.body, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "EXPECT . for stream %d", stream->id);
-    status = worker_assert_expect(worker, stream->expect.dot, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "MATCH body for stream %d", stream->id);
-    status = worker_assert_match(worker, stream->match.body, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "MATCH . for stream %d", stream->id);
-    status = worker_assert_match(worker, stream->match.dot, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "GREP body for stream %d", stream->id);
-    status = worker_assert_match(worker, stream->grep.body, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-
-    errmsg = apr_psprintf(worker->pbody, "GREP . for stream %d", stream->id);
-    status = worker_assert_match(worker, stream->grep.dot, errmsg, status);
-    if (status != APR_SUCCESS) {
-      goto cleanup;
-    }
-  }
-
-cleanup:
+  /* clean-up */
   for (hi = apr_hash_first(worker->pbody, wconf->streams); hi; hi = apr_hash_next(hi)) {
     h2_stream_t *stream;
     apr_hash_this(hi, NULL, NULL, (void **)&stream);
 
-    apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream->id),
-                 APR_HASH_KEY_STRING, NULL);
-    apr_pool_destroy(stream->p);
+    if (stream->closed) {
+      apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream->id),
+                   APR_HASH_KEY_STRING, NULL);
+      apr_pool_destroy(stream->p);
+    }
   }
 
   return status;
@@ -1458,6 +1556,12 @@ apr_status_t h2_module_init(global_t *global) {
   if ((status = module_command_new(global, "H2", "_FLUSH", "",
           "TODO",
           block_H2_FLUSH)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "H2", "_DEFER", "",
+          "TODO",
+          block_H2_DEFER)) != APR_SUCCESS) {
     return status;
   }
 
