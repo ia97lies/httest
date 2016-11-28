@@ -1251,8 +1251,9 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     apr_table_add(stream->headers_out, name, val);
     i++;
   }
+
   /* jump over empty line that separates headers from data */
-  if (i++ >= apr_table_elts(parent->cache)->nelts) {
+  if (++i >= apr_table_elts(parent->cache)->nelts) {
     /* no data */
     goto submit;
   }
@@ -1285,8 +1286,8 @@ submit:
     nghttp2_nv hdr_nv;
 
     /* calculate content length (AUTO) */
-    if (with_data && strcasecmp(name, "Content-Length") == 0 && !val) {
-      val = apr_psprintf(parent->pbody, "%d", stream->data_len);
+    if (strcasecmp(name, "Content-Length") == 0 && !val) {
+      val = with_data ? apr_psprintf(parent->pbody, "%d", stream->data_len) : "0";
     }
     hdr_nv.name = name;
     hdr_nv.namelen = strlen(name);
