@@ -185,8 +185,7 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker,
   char *line = "", *copy;
   apr_table_entry_t *e;
   apr_pool_t *p;
-  int end_len;
-  int ends = 0;
+  int end_len, headers_end = 0, ends = 0;
 
   HT_POOL_CREATE(&p);
   end_len = strlen(end);
@@ -205,6 +204,14 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker,
     line = e[worker->cmd].val;
     copy = apr_pstrdup(p, line);
     copy = worker_replace_vars(worker, copy, NULL, p);
+
+    if (!headers_end && copy[1] != '_') {
+      worker_log(worker, LOG_ERR, "command can not be used within headers definition", copy);
+      return APR_EGENERAL;
+    }
+    else if (strcmp("__", copy) == 0) {
+      headers_end = 1;
+    }
 
     if (strncmp(copy, end, end_len) == 0) {
       worker_log(worker, LOG_INFO, end);
