@@ -1307,7 +1307,7 @@ submit:
   nghttp2_data_provider data_prd;
   data_prd.read_callback = h2_data_read_callback;
 
-  if (stream->data_len > 0) {
+  if (!with_data) {
     /* data is submitted later in order to support deferring */
     stream_id =
         nghttp2_submit_headers(sconf->session, 0, -1, NULL, hdrs, hdrn, parent);
