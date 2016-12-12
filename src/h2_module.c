@@ -1289,7 +1289,7 @@ submit:
   e = (apr_table_entry_t *) apr_table_elts(stream->headers_out)->elts;
   for (i = 0; i < apr_table_elts(stream->headers_out)->nelts; i++) {
     char *name = e[i].key;
-    char *val = e[i].val;
+    char *val = e[i].val ? e[i].val : "";
     nghttp2_nv hdr_nv;
 
     /* calculate content length (AUTO) */
