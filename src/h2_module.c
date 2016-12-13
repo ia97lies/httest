@@ -1251,9 +1251,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
     if (*val && apr_isspace(*val)) {
       val++; 
     }
-    if (*val == '\0') {
-      val = NULL;
-    }
+
     if (strcasecmp("host", name) == 0)  {
       sconf->authority = val;
     }
@@ -1291,11 +1289,11 @@ submit:
   e = (apr_table_entry_t *) apr_table_elts(stream->headers_out)->elts;
   for (i = 0; i < apr_table_elts(stream->headers_out)->nelts; i++) {
     char *name = e[i].key;
-    char *val = e[i].val ? e[i].val : "";
+    char *val = e[i].val;
     nghttp2_nv hdr_nv;
 
     /* calculate content length (AUTO) */
-    if (strcasecmp(name, "Content-Length") == 0 && !val) {
+    if (strcasecmp(name, "Content-Length") == 0 && *val == 0) {
       val = with_data ? apr_psprintf(parent->pbody, "%d", stream->data_len) : "0";
     }
     hdr_nv.name = name;
