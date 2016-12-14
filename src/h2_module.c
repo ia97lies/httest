@@ -125,6 +125,7 @@ typedef struct h2_wconf_t {
   int settings;
   int pings;
   int open_streams;
+  int buffer_size;
 } h2_wconf_t;
 
 static ssize_t h2_data_read_callback(nghttp2_session *session,
@@ -168,6 +169,7 @@ static h2_wconf_t *h2_get_worker_config(worker_t *worker) {
     worker_log(worker, LOG_DEBUG, "create new wconf for worker %"APR_UINT64_T_HEX_FMT, worker);
     config = apr_pcalloc(worker->pbody, sizeof(*config));
     config->streams = apr_hash_make(worker->pbody);
+    config->buffer_size = NGHTTP2_INBOUND_BUFFER_LENGTH * 10;
     module_set_config(worker->config, apr_pstrdup(worker->pbody, h2_module), config);
   }
   return config;
@@ -846,6 +848,7 @@ static int h2_on_data_chunk_recv_callback(nghttp2_session *session,
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_stream_t *stream = apr_hash_get(
       wconf->streams, apr_itoa(worker->pbody, stream_id), APR_HASH_KEY_STRING);
+  int cur = stream->data_in_read;
 
   if (!stream->data_in) {
     stream->data_in = apr_palloc(stream->p, stream->data_in_len);
@@ -855,7 +858,7 @@ static int h2_on_data_chunk_recv_callback(nghttp2_session *session,
   worker_log(worker, LOG_DEBUG, "read %d from stream %d", len, stream_id);
 
   if (stream->data_in_read + len > stream->data_in_len) {
-    worker_log(worker, LOG_ERR, "Buffer to small (%d), stop receving",
+    worker_log(worker, LOG_ERR, "Buffer to small (%d), stopping receving",
                stream->data_in_len);
 
     return NGHTTP2_ERR_CALLBACK_FAILURE; 
@@ -865,8 +868,7 @@ static int h2_on_data_chunk_recv_callback(nghttp2_session *session,
   stream->data_in_read += len;
   stream->data_in[stream->data_in_read] = 0;
 
-  worker_log(worker, LOG_INFO, "<%d %s", stream_id, stream->data_in);
-
+  worker_log(worker, LOG_INFO, "<%d %s", stream_id, &stream->data_in[cur]);
   return 0;
 }
 
@@ -904,6 +906,16 @@ static void h2_setup_callbacks(nghttp2_session_callbacks *callbacks) {
 /************************************************************************
  * Commands
  ***********************************************************************/
+apr_status_t block_H2_STREAM_BUFFER(worker_t *worker, worker_t *parent,
+                                    apr_pool_t *ptmp) {
+  h2_wconf_t *wconf = h2_get_worker_config(parent);
+  const char *size = store_get(worker->params, "1");
+
+  wconf->buffer_size = apr_atoi64(size);
+
+  return APR_SUCCESS;
+}
+
 apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
                               apr_pool_t *ptmp) {
   h2_wconf_t *wconf = h2_get_worker_config(parent);
@@ -1064,13 +1076,13 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
 }
 
 h2_stream_t* h2_get_new_stream(worker_t *worker, int stream_id) {
+  h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_stream_t *stream = apr_pcalloc(worker->pbody, sizeof(*stream));
 
   stream->id = stream_id;
   apr_pool_create(&stream->p, worker->pbody);
 
-  /* TODO  allow to set buffer size */
-  stream->data_in_len = NGHTTP2_INBOUND_BUFFER_LENGTH * 10;
+  stream->data_in_len = wconf->buffer_size;
   stream->headers_in = apr_table_make(stream->p, 20);
   stream->headers_out = apr_table_make(stream->p, 20);
   stream->events = apr_palloc(stream->p, sizeof(event_ring_t));
@@ -1547,6 +1559,12 @@ static apr_status_t h2_hook_accept(worker_t *worker, char *data) {
  ***********************************************************************/
 apr_status_t h2_module_init(global_t *global) {
   apr_status_t status;
+  if ((status = module_command_new(global, "H2", "_STREAM_BUFFER", "<size>",
+          "Set receive buffer size.",
+          block_H2_STREAM_BUFFER)) != APR_SUCCESS) {
+    return status;
+  }
+
   if ((status = module_command_new(global, "H2", "_SESSION", "<port> [<cert-file> <key-file> [<ca-cert-file>]]",
           "Connect to the remote peer and setup h2 session.\n"
           "<host>: host name or IPv4/IPv6 address (IPv6 address must be surrounded in square brackets)\n"
