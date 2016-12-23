@@ -669,6 +669,31 @@ static unsigned char * get_ntlm_hash(htntlm_t *hook) {
   return get_hash(hook, ntlmbuffer, (DES_cblock *)&chl);
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+
+static HMAC_CTX *HMAC_CTX_new(void)
+{
+	HMAC_CTX *ctx = malloc(sizeof(HMAC_CTX));
+
+	if (!ctx)
+		return NULL;
+	HMAC_CTX_init(ctx);
+	return ctx;
+}
+
+static void HMAC_CTX_reset(HMAC_CTX *ctx)
+{
+	HMAC_CTX_init(ctx);
+}
+
+static void HMAC_CTX_free(HMAC_CTX *ctx)
+{
+	memset(ctx, 0, sizeof(ctx));
+	free(ctx);
+}
+
+#endif
+
 /**
  * Create lm2 hash out of the values stored in hook
  *
@@ -689,7 +714,7 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   char *udomain;
   apr_size_t udomain_len;
   unsigned char *buf;
-  HMAC_CTX hmac;
+  HMAC_CTX *hmac;
   unsigned char challenges[16];
   uint64_t chl = ntlm_hton64(hook->challenge);
 
@@ -711,11 +736,16 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   memcpy(buf, uuser, uuser_len);
   memcpy(&buf[uuser_len], udomain, udomain_len);
 
-  HMAC_CTX_init(&hmac);
-  HMAC_Init_ex(&hmac, ntlm_hash, 16, md5, NULL);
-  HMAC_Update(&hmac, buf, uuser_len + udomain_len);
+  hmac = HMAC_CTX_new();
+  if (!hmac) {
+	  printf("HMAC_CTX_new() failed\n");
+	  exit(1);
+  }
+  HMAC_Init_ex(hmac, ntlm_hash, 16, md5, NULL);
+  HMAC_Update(hmac, buf, uuser_len + udomain_len);
   len = 16;
-  HMAC_Final(&hmac, ntlm2_hash, &len);
+  HMAC_Final(hmac, ntlm2_hash, &len);
+  HMAC_CTX_reset(hmac);
 
   /* 3. client challenge */
 
@@ -724,11 +754,11 @@ static unsigned char * get_lm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   memcpy(challenges, &chl, 8);
   memcpy(&challenges[8], &hook->client_challenge, 8);
 
-  HMAC_CTX_init(&hmac);
-  HMAC_Init_ex(&hmac, ntlm2_hash, 16, md5, NULL);
-  HMAC_Update(&hmac, challenges, 16);
+  HMAC_Init_ex(hmac, ntlm2_hash, 16, md5, NULL);
+  HMAC_Update(hmac, challenges, 16);
   len = 16;
-  HMAC_Final(&hmac, lm2_hash, &len);
+  HMAC_Final(hmac, lm2_hash, &len);
+  HMAC_CTX_free(hmac);
 
   memcpy(&lm2_hash[16], &hook->client_challenge, 8);
 
@@ -750,7 +780,7 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   apr_size_t uuser_len;
   apr_size_t udomain_len;
   const EVP_MD *md5 = EVP_md5();
-  HMAC_CTX hmac;
+  HMAC_CTX *hmac;
   unsigned char ntlm_hash[16];
   unsigned char ntlm2_hash[16];
   unsigned char blob_hash[16];
@@ -783,11 +813,16 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   memcpy(part, uuser, uuser_len);
   memcpy(&part[uuser_len], udomain, udomain_len);
   
-  HMAC_CTX_init(&hmac);
-  HMAC_Init_ex(&hmac, ntlm_hash, 16, md5, NULL);
-  HMAC_Update(&hmac, part, uuser_len + udomain_len);
+  hmac = HMAC_CTX_new();
+  if (!hmac) {
+	  printf("HMAC_CTX_new() failed\n");
+	  exit(1);
+  }
+  HMAC_Init_ex(hmac, ntlm_hash, 16, md5, NULL);
+  HMAC_Update(hmac, part, uuser_len + udomain_len);
   len = 16;
-  HMAC_Final(&hmac, ntlm2_hash, &len);
+  HMAC_Final(hmac, ntlm2_hash, &len);
+  HMAC_CTX_reset(hmac);
 
   /* 3. blob */
   blob = apr_pcalloc(hook->pool, 28 + ti_len + 4);
@@ -814,11 +849,11 @@ static unsigned char * get_ntlm2_hash(htntlm_t *hook, uint16_t *hash_len) {
   }
   memcpy(&buf[8], blob, 28 + ti_len + 4);
 
-  HMAC_CTX_init(&hmac);
-  HMAC_Init_ex(&hmac, ntlm2_hash, 16, md5, NULL);
-  HMAC_Update(&hmac, buf, 8 + 28 + ti_len + 4);
+  HMAC_Init_ex(hmac, ntlm2_hash, 16, md5, NULL);
+  HMAC_Update(hmac, buf, 8 + 28 + ti_len + 4);
   len = 16;
-  HMAC_Final(&hmac, blob_hash, &len);
+  HMAC_Final(hmac, blob_hash, &len);
+  HMAC_CTX_free(hmac);
 
   /* 5. this value concat with the blob */
   memcpy(buf, blob_hash, 16);

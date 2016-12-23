@@ -1346,10 +1346,14 @@ int main(int argc, const char *const argv[]) {
 #ifdef RSAREF
   R_malloc_init();
 #else
+#if OPENSSL_VERSION_NUMBER < 0x10100000
   CRYPTO_malloc_init();
 #endif
+#endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000
   SSL_load_error_strings();
   SSL_library_init();
+#endif
   ssl_util_thread_setup(pool);
 #endif
 

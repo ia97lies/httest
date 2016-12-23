@@ -109,6 +109,16 @@ static apr_status_t math_parse_factor(math_eval_t *hook);
 /************************************************************************
  * Local 
  ***********************************************************************/
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+
+#define sk_long_push(x, y)		SKM_sk_push(long, x, y)
+#define sk_long_pop(x)			SKM_sk_pop(long, x)
+#define sk_long_new_null()		SKM_sk_new_null(long)
+
+#else
+DEFINE_STACK_OF(long);
+#endif
+
 /**
  * skip spaces
  * @param hook IN eval instance
@@ -317,7 +327,7 @@ static apr_status_t math_parse_factor(math_eval_t *hook) {
   case MATH_NUM:
     number = apr_pcalloc(hook->pool, sizeof(*number));
     *number = hook->last_number * sign;
-    SKM_sk_push(long, hook->stack, number);
+    sk_long_push(hook->stack, number);
     math_get_token(hook);
     return APR_SUCCESS;
     break;
@@ -367,8 +377,8 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
       return status;
     }
 
-    right = SKM_sk_pop(long, hook->stack);
-    left = SKM_sk_pop(long, hook->stack);
+    right = sk_long_pop(hook->stack);
+    left = sk_long_pop(hook->stack);
     result = apr_pcalloc(hook->pool, sizeof(*result));
     switch (token) {
     case MATH_MUL:
@@ -388,7 +398,7 @@ static apr_status_t math_parse_term(math_eval_t *hook) {
     default:
       break;
     }
-    SKM_sk_push(long, hook->stack, result);
+    sk_long_push(hook->stack, result);
  
     token = math_peek_token(hook);
   }
@@ -424,8 +434,8 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
       return status;
     }
 
-    right = SKM_sk_pop(long, hook->stack);
-    left = SKM_sk_pop(long, hook->stack);
+    right = sk_long_pop(hook->stack);
+    left = sk_long_pop(hook->stack);
     result = apr_pcalloc(hook->pool, sizeof(*result));
     switch (token) {
     case MATH_ADD:
@@ -437,7 +447,7 @@ static apr_status_t math_parse_expression(math_eval_t *hook) {
     default:
       break;
     }
-    SKM_sk_push(long, hook->stack, result);
+    sk_long_push(hook->stack, result);
 
     token = math_peek_token(hook);
   }
@@ -474,8 +484,8 @@ static apr_status_t math_parse_equalit(math_eval_t *hook) {
       return status;
     }
 
-    right = SKM_sk_pop(long, hook->stack);
-    left = SKM_sk_pop(long, hook->stack);
+    right = sk_long_pop(hook->stack);
+    left = sk_long_pop(hook->stack);
     result = apr_pcalloc(hook->pool, sizeof(*result));
     switch (token) {
     case MATH_EQ:
@@ -499,7 +509,7 @@ static apr_status_t math_parse_equalit(math_eval_t *hook) {
     default:
       break;
     }
-    SKM_sk_push(long, hook->stack, result);
+    sk_long_push(hook->stack, result);
   }
   return APR_SUCCESS;
 }
@@ -512,7 +522,7 @@ static apr_status_t math_parse_equalit(math_eval_t *hook) {
 static apr_status_t math_parse(math_eval_t * hook, long *val) {
   long *result;
   apr_status_t status = math_parse_equalit(hook);
-  result = SKM_sk_pop(long, hook->stack);
+  result = sk_long_pop(hook->stack);
   *val = *result;
   return status;
 }
@@ -530,7 +540,7 @@ static apr_status_t math_parse(math_eval_t * hook, long *val) {
 math_eval_t *math_eval_make(apr_pool_t * pool) {
   math_eval_t *hook = apr_pcalloc(pool, sizeof(*hook));
   hook->pool = pool; 
-  hook->stack = SKM_sk_new_null(long);
+  hook->stack = sk_long_new_null();
   hook->delimiter = apr_pstrdup(pool, "+-*/=<>!()");
 
   return hook;

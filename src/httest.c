@@ -80,6 +80,7 @@
 #include "tcp_module.h"
 #include "body.h"
 
+
 /************************************************************************
  * Defines 
  ***********************************************************************/
@@ -491,6 +492,17 @@ int success = 1;
 /************************************************************************
  * Private 
  ***********************************************************************/
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+
+#define sk_char_new(x)		SKM_sk_new(char, x)
+#define sk_char_push(x, y)	SKM_sk_push(char, x, y)
+#define sk_char_sort(x)		SKM_sk_sort(char, x)
+#define sk_char_pop(x)		SKM_sk_pop(char, x)
+
+#else
+
+DEFINE_STACK_OF(char);
+#endif
 
 static void worker_set_global_error(worker_t *worker); 
 static apr_status_t worker_interpret(worker_t * worker, worker_t *parent, 
@@ -2374,7 +2386,7 @@ static void show_commands(apr_pool_t *p, global_t *global) {
   char *line;
 
   fprintf(stdout, "Global commands");
-  sorted = SKM_sk_new(char, commands_compare);
+  sorted = sk_char_new(commands_compare);
   for (i = 0; global_commands[i].name; i++) {
     if (global_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
       line = apr_psprintf(p, "%s *DEPRECIATED*", 
@@ -2392,19 +2404,19 @@ static void show_commands(apr_pool_t *p, global_t *global) {
       line = apr_psprintf(p, "%s %s", global_commands[i].name, 
 			  global_commands[i].syntax);
     }
-    SKM_sk_push(char, sorted, line);
+    sk_char_push(sorted, line);
   }
-  SKM_sk_sort(char, sorted);
+  sk_char_sort(sorted);
 
-  line = SKM_sk_pop(char, sorted);  
+  line = sk_char_pop(sorted);
   while (line) {
     fprintf(stdout, "\n");
     fprintf(stdout, "\t%s", line);
-    line = SKM_sk_pop(char, sorted);  
+    line = sk_char_pop(sorted);
   }
 
   fprintf(stdout, "\n\nLocal commands");
-  sorted = SKM_sk_new(char, commands_compare);
+  sorted = sk_char_new(commands_compare);
   for (i = 0; local_commands[i].name; i++) {
     if (local_commands[i].flags & COMMAND_FLAGS_DEPRECIATED) {
       line = apr_psprintf(p, "*DEPRECIATED* %s", 
@@ -2422,19 +2434,19 @@ static void show_commands(apr_pool_t *p, global_t *global) {
       line = apr_psprintf(p, "%s %s", local_commands[i].name, 
 			  local_commands[i].syntax);
     }
-    SKM_sk_push(char, sorted, line);
+    sk_char_push(sorted, line);
   }
-  SKM_sk_sort(char, sorted);
+  sk_char_sort(sorted);
 
-  line = SKM_sk_pop(char, sorted);  
+  line = sk_char_pop(sorted);
   while (line) {
     fprintf(stdout, "\n");
     fprintf(stdout, "\t%s", line);
-    line = SKM_sk_pop(char, sorted);  
+    line = sk_char_pop(sorted);
   }
 
   fprintf(stdout, "\n\nModule commands");
-  sorted = SKM_sk_new(char, commands_compare);
+  sorted = sk_char_new(commands_compare);
   {
     apr_hash_index_t *hi;
     const char *module;
@@ -2457,19 +2469,19 @@ static void show_commands(apr_pool_t *p, global_t *global) {
               line = apr_psprintf(p, "%s:%s %s", module, command, 
                       worker->short_desc?worker->short_desc:"");
             }
-	    SKM_sk_push(char, sorted, line);
+	    sk_char_push(sorted, line);
 	  }
 	}
       }
     }
   }
-  SKM_sk_sort(char, sorted);
+  sk_char_sort(sorted);
 
-  line = SKM_sk_pop(char, sorted);  
+  line = sk_char_pop(sorted);
   while (line) {
     fprintf(stdout, "\n");
     fprintf(stdout, "\t%s", line);
-    line = SKM_sk_pop(char, sorted);  
+    line = sk_char_pop(sorted);
   }
 
   fprintf(stdout, "\n\n(Get detailed help with --help-command <command>)\n");

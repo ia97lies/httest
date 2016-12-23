@@ -735,16 +735,20 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = SSLv23_client_method();
   }
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 #ifndef OPENSSL_NO_SSL2 
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
     config->meth = SSLv2_client_method();
   }
 #endif
+#endif
+#ifndef OPENSSL_NO_SSL3_METHOD
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
     config->meth = SSLv3_client_method();
   }
+#endif
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
     config->meth = TLSv1_client_method();
@@ -782,16 +786,20 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
     is_ssl = 1;
     config->meth = SSLv23_server_method();
   } 
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 #ifndef OPENSSL_NO_SSL2
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
     config->meth = SSLv2_server_method();
   }
 #endif
+#endif
+#ifndef OPENSSL_NO_SSL3_METHOD
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
     config->meth = SSLv3_server_method();
   }
+#endif
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
     config->meth = TLSv1_server_method();
@@ -1331,8 +1339,12 @@ static apr_status_t block_SSL_GET_SESSION_ID(worker_t * worker, worker_t *parent
   sess = SSL_get_session(sconfig->ssl);
 
   if (sess) {
-    val = apr_pcalloc(ptmp, apr_base64_encode_len(sess->session_id_length));
-    apr_base64_encode_binary(val, sess->session_id, sess->session_id_length);
+    const unsigned char *ses_val;
+    unsigned int ses_len;
+
+    ses_val = SSL_SESSION_get_id(sess, &ses_len);
+    val = apr_pcalloc(ptmp, apr_base64_encode_len(ses_len));
+    apr_base64_encode_binary(val, ses_val, ses_len);
 
     worker_var_set(parent, copy, val);
   }
@@ -1406,7 +1418,10 @@ static apr_status_t block_SSL_RENEG_CERT(worker_t * worker, worker_t *parent, ap
       return APR_EACCES;
     }
     worker_ssl_handshake(worker);
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+    /* removed as of 0131df49ee1f ("Remove the SSL state variable") */
     sconfig->ssl->state=SSL_ST_ACCEPT;
+#endif
     worker_ssl_handshake(worker);
 
     config->cert = SSL_get_peer_certificate(sconfig->ssl);
@@ -2021,7 +2036,9 @@ apr_status_t ssl_module_init(global_t *global) {
 #ifdef RSAREF
   R_malloc_init();
 #else
+#if OPENSSL_VERSION_NUMBER < 0x10100000
   CRYPTO_malloc_init();
+#endif
 #endif
   SSL_load_error_strings();
   SSL_library_init();

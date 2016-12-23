@@ -68,15 +68,61 @@
 #ifndef NUL
 #define NUL '\0'
 #endif
-#define X509_NAME_get_entries(xs)         (xs->entries)
+
 #define X509_REVOKED_get_serialNumber(xs) (xs->serialNumber)
-#define X509_NAME_ENTRY_get_data_ptr(xs) (xs->value->data)
-#define X509_NAME_ENTRY_get_data_len(xs) (xs->value->length)
-#define X509_get_signature_algorithm(xs) (xs->cert_info->signature->algorithm)
-#define X509_get_key_algorithm(xs)       (xs->cert_info->key->algor->algorithm)
 #define strEQn(s1,s2,n)  (strncmp(s1,s2,n)     == 0)
 #define strcEQ(s1,s2)    (strcasecmp(s1,s2)    == 0)
 #define strcEQn(s1,s2,n) (strncasecmp(s1,s2,n) == 0)
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+
+#define X509_get_signature_algorithm(xs) (xs->cert_info->signature->algorithm)
+#define X509_get_key_algorithm(xs)       (xs->cert_info->key->algor->algorithm)
+#define X509_NAME_ENTRY_get_data_ptr(xs) (xs->value->data)
+#define X509_NAME_ENTRY_get_data_len(xs) (xs->value->length)
+
+#else
+
+static const ASN1_OBJECT *X509_get_signature_algorithm(const X509 *x)
+{
+	const X509_ALGOR *algor;
+	const ASN1_OBJECT *paobj;
+
+	algor = X509_get0_tbs_sigalg(x);
+	X509_ALGOR_get0(&paobj, NULL, NULL, algor);
+	return paobj;
+}
+
+static const ASN1_OBJECT *X509_get_key_algorithm(const X509 *x)
+{
+	X509_PUBKEY *pubkey;
+	X509_ALGOR *algor;
+	const ASN1_OBJECT *paobj;
+
+	pubkey = X509_get_X509_PUBKEY(x);
+	X509_PUBKEY_get0_param(NULL, NULL, NULL, &algor, pubkey);
+	X509_ALGOR_get0(&paobj, NULL, NULL, algor);
+	return paobj;
+}
+
+static inline const unsigned char *
+X509_NAME_ENTRY_get_data_ptr(const X509_NAME_ENTRY *ne)
+{
+	ASN1_STRING *str;
+
+	str = X509_NAME_ENTRY_get_data(ne);
+	return ASN1_STRING_get0_data(str);
+}
+
+static inline int X509_NAME_ENTRY_get_data_len(const X509_NAME_ENTRY *ne)
+{
+	ASN1_STRING *str;
+
+	str = X509_NAME_ENTRY_get_data(ne);
+	return ASN1_STRING_length(str);
+}
+
+#endif
 
 /************************************************************************
  * Forward declaration 
@@ -545,18 +591,16 @@ static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, const 
     for (i = 0; ssl_var_lookup_ssl_cert_dn_rec[i].name != NULL; i++) {
         if (strEQn(var, ssl_var_lookup_ssl_cert_dn_rec[i].name, varlen)
             && strlen(ssl_var_lookup_ssl_cert_dn_rec[i].name) == varlen) {
-            for (j = 0; j < sk_X509_NAME_ENTRY_num((STACK_OF(X509_NAME_ENTRY) *)
-                                                 X509_NAME_get_entries(xsname));
-                 j++) {
-                xsne = sk_X509_NAME_ENTRY_value((STACK_OF(X509_NAME_ENTRY) *)
-                                             X509_NAME_get_entries(xsname), j);
+            for (j = 0; j < X509_NAME_entry_count(xsname); j++) {
+
+                xsne = X509_NAME_get_entry(xsname, j);
 
                 n =OBJ_obj2nid((ASN1_OBJECT *)X509_NAME_ENTRY_get_object(xsne));
 
                 if (n == ssl_var_lookup_ssl_cert_dn_rec[i].nid && idx-- == 0) {
-                    unsigned char *data = X509_NAME_ENTRY_get_data_ptr(xsne);
+                    const unsigned char *data = X509_NAME_ENTRY_get_data_ptr(xsne);
                     /* cast needed from unsigned char to char */
-                    result = apr_pstrmemdup(p, (char *)data,
+                    result = apr_pstrmemdup(p, data,
                                             X509_NAME_ENTRY_get_data_len(xsne));
 #if APR_CHARSET_EBCDIC
                     ap_xlate_proto_from_ascii(result, X509_NAME_ENTRY_get_data_len(xsne));
@@ -661,7 +705,6 @@ static char *ssl_var_lookup_ssl_cert_PEM(apr_pool_t *p, X509 *xs)
 static void extract_dn(apr_table_t *t, apr_hash_t *nids, const char *pfx, 
                        X509_NAME *xn, apr_pool_t *p)
 {
-    STACK_OF(X509_NAME_ENTRY) *ents = X509_NAME_get_entries(xn);
     X509_NAME_ENTRY *xsne;
     apr_hash_t *count;
     int i, nid;
@@ -671,10 +714,10 @@ static void extract_dn(apr_table_t *t, apr_hash_t *nids, const char *pfx,
     count = apr_hash_make(p);
 
     /* For each RDN... */
-    for (i = 0; i < sk_X509_NAME_ENTRY_num(ents); i++) {
+    for (i = 0; i < X509_NAME_entry_count(xn); i++) {
          const char *tag;
 
-         xsne = sk_X509_NAME_ENTRY_value(ents, i);
+         xsne = X509_NAME_get_entry(xn, i);
 
          /* Retrieve the nid, and check whether this is one of the nids
           * which are to be extracted. */
@@ -682,7 +725,7 @@ static void extract_dn(apr_table_t *t, apr_hash_t *nids, const char *pfx,
 
          tag = apr_hash_get(nids, &nid, sizeof nid);
          if (tag) {
-             unsigned char *data = X509_NAME_ENTRY_get_data_ptr(xsne);
+             const unsigned char *data = X509_NAME_ENTRY_get_data_ptr(xsne);
              const char *key;
              int *dup;
              char *value;
@@ -701,7 +744,7 @@ static void extract_dn(apr_table_t *t, apr_hash_t *nids, const char *pfx,
              }
              
              /* cast needed from 'unsigned char *' to 'char *' */
-             value = apr_pstrmemdup(p, (char *)data,
+             value = apr_pstrmemdup(p, data,
                                     X509_NAME_ENTRY_get_data_len(xsne));
 #if APR_CHARSET_EBCDIC
              ap_xlate_proto_from_ascii(value, X509_NAME_ENTRY_get_data_len(xsne));

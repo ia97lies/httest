@@ -1,5 +1,8 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.18
+  *) all: A patch from debian maintainers to make OpenSSL 1.1.0 working.
+
 Changes with httest 2.4.17
   *) httest: Bugfix perf_module can lead to segfaults, it is now optional in 
              the configure script. If you relay on a stable httest just do not
