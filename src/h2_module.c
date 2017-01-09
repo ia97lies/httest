@@ -1205,7 +1205,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   h2_sconf_t *sconf = h2_get_socket_config(parent);
   const char *method = store_get(worker->params, "1");
   const char *path = store_get(worker->params, "2");
-  int i = 0, j, hdrn = 0, with_data = 0;
+  int i = 0, j, hdrn = 0, with_data = 0, conlen = 0;
   apr_table_entry_t *e; 
   apr_status_t status;
   h2_stream_t *stream;
@@ -1307,6 +1307,9 @@ submit:
     /* calculate content length (AUTO) */
     if (strcasecmp(name, "Content-Length") == 0 && *val == 0) {
       val = with_data ? apr_psprintf(parent->pbody, "%d", stream->data_len) : "0";
+      conlen = 1;
+    } else if (strcasecmp(name, "Content-Length") == 0 && *val != 0) {
+      conlen = 1;
     }
     hdr_nv.name = name;
     hdr_nv.namelen = strlen(name);
@@ -1316,10 +1319,7 @@ submit:
     hdrs[hdrn++] = hdr_nv;
   }
 
-  nghttp2_data_provider data_prd;
-  data_prd.read_callback = h2_data_read_callback;
-
-  if (stream->data_len > 0) {
+  if (stream->data_len > 0 || conlen) {
     /* data is submitted later in order to support deferring */
     stream_id =
         nghttp2_submit_headers(sconf->session, 0, -1, NULL, hdrs, hdrn, parent);
