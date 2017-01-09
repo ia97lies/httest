@@ -1316,9 +1316,6 @@ submit:
     hdrs[hdrn++] = hdr_nv;
   }
 
-  nghttp2_data_provider data_prd;
-  data_prd.read_callback = h2_data_read_callback;
-
   if (stream->data_len > 0) {
     /* data is submitted later in order to support deferring */
     stream_id =
