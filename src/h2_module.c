@@ -830,7 +830,7 @@ static int h2_on_header_callback(nghttp2_session *session,
       h2_check_content_length(stream, name, value);
 
       if (!(action & H2_RES_HEADER_FILTER)) {
-        apr_table_set(stream->headers_in, name, value);
+        apr_table_add(stream->headers_in, name, value);
         worker_log(worker, LOG_INFO, "<%d %s: %s", stream->id, name, value);
       }
 
