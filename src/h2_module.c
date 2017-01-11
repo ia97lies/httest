@@ -1053,7 +1053,10 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
     }
   }
 
-  if (stream->data_len - stream->data_sent <= length) {
+  if (stream->data_len == 0) {
+    len = 0;
+    goto eofcheck;
+  } else if (stream->data_len - stream->data_sent <= length) {
     len = stream->data_len - stream->data_sent;
     memcpy(buf, &stream->data[stream->data_sent], len);
   } else {
@@ -1063,10 +1066,12 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
 
   buf[len] = 0;
   stream->data_sent += len;
+
   worker_log(worker, LOG_INFO, ">%d %s", stream_id, buf);
   worker_log(worker, LOG_DEBUG, "send %u bytes (%u/%u)", len, stream->data_sent,
              stream->data_len);
 
+eofcheck:
   if (APR_RING_EMPTY(stream->events, _event_t, link) &&
       stream->data_len == stream->data_sent) {
     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
@@ -1213,6 +1218,9 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   worker_t *body;
   nghttp2_nv *hdrs;
 
+  nghttp2_data_provider data_prd;
+  data_prd.read_callback = h2_data_read_callback;
+
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
     return status;
   }
@@ -1322,7 +1330,7 @@ submit:
         nghttp2_submit_headers(sconf->session, 0, -1, NULL, hdrs, hdrn, parent);
   } else {
     stream_id =
-        nghttp2_submit_request(sconf->session, NULL, hdrs, hdrn, NULL, parent);
+        nghttp2_submit_request(sconf->session, NULL, hdrs, hdrn, &data_prd, parent);
   }
 
   if (stream_id < 0) {
