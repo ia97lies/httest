@@ -717,6 +717,8 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       worker_log(
           worker, LOG_INFO, "< RST_STREAM [error=%s]",
           h2_get_name_of(h2_error_code_array, frame->rst_stream.error_code));
+      stream->closed = 1;
+      wconf->open_streams--;
       break;
     case NGHTTP2_GOAWAY: {
       char *reason = NULL;
