@@ -703,6 +703,8 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       if (frame->hd.flags == NGHTTP2_FLAG_END_STREAM) {
         worker_log(worker, LOG_DEBUG, "< END_STREAM");
         rv = check_data(worker, stream);
+        stream->closed = 1;
+        wconf->open_streams--;
       }
       else {
         worker_log(worker, LOG_DEBUG, "< DATA");
@@ -779,8 +781,6 @@ static int h2_on_stream_close_callback(nghttp2_session *session,
   int rv;
 
   worker_log(worker, LOG_DEBUG, "stream %d closed", stream->id);
-  stream->closed = 1;
-  wconf->open_streams--;
 
   return 0;
 }
