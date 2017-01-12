@@ -98,6 +98,8 @@ typedef struct h2_stream_s {
   apr_size_t data_in_len;
   apr_size_t data_in_read;
   apr_size_t data_in_expect;
+
+  int reset_expect;
   
   apr_table_t *headers_in;
   apr_table_t *headers_out;
@@ -116,6 +118,7 @@ typedef struct h2_sconf_s {
 } h2_sconf_t;
 
 typedef struct h2_wconf_t {
+  h2_stream_t *current_stream;
   apr_hash_t *streams;
 #define H2_STATE_CLOSED       0x00
 #define H2_STATE_INIT         0x01
@@ -703,6 +706,12 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       if (frame->hd.flags == NGHTTP2_FLAG_END_STREAM) {
         worker_log(worker, LOG_DEBUG, "< END_STREAM");
         rv = check_data(worker, stream);
+
+        if (stream->reset_expect) {
+          worker_log(worker, LOG_ERR, "EXPECT RST_STREAM for stream %d",
+                     stream->id);
+          rv = NGHTTP2_ERR_CALLBACK_FAILURE;
+        }
         stream->closed = 1;
         wconf->open_streams--;
       }
@@ -719,7 +728,10 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
           h2_get_name_of(h2_error_code_array, frame->rst_stream.error_code));
       stream->closed = 1;
       wconf->open_streams--;
-      rv = NGHTTP2_ERR_CALLBACK_FAILURE;
+
+      if (!stream->reset_expect) {
+        rv = NGHTTP2_ERR_CALLBACK_FAILURE;
+      }
       break;
     case NGHTTP2_GOAWAY: {
       char *reason = NULL;
@@ -1236,6 +1248,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   worker_log(parent, LOG_DEBUG, "new stream %d", stream_id);
 
   stream = h2_get_new_stream(parent, stream_id);
+  wconf->current_stream = stream;
   status = body->interpret(body, parent, NULL);
 
   /* copy expectations */
@@ -1344,6 +1357,7 @@ submit:
   apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream_id),
                APR_HASH_KEY_STRING, stream);
   wconf->open_streams++;
+  wconf->current_stream = stream;
 
 on_error:
 
@@ -1359,9 +1373,7 @@ apr_status_t block_H2_EXPECT(worker_t *worker, worker_t *parent,
   const char *cat = store_get(worker->params, "1");
   const char *expect = store_get(worker->params, "2");
 
-  int stream_id = nghttp2_session_get_next_stream_id(sconf->session);
-  h2_stream_t *stream = apr_hash_get(
-      wconf->streams, apr_itoa(worker->pbody, stream_id), APR_HASH_KEY_STRING);
+  h2_stream_t *stream = wconf->current_stream;
 
   if (!stream) {
     worker_log(worker, LOG_ERR, "Invalid scope for command");
@@ -1370,6 +1382,8 @@ apr_status_t block_H2_EXPECT(worker_t *worker, worker_t *parent,
 
   if (strcmp(cat, "bodysize") == 0) {
     stream->data_in_expect = apr_atoi64(expect);
+  } else if (strcmp(cat, "rst_stream") == 0) {
+    stream->reset_expect = 1;
   } else {
     worker_log(worker, LOG_ERR, "Invalid expectation");
     return APR_EINVAL;
