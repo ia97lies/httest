@@ -129,6 +129,8 @@ typedef struct h2_wconf_t {
   int pings;
   int open_streams;
   int buffer_size;
+  int goaway;
+  char *goaway_expect;
 } h2_wconf_t;
 
 static ssize_t h2_data_read_callback(nghttp2_session *session,
@@ -637,9 +639,15 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
         opaque[frame->goaway.opaque_data_len] = 0;
         reason = apr_psprintf(p, " reason=%s", opaque);
       }
+
+      wconf->goaway = 1;
       worker_log(worker, LOG_INFO, "< GOAWAY [error=%s%s%s",
                  h2_get_name_of(h2_error_code_array, frame->goaway.error_code),
                  reason ? reason : "", "]");
+
+      if (wconf->goaway_expect && strcasecmp(reason, wconf->goaway_expect)) {
+        rv = NGHTTP2_ERR_CALLBACK_FAILURE;
+      }
     } break;
     case NGHTTP2_SETTINGS:
       if (frame->hd.flags == NGHTTP2_FLAG_ACK) {
@@ -1357,10 +1365,9 @@ submit:
   apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream_id),
                APR_HASH_KEY_STRING, stream);
   wconf->open_streams++;
-  wconf->current_stream = stream;
+  wconf->current_stream = NULL;
 
 on_error:
-
   worker_body_end(body, parent);
   return status;
 }
@@ -1369,15 +1376,23 @@ apr_status_t block_H2_EXPECT(worker_t *worker, worker_t *parent,
                              apr_pool_t *ptmp) {
   h2_sconf_t *sconf = h2_get_socket_config(parent);
   h2_wconf_t *wconf = h2_get_worker_config(parent);
-
   const char *cat = store_get(worker->params, "1");
   const char *expect = store_get(worker->params, "2");
-
   h2_stream_t *stream = wconf->current_stream;
+  apr_status_t status = APR_SUCCESS;
 
+  /* session expectations */
+  if (strcmp(cat, "goaway") == 0) {
+    wconf->goaway_expect = expect;
+    status = APR_SUCCESS;
+    goto exit;
+  }
+
+  /* stream expectations */
   if (!stream) {
-    worker_log(worker, LOG_ERR, "Invalid scope for command");
-    return APR_EINVAL;
+    worker_log(worker, LOG_ERR, "Invalid scope for command, no submitted streams");
+    status = APR_EINVAL;
+    goto exit;
   }
 
   if (strcmp(cat, "bodysize") == 0) {
@@ -1386,10 +1401,11 @@ apr_status_t block_H2_EXPECT(worker_t *worker, worker_t *parent,
     stream->reset_expect = 1;
   } else {
     worker_log(worker, LOG_ERR, "Invalid expectation");
-    return APR_EINVAL;
+    status = APR_EINVAL;
   }
 
-  return APR_SUCCESS;
+exit:
+  return status;
 }
 
 apr_status_t block_H2_PING(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
@@ -1448,30 +1464,38 @@ apr_status_t block_H2_GOAWAY(worker_t *worker, worker_t *parent, apr_pool_t *ptm
 
 apr_status_t block_H2_WAIT(worker_t *worker, worker_t *parent,
                            apr_pool_t *ptmp) {
-  apr_status_t status;
-  h2_sconf_t *sconf = h2_get_socket_config(parent); 
   h2_wconf_t *wconf = h2_get_worker_config(parent);
+  apr_status_t status;
   apr_hash_index_t *hi;
 
   if ((status = h2_open_session(parent)) != APR_SUCCESS) {
     return status;
   }
 
-  if ((status = poll(parent)) != APR_SUCCESS) {
-    return status;
+  status = poll(parent);
+
+  if (wconf->goaway_expect && !wconf->goaway) {
+    worker_log(worker, LOG_ERR, "EXPECT GOAWAY [reason=%s]", wconf->goaway_expect);
+    status = APR_EGENERAL;
+  } else if (wconf->goaway_expect && wconf->goaway) {
+    status = APR_SUCCESS;
+  } else if (status != APR_SUCCESS) {
+    worker_log(worker, LOG_ERR, "error at reading from remote");
   }
 
-  /* clean-up */
+cleanup:
   for (hi = apr_hash_first(worker->pbody, wconf->streams); hi; hi = apr_hash_next(hi)) {
     h2_stream_t *stream;
     apr_hash_this(hi, NULL, NULL, (void **)&stream);
 
     if (stream->closed) {
-      apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream->id),
-                   APR_HASH_KEY_STRING, NULL);
+      worker_log(worker, LOG_DEBUG, "clean-up stream %p", stream);
       apr_pool_destroy(stream->p);
+      apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream->id),
+                         APR_HASH_KEY_STRING, NULL);
     }
   }
+  wconf->goaway_expect = NULL;
 
   return status;
 }
