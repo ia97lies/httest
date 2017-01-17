@@ -450,6 +450,8 @@ static apr_status_t h2_open_session(worker_t *worker) {
   return APR_SUCCESS;
 }
 
+#define WANT_READ_WRITE(s) nghttp2_session_want_read(s) || nghttp2_session_want_write(s)
+
 static apr_status_t poll(worker_t *worker) {
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_sconf_t *sconf = h2_get_socket_config(worker);
@@ -457,7 +459,7 @@ static apr_status_t poll(worker_t *worker) {
   apr_pollfd_t pollfd;
   apr_status_t status;
   apr_pool_t *p;
-  int loop = 1;
+  int poll;
   int rv;
 
   apr_pool_create(&p, NULL);
@@ -479,8 +481,13 @@ static apr_status_t poll(worker_t *worker) {
     return status;
   }
 
-  while ((nghttp2_session_want_read(sconf->session) ||
-          nghttp2_session_want_write(sconf->session)) && loop) {
+  poll = WANT_READ_WRITE(sconf->session);
+
+  if (!poll) {
+    return APR_EGENERAL;
+  }
+
+  while (poll) {
     const apr_pollfd_t *result;
     apr_int32_t num;
 
@@ -520,7 +527,7 @@ static apr_status_t poll(worker_t *worker) {
       return APR_EGENERAL;
     }
 
-    loop = (wconf->settings || wconf->open_streams || wconf->pings);
+    poll = (wconf->settings || wconf->open_streams || wconf->pings);
 
     worker_log(worker, LOG_DEBUG,
                "next poll cycle: settings=%d open_streams=%d pings=%d",
