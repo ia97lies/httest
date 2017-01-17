@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.19
+  *) scripts: a bugfix for the pentest suite to work properly with apaches 2.4 
+              strict http mode.
+
 Changes with httest 2.4.18
   *) all: A patch from debian maintainers to make OpenSSL 1.1.0 working.
 
