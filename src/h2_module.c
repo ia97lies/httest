@@ -1508,14 +1508,19 @@ cleanup:
 apr_status_t h2_hook_pre_close(worker_t *worker) {
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_sconf_t *sconf = h2_get_socket_config(worker); 
-  apr_status_t status;
+  apr_status_t status = APR_SUCCESS;
   int rv;
 
-  /* if (!sconf || !sconf->session) { */
-  /*   return APR_SUCCESS; */
-  /* } */
-  /*  */
-  /* wconf->state = H2_STATE_CLOSED; */
+  if (!sconf || !sconf->session) {
+    goto exit;
+  }
+  if (!wconf) {
+    goto exit;
+  }
+  wconf->state = H2_STATE_CLOSED;
+  module_set_config(worker->config, apr_pstrdup(worker->pbody, h2_module),
+                    NULL);
+
   /* rv = nghttp2_submit_goaway( */
   /*     sconf->session, NGHTTP2_FLAG_NONE, */
   /*     nghttp2_session_get_last_proc_stream_id(sconf->session), NGHTTP2_NO_ERROR, */
@@ -1527,7 +1532,8 @@ apr_status_t h2_hook_pre_close(worker_t *worker) {
   /*  */
   /* return poll(worker); */
 
-  return APR_SUCCESS;
+exit:
+  return status;
 }
 
 int select_proto(const unsigned char **out, unsigned char *outlen,
