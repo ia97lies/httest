@@ -61,10 +61,10 @@ enum { IO_NONE, WANT_READ, WANT_WRITE };
 /* as defined in nghttp2_session.h */
 #define NGHTTP2_INBOUND_BUFFER_LENGTH 16384
 
-#define MAKE_NV3(NAME, VALUE, VALUELEN)                                        \
-  {                                                                            \
-    (uint8_t *)NAME, (uint8_t *)VALUE, sizeof(NAME) - 1, VALUELEN,             \
-        NGHTTP2_NV_FLAG_NONE                                                   \
+#define MAKE_NV(NAME, NAMELEN, VALUE, VALUELEN)                       \
+  {                                                                   \
+    (uint8_t *)NAME, (uint8_t *)VALUE, NAMELEN, VALUELEN,             \
+        NGHTTP2_NV_FLAG_NONE                                          \
   }
 
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
@@ -1328,10 +1328,10 @@ submit:
   apr_table_clear(parent->cache);
 
   hdrs = apr_pcalloc(parent->pbody, sizeof(*hdrs) * (4 + apr_table_elts(stream->headers_out)->nelts));
-  nghttp2_nv meth_nv = MAKE_NV3(":method", method, strlen(method)); 
-  nghttp2_nv path_nv = MAKE_NV3(":path", path, strlen(path));
-  nghttp2_nv scheme_nv = MAKE_NV3(":scheme", "https", 5);
-  nghttp2_nv auth_nv = MAKE_NV3(":authority", sconf->authority, strlen(sconf->authority));
+  nghttp2_nv meth_nv = MAKE_NV(":method", 7, method, strlen(method)); 
+  nghttp2_nv path_nv = MAKE_NV(":path", 5, path, strlen(path));
+  nghttp2_nv scheme_nv = MAKE_NV(":scheme", 7, "https", 5);
+  nghttp2_nv auth_nv = MAKE_NV(":authority", 10, sconf->authority, strlen(sconf->authority));
   hdrs[hdrn++] = meth_nv;
   hdrs[hdrn++] = path_nv;
   hdrs[hdrn++] = scheme_nv;
@@ -1341,17 +1341,12 @@ submit:
   for (i = 0; i < apr_table_elts(stream->headers_out)->nelts; i++) {
     char *name = e[i].key;
     char *val = e[i].val;
-    nghttp2_nv hdr_nv;
 
     /* calculate content length (AUTO) */
     if (strcasecmp(name, "Content-Length") == 0 && *val == 0) {
       val = with_data ? apr_psprintf(parent->pbody, "%d", stream->data_len) : "0";
     }
-    hdr_nv.name = name;
-    hdr_nv.namelen = strlen(name);
-    hdr_nv.value = val;
-    hdr_nv.valuelen = strlen(val);
-
+    nghttp2_nv hdr_nv = MAKE_NV(name, strlen(name), val, strlen(val));
     hdrs[hdrn++] = hdr_nv;
   }
 
