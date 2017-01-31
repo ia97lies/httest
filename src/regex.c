@@ -29,7 +29,7 @@
 #include <config.h>
 #endif
 
-#include <pcre/pcre.h>
+#include <pcre.h>
 
 #include <apr.h>
 #include <apr_strings.h>
