@@ -13,9 +13,13 @@ function auto_all() {
   autoheader
   echo "> automake -i -f -a"
   automake -i -f -a
-  echo "> libtoolize"
-  # if not found on mac, try glibtoolize
-  libtoolize
+  if hash libtoolize 2>/dev/null; then
+    echo "> libtoolize"
+    libtoolize
+  else
+    echo "> glibtoolize"
+    glibtoolize
+  fi
 }
 
 if [ ! -d config ]; then mkdir config; fi
