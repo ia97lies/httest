@@ -946,39 +946,18 @@ apr_status_t block_H2_STREAM_BUFFER(worker_t *worker, worker_t *parent,
   return APR_SUCCESS;
 }
 
-apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
-                              apr_pool_t *ptmp) {
+static apr_status_t h2_setup(worker_t *worker, worker_t *parent) {
   h2_wconf_t *wconf = h2_get_worker_config(parent);
   nghttp2_session_callbacks *callbacks;
-  const char *host = store_get(worker->params, "1");
-  const char *port = store_get(worker->params, "2");
-  const char *cert = store_get(worker->params, "3");
-  const char *key = store_get(worker->params, "4");
-  const char *cacert = store_get(worker->params, "5");
-  const char *data;
   h2_sconf_t *sconf;
-  int rv;
-
-  data = apr_psprintf(ptmp, "%s %s%s", host,
-                      strstr(port, "SSL") ? "" : "SSL:", port);
-  if (cert && key) {
-    data = apr_pstrcat(ptmp, data, " ", cert, " ", key, NULL);
-  }
-  if (cacert) {
-    data = apr_pstrcat(ptmp, data, " ", cacert, NULL);
-  }
-
-  wconf->state |= H2_STATE_INIT;
-  rv = command_REQ(NULL, parent, (char *)data, parent->pbody);
-
-  if (rv != 0) {
-    return APR_EGENERAL;
-  }
-  wconf->state |= H2_STATE_ESTABLISHED;
+  apr_status_t rv;
 
   sconf = h2_get_socket_config(parent);
   sconf->ssl = ssl_get_session(parent);
-  sconf->authority = apr_pstrdup(parent->pbody, host);
+  sconf->authority = apr_pstrdup(parent->pbody, "sesdev.tarsec.com");
+
+  wconf->state |= H2_STATE_ESTABLISHED;
+
   /* hacky: see worker.c:command_CALL() */
   worker->socket = parent->socket;
 
@@ -1006,6 +985,41 @@ apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
   }
 
   return rv;
+}
+
+apr_status_t block_H2_UPGRADE(worker_t *worker, worker_t *parent,
+                              apr_pool_t *ptmp) {
+  return h2_setup(worker, parent);
+}
+
+apr_status_t block_H2_SESSION(worker_t *worker, worker_t *parent,
+                              apr_pool_t *ptmp) {
+  h2_wconf_t *wconf = h2_get_worker_config(parent);
+  const char *host = store_get(worker->params, "1");
+  const char *port = store_get(worker->params, "2");
+  const char *cert = store_get(worker->params, "3");
+  const char *key = store_get(worker->params, "4");
+  const char *cacert = store_get(worker->params, "5");
+  const char *data;
+  apr_status_t rv;
+
+  data = apr_psprintf(ptmp, "%s %s%s", host,
+                      strstr(port, "SSL") ? "" : "SSL:", port);
+  if (cert && key) {
+    data = apr_pstrcat(ptmp, data, " ", cert, " ", key, NULL);
+  }
+  if (cacert) {
+    data = apr_pstrcat(ptmp, data, " ", cacert, NULL);
+  }
+
+  wconf->state |= H2_STATE_INIT;
+  rv = command_REQ(NULL, parent, (char *)data, parent->pbody);
+
+  if (rv != 0) {
+    return APR_EGENERAL;
+  }
+
+  return h2_setup(worker, parent);
 }
 
 apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent,
@@ -1624,6 +1638,12 @@ apr_status_t h2_module_init(global_t *global) {
           "<host>: host name or IPv4/IPv6 address (IPv6 address must be surrounded in square brackets)\n"
           "<cert-file>, <key-file> and <ca-cert-file> are optional for client/server authentication",
           block_H2_SESSION)) != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = module_command_new(global, "H2", "_UPGRADE", "",
+          "Upgrade connection.",
+          block_H2_UPGRADE)) != APR_SUCCESS) {
     return status;
   }
 
