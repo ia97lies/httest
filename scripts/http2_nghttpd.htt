@@ -6,10 +6,11 @@
 # /path/to/nghttpd 8881 \
 #    /path/to/server.key.pem \
 #    /path/to/server.cert.pem \
-#    -v --trailer 'mytrailer:mytrailerval' \
 #    -d /path/to/htdocs
 #
 # the document root should contain a text file with name "echo"
+#
+# tested with "nghttpd nghttp2/1.18.1"
 #
 
 SET HOST=127.0.0.1
@@ -36,7 +37,6 @@ __
 _PIPE
 _EXEC echo hello world
 
-_EXPECT HEADERS "mytrailer: mytrailerval"
 _EXPECT HEADERS ":status: 200"
 _MATCH HEADERS ":status: (.*)" STATUS
 _MATCH BODY "(.*)" BODY
@@ -49,17 +49,18 @@ _DEBUG body=$BODY
 
 # stream 3/5: submit two GET requests
 _H2:REQ GET /echo
+__User-Agent: httest
+__
 _EXPECT HEADERS ":status: 200"
 _H2:END
 
 _H2:REQ GET /does-not-exist
+__User-Agent: httest
+__
 _EXPECT HEADERS ":status: 404"
 _EXPECT BODY "404 Not Found"
 _H2:END
 
-_H2:WAIT
-
-_H2:GOAWAY
 _H2:WAIT
 _CLOSE
 END
