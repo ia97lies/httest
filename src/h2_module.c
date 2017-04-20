@@ -1633,7 +1633,7 @@ apr_status_t h2_module_init(global_t *global) {
     return status;
   }
 
-  if ((status = module_command_new(global, "H2", "_SESSION", "<port> [<cert-file> <key-file> [<ca-cert-file>]]",
+  if ((status = module_command_new(global, "H2", "_SESSION", "<host> SSL:<port> [<cert-file> <key-file> [<ca-cert-file>]]",
           "Connect to the remote peer and setup h2 session.\n"
           "<host>: host name or IPv4/IPv6 address (IPv6 address must be surrounded in square brackets)\n"
           "<cert-file>, <key-file> and <ca-cert-file> are optional for client/server authentication",
@@ -1654,19 +1654,19 @@ apr_status_t h2_module_init(global_t *global) {
   }
 
   if ((status = module_command_new(global, "H2", "_FLUSH", "",
-          "TODO",
+          "Flush submitted data.",
           block_H2_FLUSH)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "H2", "_DEFER", "",
-          "TODO",
+          "Defers subsequent data frames until reception of new frames from the remote peer.",
           block_H2_DEFER)) != APR_SUCCESS) {
     return status;
   }
 
   if ((status = module_command_new(global, "H2", "_SLEEP", "<ms>",
-          "TODO",
+          "Sleep <ms> milliseconds during the transmission of two consecutive data frames.",
           block_H2_SLEEP)) != APR_SUCCESS) {
     return status;
   }
@@ -1678,7 +1678,10 @@ apr_status_t h2_module_init(global_t *global) {
   }
 
   if ((status = module_command_new(global, "H2", "_EXPECT", "<category> <regex>",
-          "Expectations TODO.",
+          "Possible expectations are\n"
+          "   goaway <REASON>, can be expected for a session\n"
+          "   bodysize <SIZE>, can be expected for a stream\n"
+          "   rst_stream, can be expected for a stream, no regex needed\n",
           block_H2_EXPECT)) != APR_SUCCESS) {
     return status;
   }
