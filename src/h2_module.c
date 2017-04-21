@@ -1677,11 +1677,14 @@ apr_status_t h2_module_init(global_t *global) {
     return status;
   }
 
-  if ((status = module_command_new(global, "H2", "_EXPECT", "<category> <regex>",
+  if ((status = module_command_new(global, "H2", "_EXPECT", "<category> <expectation>",
           "Possible expectations are\n"
-          "   goaway <REASON>, can be expected for a session\n"
-          "   bodysize <SIZE>, can be expected for a stream\n"
-          "   rst_stream, can be expected for a stream, no regex needed\n",
+          "  goaway <reason>\n"
+          "    can be expected for a session, e.g. \"H2:EXPECT goaway timeout\"\n"
+          "  bodysize <size>\n"
+          "    can be expected for a stream, e.g. \"H2:EXPECT bodysize 1024\"\n"
+          "  rst_stream\n"
+          "    can be expected for a stream, no specific expectation required\n",
           block_H2_EXPECT)) != APR_SUCCESS) {
     return status;
   }
