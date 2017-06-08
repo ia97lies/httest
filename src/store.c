@@ -103,18 +103,21 @@ char *store_get_copy(store_t *store, apr_pool_t *pool, const char *name) {
 }
 
 /**
- * Set name value, if allready exist delete old name value and reset them.
+ * Store value in name, if already exists delete old value and remove name entry.
+ * Always adds the terminating zero to the stored value.
+ * So if you want to store an already zero terminated string "myStr", then pass "strlen(myStr)" in len.
  * @param store IN store hook
  * @param name IN key
- * @param value IN
+ * @param value IN zero terminated or not terminated string to store
+ * @param len IN length of value string (without terminating zero)
  */
-void store_set(store_t *store, const char *name, const char *value) {
+void store_set_and_zero_terminate(store_t *store, const char *name, const char *value, apr_size_t len) {
   apr_pool_t *pool;
   store_element_t *element = apr_hash_get(store->hash, name, APR_HASH_KEY_STRING);
   if (element) {
     /* check if the new value is same pointer as stored value */
     if (value == element->value) {
-      /* nothting to do */
+      /* nothing to do */
       return;
     }
     apr_hash_set(store->hash, name, APR_HASH_KEY_STRING, NULL);
@@ -123,9 +126,20 @@ void store_set(store_t *store, const char *name, const char *value) {
   apr_pool_create(&pool, store->pool);
   element = apr_pcalloc(pool, sizeof(*element));
   element->pool = pool;
-  element->value = apr_pstrdup(element->pool, value);
+  element->value = apr_pstrmemdup(element->pool, value, len);	/*add terminating zero*/
   apr_hash_set(store->hash, apr_pstrdup(element->pool, name), 
 	       APR_HASH_KEY_STRING, element);
+}
+
+/**
+ * Set name value, if already exists delete old name value and remove name entry.
+ * @param store IN store hook
+ * @param name IN key
+ * @param value IN zero terminated string value to store
+ */
+void store_set(store_t *store, const char *name, const char *value) {
+	apr_size_t len = (value == NULL) ? 0 : strlen(value);
+	store_set_and_zero_terminate(store, name, value, len);
 }
 
 /**

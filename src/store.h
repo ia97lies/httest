@@ -33,6 +33,7 @@ typedef struct store_s store_t;
 store_t *store_make(apr_pool_t *pool);
 const char *store_get(store_t *store, const char *name);
 char *store_get_copy(store_t *store, apr_pool_t *pool, const char *name);
+void store_set_and_zero_terminate(store_t *store, const char *name, const char *bytes, apr_size_t len);
 void store_set(store_t *store, const char *name, const char *value);
 void store_unset(store_t *store, const char *name);
 void store_merge(store_t *store, store_t *other); 

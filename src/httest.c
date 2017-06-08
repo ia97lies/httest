@@ -1666,7 +1666,7 @@ static apr_status_t global_SET(command_t *self, global_t *global, char *data,
  *
  * @param self IN command
  * @param global IN global object
- * @param data IN key=value
+ * @param data IN variable names separated by space
  *
  * @return APR_SUCCESS
  */

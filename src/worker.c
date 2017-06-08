@@ -187,31 +187,34 @@ static recorder_t *worker_get_recorder(worker_t *worker) {
 }
 
 /**
- * set a variable either as local or global
- * make a copy and replace existing
+ * Set a variable either as local or global,
+ * make a copy of passed value and replace existing value.
+ * Always adds the terminating zero to the stored value.
+ * So if you want to store an already zero terminated string "myStr", then pass "strlen(myStr)" in len.
  *
  * @param worker IN thread object
  * @param var IN variable name
- * @param val IN value
+ * @param val IN zero terminated or not terminated string to store
+ * @param len IN length of val string (without terminating zero)
  */
-void worker_var_set(worker_t * worker, const char *var, const char *val) {
+void worker_var_set_and_zero_terminate(worker_t * worker, const char *var, const char *val, apr_size_t len) {
   const char *ret;
 
   /* do mapping from ret var to var */
   if ((ret = store_get(worker->retvars, var))) {
-    store_set(worker->vars, ret, val);
+	  store_set_and_zero_terminate(worker->vars, ret, val, len);
     return;
   }
 
   /* if not test if local */
   if (store_get(worker->locals, var)) {
-    store_set(worker->locals, var, val);
+	  store_set_and_zero_terminate(worker->locals, var, val, len);
     return;
   }
 
   /* params can be shadowed by locals so this after locals */
   if (store_get(worker->params, var)) {
-    store_set(worker->params, var, val);
+	  store_set_and_zero_terminate(worker->params, var, val, len);
     return;
   }
 
@@ -220,7 +223,7 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
     /* test if this variable is a global one */
     apr_thread_mutex_lock(worker->mutex);
     if (store_get(worker->global->shared, var)) {
-      store_set(worker->global->shared, var, val);
+      store_set_and_zero_terminate(worker->global->shared, var, val, len);
       apr_thread_mutex_unlock(worker->mutex);
       return;
     }
@@ -228,7 +231,21 @@ void worker_var_set(worker_t * worker, const char *var, const char *val) {
   }
 
   /* if there is no var at all stored it in thread global vars */
-  store_set(worker->vars, var, val);
+  store_set_and_zero_terminate(worker->vars, var, val, len);
+}
+
+
+/**
+ * set a variable either as local or global
+ * make a copy and replace existing
+ *
+ * @param worker IN thread object
+ * @param var IN variable name
+ * @param val IN zero terminated string value to set
+ */
+void worker_var_set(worker_t * worker, const char *var, const char *val) {
+  apr_size_t len = (val == NULL) ? 0 : strlen(val);
+  worker_var_set_and_zero_terminate(worker, var, val, len);
 }
 
 /**
@@ -1666,7 +1683,7 @@ http_0_9:
       sockreader_push_back(recorder->sockreader, buf, len);
     }
     if (var) {
-      worker_var_set(worker, var, buf);
+      worker_var_set_and_zero_terminate(worker, var, buf, len);
     }
     if (doreadtrailing) {
       /* read trailing headers */
