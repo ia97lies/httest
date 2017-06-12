@@ -8,7 +8,7 @@
 
 \paragraph{Syntax:}
 \subparagraph{}
-\texttt{\_WAIT [<amount of bytes]}
+\texttt{\_WAIT [<amount of bytes> | <variable>]}
 
 \section{Purpose:}
 Waits for data on a connection and reads it. Without this 
@@ -23,3 +23,8 @@ they must always preceed the \texttt{\_WAIT} command.
 \subparagraph{}
 Optionally, it's also possible to just read a given amount 
 of bytes.
+
+\subparagraph{}
+If you pass a variable, the read data is stored in the given
+variable. If the variable hasn't been declared yet, then it
+is created as a local variable.

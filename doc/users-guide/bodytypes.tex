@@ -50,7 +50,7 @@ The following local body types exist:
 \subsection{Parallel Execution}
 Note that all body blocks are executed in separate threads! So, if a htt 
 script contains more than one \texttt{CLIENT} body, each one will be started in a 
-separate thread, allowing to simulate two distinct, separate HTTP clients in 
+separate thread, allowing to simulate more distinct, separate HTTP clients in 
 one test case.
 
 \subsection{Execution Order}
@@ -58,13 +58,12 @@ While multiple bodies are executed in parallel threads in general, \texttt{SERVE
 and \texttt{DAEMON} bodies are always started before \texttt{CLIENT} bodies.
 
 \subsection{Lifespan}
-If a \texttt{CLIENT} body (or all of them, if there's more than one) ends, 
-the test ends, and the htt process exits. The completion of \texttt{SERVER} 
-and \texttt{DAEMON} bodies, on the other hand, will not automatically terminate 
-the test.
+If all \texttt{CLIENT} and \texttt{SERVER} bodies end, then
+the test ends, and the htt process exits. The still running \texttt{DAEMON} threads are
+automatically terminated.
 
 \subsection{Synchronization}
-With the commands \texttt{\_PROC:LOCK} and \texttt{\_PROC:UNLOCK} it is possible to
+With the \texttt{\_LOCK} and \texttt{\_UNLOCK} commands it is possible to
 synchronize those threads. 
 
 
@@ -79,7 +78,7 @@ are generated to perform some kind of test. Usually, there is just one single
 \texttt{CLIENT} body in a htt script, but there can be multiple ones; in that case, 
 they are executed in parallel threads.
 
-A htt test ends, when all \texttt{CLIENT} bodies complete their work.
+A htt test ends, when all \texttt{CLIENT} and \texttt{SERVER} bodies complete their work.
 
 A simple \texttt{CLIENT} example:
 
@@ -111,8 +110,7 @@ backend servers that may not be available in a test environment.
 There can be multiple \texttt{SERVER} bodies; in that case, 
 they are executed in parallel threads.
 
-A htt test does not end when the \texttt{SERVER} bodies complete their work, 
-only when the \texttt{CLIENT} bodies have finished.
+A htt test ends, when all \texttt{CLIENT} and \texttt{SERVER} bodies complete their work.
 
 A simple \texttt{SERVER} example:
 

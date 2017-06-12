@@ -1,0 +1,19 @@
+% =========================================
+% COMMAND: _LOCK
+% =========================================
+
+\newpage
+\section{\_LOCK}
+\label{cmd:_LOCK}
+
+\paragraph{Syntax:}
+\subparagraph{}
+\texttt{\_LOCK}, \texttt{\_PROC:LOCK}
+
+\paragraph{Purpose:}
+\subparagraph{}
+Provides synchronization between \texttt{CLIENTs}, \texttt{SERVERs}
+and \texttt{DAEMONs} by locking the one and only global mutex.
+If the mutex is already locked, this command waits until it is unlocked by an
+\texttt{\_UNLOCK} call in the same body (thread) or in another.
+

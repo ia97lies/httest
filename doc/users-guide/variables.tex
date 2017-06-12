@@ -34,11 +34,22 @@ body.
 \newpage
 \section{Setting A Variable} 
 
-The syntax for setting a global variable is:
+To define a variable as global (and initialize with an empty value):
 
 \begin{usplisting}
-    SET name=value
+    GLOBAL global_var
 \end{usplisting}
+If $<$global\_var$>$ is assigned with the \texttt{\_SET} command in a \texttt{CLIENT},
+\texttt{SERVER} or \texttt{DAEMON} thread, then the new value will be seen in
+the others, as well.
+
+To define and initialize a global variable which can be "shaded":
+
+\begin{usplisting}
+    SET shaded_global_var=initial_value
+\end{usplisting}
+
+If $<$shaded\_global\_var$>$ is assigned with the \texttt{\_SET} command in a \texttt{CLIENT}, \texttt{SERVER} or \texttt{DAEMON} thread, then the new value will NOT be seen in the others, because then in fact a new local variable is created with the same name which "shades" $<$shaded\_global\_var$>$. The other threads will still see the $<$initial\_value$>$ of $<$shaded\_global\_var$>$ variable.
 
 The syntax for setting a local variable in a body is:
 
