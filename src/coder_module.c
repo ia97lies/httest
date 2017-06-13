@@ -100,7 +100,7 @@ apr_status_t block_CODER_URLENC(worker_t *worker, worker_t *parent, apr_pool_t *
     }
   }
 
-  worker_var_set(parent, var, (char *)result);
+  worker_var_set_and_zero_terminate(parent, var, (char *)result, j);
 
   return APR_SUCCESS;
 
@@ -314,7 +314,7 @@ apr_status_t block_CODER_REGEXENC(worker_t *worker, worker_t *parent, apr_pool_t
     prev = string[i];
     i++;
   }
-  worker_var_set(parent, var, inplace);
+  worker_var_set_and_zero_terminate(parent, var, inplace, d);
 
   return APR_SUCCESS;
 }

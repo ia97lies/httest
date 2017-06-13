@@ -135,7 +135,7 @@ apr_status_t block_DATE_FORMAT(worker_t *worker, worker_t *parent, apr_pool_t *p
     return status;
   }
 
-  worker_var_set(parent, var, timefmt);
+  worker_var_set_and_zero_terminate(parent, var, timefmt, len);
   
   return APR_SUCCESS;
 }

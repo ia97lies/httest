@@ -49,10 +49,9 @@ typedef struct charset_buf_s {
  * Local 
  ***********************************************************************/
 static apr_status_t charset_xlate(worker_t *worker, apr_xlate_t *convset, 
-                                  const char *string, char **result,
+                                  const char *string, char **result, apr_size_t* resultLen,
                                   apr_pool_t *ptmp) {
   apr_status_t status;
-  apr_size_t len;
   apr_bucket_alloc_t *alloc = apr_bucket_alloc_create(ptmp);
   apr_bucket_brigade *bb = apr_brigade_create(ptmp, alloc);
   charset_buf_t *inbuf = apr_pcalloc(ptmp, sizeof(*inbuf));
@@ -82,7 +81,7 @@ static apr_status_t charset_xlate(worker_t *worker, apr_xlate_t *convset,
     return status;
   }
 
-  status = apr_brigade_pflatten(bb, result, &len, ptmp);
+  status = apr_brigade_pflatten(bb, result, resultLen, ptmp);
   if (status != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Can't flatten converted buffer");
     return status;
@@ -112,13 +111,13 @@ static apr_status_t block_CHARSET_CONVERT(worker_t *worker, worker_t *parent, ap
   inbytes = strlen(string);
   outbytes = inbytes;
   outbuf = apr_pcalloc(ptmp, outbytes);
-  if ((status = charset_xlate(worker, convset, string, &outbuf, ptmp))
+  if ((status = charset_xlate(worker, convset, string, &outbuf, &outbytes, ptmp))
      != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Can not convert from %s to %s", from, to);
 	return status;
   }
 
-  worker_var_set(parent, result, outbuf);
+  worker_var_set_and_zero_terminate(parent, result, outbuf, outbytes);
 
   return APR_SUCCESS;
 }
