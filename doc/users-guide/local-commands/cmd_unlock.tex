@@ -1,20 +1,20 @@
 % =========================================
-% COMMAND: _UNLOCK
+% COMMAND: _PROC:UNLOCK
 % =========================================
 
 \newpage
-\section{\_UNLOCK}
-\label{cmd:_UNLOCK}
+\section{\_PROC:UNLOCK}
+\label{cmd:_PROC:UNLOCK}
 
 \paragraph{Syntax:}
 \subparagraph{}
-\texttt{\_UNLOCK}, \texttt{\_PROC:UNLOCK}
+\texttt{\_PROC:UNLOCK} (legacy form: \texttt{\_UNLOCK})
 
 \paragraph{Purpose:}
 \subparagraph{}
 Provides synchronization between \texttt{CLIENTs}, \texttt{SERVERs}
 and \texttt{DAEMONs} by unlocking the one and only global mutex.
-If the mutex is already locked by a \texttt{\_LOCK} call in the same
+If the mutex is already locked by a \texttt{\_PROC:LOCK} call in the same
 or in another body (thread), this command releases it, otherwise it
 does nothing.
 
