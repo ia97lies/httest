@@ -49,7 +49,7 @@ typedef struct charset_buf_s {
  * Local 
  ***********************************************************************/
 static apr_status_t charset_xlate(worker_t *worker, apr_xlate_t *convset, 
-                                  const char *string, char **result, apr_size_t* resultLen,
+                                  const char *string, char **result, apr_size_t* len,
                                   apr_pool_t *ptmp) {
   apr_status_t status;
   apr_bucket_alloc_t *alloc = apr_bucket_alloc_create(ptmp);
@@ -81,7 +81,7 @@ static apr_status_t charset_xlate(worker_t *worker, apr_xlate_t *convset,
     return status;
   }
 
-  status = apr_brigade_pflatten(bb, result, resultLen, ptmp);
+  status = apr_brigade_pflatten(bb, result, len, ptmp);
   if (status != APR_SUCCESS) {
 	worker_log(worker, LOG_ERR, "Can't flatten converted buffer");
     return status;
