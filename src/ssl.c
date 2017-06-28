@@ -600,7 +600,7 @@ static char *ssl_var_lookup_ssl_cert_dn(apr_pool_t *p, X509_NAME *xsname, const 
                 if (n == ssl_var_lookup_ssl_cert_dn_rec[i].nid && idx-- == 0) {
                     const unsigned char *data = X509_NAME_ENTRY_get_data_ptr(xsne);
                     /* cast needed from unsigned char to char */
-                    result = apr_pstrmemdup(p, data,
+                    result = apr_pstrmemdup(p, (char *)data,
                                             X509_NAME_ENTRY_get_data_len(xsne));
 #if APR_CHARSET_EBCDIC
                     ap_xlate_proto_from_ascii(result, X509_NAME_ENTRY_get_data_len(xsne));
@@ -744,7 +744,7 @@ static void extract_dn(apr_table_t *t, apr_hash_t *nids, const char *pfx,
              }
              
              /* cast needed from 'unsigned char *' to 'char *' */
-             value = apr_pstrmemdup(p, data,
+             value = apr_pstrmemdup(p, (char *)data,
                                     X509_NAME_ENTRY_get_data_len(xsne));
 #if APR_CHARSET_EBCDIC
              ap_xlate_proto_from_ascii(value, X509_NAME_ENTRY_get_data_len(xsne));

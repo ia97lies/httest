@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.20
+  *) httest: Bugfix for a nasty missing 0 termination when using _WAIT buf 
+             [thanks to László Németh for the fix].
+
 Changes with httest 2.4.19
   *) scripts: a bugfix for the pentest suite to work properly with apaches 2.4 
               strict http mode.

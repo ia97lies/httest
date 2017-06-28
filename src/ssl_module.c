@@ -52,7 +52,7 @@ typedef struct ssl_wconf_s {
   EVP_PKEY *pkey;
   SSL_CTX *ssl_ctx;
   SSL_SESSION *sess;
-  const SSL_METHOD *meth;
+  SSL_METHOD *meth;
   char *ssl_info;
   int refcount;
   apr_pool_t *cert_pool;
@@ -320,6 +320,7 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
  * @param ssl IN ssl instance
  * @param arg IN void pointer to worker
  */
+/* DIRTY: a dirty hack because my compile do not want to see the const void *buf as a const void * but only as a void * */
 static void ssl_message_trace(int write_p, int version, int content_type, const void *buf, size_t len, SSL *ssl, void *arg)
 {
   worker_t *worker = arg;
@@ -733,39 +734,39 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
 
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
-    config->meth = SSLv23_client_method();
+    config->meth = (SSL_METHOD *)SSLv23_client_method();
   }
 #if OPENSSL_VERSION_NUMBER < 0x10100000
 #ifndef OPENSSL_NO_SSL2 
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
-    config->meth = SSLv2_client_method();
+    config->meth = (SSL_METHOD *)SSLv2_client_method();
   }
 #endif
 #endif
 #ifndef OPENSSL_NO_SSL3_METHOD
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
-    config->meth = SSLv3_client_method();
+    config->meth = (SSL_METHOD *)SSLv3_client_method();
   }
 #endif
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
-    config->meth = TLSv1_client_method();
+    config->meth = (SSL_METHOD *)TLSv1_client_method();
   }
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
   else if (strcasecmp(sslstr, "TLS1.1") == 0) {
     is_ssl = 1;
-    config->meth = TLSv1_1_client_method();
+    config->meth = (SSL_METHOD *)TLSv1_1_client_method();
   }
   else if (strcasecmp(sslstr, "TLS1.2") == 0) {
     is_ssl = 1;
-    config->meth = TLSv1_2_client_method();
+    config->meth = (SSL_METHOD *)TLSv1_2_client_method();
   }
 #endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
-    config->meth = DTLSv1_client_method();
+    config->meth = (SSL_METHOD *)DTLSv1_client_method();
   }
   return is_ssl;
 }
@@ -784,39 +785,39 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
 
   if (strcasecmp(sslstr, "SSL") == 0) {
     is_ssl = 1;
-    config->meth = SSLv23_server_method();
+    config->meth = (SSL_METHOD *)SSLv23_server_method();
   } 
 #if OPENSSL_VERSION_NUMBER < 0x10100000
 #ifndef OPENSSL_NO_SSL2
   else if (strcasecmp(sslstr, "SSL2") == 0) {
     is_ssl = 1;
-    config->meth = SSLv2_server_method();
+    config->meth = (SSL_METHOD *)SSLv2_server_method();
   }
 #endif
 #endif
 #ifndef OPENSSL_NO_SSL3_METHOD
   else if (strcasecmp(sslstr, "SSL3") == 0) {
     is_ssl = 1;
-    config->meth = SSLv3_server_method();
+    config->meth = (SSL_METHOD *)SSLv3_server_method();
   }
 #endif
   else if (strcasecmp(sslstr, "TLS1") == 0) {
     is_ssl = 1;
-    config->meth = TLSv1_server_method();
+    config->meth = (SSL_METHOD *)TLSv1_server_method();
   }
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
   else if (strcasecmp(sslstr, "TLS1.1") == 0) {
     is_ssl = 1;
-    config->meth = TLSv1_1_server_method();
+    config->meth = (SSL_METHOD *)TLSv1_1_server_method();
   }
   else if (strcasecmp(sslstr, "TLS1.2") == 0) {
     is_ssl = 1;
-    config->meth = TLSv1_2_server_method();
+    config->meth = (SSL_METHOD *)TLSv1_2_server_method();
   }
 #endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
-    config->meth = DTLSv1_server_method();
+    config->meth = (SSL_METHOD *)DTLSv1_server_method();
   }
   return is_ssl;
 }
