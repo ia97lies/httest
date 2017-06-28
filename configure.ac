@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 cC_PREREQ(2.53)
-AC_INIT(httest, 2.4.19, ia97lies@sourceforge.net)
+AC_INIT(httest, 2.4.20, ia97lies@sourceforge.net)
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([config/config.h])
 AM_INIT_AUTOMAKE([subdir-objects])
