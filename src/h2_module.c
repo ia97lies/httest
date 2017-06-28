@@ -100,6 +100,7 @@ typedef struct h2_stream_s {
   apr_size_t data_in_expect;
 
   int reset_expect;
+  int reset_received;
   
   apr_table_t *headers_in;
   apr_table_t *headers_out;
@@ -722,11 +723,6 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
         worker_log(worker, LOG_DEBUG, "< END_STREAM");
         rv = check_data(worker, stream);
 
-        if (stream->reset_expect) {
-          worker_log(worker, LOG_ERR, "EXPECT RST_STREAM for stream %d",
-                     stream->id);
-          rv = NGHTTP2_ERR_CALLBACK_FAILURE;
-        }
         stream->closed = 1;
         wconf->open_streams--;
       }
@@ -741,11 +737,18 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
       worker_log(
           worker, LOG_INFO, "< RST_STREAM [error=%s]",
           h2_get_name_of(h2_error_code_array, frame->rst_stream.error_code));
-      stream->closed = 1;
-      wconf->open_streams--;
+
+      /* mark stream as closed if not already done due to
+       * END_STREAM */
+      if (stream->closed == 0) {
+        stream->closed = 1;
+        wconf->open_streams--;
+      }
 
       if (!stream->reset_expect) {
         rv = NGHTTP2_ERR_CALLBACK_FAILURE;
+      } else {
+        stream->reset_received = 1;
       }
       break;
     case NGHTTP2_GOAWAY: {
@@ -1505,6 +1508,10 @@ cleanup:
     apr_hash_this(hi, NULL, NULL, (void **)&stream);
 
     if (stream->closed) {
+      if (stream->reset_expect && !stream->reset_received) {
+        worker_log(worker, LOG_ERR, "EXPECT RST_STREAM for stream %d", stream->id);
+        return APR_EGENERAL;
+      }
       worker_log(worker, LOG_DEBUG, "clean-up stream %p", stream);
       apr_pool_destroy(stream->p);
       apr_hash_set(wconf->streams, apr_itoa(parent->pbody, stream->id),
