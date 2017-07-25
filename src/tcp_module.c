@@ -189,7 +189,7 @@ apr_status_t tcp_listen(worker_t *worker,  int backlog) {
   }
 
   if ((status = apr_sockaddr_info_get(&local_addr, worker->listener_addr, APR_UNSPEC,
-                                      worker->listener_port, APR_IPV6_ADDR_OK, worker->pbody))
+                                      worker->listener_port, APR_IPV4_ADDR_OK, worker->pbody))
       != APR_SUCCESS) {
     return status;
   }
@@ -232,6 +232,7 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
   apr_sockaddr_t *remote_addr;
   char *tag;
   int port;
+  int family = APR_INET;
 
   if (!hostname) {
     worker_log(worker, LOG_ERR, "no host name specified");
@@ -254,29 +255,29 @@ apr_status_t tcp_connect(worker_t *worker, char *hostname, char *portname) {
 #if APR_HAVE_IPV6
   /* hostname/address must be surrounded in square brackets */
   if((hostname[0] == '[') && (hostname[strlen(hostname)-1] == ']')) {
+    family = APR_INET6;
     hostname++;
     hostname[strlen(hostname)-1] = '\0';
   }
 #endif
-  if ((status = apr_sockaddr_info_get(&remote_addr, hostname, AF_UNSPEC, port,
-                                      APR_IPV6_ADDR_OK, worker->pbody))
-      != APR_SUCCESS) {
-    return status;
-  }
-
-  if ((status = apr_socket_create(&worker->socket->socket, remote_addr->family,
+  if ((status = apr_socket_create(&worker->socket->socket, family,
                                   SOCK_STREAM, APR_PROTO_TCP,
                                   worker->pbody)) != APR_SUCCESS) {
     worker->socket->socket = NULL;
     return status;
   }
-
   if ((status = apr_socket_opt_set(worker->socket->socket, APR_TCP_NODELAY, 1)) 
       != APR_SUCCESS) {
     return status;
   }
 
   if ((status = apr_socket_timeout_set(worker->socket->socket, worker->socktmo)) 
+      != APR_SUCCESS) {
+    return status;
+  }
+
+  if ((status = apr_sockaddr_info_get(&remote_addr, hostname, AF_UNSPEC, port,
+                                      APR_IPV4_ADDR_OK, worker->pbody))
       != APR_SUCCESS) {
     return status;
   }
