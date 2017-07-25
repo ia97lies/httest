@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.21
+  *) httest: Revert the trial to have IPv6 in the first place, not backward 
+             compatible.
+
 Changes with httest 2.4.20
   *) httest: Bugfix for a nasty missing 0 termination when using _WAIT buf 
              [thanks to László Németh for the fix].
