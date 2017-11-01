@@ -242,7 +242,7 @@ static void print_file(self_t *self, char *file) {
  *
  * @return apr status
  */
-static apr_status_t call_command(worker_t *worker, void *func, char *name, char *params) {
+static apr_status_t call_command(worker_t *worker, apr_status_t (*func)(command_t*, worker_t*, char*, apr_pool_t*), char *name, char *params) {
   command_t cmd;
   memset(&cmd, 0, sizeof(cmd));
   cmd.name = name;

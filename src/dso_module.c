@@ -241,8 +241,8 @@ static apr_status_t block_FUNC(worker_t *worker, worker_t *parent, apr_pool_t *p
   const char *sym;
   const char *string;
   apr_dso_handle_t *dso;
-  apr_dso_handle_sym_t dso_sym;
   func_dso_f func;
+  apr_dso_handle_sym_t *func_sym_address = (apr_dso_handle_sym_t*)(&func);
   global_t *global = worker->global;
 
   sym = store_get(worker->params, "1");
@@ -256,12 +256,11 @@ static apr_status_t block_FUNC(worker_t *worker, worker_t *parent, apr_pool_t *p
     return status;
   }
 
-  if ((status = apr_dso_sym(&dso_sym, dso, sym)) != APR_SUCCESS) {
+  /*Effectively fills 'func'*/
+  if ((status = apr_dso_sym(func_sym_address, dso, sym)) != APR_SUCCESS) {
     worker_log(worker, LOG_ERR, "Can not call \"%s\" object", sym);
     return status;
   }
-
-  func = (func_dso_f )dso_sym;
 
   string= store_get(worker->params, "2");
   if (!string) {

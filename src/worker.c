@@ -4537,67 +4537,67 @@ APR_HOOK_STRUCT(
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_get_length, 
                                       (worker_t *worker, line_t *line), 
-				      (worker, line), APR_SUCCESS);
+				      (worker, line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_flush, 
                                       (worker_t *worker, line_t *line), 
-				      (worker, line), APR_SUCCESS);
+				      (worker, line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, line_sent, 
                                       (worker_t *worker, line_t *line), 
-				      (worker, line), APR_SUCCESS);
+				      (worker, line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_port_args, 
                                       (worker_t *worker, char *portinfo, 
 				       char **new_portinfo, char *rest_of_line), 
-				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
+				      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, pre_connect, 
                                       (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+				      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, connect, 
                                       (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+				      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, post_connect, 
                                       (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+				      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, accept, 
                                       (worker_t *worker, char *rest_of_line), 
-				      (worker, rest_of_line), APR_SUCCESS);
+				      (worker, rest_of_line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, pre_close, 
                                       (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+				      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, close, 
                                       (worker_t *worker, char *info, char **new_info), 
-				      (worker, info, new_info), APR_SUCCESS);
+				      (worker, info, new_info), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, WAIT_begin, 
                                       (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+				      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_pre_headers, 
                                       (worker_t *worker), 
-				      (worker), APR_SUCCESS);
+				      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_status_line, 
                                       (worker_t *worker, char *line), 
-				      (worker, line), APR_SUCCESS);
+				      (worker, line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_header, 
                                       (worker_t *worker, char *line), 
-				      (worker, line), APR_SUCCESS);
+				      (worker, line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_buf, 
                                       (worker_t *worker, char *buf, apr_size_t len), 
-				      (worker, buf, len), APR_SUCCESS);
+				      (worker, buf, len), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, WAIT_end, 
                                       (worker_t *worker, apr_status_t status), 
-				      (worker, status), APR_SUCCESS);
+				      (worker, status), APR_SUCCESS)
 
 

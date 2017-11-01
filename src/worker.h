@@ -283,61 +283,61 @@ typedef struct line_s {
 # define HTT_DECLARE(type)    type
 
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_get_length,
-                          (worker_t *worker, line_t *line));
+                          (worker_t *worker, line_t *line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_flush,
-                          (worker_t *worker, line_t *line));
+                          (worker_t *worker, line_t *line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, line_sent,
-                          (worker_t *worker, line_t *line));
+                          (worker_t *worker, line_t *line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_port_args,
                           (worker_t *worker, char *portinfo, 
-			   char **new_portinfo, char *rest_of_line));
+			   char **new_portinfo, char *rest_of_line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, server_port_args,
                           (worker_t *worker, char *portinfo, 
-			   char **new_portinfo, char *rest_of_line));
+			   char **new_portinfo, char *rest_of_line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, pre_connect,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, connect,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, post_connect,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, accept,
-                          (worker_t *worker, char *rest_of_line));
+                          (worker_t *worker, char *rest_of_line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, pre_close,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, close,
-                          (worker_t *worker, char *info, char **new_info));
+                          (worker_t *worker, char *info, char **new_info))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, WAIT_begin,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_pre_headers,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_status_line,
-                          (worker_t *worker, char *line));
+                          (worker_t *worker, char *line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_header,
-                          (worker_t *worker, char *line));
+                          (worker_t *worker, char *line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_buf,
-                          (worker_t *worker, char *buf, apr_size_t len));
+                          (worker_t *worker, char *buf, apr_size_t len))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, WAIT_end,
-                          (worker_t *worker, apr_status_t status));
+                          (worker_t *worker, apr_status_t status))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_clone,
-                          (worker_t *worker, worker_t *clone));
+                          (worker_t *worker, worker_t *clone))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, read_line,
-                          (global_t *global, char **line));
+                          (global_t *global, char **line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, block_start,
-                          (global_t *global, char **line));
+                          (global_t *global, char **line))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, block_end,
-                          (global_t *global));
+                          (global_t *global))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, client_create,
-                          (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread));
+                          (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, server_create,
-                          (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread));
+                          (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_finally,
-                          (worker_t *worker));
+                          (worker_t *worker))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_start,
-                          (global_t *global, apr_thread_t *thread));
+                          (global_t *global, apr_thread_t *thread))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, thread_join,
-                          (global_t *global, apr_thread_t *thread));
+                          (global_t *global, apr_thread_t *thread))
 APR_DECLARE_EXTERNAL_HOOK(htt, HTT, apr_status_t, worker_joined,
-                          (global_t *global));
+                          (global_t *global))
 
 apr_status_t transport_register(socket_t *socket, transport_t *transport);
 apr_status_t transport_unregister(socket_t *socket, transport_t *transport);
@@ -410,6 +410,7 @@ apr_status_t command_DUMMY(command_t *self, worker_t *worker, char *data, apr_po
 /** helper */
 void lock(apr_thread_mutex_t *mutex); 
 void unlock(apr_thread_mutex_t *mutex); 
+void worker_var_set_and_zero_terminate(worker_t * worker, const char *var, const char *val, apr_size_t len);
 void worker_new(worker_t ** self, char *additional,
                 global_t *global, interpret_f interpret);
 void worker_clone(worker_t ** self, worker_t * orig); 

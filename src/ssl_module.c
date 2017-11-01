@@ -320,7 +320,6 @@ static void ssl_tlsext_trace(SSL *s, int client_server, int type, unsigned char 
  * @param ssl IN ssl instance
  * @param arg IN void pointer to worker
  */
-/* DIRTY: a dirty hack because my compile do not want to see the const void *buf as a const void * but only as a void * */
 static void ssl_message_trace(int write_p, int version, int content_type, const void *buf, size_t len, SSL *ssl, void *arg)
 {
   worker_t *worker = arg;

@@ -235,7 +235,7 @@ command_t global_commands[] = {
 };
 
 command_t local_commands[] = {
-  {"__", (command_f )command_DATA, "<string>", 
+  {"__", (command_f)command_DATA, "<string>",
   "Send <string> to the socket with a CRLF at the end of line",
   COMMAND_FLAGS_NONE},
   {"_-", (command_f )command_NOCRLF, "<string>", 
@@ -2856,44 +2856,44 @@ APR_HOOK_STRUCT(
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_port_args, 
                                       (worker_t *worker, char *portinfo, char **new_portinfo, char *rest_of_line), 
-                                      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS);
+                                      (worker, portinfo, new_portinfo, rest_of_line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_clone, 
                                       (worker_t *worker, worker_t *clone), 
-                                      (worker, clone), APR_SUCCESS);
+                                      (worker, clone), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, read_line, 
                                       (global_t *global, char **line), 
-                                      (global, line), APR_SUCCESS);
+                                      (global, line), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_start, 
                                       (global_t *global, char **line), 
-                                      (global, line), APR_ENOTIMPL);
+                                      (global, line), APR_ENOTIMPL)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, block_end, 
                                       (global_t *global), 
-                                      (global), APR_SUCCESS);
+                                      (global), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, client_create, 
                                       (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread), 
-                                      (worker, func, new_thread), APR_ENOTIMPL);
+                                      (worker, func, new_thread), APR_ENOTIMPL)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, server_create, 
                                       (worker_t *worker, apr_thread_start_t func, apr_thread_t **new_thread), 
-                                      (worker, func, new_thread), APR_ENOTIMPL);
+                                      (worker, func, new_thread), APR_ENOTIMPL)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, thread_start, 
                                       (global_t *global, apr_thread_t *thread), 
-                                      (global, thread), APR_SUCCESS);
+                                      (global, thread), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_finally, 
                                       (worker_t *worker), 
-                                      (worker), APR_SUCCESS);
+                                      (worker), APR_SUCCESS)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, thread_join, 
                                       (global_t *global, apr_thread_t *thread), 
-                                      (global, thread), APR_ENOTIMPL);
+                                      (global, thread), APR_ENOTIMPL)
 
 APR_IMPLEMENT_EXTERNAL_HOOK_RUN_FIRST(htt, HTT, apr_status_t, worker_joined, 
                                       (global_t *global), 
-                                      (global), APR_SUCCESS);
+                                      (global), APR_SUCCESS)

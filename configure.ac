@@ -26,7 +26,6 @@ AC_CONFIG_MACRO_DIR([m4])
 # Checks for typedefs, structures, and compiler characteristics.
 dnl 2.53 also doesn't have this
 m4_ifdef([AC_HEADER_STDBOOL], [AC_HEADER_STDBOOL])
-AC_C_CONST
 AC_HEADER_TIME
 
 # Checks for library functions.
