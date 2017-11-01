@@ -628,7 +628,7 @@ static int x509_tostring(lua_State *L) {
   X509 *cert = x509_pget(L, 1);
   char *s;
   HT_POOL_CREATE(&pool);
-  s = apr_psprintf(pool, "X509 cert %p", cert);
+  s = apr_psprintf(pool, "X509 cert %p", (void *)cert);
   lua_pushstring(L, s);
   apr_pool_destroy(pool);
   return 1;
@@ -812,7 +812,7 @@ static int dh_tostring(lua_State *L) {
   apr_pool_t *pool;
   DH *dh = dh_pget(L, 1);
   HT_POOL_CREATE(&pool);
-  s = apr_psprintf(pool, "DH %p", dh);
+  s = apr_psprintf(pool, "DH %p", (void *)dh);
   lua_pushstring(L, s);
   apr_pool_destroy(pool);
   return 1;
