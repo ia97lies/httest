@@ -182,7 +182,6 @@ static apr_status_t tcp_hook_accept(worker_t *worker, char *data) {
 apr_status_t tcp_listen(worker_t *worker,  int backlog) {
   apr_status_t status;
   apr_sockaddr_t *local_addr;
-  char *var;
   
   if (worker->listener) {
     worker_log(worker, LOG_ERR, "Server already up");

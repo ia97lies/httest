@@ -703,8 +703,7 @@ static int h2_on_frame_recv_callback(nghttp2_session *session,
   h2_stream_t *stream = apr_hash_get(
       wconf->streams, apr_itoa(worker->pbody, frame->hd.stream_id), APR_HASH_KEY_STRING);
   apr_pool_t *p;
-  apr_status_t status;
-  size_t i, rv = 0;
+  size_t rv = 0;
 
   apr_pool_create(&p, NULL);
 
@@ -812,7 +811,6 @@ static int h2_on_stream_close_callback(nghttp2_session *session,
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_stream_t *stream = apr_hash_get(
       wconf->streams, apr_itoa(worker->pbody, stream_id), APR_HASH_KEY_STRING);
-  int rv;
 
   worker_log(worker, LOG_DEBUG, "stream %d closed", stream->id);
 
@@ -853,7 +851,6 @@ static int h2_on_header_callback(nghttp2_session *session,
   h2_stream_t *stream =
       apr_hash_get(wconf->streams, apr_itoa(worker->pbody, frame->hd.stream_id),
                    APR_HASH_KEY_STRING);
-  int rv;
 
   switch (frame->hd.type) {
     case NGHTTP2_HEADERS: {
@@ -1031,7 +1028,6 @@ apr_status_t block_H2_SETTINGS(worker_t *worker, worker_t *parent,
   h2_sconf_t *sconf = h2_get_socket_config(parent);
   h2_wconf_t *wconf = h2_get_worker_config(parent);
   nghttp2_settings_entry settings[6];
-  apr_status_t status;
   size_t cur = 0;
   const char *param;
   int i = 0, rv;
@@ -1076,7 +1072,7 @@ static ssize_t h2_data_read_callback(nghttp2_session *session,
   h2_stream_t *stream = apr_hash_get(
       wconf->streams, apr_itoa(worker->pbody, stream_id), APR_HASH_KEY_STRING);
   event_t *event = APR_RING_FIRST(stream->events);
-  apr_size_t len = 0, i;
+  apr_size_t len = 0;
 
   if (event) {
     apr_size_t diff = -1;
@@ -1258,7 +1254,7 @@ apr_status_t block_H2_REQ(worker_t *worker, worker_t *parent,
   h2_sconf_t *sconf = h2_get_socket_config(parent);
   const char *method = store_get(worker->params, "1");
   const char *path = store_get(worker->params, "2");
-  int i = 0, j, hdrn = 0, with_data = 0;
+  int i = 0, hdrn = 0, with_data = 0;
   apr_table_entry_t *e; 
   apr_status_t status;
   h2_stream_t *stream;
@@ -1394,7 +1390,6 @@ on_error:
 
 apr_status_t block_H2_EXPECT(worker_t *worker, worker_t *parent,
                              apr_pool_t *ptmp) {
-  h2_sconf_t *sconf = h2_get_socket_config(parent);
   h2_wconf_t *wconf = h2_get_worker_config(parent);
   const char *cat = store_get(worker->params, "1");
   const char *expect = store_get(worker->params, "2");
@@ -1450,7 +1445,6 @@ apr_status_t block_H2_PING(worker_t *worker, worker_t *parent, apr_pool_t *ptmp)
 
 apr_status_t block_H2_GOAWAY(worker_t *worker, worker_t *parent, apr_pool_t *ptmp) {
   h2_sconf_t *sconf = h2_get_socket_config(parent);
-  h2_wconf_t *wconf = h2_get_worker_config(parent);
   const char *error = store_get(worker->params, "1");
   const char *data = store_get(worker->params, "2");
   int32_t err_code;
@@ -1531,7 +1525,6 @@ apr_status_t h2_hook_pre_close(worker_t *worker) {
   h2_wconf_t *wconf = h2_get_worker_config(worker);
   h2_sconf_t *sconf = h2_get_socket_config(worker); 
   apr_status_t status = APR_SUCCESS;
-  int rv;
 
   if (!sconf || !sconf->session) {
     goto exit;
@@ -1579,7 +1572,6 @@ int select_next_proto_cb(SSL *ssl, const unsigned char **out,
                          unsigned char *outlen, const unsigned char *in,
                          unsigned int inlen, void *arg) {
   worker_t *worker = (worker_t *)arg;
-  h2_wconf_t *wconf = h2_get_worker_config(worker);
   const unsigned char *protos[] = {h2, h216, h214, NULL};
   int i;
 
