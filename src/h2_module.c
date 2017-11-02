@@ -182,9 +182,10 @@ static h2_wconf_t *h2_get_worker_config(worker_t *worker) {
 }
 
 static int copy_table_entry(void *rec, const char *key, const char *val) {
- apr_table_t *t = rec;
+  apr_table_addn(rec, key, val);
 
- apr_table_addn(rec, key, val);
+  const int non_zero_meaning_continue_iteration = 1;
+  return non_zero_meaning_continue_iteration;
 }
 
 static apr_status_t h2_worker_body(worker_t **body, worker_t *worker,
@@ -206,7 +207,6 @@ static apr_status_t h2_worker_body(worker_t **body, worker_t *worker,
   e = (apr_table_entry_t *) apr_table_elts(worker->lines)->elts;
   for (worker->cmd += 1; worker->cmd < apr_table_elts(worker->lines)->nelts;
        worker->cmd++) {
-    command_t *command;
     file_and_line = e[worker->cmd].key;
 
     line = e[worker->cmd].val;
@@ -325,7 +325,6 @@ exit:
 }
 
 static int check_data(worker_t *worker, h2_stream_t *stream) {
-  h2_wconf_t *wconf = h2_get_worker_config(worker);
   apr_status_t status = APR_SUCCESS;
   apr_table_t *checked;
   char *errmsg;
@@ -596,10 +595,10 @@ static ssize_t h2_recv_callback(nghttp2_session *session, uint8_t *buf,
 static int h2_on_frame_send_callback(nghttp2_session *session,
                                      const nghttp2_frame *frame,
                                      void *user_data) {
+  int rv = 0;
   size_t i;
   apr_pool_t *p;
   worker_t *worker = user_data;
-  h2_wconf_t *wconf = h2_get_worker_config(worker);
   apr_pool_create(&p, NULL);
 
   worker_log(worker, LOG_DEBUG, "> frame header stream %d, type: %d, flag: %d",
@@ -681,7 +680,7 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
 
   apr_pool_destroy(p);
 
-  return 0;
+  return rv;
 }
 
 static int h2_on_frame_not_send_callback(nghttp2_session *session,
@@ -691,6 +690,9 @@ static int h2_on_frame_not_send_callback(nghttp2_session *session,
 
   worker_log(worker, LOG_ERR, "could not sent frame for stream %d",
              frame->hd.stream_id);
+
+  const int callback_succeeded = 0;
+  return callback_succeeded;
 }
 
 static int h2_on_frame_recv_callback(nghttp2_session *session,
