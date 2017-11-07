@@ -131,7 +131,7 @@ typedef struct h2_wconf_t {
   int open_streams;
   int buffer_size;
   int goaway;
-  char *goaway_expect;
+  const char *goaway_expect;
 } h2_wconf_t;
 
 static ssize_t h2_data_read_callback(nghttp2_session *session,
@@ -854,15 +854,17 @@ static int h2_on_header_callback(nghttp2_session *session,
 
   switch (frame->hd.type) {
     case NGHTTP2_HEADERS: {
-      int action = h2_check_response_header(worker, name);
+      const char *nameStr = (const char *)name;
+      const char *valueStr = (const char *)value;
+      int action = h2_check_response_header(worker, nameStr);
       if (action & H2_RES_HEADER_DENY) {
         return NGHTTP2_ERR_CALLBACK_FAILURE; 
       }
-      h2_check_content_length(stream, name, value);
+      h2_check_content_length(stream, nameStr, valueStr);
 
       if (!(action & H2_RES_HEADER_FILTER)) {
-        apr_table_add(stream->headers_in, name, value);
-        worker_log(worker, LOG_INFO, "<%d %s: %s", stream->id, name, value);
+        apr_table_add(stream->headers_in, nameStr, valueStr);
+        worker_log(worker, LOG_INFO, "<%d %s: %s", stream->id, nameStr, valueStr);
       }
 
     } break;
@@ -1153,7 +1155,7 @@ static apr_status_t copy_data(worker_t *worker, h2_stream_t *stream, int pos) {
     data_len = 0;
 
     e = (apr_table_entry_t *)apr_table_elts(worker->cache)->elts;
-    for (i; i < apr_table_elts(worker->cache)->nelts; i++) {
+    for (; i < apr_table_elts(worker->cache)->nelts; i++) {
       line_t line;
       line.info = e[i].key;
       line.buf = e[i].val;
@@ -1358,7 +1360,7 @@ submit:
 
     /* calculate content length (AUTO) */
     if (strcasecmp(name, "Content-Length") == 0 && *val == 0) {
-      val = with_data ? apr_psprintf(parent->pbody, "%d", stream->data_len) : "0";
+      val = with_data ? apr_psprintf(parent->pbody, "%" APR_SIZE_T_FMT , stream->data_len) : "0";
     }
     nghttp2_nv hdr_nv = MAKE_NV(name, strlen(name), val, strlen(val));
     hdrs[hdrn++] = hdr_nv;
@@ -1551,15 +1553,20 @@ exit:
   return status;
 }
 
-int select_proto(const unsigned char **out, unsigned char *outlen,
-                 const unsigned char *in, unsigned int inlen,
-                 const unsigned char *key) {
-  const unsigned char *p = in;
-  const unsigned char *end = in + inlen;
+int select_proto(      unsigned char ** const out, unsigned char *outlen,
+                 const unsigned char *  const in,  unsigned int   inlen,
+                 const unsigned char *  const key) {
+  const char *p = (const char * const)in;
+  const char * const end = (const char * const)(in + inlen);
 
-  for (*p; p + strlen(key) <= end; p += *p + 1) {
-    if (strncmp(p, key, strlen(key)) == 0) {
-      *out = p + 1;
+  const char * const keyStr = (const char * const)key;
+
+  for (; p + strlen(keyStr) <= end; p += *p + 1) {
+    if (strncmp(p, keyStr, strlen(keyStr)) == 0) {
+      /* From the manual of SSL_CTX_set_next_proto_select_cb():
+       * "For the callback itself, out must be set to point to the selected protocol (which may be within in)."
+       * This is why this "const-removing" cast is acceptable.*/
+      *out = (unsigned char *)(p + 1);
       *outlen = *p;
       return 1;
     }
@@ -1568,22 +1575,22 @@ int select_proto(const unsigned char **out, unsigned char *outlen,
   return 0;
 }
 
-int select_next_proto_cb(SSL *ssl, const unsigned char **out,
+int select_next_proto_cb(SSL *ssl, unsigned char **out,
                          unsigned char *outlen, const unsigned char *in,
                          unsigned int inlen, void *arg) {
   worker_t *worker = (worker_t *)arg;
-  const unsigned char *protos[] = {h2, h216, h214, NULL};
+  const unsigned char * const protos[] = {h2, h216, h214, NULL};
   int i;
 
   for (i = 0; protos[i]; i++) {
     if (select_proto(out, outlen, in, inlen, protos[i])) {
       worker_log(worker, LOG_DEBUG, "select %s", protos[i] + 1);
-      return 0;
+      return SSL_TLSEXT_ERR_OK;
     }
   }
 
   worker_log(worker, LOG_INFO, "remote does not offer h2 protocol");
-  return 1;
+  return ~ SSL_TLSEXT_ERR_OK;
 }
 
 static apr_status_t h2_hook_pre_connect(worker_t *worker) {
