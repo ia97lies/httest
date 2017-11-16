@@ -599,6 +599,7 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
   size_t i;
   apr_pool_t *p;
   worker_t *worker = user_data;
+	h2_wconf_t *wconf = h2_get_worker_config(worker);
   apr_pool_create(&p, NULL);
 
   worker_log(worker, LOG_DEBUG, "> frame header stream %d, type: %d, flag: %d",
@@ -610,7 +611,6 @@ static int h2_on_frame_send_callback(nghttp2_session *session,
       break;
     case NGHTTP2_HEADERS:
       worker_log(worker, LOG_DEBUG, "> HEADERS");
-      h2_wconf_t *wconf = h2_get_worker_config(worker);
       h2_stream_t *stream =
           apr_hash_get(wconf->streams, apr_itoa(worker->pbody, frame->hd.stream_id),
                        APR_HASH_KEY_STRING);

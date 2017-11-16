@@ -1,9 +1,0 @@
-REQUIRE_MODULE H2
-INCLUDE $TOP/test/config.htb
-
-# runs exactly one time
-CLIENT
-_REQ $YOUR_HOST $YOUR_PORT
-_H2:SESSION 2.0
-END
-

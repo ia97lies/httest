@@ -1,2 +1,0 @@
-
-http2_plain_client.hte:5: error: CLT0-0 Connection refused(111)

@@ -30,3 +30,8 @@ httest-*/
 .sonar
 nginx.pid
 test/*.trs
+.template.txt
+confdefs.h
+conftest.dir/
+.dirstamp
+

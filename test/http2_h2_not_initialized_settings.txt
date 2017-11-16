@@ -1,3 +1,0 @@
-
-http2_h2_not_initialized_settings.hte:6: error: CLT0-0 Internal error (specific information not available)(20014)
-http2_h2_not_initialized_settings.hte:6: error: h2 is not yet initialized, call _H2:NEW before any other call once.

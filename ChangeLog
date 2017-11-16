@@ -1,5 +1,9 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.22
+  *) httest: Add advanced HTTP/2 support for CLIENT, including multiple 
+             stream support.
+
 Changes with httest 2.4.21
   *) httest: Revert the trial to have IPv6 in the first place, not backward 
              compatible.

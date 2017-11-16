@@ -101,7 +101,7 @@ echo
 echo "  Make Distribution"
 export CPPFLAGS="-I/share/xpository/osp/lua/5.2.2/${ARCH}/dist-bin/include"
 export LDFLAGS="-L/share/xpository/osp/lua/5.2.2/${ARCH}/dist-bin/lib"
-CONFIG="--enable-lua-module --enable-js-module --enable-html-module --enable-xml-module --with-spidermonkey=$HOME/workspace/local/bin --with-apr=/share/xpository/apache/apr/1.5.2/$ARCH/dist-bin/bin --with-apr-util=/share/xpository/apache/apr-util/1.5.4/$ARCH/dist-bin/bin --with-ssl=/share/install/adnssl/3.2.3.0/adnssl/spool/$ARCH-prod --with-pcre=/share/xpository/pcre/pcre/8.36/$ARCH/dist-bin/bin --with-libxml2=/share/xpository/gnome/libxml2/2.9.1/$ARCH/dist-bin/bin"
+CONFIG="--enable-lua-module --enable-html-module --enable-xml-module --enable-h2-module --with-apr=/share/xpository/apache/apr/1.5.2/$ARCH/dist-bin/bin --with-apr-util=/share/xpository/apache/apr-util/1.5.4/$ARCH/dist-bin/bin --with-ssl=/share/install/adnssl/3.2.4.2/adnssl/spool/$ARCH-prod --with-pcre=/share/xpository/pcre/pcre/8.41/$ARCH/dist-bin/bin --with-libxml2=/share/xpository/gnome/libxml2/2.9.4/$ARCH/dist-bin/bin --with-nghttp2=/share/xpository/github/nghttp2/1.18.0/${ARCH}/dist-bin"
 CFLAGS="-g -Wall --std=c99 -Wdeclaration-after-statement -Werror" ./configure $CONFIG
 ./configure $CONFIG
 make clean all

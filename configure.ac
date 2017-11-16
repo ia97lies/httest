@@ -75,7 +75,7 @@ AC_ARG_WITH(nghttp2,AS_HELP_STRING(--with-nghttp2=PATH,path to nghttp2 source),
 	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else NGHTTP2_LIB_PATH="-L${withval}/lib"; NGHTTP2_INCLUDES="-I${withval}/include"; fi],
 	[NGHTTP2_LIB_PATH=""; NGHTTP2_INCLUDES=""])
 AC_ARG_WITH(ssl,AS_HELP_STRING(--with-ssl=PATH,path to openssl source),
-	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
+	[if test ! -d $withval; then AC_MSG_ERROR($withval is not a directory); else OPENSSL_LIB_PATH="-L${withval}/lib"; OPENSSL_INCLUDES="-I${withval}/include"; fi],
 	[OPENSSL_LIB_PATH=""; OPENSSL_INCLUDES=""])
 
 APR_VERSION=`$APR_CONFIG --version`
