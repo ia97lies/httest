@@ -144,12 +144,6 @@ EXTRA_DIST= \
 	html.htt \
 	html.txt \
 	http_0_9.htt \
-	http2_h2_not_initialized_ping.hte \
-	http2_h2_not_initialized_ping.txt \
-	http2_h2_not_initialized_settings.hte \
-	http2_h2_not_initialized_settings.txt \
-	http2_h2_not_initialized_wait.hte \
-	http2_h2_not_initialized_wait.txt \
 	http2_ping_close_ping_again.htt \
 	http2_ping.htt \
 	http2_plain_client.hte \
