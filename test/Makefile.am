@@ -144,11 +144,6 @@ EXTRA_DIST= \
 	html.htt \
 	html.txt \
 	http_0_9.htt \
-	http2_ping_close_ping_again.htt \
-	http2_ping.htt \
-	http2_plain_client.hte \
-	http2_plain_client.txt \
-	http2_settings_none.htt \
 	huge_page_chunked.htt \
 	huge_page.htt \
 	icap_100cont.htt \
