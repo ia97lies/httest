@@ -39,7 +39,6 @@
 #include "module.h"
 #include "ssl_module.h"
 #include "body.h"
-#include "h2_module.h"
 
 /************************************************************************
  * Globals 
