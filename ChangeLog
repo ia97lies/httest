@@ -1,5 +1,8 @@
                                                          -*- coding: utf-8 -*-
     
+Changes with httest 2.4.23
+  *) httest: Fix h2_module.c for solaris builds.
+
 Changes with httest 2.4.22
   *) httest: Add advanced HTTP/2 support for CLIENT, including multiple 
              stream support.
