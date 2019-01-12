@@ -68,6 +68,7 @@ typedef struct ssl_wconf_s {
   apr_pool_t *msg_pool;
   apr_table_t *msgs;
   worker_t *msg_worker;
+  int min_proto_version;
 } ssl_wconf_t;
 
 typedef struct ssl_sconf_s {
@@ -348,6 +349,11 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
       str_version = "TLS 1.2";
       break;
 #endif
+#if (OPENSSL_VERSION_NUMBER >= 0x1010101fL)
+    case TLS1_3_VERSION:
+      str_version = "TLS 1.3";
+      break;
+#endif
     case DTLS1_VERSION:
       str_version = "DTLS 1.0";
       break;
@@ -421,6 +427,9 @@ static void ssl_message_trace(int write_p, int version, int content_type, const 
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
       version == TLS1_2_VERSION ||
       version == TLS1_1_VERSION ||
+#endif
+#if (OPENSSL_VERSION_NUMBER >= 0x1010101fL)
+      version == TLS1_3_VERSION ||
 #endif
       version == DTLS1_VERSION
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
@@ -764,6 +773,13 @@ static int worker_set_client_method(worker_t * worker, const char *sslstr) {
     config->meth = (SSL_METHOD *)TLSv1_2_client_method();
   }
 #endif
+#if (OPENSSL_VERSION_NUMBER >= 0x1010101fL)
+  else if (strcasecmp(sslstr, "TLS1.3") == 0) {
+    is_ssl = 1;
+    config->meth = (SSL_METHOD *)TLS_client_method();
+    config->min_proto_version = TLS1_3_VERSION;
+  }
+#endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
     config->meth = (SSL_METHOD *)DTLSv1_client_method();
@@ -815,6 +831,13 @@ static int worker_set_server_method(worker_t * worker, const char *sslstr) {
     config->meth = (SSL_METHOD *)TLSv1_2_server_method();
   }
 #endif
+#if (OPENSSL_VERSION_NUMBER >= 0x1010101fL)
+  else if (strcasecmp(sslstr, "TLS1.3") == 0) {
+    is_ssl = 1;
+    config->meth = (SSL_METHOD *)TLS_server_method();
+    config->min_proto_version = TLS1_3_VERSION;
+  }
+#endif
   else if (strcasecmp(sslstr, "DTLS1") == 0) {
     is_ssl = 1;
     config->meth = (SSL_METHOD *)DTLSv1_server_method();
@@ -843,6 +866,9 @@ static apr_status_t ssl_new_instance(worker_t *worker) {
     return APR_ECONNREFUSED;
   }
   SSL_set_ssl_method(sconfig->ssl, config->meth);
+  if (config->min_proto_version != 0) {
+    SSL_CTX_set_min_proto_version(config->ssl_ctx, config->min_proto_version);
+  }
   if (config->flags & SSL_CONFIG_FLAGS_TRACE) {
 #if (!OPENSSL_NO_TLSEXT && OPENSSL_VERSION_NUMBER >= 0x1000100fL) 
     SSL_set_tlsext_debug_callback(sconfig->ssl, ssl_tlsext_trace);
@@ -2063,6 +2089,9 @@ apr_status_t ssl_module_init(global_t *global) {
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
                                    "|TLS1.1|TLS1.2"
 #endif
+#if (OPENSSL_VERSION_NUMBER >= 0x1010101fL)
+                                   "|TLS1.3"
+#endif
                                    " [<cert-file> <key-file>]",
                              "Needs a connected socket to establish a ssl "
            "connection on it.",
@@ -2073,6 +2102,9 @@ apr_status_t ssl_module_init(global_t *global) {
                              "SSL|SSL2|SSL3|DTLS|TLS1"
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL)
                                    "|TLS1.1|TLS1.2"
+#endif
+#if (OPENSSL_VERSION_NUMBER >= 0x1010101fL)
+                                   "|TLS1.3"
 #endif
                                    " [<cert-file> <key-file>]",
                              "Needs a connected socket to accept a ssl "

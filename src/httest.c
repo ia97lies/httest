@@ -57,7 +57,7 @@
 #include <apr_env.h>
 #include <apr_hooks.h>
 
-#include <pcre/pcre.h>
+#include <pcre.h>
 
 #if APR_HAVE_UNISTD_H
 #include <unistd.h> /* for getpid() */
@@ -501,7 +501,7 @@ int success = 1;
 
 #else
 
-DEFINE_STACK_OF(char);
+DEFINE_STACK_OF(char)
 #endif
 
 static void worker_set_global_error(worker_t *worker); 
@@ -2735,7 +2735,7 @@ int main(int argc, const char *const argv[]) {
   }
 
   /* test at least one file */
-  if (!log_mode == -1 && !(flags & MAIN_FLAGS_USE_STDIN) && !(argc - opt->ind)) {
+  if (log_mode != LOG_NONE && !(flags & MAIN_FLAGS_USE_STDIN) && !(argc - opt->ind)) {
     apr_file_printf(err, "%s: wrong number of arguments\n\n", 
                     filename(pool, argv[0]));
     apr_file_printf(err, "try \"%s --help\" to get more information\n", 
