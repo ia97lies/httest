@@ -57,8 +57,6 @@
 #include <apr_env.h>
 #include <apr_hooks.h>
 
-#include <pcre.h>
-
 #if APR_HAVE_UNISTD_H
 #include <unistd.h> /* for getpid() */
 #endif

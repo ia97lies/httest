@@ -43,8 +43,6 @@
 #include <apr_portable.h>
 #include <apr_support.h>
 
-#include <pcre.h>
-
 #if APR_HAVE_UNISTD_H
 #include <unistd.h> /* for getpid() */
 #endif

@@ -29,8 +29,6 @@
 #include <config.h>
 #endif
 
-#include <pcre.h>
-
 #include <apr.h>
 #include <apr_strings.h>
 

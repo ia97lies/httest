@@ -42,7 +42,6 @@
 #include <apr_base64.h>
 #include <apr_env.h>
 
-#include <pcre.h>
 #if APR_HAVE_UNISTD_H
 #include <unistd.h> /* for getpid() */
 #endif

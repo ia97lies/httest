@@ -25,6 +25,8 @@
 #ifndef HTTEST_REGEX_H
 #define HTTEST_REGEX_H
 
+#include <pcre.h>
+
 typedef struct htt_regex_s htt_regex_t;
 typedef struct regmatch_s regmatch_t;
 struct regmatch_s {
