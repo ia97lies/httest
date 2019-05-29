@@ -31,3 +31,9 @@ Thanks to Nicolas Perrenoud for
 - maintaining the gentoo ebuild and linked it into gentoos overlay system
 - various bugfixes.
 
+Thanks to Dominik Stillhard for
+- fixes and extensions around OpenSSL 1.1.x
+
+Thanks to Armin Abfalterer for
+- Writting a set of very helpful commands for HTTP2
+- For OpenSSL port to 1.1.x
