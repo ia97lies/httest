@@ -9,7 +9,7 @@ httest_SOURCES = \
 	httest.c htt_core.c htt_context.c htt_executable.c htt_map.c \
 	htt_log.c htt_log_appender.c htt_util.c htt_stack.c htt_bufreader.c \
 	htt_replacer.c htt_command.c htt_string.c htt_function.c htt_socket.c \
-	htt_expr.c htt_transport.c \
+	htt_transport.c \
 	core_module.c thread_module.c exception_module.c \
 	shell_module.c htt_modules.c htt_log_simple_appender.c \
 	htt_log_std_appender.c log_module.c dbg_module.c \
