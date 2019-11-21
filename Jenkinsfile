@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                sh "${env.WORKSPACE}./distcheck"
+                sh "${env.WORKSPACE}/distcheck"
             }
         }
         stage('Test') {
