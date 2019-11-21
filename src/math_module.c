@@ -166,6 +166,7 @@ static apr_status_t block_MATH_RAND(worker_t *worker, worker_t *parent,
   int start;
   int end;
   int result;
+  int foo;
 
   const char *val = store_get(worker->params, "1");
   if (val == NULL) {
