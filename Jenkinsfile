@@ -4,7 +4,9 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                sh "${env.WORKSPACE}/distcheck"
+                sh "${env.WORKSPACE}/buildconf.sh"
+                sh "${env.WORKSPACE}/configure"
+                sh "${env.WORKSPACE}/make"
             }
         }
         stage('Test') {
