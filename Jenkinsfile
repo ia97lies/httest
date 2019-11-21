@@ -6,7 +6,7 @@ pipeline {
             steps {
                 sh "${env.WORKSPACE}/buildconf.sh"
                 sh "${env.WORKSPACE}/configure"
-                sh "${env.WORKSPACE}/make"
+                sh "make"
             }
         }
         stage('Test') {
