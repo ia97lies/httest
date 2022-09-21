@@ -114,7 +114,7 @@ typedef struct perf_gconf_s {
  * Globals 
  ***********************************************************************/
 const char * perf_module = "perf_module";
-apr_time_t start_time;
+apr_time_t perf_start_time;
 
 /************************************************************************
  * Local 
@@ -424,7 +424,7 @@ static apr_status_t perf_worker_joined(global_t *global) {
     fprintf(stdout, "total conns: %d\n", gconf->stat.count.conns);
     fprintf(stdout, "send bytes: %"APR_SIZE_T_FMT"\n", gconf->stat.sent_bytes);
     fprintf(stdout, "received bytes: %"APR_SIZE_T_FMT"\n", gconf->stat.recv_bytes);
-    seconds = (float)(apr_time_now() - start_time)/ APR_USEC_PER_SEC;
+    seconds = (float)(apr_time_now() - perf_start_time)/ APR_USEC_PER_SEC;
     
     fprintf(stdout, "test duration: %02f\n", seconds);
     if (seconds > 0) {
@@ -958,7 +958,7 @@ static apr_status_t block_PERF_RAMPUP(worker_t * worker, worker_t *parent,
 apr_status_t perf_module_init(global_t *global) {
   apr_status_t status;
 
-  start_time = apr_time_now();
+  perf_start_time = apr_time_now();
   if ((status = module_command_new(global, "PERF", "STAT", 
                                    "ON|OFF|LOG <filename>",
 				   "print statistics at end of test, option LOG "
